@@ -66,3 +66,25 @@ export async function createReservationAction(formData: FormData) {
 
   redirect(`/account/reservations/${encodeURIComponent(reservation.id)}`);
 }
+
+export async function cancelReservationAction(formData: FormData) {
+  const identity = await getIdentityRepository().getCurrentIdentity();
+
+  if (!identity) {
+    redirect("/account/sign-in");
+  }
+
+  const reservationId = value(formData, "reservationId");
+
+  if (!bookingConfig.demoWritesEnabled || !reservationId) {
+    redirect("/account/reservations");
+  }
+
+  const reservation = await getBookingRepository().cancelReservation(identity.id, reservationId);
+
+  if (!reservation) {
+    redirect("/account/reservations");
+  }
+
+  redirect(`/account/reservations/${encodeURIComponent(reservation.id)}?updated=cancelled`);
+}
