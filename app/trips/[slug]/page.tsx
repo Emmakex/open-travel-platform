@@ -79,11 +79,11 @@ export default async function TripDetailPage({ params }: PageProps) {
           </div>
           <aside className="booking-preview">
             <div className="card-kicker">Reservation layer</div>
-            <h3>Coming in v0.4</h3>
+            <h3>Check availability</h3>
             <p>
-              Availability and reservations will attach to the trip domain through a separate capability interface rather than being embedded in catalogue components.
+              Availability and reservation writes live behind a separate `BookingRepository`, keeping this public catalogue route independent from booking infrastructure.
             </p>
-            <Link className="button button-secondary" href="/trips">Back to catalogue</Link>
+            <Link className="button button-primary" href={`/trips/${trip.slug}/book`}>View departures</Link>
           </aside>
         </div>
       </section>
