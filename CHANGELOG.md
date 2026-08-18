@@ -2,6 +2,22 @@
 
 All notable project changes are documented here.
 
+## [0.3.0] - 2026-08-18
+
+### Added
+- Typed identity, customer profile and role domain models.
+- `IdentityRepository` provider boundary.
+- Fictional passwordless demo customer session using an HTTP-only cookie.
+- Protected customer account page and provider-neutral sign-in surface.
+- Account-aware primary navigation.
+- Dedicated identity/security architecture documentation.
+- Scoped account CSS module.
+
+### Security
+- Production identity defaults to disabled when not explicitly configured.
+- Production demo sign-in requires an explicit `DEMO_IDENTITY_ENABLED=true` opt-in.
+- Identity configuration remains server-only; no credentials are handled by the demo flow.
+
 ## [0.2.0] - 2026-08-18
 
 ### Added
