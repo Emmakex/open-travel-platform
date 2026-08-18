@@ -80,4 +80,20 @@ export class DemoBookingRepository implements BookingRepository {
     await writeReservations([...reservations, reservation]);
     return reservation;
   }
+
+  async cancelReservation(identityId: string, reservationId: string) {
+    const reservations = await readReservations();
+    const index = reservations.findIndex(
+      (item) => item.identityId === identityId && item.id === reservationId
+    );
+
+    if (index < 0) return null;
+
+    const current = reservations[index];
+    const cancelled: Reservation = { ...current, status: "cancelled" };
+    const next = [...reservations];
+    next[index] = cancelled;
+    await writeReservations(next);
+    return cancelled;
+  }
 }
