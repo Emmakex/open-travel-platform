@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { startDemoSession } from "@/app/account/actions";
+import styles from "@/app/account/account.module.css";
 import { identityConfig } from "@/lib/identity-config";
 import { getIdentityRepository } from "@/lib/identity-repository";
 
@@ -18,11 +19,11 @@ export default async function SignInPage() {
 
   return (
     <main className="section">
-      <div className="container account-shell">
-        <section className="account-panel">
+      <div className={`container ${styles.shell}`}>
+        <section className={styles.panel}>
           <div className="eyebrow">Identity boundary</div>
           <h1>Customer accounts without provider lock-in.</h1>
-          <p className="account-lead">
+          <p className={styles.lead}>
             This starter keeps authentication providers behind an identity boundary. The built-in
             demo session uses no password and grants access only to fictional local account data.
           </p>
@@ -34,13 +35,13 @@ export default async function SignInPage() {
               </button>
             </form>
           ) : (
-            <div className="account-notice">
+            <div className={styles.notice}>
               Demo identity is disabled in this deployment. Connect a production identity provider
               by implementing the documented repository contract.
             </div>
           )}
 
-          <div className="account-notice">
+          <div className={styles.notice}>
             <strong>Production note.</strong> The demo session is not a replacement for a real
             authentication provider and must never be used as an authorization boundary for real data.
           </div>
