@@ -1,10 +1,7 @@
 import Link from "next/link";
 import { appConfig } from "@/lib/config";
-import { getIdentityRepository } from "@/lib/identity-repository";
 
-export async function SiteHeader() {
-  const identity = await getIdentityRepository().getCurrentIdentity();
-
+export function SiteHeader() {
   return (
     <header className="site-header">
       <div className="container nav">
@@ -15,9 +12,7 @@ export async function SiteHeader() {
         <nav className="nav-links" aria-label="Primary navigation">
           <Link href="/destinations">Destinations</Link>
           <Link href="/trips">Trips</Link>
-          <Link href={identity ? "/account" : "/account/sign-in"}>
-            {identity ? "My account" : "Sign in"}
-          </Link>
+          <Link href="/account">Account</Link>
           <a href="https://github.com/Emmakex/open-travel-platform" target="_blank" rel="noreferrer">GitHub</a>
         </nav>
       </div>
