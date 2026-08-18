@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { cancelReservationAction } from "@/app/reservations/actions";
 import styles from "@/app/account/account.module.css";
 import { bookingConfig } from "@/lib/booking-config";
 import { getBookingRepository } from "@/lib/booking-repository";
-import { getIdentityRepository } from "@/lib/identity-repository";
+import { requireCustomerIdentity } from "@/lib/require-customer-identity";
 import { getTravelRepository } from "@/lib/travel-repository";
 
 const dateFormatter = new Intl.DateTimeFormat("en", {
@@ -29,9 +29,7 @@ export default async function ReservationDetailPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ updated?: string }>;
 }) {
-  const identity = await getIdentityRepository().getCurrentIdentity();
-  if (!identity) redirect("/account/sign-in");
-
+  const identity = await requireCustomerIdentity();
   const { id } = await params;
   const { updated } = await searchParams;
   const bookingRepository = getBookingRepository();
