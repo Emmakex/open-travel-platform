@@ -49,6 +49,8 @@ export class DemoBookingRepository implements BookingRepository {
     if (index < 0) return null;
 
     const current = reservations[index];
+    if (current.status !== "pending") return null;
+
     const cancelled: Reservation = {
       ...current,
       status: "cancelled",
