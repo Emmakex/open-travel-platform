@@ -6,6 +6,10 @@ export class DemoTravelRepository implements TravelRepository {
     return demoCatalogue.destinations;
   }
 
+  async getDestinationBySlug(slug: string) {
+    return demoCatalogue.destinations.find((destination) => destination.slug === slug) ?? null;
+  }
+
   async listTrips() {
     return demoCatalogue.trips;
   }
