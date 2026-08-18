@@ -1,5 +1,9 @@
 # Security Policy
 
+## Supported versions
+
+Security fixes are targeted at the latest stable `1.x` release and the current `main` branch. Older pre-1.0 milestones are historical and are not maintained as separate supported release lines.
+
 ## Reporting a vulnerability
 
 Please do not disclose exploitable vulnerabilities, secrets or personal data in a public issue.
@@ -10,6 +14,8 @@ Report security concerns privately to **eduardoyauri@emmake.com** with:
 - reproduction steps;
 - expected impact;
 - suggested mitigation, if known.
+
+Do not include real credentials or personal data unless strictly necessary; revoke exposed credentials before sending a report whenever possible.
 
 ## Repository security rules
 
@@ -27,25 +33,34 @@ Report security concerns privately to **eduardoyauri@emmake.com** with:
 - Reservation ownership must be checked server-side before customer reads or mutations.
 - Prices, totals, availability and capacity used for booking decisions must be resolved or revalidated on trusted server-side sources rather than accepted from browser input.
 - Operational status transitions must be validated on the server and should produce durable audit records in production.
+- Production integrations should apply rate limiting, abuse controls, observability and incident-response procedures appropriate to their deployment.
 
-## Demo identity warning
+## Demo capability warnings
+
+### Identity
 
 The built-in demo identities exist only to exercise fictional customer and staff UI. They are not production authentication or authorization mechanisms and must never protect real customer, booking, payment or operational data.
 
-The demo staff entry intentionally lets a user choose between fixed fictional operator/admin identities. This is acceptable only because the demo contains no real privileged data. A production integration must derive roles from a trusted identity provider/backend.
+The demo staff entry intentionally allows choosing between fixed fictional operator/admin identities. This is acceptable only because the demo contains no real privileged data. A production integration must derive roles from a trusted identity provider/backend and re-authorize requests server-side.
 
-Production identity defaults to disabled unless explicitly configured.
+### Booking
 
-## Demo booking warning
+The demo booking adapter stores a small number of fictional reservation records in an HTTP-only cookie. It does not provide production persistence, inventory locking, tamper-resistant booking integrity, concurrency protection or payment guarantees.
 
-The demo booking adapter stores at most five fictional reservation records in an HTTP-only cookie. The cookie is intentionally suitable only for demonstration data and does not provide production persistence, inventory locking, tamper-resistant booking integrity or payment protection.
+Real bookings must use trusted persistence/booking infrastructure, revalidate inventory and pricing, enforce reservation ownership and define idempotency/concurrency rules.
 
-Production booking defaults to disabled unless explicitly configured. Real bookings must use trusted persistence/booking infrastructure, revalidate inventory and pricing, and enforce reservation ownership server-side.
+### Operations
 
-## Demo operations warning
+The demo operations adapter reads the same fictional browser-local reservation records and keeps a small fictional audit history. It is not a production backoffice, permissions system or compliance audit log.
 
-The v0.5 operations adapter reads the same fictional browser-local reservation records and stores at most ten fictional audit events in an HTTP-only cookie. It is not a production backoffice, permissions system or compliance audit log.
+Real staff workflows should use trusted multi-user persistence, server-side RBAC/ABAC as appropriate, validated state transitions and durable append-only audit/event infrastructure.
 
-Production operations default to disabled unless explicitly configured. Real staff workflows should use trusted multi-user persistence, server-side RBAC/ABAC as appropriate, validated state transitions and durable append-only audit/event infrastructure.
+## Production defaults
 
-If a secret is committed accidentally, removing it in a later commit is not sufficient. Revoke or rotate the credential and assess Git history exposure.
+When production mode variables are omitted, identity, booking and operations demo capabilities default to disabled. Enabling the fictional demo capabilities in a public production deployment must never expose real customer, booking, payment or privileged operational data.
+
+Review `docs/PRODUCTION-CHECKLIST.md` before any real deployment.
+
+## Accidental secret exposure
+
+Removing a committed secret in a later commit is not sufficient. Revoke or rotate it immediately, assess Git history/log exposure and determine whether history rewriting or additional incident response is required.
