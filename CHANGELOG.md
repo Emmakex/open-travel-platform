@@ -2,6 +2,32 @@
 
 All notable project changes are documented here.
 
+## [0.5.0] - 2026-08-18
+
+### Added
+- Fixed fictional customer, operator and admin identity fixtures.
+- Server-side role predicates and reusable customer/staff authorization helpers.
+- Dedicated `OperationsRepository` capability boundary.
+- Staff operations dashboard with pending/confirmed/cancelled metrics.
+- Role-protected reservation queue and detail routes.
+- Validated staff reservation status transitions.
+- Fictional staff audit events recording actor, role, transition and timestamp.
+- Shared demo reservation store used by customer booking and staff operations adapters.
+- Dedicated operations architecture/trust-boundary documentation.
+
+### Security
+- Customer routes/actions now explicitly require the `customer` role.
+- Staff routes/actions require `operator` or `admin` on the server.
+- Demo staff identities are fixed server-side; browser role input is never authoritative.
+- Production operations default to disabled.
+- Production demo staff writes require `OPERATIONS_MODE=demo` and `DEMO_OPERATIONS_ENABLED=true`.
+- Unsupported reservation status transitions are rejected server-side.
+
+### Changed
+- Customer and staff surfaces are separated even when a valid session exists.
+- Demo reservation cancellation records `updatedAt`.
+- Primary navigation exposes the operator demo entry.
+
 ## [0.4.0] - 2026-08-18
 
 ### Added
