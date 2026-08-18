@@ -1,0 +1,60 @@
+name: Bug report
+description: Report a reproducible problem in Open Travel Platform
+title: "bug: "
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for helping improve the project. Do not include private customer data or protected configuration.
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      placeholder: v1.0.0 or commit SHA
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Catalogue
+        - Identity / customer account
+        - Booking / availability
+        - Operator / admin operations
+        - Adapter / integration
+        - Build / CI / deployment
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: Provide the smallest reproducible sequence.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Node version, deployment environment and active adapter modes when relevant.
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety check
+      options:
+        - label: I removed private customer data and protected deployment values from this report.
+          required: true
