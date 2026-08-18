@@ -9,4 +9,5 @@ export interface BookingRepository {
   listReservations(identityId: string): Promise<Reservation[]>;
   getReservation(identityId: string, reservationId: string): Promise<Reservation | null>;
   createReservation(input: CreateReservationInput): Promise<Reservation>;
+  cancelReservation(identityId: string, reservationId: string): Promise<Reservation | null>;
 }
