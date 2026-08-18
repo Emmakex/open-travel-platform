@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { endDemoSession } from "@/app/account/actions";
+import styles from "@/app/account/account.module.css";
 import { getIdentityRepository } from "@/lib/identity-repository";
 import { getTravelRepository } from "@/lib/travel-repository";
 
@@ -24,15 +25,15 @@ export default async function AccountPage() {
 
   return (
     <main className="section">
-      <div className="container account-grid">
-        <section className="account-panel">
+      <div className={`container ${styles.grid}`}>
+        <section className={styles.panel}>
           <div className="eyebrow">Customer account</div>
           <h1>{identity.displayName}</h1>
-          <p className="account-lead">
+          <p className={styles.lead}>
             A provider-neutral account surface backed by the current IdentityRepository adapter.
           </p>
 
-          <dl className="profile-list">
+          <dl className={styles.profileList}>
             <div><dt>Email</dt><dd>{profile?.email ?? identity.email}</dd></div>
             <div><dt>Role</dt><dd>{identity.role}</dd></div>
             <div><dt>Country</dt><dd>{profile?.country ?? "Not set"}</dd></div>
@@ -44,7 +45,7 @@ export default async function AccountPage() {
           </form>
         </section>
 
-        <aside className="account-panel">
+        <aside className={styles.panel}>
           <div className="eyebrow">Suggested next trip</div>
           {trips[0] ? (
             <>
