@@ -2,6 +2,7 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { DEMO_RESERVATIONS_COOKIE } from "@/lib/booking-config";
 import { DEMO_SESSION_COOKIE, identityConfig } from "@/lib/identity-config";
 
 const DEMO_IDENTITY_ID = "demo-customer";
@@ -26,5 +27,6 @@ export async function startDemoSession() {
 export async function endDemoSession() {
   const cookieStore = await cookies();
   cookieStore.delete(DEMO_SESSION_COOKIE);
+  cookieStore.delete(DEMO_RESERVATIONS_COOKIE);
   redirect("/account/sign-in");
 }

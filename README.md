@@ -2,67 +2,82 @@
 
 > Modern, reusable open-source starter for travel agencies, tour operators and booking products.
 
-Open Travel Platform is a clean-room travel product starter that runs immediately in demo mode and can later connect to external APIs, CMSs, identity providers, supplier systems or booking backends through explicit adapters.
+Open Travel Platform is a clean-room travel product starter that runs immediately with fictional demo data and can later connect to external APIs, CMSs, identity providers, supplier systems or booking backends through explicit adapters.
 
-![Version](https://img.shields.io/badge/version-0.3.0-0d1b2d)
+![Version](https://img.shields.io/badge/version-0.4.0-0d1b2d)
 ![Next.js](https://img.shields.io/badge/Next.js-16.3.1-000000)
-![React](https://img.shields.io/badge/React-19.2-149eca)
+![React](https://img.shields.io/badge/React-19.2.8-149eca)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178c6)
 ![License](https://img.shields.io/badge/license-MIT-45d6b5)
 
-## v0.3.0 — Identity & customer accounts
+## v0.4.0 — Reservations & availability
 
-The current milestone adds a provider-neutral customer account layer without making an authentication vendor mandatory:
+The current milestone adds a booking capability without coupling catalogue or account UI to a specific booking engine:
 
-- typed `UserIdentity`, `CustomerProfile` and role domain models;
-- `IdentityRepository` capability boundary;
-- fictional `DemoIdentityRepository`;
-- passwordless demo session using an HTTP-only cookie;
-- protected `/account` route;
-- `/account/sign-in` provider-neutral entry surface;
-- customer profile and role presentation;
-- account-aware navigation;
-- production-safe defaults: identity is disabled when not explicitly configured;
-- documentation for replacing the demo adapter with Auth.js, OAuth, SSO or an external identity backend.
+- typed availability and reservation domain models;
+- `BookingRepository` capability boundary;
+- fictional availability windows for the demo catalogue;
+- server-side reservation creation and validation;
+- protected booking flow per trip;
+- customer reservation list and detail pages;
+- identity-scoped reservation reads and cancellation;
+- fictional cookie-backed demo persistence capped at five reservations;
+- production-safe booking defaults;
+- booking trust-boundary documentation.
 
-The demo identity grants access only to fictional local data and is **not** a production authentication mechanism.
+### Server-side booking integrity
 
-## Catalogue capabilities
+The browser never submits a trusted reservation total. The server resolves the trip and selected availability, validates party size and remaining spaces, uses the trusted trip price/currency and calculates the total before creating the reservation.
 
-v0.2 provides:
+The demo adapter is only for fictional data. It is **not** a production booking, inventory or payment system.
 
-- destination catalogue and detail routes;
-- trip catalogue and detail routes;
-- trip-to-destination relations;
-- live text search;
-- destination, duration and starting-price filters;
-- reusable cards, generated metadata and catalogue-aware 404 handling;
-- demo and generic REST travel adapters behind the same repository interface.
+## Previous capabilities
 
-## Foundation stack
+### v0.3 — Identity & customer accounts
 
-- Next.js 16.3.1 / React 19.2 / TypeScript 6;
+- `IdentityRepository` provider boundary;
+- typed identity/profile/role models;
+- passwordless fictional demo session;
+- protected `/account` surface;
+- provider-neutral identity architecture and production-safe defaults.
+
+### v0.2 — Catalogue
+
+- destination and trip catalogues/details;
+- search and filtering;
+- trip-to-destination relationships;
+- demo and generic REST travel adapters.
+
+## Stack
+
+- Next.js 16.3.1;
+- React / ReactDOM 19.2.8;
+- TypeScript 6;
 - Node.js 24 LTS target;
-- strict TypeScript configuration;
-- original responsive UI and fictional demo content;
-- ports-and-adapters boundaries for travel data and identity;
-- environment-driven adapter selection;
-- CI with public-safety, type, build and production dependency checks;
-- MIT licensing, contribution and security policies.
+- ports-and-adapters boundaries for catalogue, identity and booking;
+- GitHub Actions CI with source-safety, type, build and production dependency checks;
+- MIT license.
 
 ## Architecture
 
 ```text
-Travel UI                         Account UI
-   |                                 |
-   v                                 v
-TravelRepository                IdentityRepository
-   |                                 |
-   +--> Demo adapter                 +--> Demo identity
-   +--> REST adapter                 +--> future Auth/OAuth/SSO adapter
+Catalogue UI          Account UI            Booking UI
+    |                    |                     |
+    v                    v                     v
+TravelRepository    IdentityRepository    server validation
+    |                    |                     |
+    |                    |                     v
+    |                    |               BookingRepository
+    |                    |                     |
+ Demo / REST         Demo / future auth    Demo / future booking engine
 ```
 
-Read [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`docs/API-CONTRACT.md`](docs/API-CONTRACT.md) and [`docs/IDENTITY.md`](docs/IDENTITY.md).
+Read:
+
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+- [`docs/API-CONTRACT.md`](docs/API-CONTRACT.md)
+- [`docs/IDENTITY.md`](docs/IDENTITY.md)
+- [`docs/BOOKING.md`](docs/BOOKING.md)
 
 ## Quick start
 
@@ -76,18 +91,21 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Open `http://localhost:3000`. Travel data and customer identity run in demo mode during local development without external infrastructure.
+Open `http://localhost:3000`. During local development catalogue, identity and booking use fictional demo adapters without external infrastructure.
 
 ## Routes
 
 ```text
-/                       landing page
-/destinations           destination catalogue
-/destinations/[slug]    destination detail + related trips
-/trips                  searchable/filterable trip catalogue
-/trips/[slug]           trip detail
-/account/sign-in        identity entry surface
-/account                 protected customer account
+/                               landing page
+/destinations                   destination catalogue
+/destinations/[slug]            destination detail + related trips
+/trips                          searchable/filterable trip catalogue
+/trips/[slug]                   trip detail
+/trips/[slug]/book              availability + reservation form
+/account/sign-in                identity entry surface
+/account                         protected customer account
+/account/reservations            customer reservation history
+/account/reservations/[id]       reservation detail + demo cancellation
 ```
 
 ## Configuration
@@ -100,19 +118,22 @@ NEXT_PUBLIC_TRAVEL_API_URL=
 
 IDENTITY_MODE=demo
 DEMO_IDENTITY_ENABLED=false
+
+BOOKING_MODE=demo
+DEMO_BOOKING_ENABLED=false
 ```
 
-`NEXT_PUBLIC_*` values are visible to browser code and must never contain secrets. Identity configuration is server-only.
+`NEXT_PUBLIC_*` values are browser-visible and must never contain secrets. Identity and booking configuration are server-only.
 
-Development defaults to demo identity. Production defaults to identity disabled unless explicitly configured; demo sign-in additionally requires `DEMO_IDENTITY_ENABLED=true` in production.
+Development defaults to demo identity/booking. Production defaults both capabilities to disabled when their mode variables are omitted. Demo identity/booking writes in production require explicit opt-in.
 
 ## Repository layout
 
 ```text
 app/              routes, server actions and presentation
 components/       reusable UI/catalogue components
-domain/           pure travel and identity domain types
-data/             fictional demo catalogue
+domain/           pure travel, identity and booking types
+data/             fictional catalogue and availability fixtures
 repositories/     stable capability interfaces
 adapters/         infrastructure/provider implementations
 lib/              configuration and composition
@@ -134,10 +155,10 @@ npm run build
 
 - **Clean-room implementation** — original code, UI and demo data created for this repository.
 - **Demo-first** — fresh clones are useful without external infrastructure.
-- **Adapter-based** — integrations sit behind explicit interfaces.
-- **Secure defaults** — no production endpoints, credentials or customer data in source control.
-- **Provider-neutral identity** — account UI does not depend directly on one auth SDK.
-- **Portable** — no mandatory hosting provider, CMS, payment gateway or supplier.
+- **Adapter-based** — external systems sit behind explicit capabilities.
+- **Server-validated writes** — private mutations do not trust browser totals, ownership or availability claims.
+- **Secure defaults** — production identity and booking demo modes are opt-in.
+- **Portable** — no mandatory hosting provider, CMS, auth provider, payment gateway or supplier.
 - **Open source** — MIT licensed from the first project commit.
 
 ## Roadmap
@@ -146,8 +167,8 @@ npm run build
 |---|---|---|
 | `0.1.0` | Foundation, demo data, architecture and CI | Done |
 | `0.2.0` | Catalogue, detail views, search and filtering | Done |
-| `0.3.0` | Identity and customer accounts | Current |
-| `0.4.0` | Reservations and availability | Planned |
+| `0.3.0` | Identity and customer accounts | Done |
+| `0.4.0` | Reservations and availability | Current |
 | `0.5.0` | Operator/admin workflows | Planned |
 | `1.0.0` | Stable reusable travel starter | Planned |
 

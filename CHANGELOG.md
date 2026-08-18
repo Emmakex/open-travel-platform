@@ -2,6 +2,31 @@
 
 All notable project changes are documented here.
 
+## [0.4.0] - 2026-08-18
+
+### Added
+- Availability and reservation domain models.
+- `BookingRepository` capability boundary.
+- Fictional availability fixtures for demo trips.
+- Server-side reservation creation with trusted trip price calculation.
+- Trip booking route with departure and party-size selection.
+- Customer reservation history and reservation detail routes.
+- Identity-scoped demo cancellation flow.
+- Cookie-backed fictional demo reservation persistence.
+- Dedicated booking architecture and trust-boundary documentation.
+
+### Security
+- Booking defaults to disabled in production when not explicitly configured.
+- Production demo writes require `BOOKING_MODE=demo` and `DEMO_BOOKING_ENABLED=true`.
+- Reservation creation validates identity, trip, selected availability, party size and remaining spaces server-side.
+- Client-supplied totals are never trusted.
+- Reservation reads and cancellation are scoped by identity.
+
+### Changed
+- Trip detail pages now link to the booking/availability capability.
+- Customer account shows reservation summary/history.
+- React and ReactDOM aligned to 19.2.8.
+
 ## [0.3.0] - 2026-08-18
 
 ### Added
@@ -9,7 +34,7 @@ All notable project changes are documented here.
 - `IdentityRepository` provider boundary.
 - Fictional passwordless demo customer session using an HTTP-only cookie.
 - Protected customer account page and provider-neutral sign-in surface.
-- Account-aware primary navigation.
+- Account entry in primary navigation.
 - Dedicated identity/security architecture documentation.
 - Scoped account CSS module.
 
