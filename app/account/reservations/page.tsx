@@ -1,8 +1,7 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import styles from "@/app/account/account.module.css";
 import { getBookingRepository } from "@/lib/booking-repository";
-import { getIdentityRepository } from "@/lib/identity-repository";
+import { requireCustomerIdentity } from "@/lib/require-customer-identity";
 import { getTravelRepository } from "@/lib/travel-repository";
 
 const money = new Intl.NumberFormat("en", {
@@ -17,9 +16,7 @@ export const metadata = {
 };
 
 export default async function ReservationsPage() {
-  const identity = await getIdentityRepository().getCurrentIdentity();
-  if (!identity) redirect("/account/sign-in");
-
+  const identity = await requireCustomerIdentity();
   const bookingRepository = getBookingRepository();
   const [reservations, trips] = await Promise.all([
     bookingRepository.listReservations(identity.id),
