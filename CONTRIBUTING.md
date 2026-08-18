@@ -5,16 +5,18 @@ Thanks for helping improve Open Travel Platform.
 ## Development setup
 
 1. Fork or clone the repository.
-2. Use Node.js 24 LTS.
-3. Install the committed dependency graph with `npm ci`.
+2. Use Node.js 24 LTS and the npm version declared in `packageManager`.
+3. Install the exact direct dependency/toolchain versions declared in `package.json` with `npm install`.
 4. Copy `.env.example` to `.env.local` only when local overrides are needed.
 5. Keep demo adapters enabled for local work unless the change specifically targets an integration adapter.
 
 ```bash
-npm ci
+npm install
 cp .env.example .env.local
 npm run dev
 ```
+
+The repository pins all direct runtime and development dependencies. CI additionally generates a fresh dependency lock and performs a clean `npm ci` installation before validation so pull requests are tested from a clean resolved graph.
 
 ## Required validation
 
@@ -29,7 +31,7 @@ npm run verify
 ## Architecture rules
 
 - Keep `domain/` independent from Next.js, browser APIs, persistence and vendor SDKs.
-- Add provider integrations behind repository/adaptor boundaries instead of importing vendor SDKs throughout UI code.
+- Add provider integrations behind repository/adapter boundaries instead of importing vendor SDKs throughout UI code.
 - Do not expand `BookingRepository` into a staff administration API; internal workflows belong behind `OperationsRepository`.
 - Keep authorization checks on trusted server-side boundaries. UI visibility is never sufficient authorization.
 - Revalidate prices, availability, capacity, ownership and state transitions server-side for real write operations.
