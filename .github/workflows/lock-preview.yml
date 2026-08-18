@@ -1,14 +1,13 @@
-name: Lockfile preview
+name: Dependency lock snapshot
 
 on:
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  lockfile:
+  snapshot:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -20,10 +19,10 @@ jobs:
           node-version: 24
           package-manager-cache: false
 
-      - name: Generate lockfile
+      - name: Resolve dependency graph
         run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
 
-      - name: Upload lockfile artifact
+      - name: Upload lock snapshot
         uses: actions/upload-artifact@v6
         with:
           name: npm-lockfile
