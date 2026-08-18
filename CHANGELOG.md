@@ -2,6 +2,36 @@
 
 All notable project changes are documented here.
 
+## [1.0.0] - 2026-08-18
+
+### Added
+- Stable release documentation for catalogue, identity, booking and operations capability boundaries.
+- `docs/ADAPTER-GUIDE.md` for replacing demo implementations with production providers.
+- `docs/DEPLOYMENT.md` and `docs/PRODUCTION-CHECKLIST.md` for deployment and production-readiness review.
+- `ROADMAP.md` and `SUPPORT.md` for post-1.0 maintenance and support expectations.
+- GitHub issue forms and pull-request template.
+- Release consistency validation through `scripts/release-check.mjs`.
+- Stronger public-source safety rules.
+- HTTP smoke tests against the production build in CI.
+
+### Changed
+- Package version promoted to `1.0.0`.
+- README reframed around the stable reusable starter rather than an in-progress milestone.
+- CI now validates safe production capability defaults, release consistency, TypeScript, production build, HTTP routes and dependency security.
+- Runtime versions remain explicitly pinned for stable-release predictability.
+
+### Security
+- Release checks require safe demo defaults in `.env.example`.
+- Source safety now rejects additional high-risk patterns such as dynamic code execution, direct cookie access and unsafe HTML injection in application source.
+- Production deployment guidance requires replacing fictional identity, booking and operations persistence before using real data.
+- Smoke tests verify representative public/protected routes after the production server starts.
+
+### Compatibility
+- Node.js 24 LTS target.
+- Next.js 16.3.1.
+- React / ReactDOM 19.2.8.
+- TypeScript 6.x.
+
 ## [0.5.0] - 2026-08-18
 
 ### Added
@@ -16,7 +46,7 @@ All notable project changes are documented here.
 - Dedicated operations architecture/trust-boundary documentation.
 
 ### Security
-- Customer routes/actions now explicitly require the `customer` role.
+- Customer routes/actions explicitly require the `customer` role.
 - Staff routes/actions require `operator` or `admin` on the server.
 - Demo staff identities are fixed server-side; browser role input is never authoritative.
 - Production operations default to disabled.
@@ -80,8 +110,8 @@ All notable project changes are documented here.
 - Reusable destination cards and catalogue explorer UI.
 
 ### Changed
-- Homepage now links directly into the destination and trip catalogue experience.
-- Navigation now exposes the dedicated trips catalogue.
+- Homepage links directly into the destination and trip catalogue experience.
+- Navigation exposes the dedicated trips catalogue.
 - Catalogue documentation expanded for v0.2.
 
 ## [0.1.0] - 2026-08-18
