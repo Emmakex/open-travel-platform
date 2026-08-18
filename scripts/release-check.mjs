@@ -6,6 +6,8 @@ const requiredFiles = [
   "SECURITY.md",
   "CONTRIBUTING.md",
   "CHANGELOG.md",
+  "SUPPORT.md",
+  "ROADMAP.md",
   "docs/ARCHITECTURE.md",
   "docs/API-CONTRACT.md",
   "docs/IDENTITY.md",
@@ -33,10 +35,18 @@ if (!changelog.includes(`## [${packageJson.version}]`)) {
   errors.push("CHANGELOG has no entry matching package.json version");
 }
 
-for (const dependency of ["next", "react", "react-dom"]) {
-  const version = packageJson.dependencies?.[dependency];
-  if (typeof version !== "string" || /^[~^*><=]/.test(version)) {
-    errors.push(`${dependency} must use an exact runtime version`);
+if (packageJson.packageManager !== "npm@11.17.0") {
+  errors.push("stable v1.0 toolchain must declare npm@11.17.0");
+}
+
+for (const [groupName, dependencies] of [
+  ["dependencies", packageJson.dependencies],
+  ["devDependencies", packageJson.devDependencies]
+]) {
+  for (const [dependency, version] of Object.entries(dependencies ?? {})) {
+    if (typeof version !== "string" || /^[~^*><=]/.test(version)) {
+      errors.push(`${groupName}.${dependency} must use an exact version`);
+    }
   }
 }
 
