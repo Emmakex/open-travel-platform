@@ -13,6 +13,7 @@ export function SiteHeader() {
           <Link href="/destinations">Destinations</Link>
           <Link href="/trips">Trips</Link>
           <Link href="/account">Account</Link>
+          <Link href="/operator/sign-in">Operator</Link>
           <a href="https://github.com/Emmakex/open-travel-platform" target="_blank" rel="noreferrer">GitHub</a>
         </nav>
       </div>
