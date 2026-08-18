@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { bookingConfig } from "@/lib/booking-config";
 import { getBookingRepository } from "@/lib/booking-repository";
-import { getIdentityRepository } from "@/lib/identity-repository";
+import { requireCustomerIdentity } from "@/lib/require-customer-identity";
 import { getTravelRepository } from "@/lib/travel-repository";
 
 function value(formData: FormData, key: string) {
@@ -12,12 +12,7 @@ function value(formData: FormData, key: string) {
 }
 
 export async function createReservationAction(formData: FormData) {
-  const identity = await getIdentityRepository().getCurrentIdentity();
-
-  if (!identity) {
-    redirect("/account/sign-in");
-  }
-
+  const identity = await requireCustomerIdentity();
   const tripSlug = value(formData, "tripSlug");
   const availabilityId = value(formData, "availabilityId");
   const requestedPartySize = Number(value(formData, "partySize"));
@@ -68,12 +63,7 @@ export async function createReservationAction(formData: FormData) {
 }
 
 export async function cancelReservationAction(formData: FormData) {
-  const identity = await getIdentityRepository().getCurrentIdentity();
-
-  if (!identity) {
-    redirect("/account/sign-in");
-  }
-
+  const identity = await requireCustomerIdentity();
   const reservationId = value(formData, "reservationId");
 
   if (!bookingConfig.demoWritesEnabled || !reservationId) {

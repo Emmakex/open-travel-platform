@@ -19,6 +19,7 @@ export interface Reservation {
   currency: string;
   status: ReservationStatus;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface CreateReservationInput {

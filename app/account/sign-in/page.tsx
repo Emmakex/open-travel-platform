@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { startDemoSession } from "@/app/account/actions";
 import styles from "@/app/account/account.module.css";
+import { hasCustomerAccess, hasOperationsAccess } from "@/lib/access-control";
 import { identityConfig } from "@/lib/identity-config";
 import { getIdentityRepository } from "@/lib/identity-repository";
 
@@ -13,8 +14,12 @@ export const metadata = {
 export default async function SignInPage() {
   const identity = await getIdentityRepository().getCurrentIdentity();
 
-  if (identity) {
+  if (hasCustomerAccess(identity)) {
     redirect("/account");
+  }
+
+  if (hasOperationsAccess(identity)) {
+    redirect("/operator");
   }
 
   return (
@@ -46,6 +51,7 @@ export default async function SignInPage() {
             authentication provider and must never be used as an authorization boundary for real data.
           </div>
 
+          <p><Link className="text-link" href="/operator/sign-in">Operator/admin demo →</Link></p>
           <Link className="text-link" href="/">← Back to catalogue</Link>
         </section>
       </div>
