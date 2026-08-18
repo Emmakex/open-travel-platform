@@ -1,18 +1,33 @@
 # Architecture
 
-Open Travel Platform uses a small ports-and-adapters boundary so travel-domain code and UI do not depend directly on one backend vendor.
+Open Travel Platform uses small ports-and-adapters boundaries so product UI and domain code do not depend directly on one backend, identity provider or travel vendor.
 
-## Current flow
+## Current flows
+
+### Catalogue
 
 ```text
 Next.js pages/components
         |
         v
-TravelRepository interface
+TravelRepository
         |
         +--> DemoTravelRepository
         |
         +--> HttpTravelRepository
+```
+
+### Identity
+
+```text
+Account UI / server actions
+        |
+        v
+IdentityRepository
+        |
+        +--> DemoIdentityRepository
+        |
+        +--> Future Auth.js / OAuth / SSO / external identity adapter
 ```
 
 ## Layers
@@ -24,18 +39,18 @@ Pure TypeScript entities and value shapes. Domain files must not import Next.js,
 Interfaces consumed by application code. They describe capabilities, not transport details.
 
 ### `adapters/`
-Infrastructure implementations. The initial release includes an in-memory demo catalogue and a generic HTTP implementation.
+Infrastructure implementations. Current adapters include an in-memory travel catalogue, a generic HTTP travel adapter and a fictional demo identity adapter.
 
 ### `data/`
 Original, non-production demo fixtures. Demo data exists so forks can run immediately and safely.
 
 ### `lib/`
-Application configuration and composition. Adapter selection happens here rather than inside pages.
+Application configuration and composition. Adapter selection and security-sensitive server-only configuration live here rather than inside pages.
 
 ### `app/` and `components/`
-Next.js presentation layer. UI code should consume repository capabilities instead of hard-coded external URLs.
+Next.js presentation layer. UI code consumes repository capabilities instead of hard-coded external URLs or provider SDKs.
 
-## Data modes
+## Travel data modes
 
 ### Demo mode
 
@@ -43,7 +58,7 @@ Next.js presentation layer. UI code should consume repository capabilities inste
 NEXT_PUBLIC_DATA_MODE=demo
 ```
 
-No external service is required.
+No external travel service is required.
 
 ### API mode
 
@@ -52,8 +67,25 @@ NEXT_PUBLIC_DATA_MODE=api
 NEXT_PUBLIC_TRAVEL_API_URL=https://api.example.com
 ```
 
-The v0.1 HTTP adapter expects read-only catalogue endpoints documented in `API-CONTRACT.md`.
+The HTTP adapter expects the read-only catalogue endpoints documented in `API-CONTRACT.md`.
+
+## Identity modes
+
+Identity configuration is server-only.
+
+```text
+IDENTITY_MODE=demo
+DEMO_IDENTITY_ENABLED=false
+```
+
+Development defaults to demo identity when `IDENTITY_MODE` is omitted. Production defaults to identity disabled. A production deployment must explicitly opt into the fictional demo session or, preferably, replace it with a real identity adapter.
+
+See `IDENTITY.md` for the trust model and production integration rules.
+
+## Security rule
+
+Client-visible `NEXT_PUBLIC_*` variables must never contain credentials, secrets, private keys or privileged tokens. Authentication and authorization for private resources belong on trusted server-side boundaries.
 
 ## Future boundaries
 
-Planned capabilities include authentication, reservations, availability, operator/admin workflows and optional provider/payment/CRM connectors. Each external integration should live behind a dedicated interface or adapter rather than leaking vendor-specific payloads into the UI.
+Reservations, availability, operator/admin workflows and optional provider/payment/CRM connectors will each be added as dedicated capabilities rather than leaking vendor-specific payloads across the application.

@@ -12,8 +12,8 @@ export function SiteHeader() {
         <nav className="nav-links" aria-label="Primary navigation">
           <Link href="/destinations">Destinations</Link>
           <Link href="/trips">Trips</Link>
-          <Link href="/#architecture">Architecture</Link>
-          <a href="https://github.com/Emmakex" target="_blank" rel="noreferrer">GitHub</a>
+          <Link href="/account">Account</Link>
+          <a href="https://github.com/Emmakex/open-travel-platform" target="_blank" rel="noreferrer">GitHub</a>
         </nav>
       </div>
     </header>
