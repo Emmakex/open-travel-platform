@@ -1,5 +1,7 @@
 # Open Travel Platform
 
+<p align="center"><strong>English</strong> · <a href="./README.es.md">Español</a></p>
+
 > Reusable open-source foundation for travel agencies, tour operators and booking products.
 
 Open Travel Platform is a clean-room Next.js starter with a complete fictional travel flow and explicit adapter boundaries for catalogue data, identity, booking and staff operations. A fresh clone runs without external infrastructure; production integrations can replace each demo capability independently.
