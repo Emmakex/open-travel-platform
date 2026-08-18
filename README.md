@@ -4,20 +4,32 @@
 
 Open Travel Platform is a clean-room travel product starter built to run immediately in demo mode and later connect to external APIs, CMSs, supplier systems or booking backends through explicit adapters.
 
-![Version](https://img.shields.io/badge/version-0.1.0-0d1b2d)
+![Version](https://img.shields.io/badge/version-0.2.0-0d1b2d)
 ![Next.js](https://img.shields.io/badge/Next.js-16.3.1-000000)
 ![React](https://img.shields.io/badge/React-19.2-149eca)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178c6)
 ![License](https://img.shields.io/badge/license-MIT-45d6b5)
 
-## v0.1.0 — Foundation
+## v0.2.0 — Catalogue
 
-The first milestone establishes:
+The current milestone provides a navigable travel catalogue on top of the foundation architecture:
+
+- destination list and stable destination detail routes;
+- trip list and stable trip detail routes;
+- trip-to-destination relations through domain IDs;
+- live text search across trip and destination content;
+- destination, duration and starting-price filters;
+- explicit empty/reset states;
+- metadata generation for catalogue detail pages;
+- demo and generic REST adapters using the same repository interface;
+- responsive catalogue/detail UI without inherited media assets.
+
+## Foundation stack
 
 - Next.js 16.3 / React 19.2 / TypeScript 6;
 - Node.js 24 LTS runtime target;
 - strict TypeScript configuration;
-- original responsive UI and demo content;
+- original responsive UI and fictional demo content;
 - typed travel-domain entities;
 - repository interfaces separating UI from infrastructure;
 - demo and generic HTTP catalogue adapters;
@@ -54,9 +66,17 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Open `http://localhost:3000`.
+Open `http://localhost:3000`. Demo mode is the default and requires no backend.
 
-Demo mode is the default and requires no backend.
+## Routes
+
+```text
+/                       landing page
+/destinations           destination catalogue
+/destinations/[slug]    destination detail + related trips
+/trips                  searchable/filterable trip catalogue
+/trips/[slug]           trip detail
+```
 
 ## Configuration
 
@@ -67,15 +87,13 @@ NEXT_PUBLIC_DATA_MODE=demo
 NEXT_PUBLIC_TRAVEL_API_URL=
 ```
 
-Use `NEXT_PUBLIC_DATA_MODE=api` only when a compatible API is configured. The initial read-only contract is documented in [`docs/API-CONTRACT.md`](docs/API-CONTRACT.md).
+Use `NEXT_PUBLIC_DATA_MODE=api` only when a compatible API is configured. The read-only contract is documented in [`docs/API-CONTRACT.md`](docs/API-CONTRACT.md).
 
 ## Architecture
 
-The codebase intentionally separates concerns:
-
 ```text
 app/              Next.js routes and pages
-components/       reusable presentation components
+components/       reusable presentation and catalogue components
 domain/           pure travel-domain types
 data/             fictional demo catalogue
 repositories/     stable capability interfaces
@@ -87,18 +105,18 @@ scripts/          repository safety checks
 
 Read [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the architectural rules.
 
-## Current demo model
+## Current domain
 
-The initial domain includes:
+The catalogue model includes:
 
-- destinations;
-- trips/itineraries;
+- destinations with stable slugs, regions and summaries;
+- trips/itineraries related to destinations by ID;
 - duration;
 - pricing and currency;
 - highlights;
 - featured catalogue state.
 
-The next milestones will add search/filtering, accounts, reservations, availability and operator workflows without coupling those features to one vendor.
+Authentication, reservations, availability and operator workflows will be added as separate capability boundaries rather than embedded directly in catalogue UI code.
 
 ## Quality checks
 
@@ -112,7 +130,7 @@ npm run build
 
 ## TypeScript version note
 
-TypeScript 7 is available, but its new native compiler does not currently expose the JavaScript compiler API expected by Next.js' build integration. The project therefore uses TypeScript 6.0 for stable framework compatibility and will move to TypeScript 7 when the integration no longer requires a compatibility layer.
+TypeScript 7 is available, but its native compiler does not currently expose the JavaScript compiler API expected by the Next.js build integration. The project therefore uses TypeScript 6.0 for stable framework compatibility and will move to TypeScript 7 when that integration no longer requires a compatibility layer.
 
 ## Principles
 
@@ -125,14 +143,14 @@ TypeScript 7 is available, but its new native compiler does not currently expose
 
 ## Roadmap
 
-| Version | Focus |
-|---|---|
-| `0.1.0` | Foundation, demo data, architecture and CI |
-| `0.2.0` | Destination/trip catalogue, detail views, search and filtering |
-| `0.3.0` | Authentication and customer accounts |
-| `0.4.0` | Reservations and availability |
-| `0.5.0` | Operator/admin workflows |
-| `1.0.0` | Stable reusable travel starter |
+| Version | Focus | Status |
+|---|---|---|
+| `0.1.0` | Foundation, demo data, architecture and CI | Done |
+| `0.2.0` | Destination/trip catalogue, detail views, search and filtering | Current |
+| `0.3.0` | Authentication and customer accounts | Planned |
+| `0.4.0` | Reservations and availability | Planned |
+| `0.5.0` | Operator/admin workflows | Planned |
+| `1.0.0` | Stable reusable travel starter | Planned |
 
 ## Contributing and security
 
