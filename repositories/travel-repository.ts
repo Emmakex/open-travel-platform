@@ -1,0 +1,7 @@
+import type { Destination, Trip } from "@/domain/travel/types";
+
+export interface TravelRepository {
+  listDestinations(): Promise<Destination[]>;
+  listTrips(): Promise<Trip[]>;
+  getTripBySlug(slug: string): Promise<Trip | null>;
+}
