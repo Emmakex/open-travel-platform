@@ -1,0 +1,86 @@
+.shell {
+  max-width: 780px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.panel {
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  padding: clamp(1.4rem, 4vw, 2.2rem);
+  background: linear-gradient(180deg, rgba(255,255,255,0.055), rgba(255,255,255,0.025));
+}
+
+.panel h1,
+.panel h2 {
+  margin: 0.55rem 0 1rem;
+  letter-spacing: -0.04em;
+}
+
+.panel h1 {
+  font-size: clamp(2.4rem, 6vw, 4.5rem);
+  line-height: 1;
+}
+
+.panel h2 {
+  font-size: clamp(1.7rem, 3vw, 2.4rem);
+}
+
+.lead {
+  color: var(--muted);
+  font-size: 1.06rem;
+  margin-bottom: 1.5rem;
+}
+
+.notice {
+  margin: 1.25rem 0;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  color: var(--muted);
+  background: rgba(255,255,255,0.035);
+}
+
+.notice strong {
+  color: var(--text);
+}
+
+.profileList {
+  display: grid;
+  gap: 0;
+  margin: 1.5rem 0;
+}
+
+.profileList > div {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 1rem;
+  padding: 0.85rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.profileList dt {
+  color: var(--muted);
+}
+
+.profileList dd {
+  margin: 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 760px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .profileList > div {
+    grid-template-columns: 1fr;
+    gap: 0.15rem;
+  }
+}
