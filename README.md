@@ -1,118 +1,94 @@
 # Open Travel Platform
 
-> Modern, reusable open-source starter for travel agencies, tour operators and booking products.
+> Reusable open-source foundation for travel agencies, tour operators and booking products.
 
-Open Travel Platform is a clean-room travel product starter that runs immediately with fictional demo data and can later connect to external APIs, CMSs, identity providers, supplier systems, booking engines, CRMs or operations backends through explicit adapters.
+Open Travel Platform is a clean-room Next.js starter with a complete fictional travel flow and explicit adapter boundaries for catalogue data, identity, booking and staff operations. A fresh clone runs without external infrastructure; production integrations can replace each demo capability independently.
 
-![Version](https://img.shields.io/badge/version-0.5.0-0d1b2d)
+![Version](https://img.shields.io/badge/version-1.0.0-0d1b2d)
 ![Next.js](https://img.shields.io/badge/Next.js-16.3.1-000000)
 ![React](https://img.shields.io/badge/React-19.2.8-149eca)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178c6)
+![Node](https://img.shields.io/badge/Node-24_LTS-5fa04e)
 ![License](https://img.shields.io/badge/license-MIT-45d6b5)
 
-## v0.5.0 — Operator & admin workflows
+## What 1.0 includes
 
-The current milestone adds a separate staff operations surface instead of exposing customer booking methods to internal users:
+- **Catalogue** — destinations, trips, details, search and filters through `TravelRepository`.
+- **Identity** — customer/operator/admin identities through `IdentityRepository`.
+- **Booking** — availability and customer reservations through `BookingRepository`.
+- **Operations** — staff queues, validated state transitions and audit events through `OperationsRepository`.
+- **Security boundaries** — server-side role checks, ownership checks and trusted price/availability validation.
+- **Release quality** — source-safety checks, TypeScript, production build, HTTP smoke tests and dependency audit in CI.
 
-- fixed fictional `customer`, `operator` and `admin` identities;
-- server-side role checks for customer and staff routes/actions;
-- dedicated `OperationsRepository` capability boundary;
-- operator dashboard with pending/confirmed/cancelled metrics;
-- reservation queue with status filtering;
-- role-protected reservation detail;
-- validated reservation transitions (`pending → confirmed/cancelled`, `confirmed → cancelled`);
-- fictional staff audit trail recording actor, role, previous/new status and timestamp;
-- production-safe operations defaults;
-- customer and staff surfaces kept separate even when a session exists.
-
-The demo staff selector is intentionally available only for fictional data. Production roles must come from a trusted identity provider or backend and must be re-authorized on the server.
-
-## Booking integrity
-
-v0.4 introduced availability and reservations behind `BookingRepository`. The browser never submits a trusted reservation total: the server resolves the trip and availability, validates capacity and party size, uses the trusted price/currency and calculates the total before writing.
-
-The demo booking/operations adapters store only fictional records in HTTP-only cookies and are **not** production inventory, booking, payment or authorization systems.
+The bundled adapters contain only fictional demo data. They are intentionally replaceable examples, **not** production authentication, inventory, payment, booking or backoffice systems.
 
 ## Architecture
 
 ```text
-Public catalogue          Customer area             Staff operations
-      |                         |                         |
-      v                         v                         v
-TravelRepository        IdentityRepository        server role checks
-      |                         |                         |
- Demo / REST              demo / future auth             v
-                                                     OperationsRepository
-                                                          |
-                                                    demo / CRM / ERP /
-                                                    booking backoffice
+Public catalogue           Customer area              Staff operations
+      |                          |                           |
+      v                          v                           v
+TravelRepository         IdentityRepository          server RBAC
+      |                          |                           |
+ Demo / REST              Demo / future auth                 v
+                                                       OperationsRepository
+                                                            |
+                                                 demo / CRM / ERP / backoffice
 
-Customer booking writes
+Customer reservation write
       |
 server validation
       |
 BookingRepository
       |
-demo / booking engine
+demo / booking engine / supplier
 ```
 
-Read:
+Provider-specific payloads stay inside adapters rather than leaking through pages and components.
 
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
-- [`docs/API-CONTRACT.md`](docs/API-CONTRACT.md)
-- [`docs/IDENTITY.md`](docs/IDENTITY.md)
-- [`docs/BOOKING.md`](docs/BOOKING.md)
-- [`docs/OPERATIONS.md`](docs/OPERATIONS.md)
+## End-to-end demo
 
-## Stack
+1. Browse destinations and trips.
+2. Start the fictional customer session.
+3. Choose availability and create a demo reservation.
+4. Review it in the customer account.
+5. Switch to the fictional operator/admin surface.
+6. Confirm or cancel the reservation.
+7. Inspect the generated audit event.
 
-- Next.js 16.3.1;
-- React / ReactDOM 19.2.8;
-- TypeScript 6;
-- Node.js 24 LTS target;
-- ports-and-adapters boundaries for catalogue, identity, booking and operations;
-- GitHub Actions CI with source-safety, type, build and production dependency checks;
-- MIT license.
+Browser-supplied roles, totals and state transitions never become authoritative decisions.
 
 ## Quick start
 
-Requirements: **Node.js 24 LTS**.
+Requires **Node.js 24 LTS**. The project declares the npm toolchain and exact direct dependency versions in `package.json`.
 
 ```bash
-git clone <your-fork-url>
+git clone https://github.com/Emmakex/open-travel-platform.git
 cd open-travel-platform
 npm install
 cp .env.example .env.local
 npm run dev
 ```
 
-Open `http://localhost:3000`. During local development catalogue, identity, booking and staff operations use fictional demo adapters without external infrastructure.
+Open `http://localhost:3000`.
 
-A useful end-to-end demo is:
-
-1. start the fictional customer session;
-2. create a reservation from a trip;
-3. open `/operator/sign-in` and switch to the fictional operator/admin identity;
-4. review the reservation and change its status;
-5. inspect the generated audit event.
-
-## Routes
+## Main routes
 
 ```text
 /                                landing page
 /destinations                    destination catalogue
-/destinations/[slug]             destination detail + related trips
-/trips                           searchable/filterable trip catalogue
+/destinations/[slug]             destination detail
+/trips                           searchable/filterable trips
 /trips/[slug]                    trip detail
-/trips/[slug]/book               availability + customer reservation form
-/account/sign-in                 customer identity entry
+/trips/[slug]/book               availability + reservation
+/account/sign-in                 customer demo entry
 /account                         protected customer account
-/account/reservations            customer reservation history
-/account/reservations/[id]       customer reservation detail/cancellation
-/operator/sign-in                fictional operator/admin entry
-/operator                        role-protected operations dashboard
+/account/reservations            reservation history
+/account/reservations/[id]       customer reservation detail
+/operator/sign-in                operator/admin demo entry
+/operator                        operations dashboard
 /operator/reservations           staff reservation queue
-/operator/reservations/[id]      staff status workflow + audit history
+/operator/reservations/[id]      status workflow + audit history
 ```
 
 ## Configuration
@@ -133,61 +109,53 @@ OPERATIONS_MODE=demo
 DEMO_OPERATIONS_ENABLED=false
 ```
 
-`NEXT_PUBLIC_*` values are browser-visible and must never contain secrets. Identity, booking and operations configuration is server-only.
+`NEXT_PUBLIC_*` variables are browser-visible and must never contain secrets. In production, identity, booking and operations default to **disabled** when their mode variables are omitted. Fictional demo writes require explicit opt-in and must never be used with real customer or commercial data.
 
-Development defaults to demo adapters. Production defaults identity, booking and operations to disabled when their mode variables are omitted. Fictional demo identity/booking/operations writes in production require explicit opt-in.
+## Integration and production docs
 
-## Repository layout
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — capability and trust boundaries.
+- [`docs/API-CONTRACT.md`](docs/API-CONTRACT.md) — generic catalogue REST contract.
+- [`docs/IDENTITY.md`](docs/IDENTITY.md) — replacing demo identity.
+- [`docs/BOOKING.md`](docs/BOOKING.md) — booking integrity and adapter rules.
+- [`docs/OPERATIONS.md`](docs/OPERATIONS.md) — staff authorization/workflows.
+- [`docs/ADAPTER-GUIDE.md`](docs/ADAPTER-GUIDE.md) — adding real integrations.
+- [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — deployment model.
+- [`docs/PRODUCTION-CHECKLIST.md`](docs/PRODUCTION-CHECKLIST.md) — mandatory production review.
 
-```text
-app/              routes, server actions and presentation
-components/       reusable UI/catalogue components
-domain/           pure travel, identity, booking and operations types
-data/             fictional catalogue, availability and identity fixtures
-repositories/     stable capability interfaces
-adapters/         infrastructure/provider implementations
-lib/              configuration, authorization and composition
-docs/             architecture and integration contracts
-scripts/          repository safety checks
-```
-
-## Quality checks
+## Quality gates
 
 ```bash
 npm run check:safety
+npm run check:release
 npm run typecheck
 npm run build
+npm run verify
 ```
 
-`npm run check` executes the local validation sequence. GitHub Actions also performs a production dependency audit on pull requests and `main`.
+CI resolves a fresh dependency lock, performs a clean `npm ci` install, validates the release, builds the application, starts the production server, smoke-tests representative routes and runs `npm audit`.
 
-## Principles
+## Project principles
 
-- **Clean-room implementation** — original code, UI and fictional data created for this repository.
-- **Demo-first** — fresh clones are useful without external infrastructure.
-- **Adapter-based** — external systems sit behind explicit capabilities.
-- **Role-separated surfaces** — customer booking and staff operations are different capability boundaries.
-- **Server-authorized operations** — staff pages/actions re-check trusted role state server-side.
-- **Server-validated booking writes** — private mutations do not trust browser totals, ownership or availability claims.
-- **Auditable state changes** — demo staff transitions generate a minimal audit record.
-- **Secure defaults** — production demo capabilities are disabled unless explicitly enabled.
-- **Portable** — no mandatory hosting provider, CMS, auth provider, payment gateway, CRM or supplier.
-- **Open source** — MIT licensed from the first project commit.
+- Clean-room implementation and fictional demo fixtures.
+- Provider-neutral capability interfaces.
+- Server-authorized customer/staff operations.
+- Server-validated pricing, availability, ownership and state transitions.
+- Production-safe defaults.
+- No mandatory hosting, CMS, auth, CRM, payment or supplier vendor.
+- MIT licensed.
 
-## Roadmap
+## Version history
 
 | Version | Focus | Status |
 |---|---|---|
-| `0.1.0` | Foundation, demo data, architecture and CI | Done |
-| `0.2.0` | Catalogue, detail views, search and filtering | Done |
+| `0.1.0` | Foundation and CI | Done |
+| `0.2.0` | Catalogue and discovery | Done |
 | `0.3.0` | Identity and customer accounts | Done |
 | `0.4.0` | Reservations and availability | Done |
-| `0.5.0` | Operator/admin workflows | Current |
-| `1.0.0` | Stable reusable travel starter | Planned |
+| `0.5.0` | Operator/admin workflows | Done |
+| `1.0.0` | Stable starter and release hardening | Current |
 
-## Contributing and security
-
-See [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`SECURITY.md`](SECURITY.md).
+Future work is tracked in [`ROADMAP.md`](ROADMAP.md). For contribution, support and security guidance see [`CONTRIBUTING.md`](CONTRIBUTING.md), [`SUPPORT.md`](SUPPORT.md) and [`SECURITY.md`](SECURITY.md).
 
 ## License
 

@@ -44,6 +44,18 @@ for (const root of sourceRoots) {
     if (/fetch\(\s*["'`]https?:\/\//.test(content)) {
       findings.push(`${file}: hard-coded fetch URL; use configuration/adapters instead`);
     }
+
+    if (/\beval\s*\(|new\s+Function\s*\(/.test(content)) {
+      findings.push(`${file}: dynamic code execution is not allowed in the starter`);
+    }
+
+    if (/dangerouslySetInnerHTML/.test(content)) {
+      findings.push(`${file}: dangerouslySetInnerHTML requires explicit security review`);
+    }
+
+    if (/document\.cookie/.test(content)) {
+      findings.push(`${file}: browser-managed cookies are disallowed; keep session state server-side`);
+    }
   }
 }
 

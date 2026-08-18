@@ -8,9 +8,19 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      NEXT_PUBLIC_DATA_MODE: demo
+      IDENTITY_MODE: disabled
+      BOOKING_MODE: disabled
+      OPERATIONS_MODE: disabled
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -21,19 +31,56 @@ jobs:
           node-version: 24
           package-manager-cache: false
 
-      - name: Install dependencies
-        run: npm install --no-fund
+      - name: Resolve dependency lock
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+
+      - name: Clean install from resolved lock
+        run: npm ci --no-fund
 
       - name: Public safety check
         run: npm run check:safety
 
+      - name: Release consistency check
+        run: npm run check:release
+
       - name: Type check
         run: npm run typecheck
 
-      - name: Production build
-        env:
-          NEXT_PUBLIC_DATA_MODE: demo
+      - name: Production build with safe capability defaults
         run: npm run build
 
-      - name: Production dependency audit
-        run: npm audit --omit=dev --audit-level=high
+      - name: HTTP smoke tests
+        run: |
+          npm start > /tmp/open-travel-platform.log 2>&1 &
+          server_pid=$!
+          trap 'kill $server_pid 2>/dev/null || true' EXIT
+
+          ready=false
+          for attempt in {1..30}; do
+            if curl -fsS http://127.0.0.1:3000/ > /dev/null; then
+              ready=true
+              break
+            fi
+            sleep 1
+          done
+
+          if [ "$ready" != "true" ]; then
+            cat /tmp/open-travel-platform.log
+            exit 1
+          fi
+
+          for path in \
+            / \
+            /destinations \
+            /trips \
+            /trips/barcelona-city-break \
+            /trips/barcelona-city-break/book \
+            /account/sign-in \
+            /operator/sign-in \
+            /account \
+            /operator; do
+            curl -fsSL "http://127.0.0.1:3000${path}" > /dev/null
+          done
+
+      - name: Dependency audit
+        run: npm audit --audit-level=high

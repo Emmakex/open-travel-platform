@@ -1,0 +1,30 @@
+name: Dependency lock snapshot
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Resolve dependency graph
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+
+      - name: Upload lock snapshot
+        uses: actions/upload-artifact@v6
+        with:
+          name: npm-lockfile
+          path: package-lock.json
+          if-no-files-found: error
