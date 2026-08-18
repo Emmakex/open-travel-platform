@@ -19,6 +19,10 @@ class DisabledBookingRepository implements BookingRepository {
   async createReservation(_input: CreateReservationInput) {
     throw new Error("Booking is disabled in this deployment.");
   }
+
+  async cancelReservation() {
+    return null;
+  }
 }
 
 export function getBookingRepository(): BookingRepository {
