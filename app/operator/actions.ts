@@ -3,12 +3,12 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { demoIdentities } from "@/data/demo-identities";
-import type { ReservationStatus } from "@/domain/booking/types";
+import type { Reservation, ReservationStatus } from "@/domain/booking/types";
 import { hasOperationsAccess } from "@/lib/access-control";
 import { DEMO_SESSION_COOKIE, identityConfig } from "@/lib/identity-config";
+import { getIdentityRepository } from "@/lib/identity-repository";
 import { operationsConfig } from "@/lib/operations-config";
 import { getOperationsRepository } from "@/lib/operations-repository";
-import { getIdentityRepository } from "@/lib/identity-repository";
 
 async function startDemoStaffSession(identityId: string) {
   if (!identityConfig.demoSessionEnabled) {
@@ -71,20 +71,22 @@ export async function updateReservationStatusAction(formData: FormData) {
     redirect(`${detailUrl}?error=invalid-request`);
   }
 
+  let reservation: Reservation | null = null;
+
   try {
-    const reservation = await getOperationsRepository().updateReservationStatus({
+    reservation = await getOperationsRepository().updateReservationStatus({
       reservationId,
       actorIdentityId: identity.id,
       actorRole: identity.role,
       status: targetStatus
     });
-
-    if (!reservation) {
-      redirect("/operator/reservations?error=not-found");
-    }
-
-    redirect(`${detailUrl}?updated=${reservation.status}`);
   } catch {
     redirect(`${detailUrl}?error=invalid-transition`);
   }
+
+  if (!reservation) {
+    redirect("/operator/reservations?error=not-found");
+  }
+
+  redirect(`${detailUrl}?updated=${reservation.status}`);
 }
