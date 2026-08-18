@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createReservationAction } from "@/app/reservations/actions";
 import styles from "@/app/trips/[slug]/book/booking.module.css";
+import { hasCustomerAccess, hasOperationsAccess } from "@/lib/access-control";
 import { bookingConfig } from "@/lib/booking-config";
 import { getBookingRepository } from "@/lib/booking-repository";
 import { getIdentityRepository } from "@/lib/identity-repository";
@@ -52,6 +53,8 @@ export default async function BookTripPage({
     getBookingRepository().listAvailability(trip.id),
     getIdentityRepository().getCurrentIdentity()
   ]);
+  const customer = hasCustomerAccess(identity);
+  const staff = hasOperationsAccess(identity);
 
   return (
     <main className="section">
@@ -75,7 +78,14 @@ export default async function BookTripPage({
             </div>
           ) : null}
 
-          {identity && bookingConfig.demoWritesEnabled && availability.length > 0 ? (
+          {staff ? (
+            <div className={styles.notice}>
+              A staff session is active. Reservation creation is customer-only.{" "}
+              <Link className="text-link" href="/operator">Open operator console →</Link>
+            </div>
+          ) : null}
+
+          {customer && bookingConfig.demoWritesEnabled && availability.length > 0 ? (
             <form action={createReservationAction} className={styles.form}>
               <input type="hidden" name="tripSlug" value={trip.slug} />
 
@@ -99,7 +109,7 @@ export default async function BookTripPage({
             </form>
           ) : null}
 
-          {identity && !bookingConfig.demoWritesEnabled ? (
+          {customer && !bookingConfig.demoWritesEnabled ? (
             <div className={styles.notice}>
               Reservation writes are disabled in this deployment. A production booking adapter can
               implement the same `BookingRepository` contract.
