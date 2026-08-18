@@ -5,16 +5,16 @@
 Open Travel Platform is a clean-room travel product starter built to run immediately in demo mode and later connect to external APIs, CMSs, supplier systems or booking backends through explicit adapters.
 
 ![Version](https://img.shields.io/badge/version-0.1.0-0d1b2d)
-![Next.js](https://img.shields.io/badge/Next.js-16.2.11-000000)
+![Next.js](https://img.shields.io/badge/Next.js-16.3.1-000000)
 ![React](https://img.shields.io/badge/React-19.2-149eca)
-![TypeScript](https://img.shields.io/badge/TypeScript-7.0-3178c6)
+![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178c6)
 ![License](https://img.shields.io/badge/license-MIT-45d6b5)
 
 ## v0.1.0 — Foundation
 
 The first milestone establishes:
 
-- Next.js 16.2 / React 19.2 / TypeScript 7;
+- Next.js 16.3 / React 19.2 / TypeScript 6;
 - Node.js 24 LTS runtime target;
 - strict TypeScript configuration;
 - original responsive UI and demo content;
@@ -109,6 +109,10 @@ npm run build
 ```
 
 `npm run check` executes the complete local validation sequence. GitHub Actions also performs a production dependency audit on pull requests and `main`.
+
+## TypeScript version note
+
+TypeScript 7 is available, but its new native compiler does not currently expose the JavaScript compiler API expected by Next.js' build integration. The project therefore uses TypeScript 6.0 for stable framework compatibility and will move to TypeScript 7 when the integration no longer requires a compatibility layer.
 
 ## Principles
 
