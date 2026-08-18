@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { endDemoSession } from "@/app/account/actions";
 import styles from "@/app/account/account.module.css";
 import { getBookingRepository } from "@/lib/booking-repository";
 import { getIdentityRepository } from "@/lib/identity-repository";
+import { requireCustomerIdentity } from "@/lib/require-customer-identity";
 import { getTravelRepository } from "@/lib/travel-repository";
 
 export const metadata = {
@@ -12,12 +12,8 @@ export const metadata = {
 };
 
 export default async function AccountPage() {
+  const identity = await requireCustomerIdentity();
   const identityRepository = getIdentityRepository();
-  const identity = await identityRepository.getCurrentIdentity();
-
-  if (!identity) {
-    redirect("/account/sign-in");
-  }
 
   const [profile, trips, reservations] = await Promise.all([
     identityRepository.getCustomerProfile(identity.id),
@@ -49,9 +45,12 @@ export default async function AccountPage() {
             </div>
           </dl>
 
-          <form action={endDemoSession}>
-            <button className="button button-secondary" type="submit">End demo session</button>
-          </form>
+          <div className={styles.actions}>
+            <form action={endDemoSession}>
+              <button className="button button-secondary" type="submit">End demo session</button>
+            </form>
+            <Link className="button button-secondary" href="/operator/sign-in">Switch to staff demo</Link>
+          </div>
         </section>
 
         <aside className={styles.panel}>
