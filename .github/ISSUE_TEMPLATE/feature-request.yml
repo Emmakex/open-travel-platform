@@ -1,0 +1,43 @@
+name: Feature request
+description: Propose a reusable capability or improvement
+title: "feat: "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: Describe the reusable product problem, not only one vendor-specific implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed capability
+    validations:
+      required: true
+  - type: dropdown
+    id: boundary
+    attributes:
+      label: Capability boundary
+      options:
+        - Travel catalogue
+        - Identity / authorization
+        - Booking / availability
+        - Operator / admin operations
+        - New optional adapter
+        - UI / accessibility
+        - Quality / tooling
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: portability
+    attributes:
+      label: Portability considerations
+      description: Explain how the proposal can remain provider-neutral or optional.
+  - type: textarea
+    id: security
+    attributes:
+      label: Security / privacy impact
+      description: Note any new write paths, identity/role behavior, customer data or external integrations.
