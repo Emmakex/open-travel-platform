@@ -1,18 +1,19 @@
+import Link from "next/link";
 import type { Trip } from "@/domain/travel/types";
 
-const currency = new Intl.NumberFormat("en", {
+const euro = new Intl.NumberFormat("en", {
   style: "currency",
   currency: "EUR",
   maximumFractionDigits: 0
 });
 
 export function TripCard({ trip }: { trip: Trip }) {
-  const price = trip.currency === "EUR" ? currency.format(trip.fromPrice) : `${trip.fromPrice} ${trip.currency}`;
+  const price = trip.currency === "EUR" ? euro.format(trip.fromPrice) : `${trip.fromPrice} ${trip.currency}`;
 
   return (
     <article className="card">
       <div className="card-kicker">{trip.durationDays} day itinerary</div>
-      <h3>{trip.title}</h3>
+      <h3><Link href={`/trips/${trip.slug}`}>{trip.title}</Link></h3>
       <p>{trip.summary}</p>
       <ul className="highlight-list">
         {trip.highlights.map((highlight) => (
@@ -20,7 +21,7 @@ export function TripCard({ trip }: { trip: Trip }) {
         ))}
       </ul>
       <div className="trip-meta">
-        <span>Demo catalogue</span>
+        <Link className="text-link" href={`/trips/${trip.slug}`}>View trip →</Link>
         <strong>From {price}</strong>
       </div>
     </article>

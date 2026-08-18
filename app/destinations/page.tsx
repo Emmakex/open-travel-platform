@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import { DestinationCard } from "@/components/destination-card";
 import { getTravelRepository } from "@/lib/travel-repository";
 
 export const metadata: Metadata = {
   title: "Destinations",
-  description: "Demo destination catalogue for Open Travel Platform."
+  description: "Destination catalogue for Open Travel Platform."
 };
 
 export default async function DestinationsPage() {
@@ -18,19 +19,13 @@ export default async function DestinationsPage() {
             <h2>Destinations</h2>
           </div>
           <p>
-            These records come from the active repository adapter. Switch from demo to API mode
-            without changing this page.
+            Records come from the active repository adapter. Each destination now has a stable detail URL and related-trip view.
           </p>
         </div>
 
         <div className="grid-3">
           {destinations.map((destination) => (
-            <article className="card" key={destination.id}>
-              <div className="card-kicker">{destination.region}</div>
-              <h3>{destination.name}</h3>
-              <p>{destination.country}</p>
-              <p>{destination.summary}</p>
-            </article>
+            <DestinationCard destination={destination} key={destination.id} />
           ))}
         </div>
       </div>

@@ -10,6 +10,10 @@ export class HttpTravelRepository implements TravelRepository {
       next: { revalidate: 60 }
     });
 
+    if (response.status === 404) {
+      return null as T;
+    }
+
     if (!response.ok) {
       throw new Error(`Travel API request failed with status ${response.status}`);
     }
@@ -19,6 +23,10 @@ export class HttpTravelRepository implements TravelRepository {
 
   listDestinations() {
     return this.request<Destination[]>("/destinations");
+  }
+
+  getDestinationBySlug(slug: string) {
+    return this.request<Destination | null>(`/destinations/${encodeURIComponent(slug)}`);
   }
 
   listTrips() {

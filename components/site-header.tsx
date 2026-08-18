@@ -11,7 +11,7 @@ export function SiteHeader() {
         </Link>
         <nav className="nav-links" aria-label="Primary navigation">
           <Link href="/destinations">Destinations</Link>
-          <Link href="/#trips">Trips</Link>
+          <Link href="/trips">Trips</Link>
           <Link href="/#architecture">Architecture</Link>
           <a href="https://github.com/Emmakex" target="_blank" rel="noreferrer">GitHub</a>
         </nav>
