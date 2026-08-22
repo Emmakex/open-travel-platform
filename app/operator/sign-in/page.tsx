@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
+  signInStaffAction,
   startDemoAdminSession,
   startDemoOperatorSession
 } from "@/app/operator/actions";
@@ -8,10 +9,11 @@ import styles from "@/app/operator/operator.module.css";
 import { hasOperationsAccess } from "@/lib/access-control";
 import { identityConfig } from "@/lib/identity-config";
 import { getIdentityRepository } from "@/lib/identity-repository";
+import { ensureBootstrapAdmin } from "@/lib/staff-auth";
 
 export const metadata = {
   title: "Operator sign in | Kairoseth Travel",
-  description: "Staff access boundary for Kairoseth Travel operations."
+  description: "Secure staff access for Kairoseth Travel operations."
 };
 
 export default async function OperatorSignInPage({
@@ -26,50 +28,76 @@ export default async function OperatorSignInPage({
     redirect("/operator");
   }
 
+  const bootstrap = identityConfig.staffAuthEnabled
+    ? await ensureBootstrapAdmin().catch(() => ({ created: false, count: 0, configured: false }))
+    : null;
+
+  const errors: Record<string, string> = {
+    "invalid-credentials": "Email or password is incorrect.",
+    "auth-disabled": "Persistent staff authentication is disabled in this deployment.",
+    forbidden: "The current identity does not have operator access."
+  };
+
   return (
     <main className="section">
       <div className={`container ${styles.shell}`}>
         <section className={styles.panel}>
-          <div className="eyebrow">Staff identity boundary</div>
-          <h1>Operations access.</h1>
+          <div className="eyebrow">Staff access</div>
+          <h1>Operations sign in.</h1>
           <p className={styles.lead}>
-            Customer accounts are now persistent. Operator and admin access remains an explicit demo-only staff switch while the production staff identity layer is being built.
+            Staff accounts use a separate protected identity boundary from customer accounts.
           </p>
 
-          {error === "forbidden" ? (
-            <div className={styles.notice}>
-              The current identity does not have operator access. Staff permissions are checked on the server.
-            </div>
-          ) : null}
-
+          {error && errors[error] ? <div className={styles.notice}>{errors[error]}</div> : null}
           {demo === "disabled" ? (
             <div className={styles.notice}>Demo staff identity is disabled in this deployment.</div>
           ) : null}
 
           {identity?.role === "customer" ? (
             <div className={styles.notice}>
-              A customer session is active. Starting a staff session signs that customer session out before entering the operator console.
+              A customer session is active. Signing in as staff will close the customer session first.
             </div>
           ) : null}
 
-          {identityConfig.demoStaffEnabled ? (
-            <div className={styles.actions}>
-              <form action={startDemoOperatorSession}>
-                <button className="button button-primary" type="submit">Start demo operator</button>
+          {identityConfig.staffAuthEnabled ? (
+            <>
+              {bootstrap?.count === 0 && !bootstrap.configured ? (
+                <div className={styles.notice}>
+                  No staff administrator exists yet. Configure the one-time bootstrap admin environment variables and redeploy before signing in.
+                </div>
+              ) : null}
+              <form action={signInStaffAction} className={styles.editorForm}>
+                <label className={styles.field}>
+                  <span>Email</span>
+                  <input name="email" type="email" autoComplete="username" required />
+                </label>
+                <label className={styles.field}>
+                  <span>Password</span>
+                  <input name="password" type="password" autoComplete="current-password" required />
+                </label>
+                <button className="button button-primary" type="submit">Sign in to operations</button>
               </form>
-              <form action={startDemoAdminSession}>
-                <button className="button button-secondary" type="submit">Start demo admin</button>
-              </form>
-            </div>
+              <div className={styles.notice}>
+                Staff sessions expire after 8 hours. Customer and staff sessions cannot be active at the same time.
+              </div>
+            </>
+          ) : identityConfig.demoStaffEnabled ? (
+            <>
+              <div className={styles.actions}>
+                <form action={startDemoOperatorSession}>
+                  <button className="button button-primary" type="submit">Start demo operator</button>
+                </form>
+                <form action={startDemoAdminSession}>
+                  <button className="button button-secondary" type="submit">Start demo admin</button>
+                </form>
+              </div>
+              <div className={styles.notice}>
+                <strong>Temporary bridge.</strong> Set STAFF_AUTH_MODE=mongodb to replace these demo staff identities with persistent accounts.
+              </div>
+            </>
           ) : (
-            <div className={styles.notice}>
-              Staff demo access is disabled. Connect a trusted staff identity provider or persistent staff account source.
-            </div>
+            <div className={styles.notice}>Staff access is disabled in this deployment.</div>
           )}
-
-          <div className={styles.notice}>
-            <strong>Temporary staff bridge.</strong> Customer identities cannot self-assign operator/admin roles. The demo staff switch remains isolated and server-controlled until real staff authentication replaces it.
-          </div>
 
           <Link className="text-link" href="/">← Back to public catalogue</Link>
         </section>
