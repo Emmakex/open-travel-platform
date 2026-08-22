@@ -1,5 +1,6 @@
 export type CurrencyCode = "EUR" | "USD" | "GBP";
 export type TravelLocale = "en" | "es";
+export type TravelPublicationStatus = "draft" | "published";
 export type TravelMediaFocalPoint = "center" | "top" | "bottom" | "left" | "right";
 
 export type TravelMedia = {
@@ -42,6 +43,7 @@ export type Destination = {
   region: string;
   summary: string;
   featured: boolean;
+  publicationStatus?: TravelPublicationStatus;
   coverImage?: TravelMedia;
   gallery?: TravelMedia[];
   translations?: Partial<Record<TravelLocale, DestinationTranslation>>;
@@ -63,6 +65,7 @@ export type Trip = {
   coverImage?: TravelMedia;
   gallery?: TravelMedia[];
   featured: boolean;
+  publicationStatus?: TravelPublicationStatus;
   translations?: Partial<Record<TravelLocale, TripTranslation>>;
 };
 
