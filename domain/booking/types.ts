@@ -37,6 +37,7 @@ export interface ReservationTraveller {
   pricingBandId: string;
   pricingCode: string;
   pricingLabel: string;
+  pricingLabelEs?: string;
   unitPrice: number;
   consumesInventory: boolean;
 }
