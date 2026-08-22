@@ -30,8 +30,8 @@ export default async function SignInPage({
   const isEs = locale === "es";
   const errors: Record<string, string> = {
     "invalid-credentials": isEs
-      ? "El correo o la contraseña no son correctos."
-      : "The email or password is incorrect.",
+      ? "No se ha podido iniciar sesión. Comprueba tus credenciales. Tras varios intentos fallidos, el acceso se bloquea temporalmente durante 15 minutos."
+      : "Sign in was not successful. Check your credentials. After repeated failures, access is temporarily locked for 15 minutes.",
     "auth-disabled": isEs
       ? "El acceso de clientes está desactivado temporalmente."
       : "Customer sign in is temporarily disabled.",
