@@ -12,6 +12,13 @@ Open Travel Platform es un starter clean-room en Next.js con un flujo de viaje f
 ![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178c6)
 ![Node](https://img.shields.io/badge/Node-24_LTS-5fa04e)
 ![Licencia](https://img.shields.io/badge/license-MIT-45d6b5)
+[![Demo en vivo](https://img.shields.io/badge/demo_en_vivo-travel.kairoseth.com-45d6b5)](https://travel.kairoseth.com)
+
+## Demo en vivo
+
+Hay un despliegue público de referencia disponible en **[travel.kairoseth.com](https://travel.kairoseth.com)**.
+
+La instancia alojada utiliza los adaptadores demo con datos ficticios para que se pueda recorrer de extremo a extremo el catálogo, el flujo de reservas del cliente y el workflow de operator/admin. Está destinada únicamente a demostración y evaluación; no deben introducirse datos reales de clientes, pagos, inventario ni información comercial.
 
 ## Qué incluye 1.0
 
