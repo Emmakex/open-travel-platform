@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import styles from "@/app/operator/operator.module.css";
+import departureStyles from "@/components/operator/departure-editor.module.css";
 import type { TripDeparture } from "@/domain/booking/types";
 
 type EditableDeparture = TripDeparture & { key: string };
@@ -61,8 +62,8 @@ export function DepartureEditor({ departures = [] }: { departures?: TripDepartur
           {items.map((item, index) => {
             const remaining = Math.max(0, item.capacity - item.reservedSpaces);
             return (
-              <div className={styles.departureCard} key={item.key}>
-                <div className={styles.departureCardHeader}>
+              <div className={departureStyles.card} key={item.key}>
+                <div className={departureStyles.header}>
                   <div>
                     <strong>Departure {index + 1}</strong>
                     <span>{remaining} of {item.capacity} spaces available</span>
@@ -75,7 +76,7 @@ export function DepartureEditor({ departures = [] }: { departures?: TripDepartur
                 </div>
 
                 <input type="hidden" name="departureId" value={item.id} />
-                <div className={styles.departureGrid}>
+                <div className={departureStyles.grid}>
                   <label className={styles.field}>
                     <span>Departure date *</span>
                     <input name="departureDate" type="date" value={item.departureDate} onChange={(event) => update(index, { departureDate: event.target.value })} required />
