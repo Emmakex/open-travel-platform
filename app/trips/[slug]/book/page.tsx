@@ -6,7 +6,7 @@ import { hasCustomerAccess, hasOperationsAccess } from "@/lib/access-control";
 import { bookingConfig } from "@/lib/booking-config";
 import { getBookingRepository } from "@/lib/booking-repository";
 import { getLocale } from "@/lib/get-locale";
-import { getDictionary, localizeTrip } from "@/lib/i18n";
+import { formatCurrency, getDictionary, localizeTrip } from "@/lib/i18n";
 import { getIdentityRepository } from "@/lib/identity-repository";
 import { getTravelRepository } from "@/lib/travel-repository";
 import type { TravelLocale } from "@/domain/travel/types";
@@ -98,11 +98,14 @@ export default async function BookTripPage({
               <label className={styles.field}>
                 <span>{copy.booking.departure}</span>
                 <select name="availabilityId" required defaultValue={availability[0].id}>
-                  {availability.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {formatDate(item.departureDate, locale)} → {formatDate(item.returnDate, locale)} · {item.remainingSpaces} {copy.booking.spaces}
-                    </option>
-                  ))}
+                  {availability.map((item) => {
+                    const departurePrice = formatCurrency(item.unitPrice ?? trip.fromPrice, trip.currency, locale);
+                    return (
+                      <option key={item.id} value={item.id}>
+                        {formatDate(item.departureDate, locale)} → {formatDate(item.returnDate, locale)} · {item.remainingSpaces} {copy.booking.spaces} · {departurePrice}
+                      </option>
+                    );
+                  })}
                 </select>
               </label>
 
@@ -135,7 +138,8 @@ export default async function BookTripPage({
               <div className={styles.availabilityItem} key={item.id}>
                 <div>
                   <strong>{formatDate(item.departureDate, locale)}</strong><br />
-                  <span>{locale === "es" ? "a" : "to"} {formatDate(item.returnDate, locale)}</span>
+                  <span>{locale === "es" ? "a" : "to"} {formatDate(item.returnDate, locale)}</span><br />
+                  <span>{formatCurrency(item.unitPrice ?? trip.fromPrice, trip.currency, locale)} / {locale === "es" ? "persona" : "traveller"}</span>
                 </div>
                 <strong>{item.remainingSpaces} {copy.booking.left}</strong>
               </div>
