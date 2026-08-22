@@ -12,6 +12,13 @@ Open Travel Platform is a clean-room Next.js starter with a complete fictional t
 ![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178c6)
 ![Node](https://img.shields.io/badge/Node-24_LTS-5fa04e)
 ![License](https://img.shields.io/badge/license-MIT-45d6b5)
+[![Live demo](https://img.shields.io/badge/live_demo-travel.kairoseth.com-45d6b5)](https://travel.kairoseth.com)
+
+## Live demo
+
+A public reference deployment is available at **[travel.kairoseth.com](https://travel.kairoseth.com)**.
+
+The hosted instance runs the fictional demo adapters so visitors can explore the catalogue, customer booking flow and operator/admin workflow end to end. It is intended for demonstration and evaluation only; no real customer, payment, inventory or commercial data should be entered.
 
 ## What 1.0 includes
 
