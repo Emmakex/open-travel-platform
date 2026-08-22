@@ -9,7 +9,7 @@ export function DestinationCard({ destination }: { destination: Destination }) {
       <p>{destination.summary}</p>
       <div className="trip-meta">
         <span>{destination.country}</span>
-        <Link className="text-link" href={`/destinations/${destination.slug}`}>Explore →</Link>
+        <Link className="text-link" href={`/destinations/${destination.slug}`}>Discover →</Link>
       </div>
     </article>
   );
