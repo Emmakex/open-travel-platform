@@ -80,7 +80,8 @@
   color: var(--muted);
 }
 
-.field input {
+.field input,
+.field select {
   width: 100%;
   min-height: 48px;
   border: 1px solid var(--line);
@@ -91,7 +92,13 @@
   font: inherit;
 }
 
-.field input:focus {
+.field input:disabled {
+  opacity: 0.68;
+  cursor: not-allowed;
+}
+
+.field input:focus,
+.field select:focus {
   outline: 2px solid rgba(74, 222, 198, 0.35);
   outline-offset: 2px;
 }
