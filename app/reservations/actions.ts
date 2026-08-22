@@ -46,18 +46,26 @@ export async function createReservationAction(formData: FormData) {
     redirect(`${backToBooking}?error=insufficient-space`);
   }
 
-  const unitPrice = trip.fromPrice;
+  const unitPrice = availability.unitPrice ?? trip.fromPrice;
   const totalPrice = unitPrice * requestedPartySize;
 
-  const reservation = await bookingRepository.createReservation({
-    identityId: identity.id,
-    tripId: trip.id,
-    availabilityId: availability.id,
-    partySize: requestedPartySize,
-    unitPrice,
-    totalPrice,
-    currency: trip.currency
-  });
+  let reservation;
+  try {
+    reservation = await bookingRepository.createReservation({
+      identityId: identity.id,
+      tripId: trip.id,
+      availabilityId: availability.id,
+      partySize: requestedPartySize,
+      unitPrice,
+      totalPrice,
+      currency: trip.currency
+    });
+  } catch (error) {
+    if (error && typeof error === "object" && "code" in error && error.code === "DEPARTURE_UNAVAILABLE") {
+      redirect(`${backToBooking}?error=insufficient-space`);
+    }
+    throw error;
+  }
 
   redirect(`/account/reservations/${encodeURIComponent(reservation.id)}`);
 }
