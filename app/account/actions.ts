@@ -8,15 +8,17 @@ import {
   authenticateCustomer,
   createCustomerSession,
   registerCustomer,
-  revokeCustomerSession
+  revokeCustomerSession,
+  updateCustomerProfile
 } from "@/lib/customer-auth";
-import { getLocale } from "@/lib/get-locale";
+import { getLocale, localeCookieName } from "@/lib/get-locale";
 import {
   DEMO_SESSION_COOKIE,
   KTRAVEL_SESSION_COOKIE,
   identityConfig
 } from "@/lib/identity-config";
 import { DEMO_OPERATIONS_AUDIT_COOKIE } from "@/lib/operations-config";
+import { requireCustomerIdentity } from "@/lib/require-customer-identity";
 
 function value(formData: FormData, key: string) {
   const item = formData.get(key);
@@ -102,6 +104,51 @@ export async function signInCustomerAction(formData: FormData) {
   const session = await createCustomerSession(user.id);
   await setCustomerSessionCookie(session.token, session.expiresAt);
   redirect("/account");
+}
+
+export async function updateCustomerProfileAction(formData: FormData) {
+  if (!identityConfig.customerAuthEnabled) {
+    redirect("/account?error=profile-disabled");
+  }
+
+  const identity = await requireCustomerIdentity();
+  const firstName = value(formData, "firstName");
+  const lastName = value(formData, "lastName");
+  const phone = value(formData, "phone");
+  const country = value(formData, "country");
+  const preferredLocale = value(formData, "preferredLocale");
+
+  if (
+    !firstName || firstName.length > 80 ||
+    !lastName || lastName.length > 80 ||
+    phone.length > 40 ||
+    country.length > 80 ||
+    (preferredLocale !== "en" && preferredLocale !== "es")
+  ) {
+    redirect("/account/profile?error=validation");
+  }
+
+  const updated = await updateCustomerProfile(identity.id, {
+    firstName,
+    lastName,
+    phone: phone || undefined,
+    country: country || undefined,
+    preferredLocale
+  });
+
+  if (!updated) {
+    redirect("/account/profile?error=not-found");
+  }
+
+  const cookieStore = await cookies();
+  cookieStore.set(localeCookieName, preferredLocale, {
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365
+  });
+
+  redirect("/account?profile=updated");
 }
 
 export async function startDemoSession() {
