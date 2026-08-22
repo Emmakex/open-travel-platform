@@ -9,11 +9,7 @@ export const dictionaries = {
       operator: "Operator",
       brandTagline: "Travel experiences & operations"
     },
-    language: {
-      label: "Language",
-      en: "EN",
-      es: "ES"
-    },
+    language: { label: "Language", en: "EN", es: "ES" },
     home: {
       eyebrow: "Kairoseth Travel",
       title: "Discover extraordinary journeys. Book with clarity. Travel with confidence.",
@@ -109,31 +105,29 @@ export const dictionaries = {
       eyebrow: "Book your journey",
       intro: "Choose a departure and the number of travellers. Availability, remaining spaces and price are validated before the reservation is created.",
       customerRequired: "Customer session required.",
-      customerRequiredCopy: "Start the demo customer account before creating a reservation.",
+      customerRequiredCopy: "Sign in to your customer account before creating a reservation.",
       signIn: "Sign in →",
       staffActive: "A staff session is active. Reservation creation is customer-only.",
       openOperator: "Open operator console →",
       departure: "Departure",
       travellers: "Travellers",
       spaces: "spaces",
-      create: "Create demo reservation",
+      create: "Create reservation",
       availabilityEyebrow: "Availability",
-      departuresTitle: "Available departure windows",
-      departuresCopy: "These dates are fictional demo availability and are not connected to a live supplier.",
+      departuresTitle: "Available departures",
+      departuresCopy: "Availability is managed by Kairoseth Travel and validated against the current trip inventory.",
       left: "left",
       back: "← Back to trip",
       noDepartures: "No departures are currently available.",
-      writesDisabled: "Reservation writes are disabled in this deployment.",
+      writesDisabled: "Reservation creation is disabled in this deployment.",
       errors: {
-        bookingDisabled: "Demo reservation writes are disabled in this deployment.",
+        bookingDisabled: "Reservation creation is disabled in this deployment.",
         invalidParty: "Choose a party size between 1 and 8 travellers.",
         invalidAvailability: "The selected departure is no longer available.",
-        insufficientSpace: "The selected departure does not have enough remaining demo spaces."
+        insufficientSpace: "The selected departure does not have enough remaining spaces."
       }
     },
-    footer: {
-      product: "A Kairoseth travel technology product · 2026"
-    }
+    footer: { product: "A Kairoseth travel technology product · 2026" }
   },
   es: {
     nav: {
@@ -143,11 +137,7 @@ export const dictionaries = {
       operator: "Operador",
       brandTagline: "Experiencias y operaciones de viaje"
     },
-    language: {
-      label: "Idioma",
-      en: "EN",
-      es: "ES"
-    },
+    language: { label: "Idioma", en: "EN", es: "ES" },
     home: {
       eyebrow: "Kairoseth Travel",
       title: "Descubre viajes extraordinarios. Reserva con claridad. Viaja con confianza.",
@@ -243,31 +233,29 @@ export const dictionaries = {
       eyebrow: "Reserva tu viaje",
       intro: "Elige una salida y el número de viajeros. La disponibilidad, las plazas restantes y el precio se validan antes de crear la reserva.",
       customerRequired: "Necesitas una sesión de cliente.",
-      customerRequiredCopy: "Inicia la cuenta demo de cliente antes de crear una reserva.",
+      customerRequiredCopy: "Inicia sesión en tu cuenta de cliente antes de crear una reserva.",
       signIn: "Iniciar sesión →",
       staffActive: "Hay una sesión de personal activa. Las reservas solo pueden crearse como cliente.",
       openOperator: "Abrir consola de operador →",
       departure: "Salida",
       travellers: "Viajeros",
       spaces: "plazas",
-      create: "Crear reserva demo",
+      create: "Crear reserva",
       availabilityEyebrow: "Disponibilidad",
       departuresTitle: "Salidas disponibles",
-      departuresCopy: "Estas fechas son disponibilidad ficticia de demostración y no están conectadas a un proveedor real.",
+      departuresCopy: "La disponibilidad está gestionada por Kairoseth Travel y se valida con el inventario actual del viaje.",
       left: "disponibles",
       back: "← Volver al viaje",
       noDepartures: "No hay salidas disponibles actualmente.",
       writesDisabled: "La creación de reservas está desactivada en este despliegue.",
       errors: {
-        bookingDisabled: "La creación de reservas demo está desactivada en este despliegue.",
+        bookingDisabled: "La creación de reservas está desactivada en este despliegue.",
         invalidParty: "Elige entre 1 y 8 viajeros.",
         invalidAvailability: "La salida seleccionada ya no está disponible.",
-        insufficientSpace: "La salida seleccionada no tiene suficientes plazas demo disponibles."
+        insufficientSpace: "La salida seleccionada no tiene suficientes plazas disponibles."
       }
     },
-    footer: {
-      product: "Un producto de tecnología turística de Kairoseth · 2026"
-    }
+    footer: { product: "Un producto de tecnología turística de Kairoseth · 2026" }
   }
 } as const;
 
@@ -286,9 +274,5 @@ export function localizeTrip(trip: Trip, locale: TravelLocale): Trip {
 }
 
 export function formatCurrency(value: number, currency: string, locale: TravelLocale) {
-  return new Intl.NumberFormat(locale === "es" ? "es-ES" : "en-GB", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 0
-  }).format(value);
+  return new Intl.NumberFormat(locale === "es" ? "es-ES" : "en-GB", { style: "currency", currency, maximumFractionDigits: 0 }).format(value);
 }
