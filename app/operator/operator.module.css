@@ -20,11 +20,16 @@
   color: var(--muted);
 }
 
-.actions {
+.actions,
+.toolbar {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
   margin: 1.2rem 0;
+}
+
+.toolbar form {
+  margin: 0;
 }
 
 .notice {
@@ -63,7 +68,8 @@
   letter-spacing: 0.08em;
 }
 
-.list {
+.list,
+.managementList {
   display: grid;
   gap: 0.75rem;
 }
@@ -141,14 +147,140 @@
   color: var(--text);
 }
 
+.sectionHeader {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.managementRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) 110px 100px auto;
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.managementRow > div {
+  min-width: 0;
+}
+
+.managementRow strong {
+  display: block;
+  color: var(--text);
+  margin-bottom: 0.25rem;
+}
+
+.managementRow span {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.editorForm {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.field span,
+.checkboxField span {
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.field input,
+.field textarea,
+.field select {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.8rem 0.9rem;
+  background: rgba(7, 18, 32, 0.72);
+  color: var(--text);
+  font: inherit;
+}
+
+.field textarea {
+  resize: vertical;
+  min-height: 110px;
+}
+
+.field input:focus,
+.field textarea:focus,
+.field select:focus {
+  outline: 2px solid color-mix(in srgb, var(--accent) 60%, transparent);
+  outline-offset: 2px;
+}
+
+.checkboxField {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 48px;
+  padding-top: 1.7rem;
+}
+
+.checkboxField input {
+  width: 1rem;
+  height: 1rem;
+}
+
+.editorSection {
+  display: grid;
+  gap: 1rem;
+  margin-top: 0.5rem;
+  padding: 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255,255,255,0.02);
+}
+
 @media (max-width: 880px) {
   .metrics {
     grid-template-columns: 1fr 1fr;
   }
 
   .row,
-  .detailGrid {
+  .detailGrid,
+  .managementRow {
     grid-template-columns: 1fr;
+  }
+
+  .managementRow .badge {
+    margin-top: 0.2rem;
+  }
+}
+
+@media (max-width: 620px) {
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .checkboxField {
+    padding-top: 0;
+  }
+
+  .sectionHeader {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 
