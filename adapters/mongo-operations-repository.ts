@@ -106,14 +106,15 @@ export class MongoOperationsRepository implements OperationsRepository {
         }
 
         if (input.status === "cancelled") {
+          const inventorySpaces = current.inventorySpaces ?? current.partySize;
           await departures.updateOne(
             {
               id: current.availabilityId,
               tripId: current.tripId,
-              reservedSpaces: { $gte: current.partySize }
+              reservedSpaces: { $gte: inventorySpaces }
             },
             {
-              $inc: { reservedSpaces: -current.partySize },
+              $inc: { reservedSpaces: -inventorySpaces },
               $set: { updatedAt: new Date() }
             },
             { session }
