@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { createReservationAction } from "@/app/reservations/actions";
 import styles from "@/app/trips/[slug]/book/booking.module.css";
+import { TravellerBookingForm } from "@/components/traveller-booking-form";
 import { hasCustomerAccess, hasOperationsAccess } from "@/lib/access-control";
 import { bookingConfig } from "@/lib/booking-config";
 import { getBookingRepository } from "@/lib/booking-repository";
@@ -9,6 +9,10 @@ import { getLocale } from "@/lib/get-locale";
 import { formatCurrency, getDictionary, localizeTrip } from "@/lib/i18n";
 import { getIdentityRepository } from "@/lib/identity-repository";
 import { getTravelRepository } from "@/lib/travel-repository";
+import {
+  getTravellerBandPrice,
+  getTravellerPricingBands
+} from "@/lib/traveller-pricing";
 import type { TravelLocale } from "@/domain/travel/types";
 
 function formatDate(value: string, locale: TravelLocale) {
@@ -30,7 +34,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       ? locale === "es" ? `Reservar ${localizedTrip.title}` : `Book ${localizedTrip.title}`
       : locale === "es" ? "Reservar viaje" : "Book trip",
     description: localizedTrip
-      ? locale === "es" ? `Elige una salida para ${localizedTrip.title}.` : `Choose a departure for ${localizedTrip.title}.`
+      ? locale === "es" ? `Elige una salida y añade los viajeros de ${localizedTrip.title}.` : `Choose a departure and add travellers for ${localizedTrip.title}.`
       : locale === "es" ? "Elige una salida para tu viaje." : "Choose a trip departure."
   };
 }
@@ -50,7 +54,11 @@ export default async function BookTripPage({
     "booking-disabled": copy.booking.errors.bookingDisabled,
     "invalid-party-size": copy.booking.errors.invalidParty,
     "invalid-availability": copy.booking.errors.invalidAvailability,
-    "insufficient-space": copy.booking.errors.insufficientSpace
+    "insufficient-space": copy.booking.errors.insufficientSpace,
+    "invalid-travellers": locale === "es" ? "Revisa los datos de todos los viajeros." : "Review the details for every traveller.",
+    "lead-must-be-adult": locale === "es" ? "El viajero principal debe tener al menos 18 años en la fecha de salida." : "The lead traveller must be at least 18 on the departure date.",
+    "minor-guardian-required": locale === "es" ? "Todos los menores deben tener asociado un adulto responsable de la misma reserva." : "Every minor must be linked to a responsible adult on the same booking.",
+    "pricing-unavailable": locale === "es" ? "No se ha podido calcular una tarifa válida para uno de los viajeros." : "A valid fare could not be calculated for one of the travellers."
   };
   const travelRepository = getTravelRepository();
   const trip = await travelRepository.getTripBySlug(slug);
@@ -65,10 +73,11 @@ export default async function BookTripPage({
   const customer = hasCustomerAccess(identity);
   const staff = hasOperationsAccess(identity);
   const persistentBooking = bookingConfig.mode === "mongodb";
+  const pricingBands = getTravellerPricingBands(trip);
   const availabilityCopy = persistentBooking
     ? locale === "es"
-      ? "Disponibilidad gestionada por Kairoseth Travel y almacenada de forma persistente en el inventario del viaje."
-      : "Availability is managed by Kairoseth Travel and stored persistently against the trip inventory."
+      ? "Disponibilidad y tarifas validadas contra el inventario persistente de Kairoseth Travel. La edad se calcula en la fecha de salida."
+      : "Availability and fares are validated against Kairoseth Travel persistent inventory. Age is calculated on the departure date."
     : copy.booking.departuresCopy;
 
   return (
@@ -77,7 +86,11 @@ export default async function BookTripPage({
         <section className={styles.panel}>
           <div className="eyebrow">{copy.booking.eyebrow}</div>
           <h1>{localizedTrip.title}</h1>
-          <p className={styles.lead}>{copy.booking.intro}</p>
+          <p className={styles.lead}>
+            {locale === "es"
+              ? "Elige la salida e introduce los datos de cada viajero. Menores y adultos se tarifan según su edad real el día de salida."
+              : "Choose the departure and enter each traveller. Adults and minors are priced using their actual age on departure."}
+          </p>
 
           {error && errorMessages[error] ? (
             <div className={styles.error}>{errorMessages[error]}</div>
@@ -98,30 +111,15 @@ export default async function BookTripPage({
           ) : null}
 
           {customer && bookingConfig.writesEnabled && availability.length > 0 ? (
-            <form action={createReservationAction} className={styles.form}>
-              <input type="hidden" name="tripSlug" value={trip.slug} />
-
-              <label className={styles.field}>
-                <span>{copy.booking.departure}</span>
-                <select name="availabilityId" required defaultValue={availability[0].id}>
-                  {availability.map((item) => {
-                    const departurePrice = formatCurrency(item.unitPrice ?? trip.fromPrice, trip.currency, locale);
-                    return (
-                      <option key={item.id} value={item.id}>
-                        {formatDate(item.departureDate, locale)} → {formatDate(item.returnDate, locale)} · {item.remainingSpaces} {copy.booking.spaces} · {departurePrice}
-                      </option>
-                    );
-                  })}
-                </select>
-              </label>
-
-              <label className={styles.field}>
-                <span>{copy.booking.travellers}</span>
-                <input name="partySize" type="number" min="1" max="8" step="1" defaultValue="2" required />
-              </label>
-
-              <button className="button button-primary" type="submit">{copy.booking.create}</button>
-            </form>
+            <TravellerBookingForm
+              tripSlug={trip.slug}
+              fromPrice={trip.fromPrice}
+              currency={trip.currency}
+              pricingBands={pricingBands}
+              hasExplicitPricing={Boolean(trip.travellerPricing?.length)}
+              availability={availability}
+              locale={locale}
+            />
           ) : null}
 
           {customer && !bookingConfig.writesEnabled ? (
@@ -139,17 +137,31 @@ export default async function BookTripPage({
           <div className="eyebrow">{copy.booking.availabilityEyebrow}</div>
           <h2>{copy.booking.departuresTitle}</h2>
           <p className={styles.muted}>{availabilityCopy}</p>
-          <div className={styles.availabilityList}>
-            {availability.map((item) => (
-              <div className={styles.availabilityItem} key={item.id}>
-                <div>
-                  <strong>{formatDate(item.departureDate, locale)}</strong><br />
-                  <span>{locale === "es" ? "a" : "to"} {formatDate(item.returnDate, locale)}</span><br />
-                  <span>{formatCurrency(item.unitPrice ?? trip.fromPrice, trip.currency, locale)} / {locale === "es" ? "persona" : "traveller"}</span>
-                </div>
-                <strong>{item.remainingSpaces} {copy.booking.left}</strong>
+
+          <div className={styles.fareBands}>
+            {pricingBands.map((band) => (
+              <div key={band.id}>
+                <span>{locale === "es" ? (band.labelEs || band.label) : band.label} · {band.minAge}{band.maxAge === undefined ? "+" : `–${band.maxAge}`}</span>
+                <strong>{formatCurrency(band.price, trip.currency, locale)}</strong>
               </div>
             ))}
+          </div>
+
+          <div className={styles.availabilityList}>
+            {availability.map((item) => {
+              const prices = pricingBands.map((band) => getTravellerBandPrice({ trip, availability: item, band }));
+              const minimum = Math.min(...prices);
+              return (
+                <div className={styles.availabilityItem} key={item.id}>
+                  <div>
+                    <strong>{formatDate(item.departureDate, locale)}</strong><br />
+                    <span>{locale === "es" ? "a" : "to"} {formatDate(item.returnDate, locale)}</span><br />
+                    <span>{locale === "es" ? "desde" : "from"} {formatCurrency(minimum, trip.currency, locale)}</span>
+                  </div>
+                  <strong>{item.remainingSpaces} {copy.booking.left}</strong>
+                </div>
+              );
+            })}
           </div>
         </aside>
       </div>
