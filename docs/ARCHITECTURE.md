@@ -15,7 +15,11 @@ TravelRepository
         +--> DemoTravelRepository
         |
         +--> HttpTravelRepository
+        |
+        +--> MongoTravelRepository
 ```
+
+`MongoTravelRepository` is a server-only durable catalogue adapter. It reads the same `Destination` and `Trip` domain shapes as the demo and HTTP adapters, so switching catalogue storage does not require page/component changes.
 
 ### Identity and authorization
 
@@ -76,33 +80,56 @@ Pure TypeScript entities and value shapes. Domain files must not import Next.js,
 Interfaces consumed by application code. They describe capabilities, not transport details. Current boundaries are travel, identity, booking and operations.
 
 ### `adapters/`
-Infrastructure implementations. Current adapters include an in-memory travel catalogue, a generic HTTP travel adapter, fictional identity, cookie-backed fictional booking and cookie-backed fictional operations.
+Infrastructure implementations. Current travel adapters include the in-code demo catalogue, a generic HTTP catalogue adapter and a MongoDB catalogue adapter. Identity, booking and operations still use explicit fictional demo adapters in the starter.
 
 ### `data/`
-Original, non-production demo fixtures such as catalogue, availability and fixed fictional identities. Demo data exists so forks can run immediately and safely.
+Original, non-production demo fixtures such as catalogue, availability and fixed fictional identities. Demo data exists so forks can run immediately and safely. The protected operator catalogue screen can seed missing demo catalogue records into MongoDB without overwriting records that already exist.
 
 ### `lib/`
-Application configuration, capability composition, demo stores and shared authorization predicates. Security-sensitive server-only configuration lives here rather than in browser components.
+Application configuration, capability composition, MongoDB connection management, demo stores and shared authorization predicates. Security-sensitive server-only configuration lives here rather than in browser components.
 
 ### `app/` and `components/`
 Next.js presentation layer and server actions. UI code consumes capability interfaces instead of hard-coded external URLs or provider SDKs.
 
 ## Travel data modes
 
+Public presentation/noindex behaviour can remain in demo mode while catalogue storage changes behind the server boundary:
+
 ```text
 NEXT_PUBLIC_DATA_MODE=demo
+TRAVEL_DATA_MODE=demo
 ```
 
-No external travel service is required.
-
-For an external read-only catalogue:
+For the durable MongoDB catalogue:
 
 ```text
-NEXT_PUBLIC_DATA_MODE=api
+NEXT_PUBLIC_DATA_MODE=demo
+TRAVEL_DATA_MODE=mongodb
+MONGODB_URI=mongodb+srv://...
+MONGODB_DB_NAME=kairoseth_travel
+```
+
+`MONGODB_URI` and related credentials are server-only and must never use a `NEXT_PUBLIC_*` prefix.
+
+For an external read-only catalogue API:
+
+```text
+TRAVEL_DATA_MODE=api
 NEXT_PUBLIC_TRAVEL_API_URL=https://api.example.com
 ```
 
-See `API-CONTRACT.md`.
+When `TRAVEL_DATA_MODE` is omitted, the repository mode falls back to `NEXT_PUBLIC_DATA_MODE` for backward compatibility. See `API-CONTRACT.md`.
+
+## MongoDB catalogue collections
+
+The MongoDB adapter uses two collections:
+
+```text
+travel_destinations
+travel_trips
+```
+
+Protected catalogue administration creates unique indexes for stable `id` and `slug` fields plus a `destinationId` index for trip relationships. MongoDB `_id` and internal timestamps are stripped before domain entities cross the repository boundary.
 
 ## Identity modes
 
@@ -141,6 +168,8 @@ Private operations are validated on trusted server-side boundaries. Current rule
 
 - customer routes/actions require a resolved `customer` identity;
 - operator routes/actions require a resolved `operator` or `admin` identity;
+- MongoDB credentials remain server-side;
+- protected catalogue seed actions require operator/admin identity;
 - browser-supplied role values are never authoritative;
 - booking totals are derived from trusted trip data;
 - availability, remaining capacity and identity ownership are checked server-side;
@@ -150,6 +179,8 @@ Private operations are validated on trusted server-side boundaries. Current rule
 ## Demo-store limitation
 
 Cookie-backed demo stores exist to make a fresh clone useful with no database. They are intentionally browser-local, capped and fictional. They are not substitutes for durable multi-user storage, transactional inventory or audit infrastructure.
+
+MongoDB catalogue persistence solves durable destination/trip content only. Booking, customer identity and operations persistence remain separate capability migrations.
 
 ## Future boundaries
 

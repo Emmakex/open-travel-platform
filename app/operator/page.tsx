@@ -54,6 +54,7 @@ export default async function OperatorPage() {
 
           <div className={styles.actions}>
             <Link className="button button-primary" href="/operator/reservations">Review reservations</Link>
+            <Link className="button button-secondary" href="/operator/catalogue">Catalogue data</Link>
             <Link className="button button-secondary" href="/trips">Public catalogue</Link>
             <form action={endDemoStaffSession}>
               <button className="button button-secondary" type="submit">End staff session</button>
