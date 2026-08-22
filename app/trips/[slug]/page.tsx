@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { TravelMediaGallery } from "@/components/travel-media-gallery";
 import { getLocale } from "@/lib/get-locale";
 import {
   formatCurrency,
@@ -50,7 +52,7 @@ export default async function TripDetailPage({ params }: PageProps) {
 
   return (
     <main>
-      <section className="detail-hero">
+      <section className="detail-hero detail-hero-with-media">
         <div className="container detail-grid">
           <div>
             <div className="eyebrow">{localizedDestination?.name ?? copy.trips.eyebrow}</div>
@@ -62,13 +64,34 @@ export default async function TripDetailPage({ params }: PageProps) {
               </Link>
             ) : null}
           </div>
-          <div className="detail-facts">
-            <div><span>{copy.trips.duration}</span><strong>{trip.durationDays} {copy.trips.days}</strong></div>
-            <div><span>{copy.trips.startingPrice}</span><strong>{price}</strong></div>
-            <div><span>{copy.trips.highlightCount}</span><strong>{localizedTrip.highlights.length}</strong></div>
+          <div className="detail-side">
+            {trip.coverImage ? (
+              <div className="detail-cover">
+                <Image
+                  src={trip.coverImage.src}
+                  alt={trip.coverImage.alt ?? localizedTrip.title}
+                  fill
+                  priority
+                  sizes="(max-width: 880px) 100vw, 38vw"
+                />
+              </div>
+            ) : null}
+            <div className="detail-facts">
+              <div><span>{copy.trips.duration}</span><strong>{trip.durationDays} {copy.trips.days}</strong></div>
+              <div><span>{copy.trips.startingPrice}</span><strong>{price}</strong></div>
+              <div><span>{copy.trips.highlightCount}</span><strong>{localizedTrip.highlights.length}</strong></div>
+            </div>
           </div>
         </div>
       </section>
+
+      {trip.gallery?.length ? (
+        <section className="media-gallery-section">
+          <div className="container">
+            <TravelMediaGallery items={trip.gallery} title={localizedTrip.title} />
+          </div>
+        </section>
+      ) : null}
 
       <section className="section">
         <div className="container trip-detail-main">
