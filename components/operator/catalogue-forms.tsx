@@ -3,17 +3,19 @@ import { saveDestinationAction, saveTripAction } from "@/app/operator/catalogue/
 import styles from "@/app/operator/operator.module.css";
 import { DepartureEditor } from "@/components/operator/departure-editor";
 import { GalleryEditor, ItineraryEditor, MediaEditorCard } from "@/components/operator/structured-editors";
+import { TravellerPricingEditor } from "@/components/operator/traveller-pricing-editor";
 import type { TripDeparture } from "@/domain/booking/types";
 import type { Destination, TravelLocale, Trip } from "@/domain/travel/types";
 import type { MediaLibraryChoice } from "@/lib/media-library";
 import { publicationStatusLabel, tr } from "@/lib/operator-i18n";
+import { defaultTravellerPricingBands } from "@/lib/traveller-pricing";
 
 function ErrorNotice({ error, locale }: { error?: string; locale: TravelLocale }) {
   if (!error) return null;
   return (
     <div className={styles.notice}>
       {error === "validation"
-        ? tr(locale, "Complete all required fields with valid values. Check media URLs, itinerary rows and departure capacity/dates.", "Completa todos los campos obligatorios con valores válidos. Revisa las URL de imágenes, el itinerario y las fechas/cupos de las salidas.")
+        ? tr(locale, "Complete all required fields with valid values. Check age pricing, media URLs, itinerary rows and departure capacity/dates.", "Completa todos los campos obligatorios con valores válidos. Revisa precios por edad, URL de imágenes, itinerario y fechas/cupos de las salidas.")
         : tr(locale, "The record could not be saved. Check for a duplicate slug and review the runtime log.", "No se pudo guardar el registro. Comprueba si el slug está duplicado y revisa los logs de ejecución.")}
     </div>
   );
@@ -95,6 +97,9 @@ export function TripForm({ trip, destinations, departures = [], error, mediaLibr
   const isEditing = Boolean(trip);
   const returnTo = isEditing ? `/operator/catalogue/trips/${trip?.id}` : "/operator/catalogue/trips/new";
   const es = trip?.translations?.es;
+  const pricingBands = trip?.travellerPricing?.length
+    ? trip.travellerPricing
+    : defaultTravellerPricingBands(trip?.fromPrice ?? 0);
 
   return (
     <form action={saveTripAction} className={styles.editorForm}>
@@ -128,7 +133,15 @@ export function TripForm({ trip, destinations, departures = [], error, mediaLibr
         </div>
       </div>
 
-      <DepartureEditor departures={departures} locale={locale} />
+      <TravellerPricingEditor bands={trip?.travellerPricing} fromPrice={trip?.fromPrice ?? 0} locale={locale} />
+
+      {!trip?.travellerPricing?.length && isEditing ? (
+        <div className={styles.notice}>
+          {tr(locale, "Save the traveller pricing bands once before fine-tuning per-departure overrides. Legacy departure prices are shown for every band during this first migration save.", "Guarda una vez las bandas de precios por viajero antes de ajustar los precios de cada salida. En esta primera migración se muestra el precio antiguo de la salida en todas las bandas.")}
+        </div>
+      ) : null}
+
+      <DepartureEditor departures={departures} pricingBands={pricingBands} legacySinglePrice={!trip?.travellerPricing?.length} locale={locale} />
 
       <div className={styles.editorSection}>
         <div><div className="eyebrow">{tr(locale, "Cover media", "Imagen de portada")}</div><p className={styles.muted}>{tr(locale, "Upload or reuse the hero image for this travel product.", "Sube o reutiliza la imagen principal de este producto de viaje.")}</p></div>
@@ -152,7 +165,7 @@ export function TripForm({ trip, destinations, departures = [], error, mediaLibr
       <ItineraryEditor itinerary={es?.itinerary} suffix="Es" label={tr(locale, "Spanish itinerary", "Itinerario en español")} locale={locale} />
 
       <div className={styles.stickySaveBar}>
-        <div><strong>{isEditing ? tr(locale, "Save trip changes", "Guardar cambios del viaje") : tr(locale, "Create trip", "Crear viaje")}</strong><span>{tr(locale, "Product, departures and inventory are written to MongoDB when you save.", "El producto, las salidas y el inventario se guardan en MongoDB al confirmar.")}</span></div>
+        <div><strong>{isEditing ? tr(locale, "Save trip changes", "Guardar cambios del viaje") : tr(locale, "Create trip", "Crear viaje")}</strong><span>{tr(locale, "Product, traveller pricing, departures and inventory are written to MongoDB when you save.", "El producto, los precios por viajero, las salidas y el inventario se guardan en MongoDB al confirmar.")}</span></div>
         <div className={styles.actionsCompact}>
           <Link className="button button-secondary" href="/operator/catalogue">{tr(locale, "Cancel", "Cancelar")}</Link>
           <button className="button button-primary" type="submit">{isEditing ? tr(locale, "Save trip", "Guardar viaje") : tr(locale, "Create trip", "Crear viaje")}</button>
