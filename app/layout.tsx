@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import "./visual-polish.css";
+import "./rich-travel.css";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { appConfig } from "@/lib/config";
+import { getLocale } from "@/lib/get-locale";
 
 export const metadata: Metadata = {
   title: {
@@ -19,13 +21,15 @@ export const metadata: Metadata = {
     : undefined
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const locale = await getLocale();
+
   return (
-    <html lang="en">
+    <html lang={locale}>
       <body>
-        <SiteHeader />
+        <SiteHeader locale={locale} />
         {children}
-        <SiteFooter />
+        <SiteFooter locale={locale} />
       </body>
     </html>
   );
