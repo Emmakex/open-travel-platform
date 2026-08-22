@@ -3,9 +3,11 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { demoIdentities } from "@/data/demo-identities";
+import { recordAuthAudit } from "@/lib/auth-security";
 import { DEMO_RESERVATIONS_COOKIE } from "@/lib/booking-config";
 import {
   authenticateCustomer,
+  changeCustomerPassword,
   createCustomerSession,
   registerCustomer,
   revokeCustomerSession,
@@ -160,6 +162,36 @@ export async function updateCustomerProfileAction(formData: FormData) {
   redirect("/account?profile=updated");
 }
 
+export async function changeCustomerPasswordAction(formData: FormData) {
+  if (!identityConfig.customerAuthEnabled) {
+    redirect("/account/security?error=auth-disabled");
+  }
+
+  const identity = await requireCustomerIdentity();
+  const currentPassword = value(formData, "currentPassword");
+  const newPassword = value(formData, "newPassword");
+  const confirmPassword = value(formData, "confirmPassword");
+
+  if (
+    !currentPassword ||
+    newPassword.length < 10 ||
+    newPassword.length > 128 ||
+    newPassword !== confirmPassword ||
+    newPassword === currentPassword
+  ) {
+    redirect("/account/security?error=validation");
+  }
+
+  const changed = await changeCustomerPassword(identity.id, currentPassword, newPassword);
+  if (!changed) {
+    redirect("/account/security?error=current-password");
+  }
+
+  const session = await createCustomerSession(identity.id);
+  await setCustomerSessionCookie(session.token, session.expiresAt);
+  redirect("/account/security?changed=1");
+}
+
 export async function startDemoSession() {
   if (!identityConfig.demoSessionEnabled) {
     redirect("/account/sign-in?demo=disabled");
@@ -178,11 +210,18 @@ export async function startDemoSession() {
 }
 
 export async function endCustomerSession() {
+  const identity = await requireCustomerIdentity();
   const cookieStore = await cookies();
   const mongoToken = cookieStore.get(KTRAVEL_SESSION_COOKIE)?.value;
 
   if (mongoToken) {
     await revokeCustomerSession(mongoToken).catch(() => undefined);
+    await recordAuthAudit({
+      scope: "customer",
+      event: "sign_out",
+      subjectId: identity.id,
+      email: identity.email
+    }).catch(() => undefined);
   }
 
   cookieStore.delete(KTRAVEL_SESSION_COOKIE);
