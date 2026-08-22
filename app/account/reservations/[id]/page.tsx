@@ -7,6 +7,12 @@ import { bookingConfig } from "@/lib/booking-config";
 import { getBookingRepository } from "@/lib/booking-repository";
 import { getLocale } from "@/lib/get-locale";
 import { formatCurrency, getDictionary, localizeTrip } from "@/lib/i18n";
+import {
+  paymentMethodLabel,
+  paymentStatusLabel,
+  paymentTransactionTypeLabel
+} from "@/lib/payment-i18n";
+import { getPaymentRepository } from "@/lib/payment-repository";
 import { requireCustomerIdentity } from "@/lib/require-customer-identity";
 import { getTravelRepository } from "@/lib/travel-repository";
 import type { TravelLocale } from "@/domain/travel/types";
@@ -17,6 +23,22 @@ function formatDate(value: string, locale: TravelLocale) {
     month: "short",
     day: "numeric"
   }).format(new Date(`${value}T00:00:00Z`));
+}
+
+function formatDateTime(value: string, locale: TravelLocale) {
+  return new Intl.DateTimeFormat(locale === "es" ? "es-ES" : "en-GB", {
+    dateStyle: "medium",
+    timeStyle: "short"
+  }).format(new Date(value));
+}
+
+function formatMoney(value: number, currency: string, locale: TravelLocale) {
+  return new Intl.NumberFormat(locale === "es" ? "es-ES" : "en-GB", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value);
 }
 
 export const metadata = {
@@ -43,9 +65,12 @@ export default async function ReservationDetailPage({
   if (!reservation) notFound();
 
   const travelRepository = getTravelRepository();
-  const [trips, availability] = await Promise.all([
+  const paymentRepository = getPaymentRepository();
+  const [trips, availability, paymentSummary, paymentTransactions] = await Promise.all([
     travelRepository.listTrips(),
-    bookingRepository.listAvailability(reservation.tripId)
+    bookingRepository.listAvailability(reservation.tripId),
+    paymentRepository.getSummary(reservation),
+    paymentRepository.listTransactions(reservation.id)
   ]);
 
   const trip = trips.find((item) => item.id === reservation.tripId);
@@ -76,6 +101,7 @@ export default async function ReservationDetailPage({
 
           <dl className={styles.profileList}>
             <div><dt>{copy.status}</dt><dd>{status}</dd></div>
+            <div><dt>{locale === "es" ? "Estado del pago" : "Payment status"}</dt><dd>{paymentStatusLabel(paymentSummary.status, locale)}</dd></div>
             <div><dt>{generalCopy.booking.travellers}</dt><dd>{reservation.partySize}</dd></div>
             <div><dt>{copy.unitPrice}</dt><dd>{formatCurrency(reservation.unitPrice, reservation.currency, locale)}</dd></div>
             <div><dt>{copy.total}</dt><dd>{formatCurrency(reservation.totalPrice, reservation.currency, locale)}</dd></div>
@@ -92,6 +118,44 @@ export default async function ReservationDetailPage({
           ) : null}
 
           <p><Link className="text-link" href="/account/reservations">{copy.all}</Link></p>
+        </section>
+
+        <section className={styles.panel} style={{ marginTop: "1rem" }}>
+          <div className="eyebrow">{locale === "es" ? "Pagos" : "Payments"}</div>
+          <h2>{locale === "es" ? "Resumen de pago" : "Payment summary"}</h2>
+          <p className={styles.lead}>
+            {locale === "es"
+              ? "Consulta los importes registrados para esta reserva. Los pagos online se incorporarán sobre esta misma capa de pagos."
+              : "Review the amounts recorded for this reservation. Online payments will use this same payment layer."}
+          </p>
+
+          <dl className={styles.profileList}>
+            <div><dt>{locale === "es" ? "Estado" : "Status"}</dt><dd>{paymentStatusLabel(paymentSummary.status, locale)}</dd></div>
+            <div><dt>{locale === "es" ? "Total de la reserva" : "Reservation total"}</dt><dd>{formatMoney(paymentSummary.totalAmount, paymentSummary.currency, locale)}</dd></div>
+            <div><dt>{locale === "es" ? "Pagado" : "Paid"}</dt><dd>{formatMoney(paymentSummary.paidAmount, paymentSummary.currency, locale)}</dd></div>
+            <div><dt>{locale === "es" ? "Reembolsado" : "Refunded"}</dt><dd>{formatMoney(paymentSummary.refundedAmount, paymentSummary.currency, locale)}</dd></div>
+            <div><dt>{locale === "es" ? "Pendiente" : "Outstanding"}</dt><dd>{formatMoney(paymentSummary.outstandingAmount, paymentSummary.currency, locale)}</dd></div>
+          </dl>
+
+          <h3>{locale === "es" ? "Movimientos" : "Transactions"}</h3>
+          {paymentTransactions.length ? (
+            <div className={styles.profileList}>
+              {paymentTransactions.map((transaction) => (
+                <div key={transaction.id}>
+                  <dt>
+                    {paymentTransactionTypeLabel(transaction.type, locale)} · {formatDateTime(transaction.createdAt, locale)}
+                  </dt>
+                  <dd>
+                    {formatMoney(transaction.amount, transaction.currency, locale)} · {paymentMethodLabel(transaction.method, locale)}
+                  </dd>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className={styles.notice}>
+              {locale === "es" ? "Todavía no hay pagos registrados para esta reserva." : "No payments have been recorded for this reservation yet."}
+            </div>
+          )}
         </section>
       </div>
     </main>
