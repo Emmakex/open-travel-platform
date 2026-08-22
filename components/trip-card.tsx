@@ -1,14 +1,11 @@
 import Link from "next/link";
-import type { Trip } from "@/domain/travel/types";
+import type { TravelLocale, Trip } from "@/domain/travel/types";
+import { formatCurrency, getDictionary, localizeTrip } from "@/lib/i18n";
 
-const euro = new Intl.NumberFormat("en", {
-  style: "currency",
-  currency: "EUR",
-  maximumFractionDigits: 0
-});
-
-export function TripCard({ trip }: { trip: Trip }) {
-  const price = trip.currency === "EUR" ? euro.format(trip.fromPrice) : `${trip.fromPrice} ${trip.currency}`;
+export function TripCard({ trip, locale = "en" }: { trip: Trip; locale?: TravelLocale }) {
+  const localizedTrip = localizeTrip(trip, locale);
+  const copy = getDictionary(locale);
+  const price = formatCurrency(trip.fromPrice, trip.currency, locale);
 
   return (
     <article className="card trip-card">
@@ -16,22 +13,22 @@ export function TripCard({ trip }: { trip: Trip }) {
         className="card-media trip-card-media"
         data-visual={trip.slug}
         href={`/trips/${trip.slug}`}
-        aria-label={`Explore ${trip.title}`}
+        aria-label={`${copy.trips.explore} ${localizedTrip.title}`}
       >
-        <span className="card-media-label">{trip.durationDays} days</span>
-        <span className="card-media-title">From {price}</span>
+        <span className="card-media-label">{trip.durationDays} {copy.trips.days}</span>
+        <span className="card-media-title">{copy.trips.from} {price}</span>
       </Link>
       <div className="card-body">
-        <div className="card-kicker">Curated journey</div>
-        <h3><Link href={`/trips/${trip.slug}`}>{trip.title}</Link></h3>
-        <p>{trip.summary}</p>
+        <div className="card-kicker">{copy.home.featuredJourney}</div>
+        <h3><Link href={`/trips/${trip.slug}`}>{localizedTrip.title}</Link></h3>
+        <p>{localizedTrip.summary}</p>
         <ul className="highlight-list">
-          {trip.highlights.slice(0, 3).map((highlight) => (
+          {localizedTrip.highlights.slice(0, 3).map((highlight) => (
             <li key={highlight}>{highlight}</li>
           ))}
         </ul>
         <div className="trip-meta">
-          <Link className="text-link" href={`/trips/${trip.slug}`}>Explore trip →</Link>
+          <Link className="text-link" href={`/trips/${trip.slug}`}>{copy.trips.explore}</Link>
           <strong>{price}</strong>
         </div>
       </div>
