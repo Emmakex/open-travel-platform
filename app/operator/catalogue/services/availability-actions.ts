@@ -3,10 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type {
-  ServiceAvailabilityDraft,
-  ServiceInventoryMode
-} from "@/lib/service-availability";
-import type { TravelServiceType } from "@/domain/services/types";
+  ServiceInventoryMode,
+  TravelServiceType
+} from "@/domain/services/types";
+import type { ServiceAvailabilityDraft } from "@/lib/service-availability";
 import { requireOperationsIdentity } from "@/lib/require-operations-identity";
 import {
   saveServiceAvailabilitySlots,
@@ -44,7 +44,7 @@ export async function saveServiceAvailabilityAction(formData: FormData) {
   const ids = texts(formData, "slotId").filter(Boolean);
   const slots: ServiceAvailabilityDraft[] = ids.map((id) => {
     const rawPrice = text(formData, `slotPriceOverride__${id}`);
-    const slot: ServiceAvailabilityDraft = {
+    return {
       id,
       serviceId,
       serviceType,
@@ -56,7 +56,6 @@ export async function saveServiceAvailabilityAction(formData: FormData) {
       status: text(formData, `slotStatus__${id}`) === "closed" ? "closed" : "open",
       priceOverride: rawPrice === "" ? undefined : Number(rawPrice)
     };
-    return slot;
   });
 
   if (slots.some((slot) => !validateServiceAvailabilityDraft(slot))) {
