@@ -1,14 +1,18 @@
+import type { TravelLocale } from "@/domain/travel/types";
 import { appConfig } from "@/lib/config";
+import { getDictionary } from "@/lib/i18n";
 
-export function SiteFooter() {
+export function SiteFooter({ locale }: { locale: TravelLocale }) {
+  const copy = getDictionary(locale);
+
   return (
     <footer className="site-footer">
       <div className="container footer-row">
         <div>
           <strong>{appConfig.siteName}</strong>
-          <div>{appConfig.siteTagline}</div>
+          <div>{copy.nav.brandTagline}</div>
         </div>
-        <div>A Kairoseth travel technology product · 2026</div>
+        <div>{copy.footer.product}</div>
       </div>
     </footer>
   );

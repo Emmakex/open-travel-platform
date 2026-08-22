@@ -1,29 +1,45 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { Destination, Trip } from "@/domain/travel/types";
+import type { Destination, TravelLocale, Trip } from "@/domain/travel/types";
 import { TripCard } from "@/components/trip-card";
+import {
+  getDictionary,
+  localizeDestination,
+  localizeTrip
+} from "@/lib/i18n";
 
 type Props = {
   destinations: Destination[];
   trips: Trip[];
+  locale?: TravelLocale;
 };
 
-export function CatalogueExplorer({ destinations, trips }: Props) {
+export function CatalogueExplorer({ destinations, trips, locale = "en" }: Props) {
+  const copy = getDictionary(locale);
+  const labels = copy.trips.filters;
   const [query, setQuery] = useState("");
   const [destinationId, setDestinationId] = useState("all");
   const [duration, setDuration] = useState("all");
   const [budget, setBudget] = useState("all");
 
+  const localizedDestinations = useMemo(
+    () => destinations.map((destination) => localizeDestination(destination, locale)),
+    [destinations, locale]
+  );
+  const localizedTrips = useMemo(
+    () => trips.map((trip) => localizeTrip(trip, locale)),
+    [trips, locale]
+  );
   const destinationById = useMemo(
-    () => new Map(destinations.map((destination) => [destination.id, destination])),
-    [destinations]
+    () => new Map(localizedDestinations.map((destination) => [destination.id, destination])),
+    [localizedDestinations]
   );
 
   const results = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
 
-    return trips.filter((trip) => {
+    return localizedTrips.filter((trip) => {
       const destination = destinationById.get(trip.destinationId);
       const searchable = [
         trip.title,
@@ -49,7 +65,7 @@ export function CatalogueExplorer({ destinations, trips }: Props) {
 
       return matchesQuery && matchesDestination && matchesDuration && matchesBudget;
     });
-  }, [budget, destinationById, destinationId, duration, query, trips]);
+  }, [budget, destinationById, destinationId, duration, localizedTrips, query]);
 
   const resetFilters = () => {
     setQuery("");
@@ -60,62 +76,62 @@ export function CatalogueExplorer({ destinations, trips }: Props) {
 
   return (
     <div>
-      <div className="catalogue-toolbar" aria-label="Trip catalogue filters">
+      <div className="catalogue-toolbar" aria-label={labels.aria}>
         <label className="filter-field filter-search">
-          <span>Search</span>
+          <span>{labels.search}</span>
           <input
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="City, country, highlight…"
+            placeholder={labels.searchPlaceholder}
           />
         </label>
 
         <label className="filter-field">
-          <span>Destination</span>
+          <span>{labels.destination}</span>
           <select value={destinationId} onChange={(event) => setDestinationId(event.target.value)}>
-            <option value="all">All destinations</option>
-            {destinations.map((destination) => (
+            <option value="all">{labels.allDestinations}</option>
+            {localizedDestinations.map((destination) => (
               <option value={destination.id} key={destination.id}>{destination.name}</option>
             ))}
           </select>
         </label>
 
         <label className="filter-field">
-          <span>Duration</span>
+          <span>{labels.duration}</span>
           <select value={duration} onChange={(event) => setDuration(event.target.value)}>
-            <option value="all">Any length</option>
-            <option value="short">1–4 days</option>
-            <option value="medium">5–8 days</option>
-            <option value="long">9+ days</option>
+            <option value="all">{labels.anyLength}</option>
+            <option value="short">{labels.short}</option>
+            <option value="medium">{labels.medium}</option>
+            <option value="long">{labels.long}</option>
           </select>
         </label>
 
         <label className="filter-field">
-          <span>Starting price</span>
+          <span>{labels.price}</span>
           <select value={budget} onChange={(event) => setBudget(event.target.value)}>
-            <option value="all">Any budget</option>
-            <option value="under-750">Under €750</option>
-            <option value="750-1200">€750–€1,200</option>
-            <option value="over-1200">Over €1,200</option>
+            <option value="all">{labels.anyBudget}</option>
+            <option value="under-750">{labels.under750}</option>
+            <option value="750-1200">{labels.mid}</option>
+            <option value="over-1200">{labels.over1200}</option>
           </select>
         </label>
       </div>
 
       <div className="results-bar">
-        <strong>{results.length}</strong> {results.length === 1 ? "trip" : "trips"} found
-        <button type="button" className="filter-reset" onClick={resetFilters}>Reset filters</button>
+        <strong>{results.length}</strong> {results.length === 1 ? labels.trip : labels.trips} {labels.found}
+        <button type="button" className="filter-reset" onClick={resetFilters}>{labels.reset}</button>
       </div>
 
       {results.length ? (
         <div className="grid-3">
-          {results.map((trip) => <TripCard trip={trip} key={trip.id} />)}
+          {results.map((trip) => <TripCard trip={trip} locale={locale} key={trip.id} />)}
         </div>
       ) : (
         <div className="empty-state">
-          <strong>No trips match these filters.</strong>
-          <p>Reset the catalogue or broaden your search.</p>
-          <button type="button" className="button button-secondary" onClick={resetFilters}>Show all trips</button>
+          <strong>{labels.noResults}</strong>
+          <p>{labels.broaden}</p>
+          <button type="button" className="button button-secondary" onClick={resetFilters}>{labels.showAll}</button>
         </div>
       )}
     </div>

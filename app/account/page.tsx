@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { endDemoSession } from "@/app/account/actions";
 import styles from "@/app/account/account.module.css";
+import { getAccountCopy } from "@/lib/account-i18n";
 import { getBookingRepository } from "@/lib/booking-repository";
+import { getLocale } from "@/lib/get-locale";
+import { localizeTrip } from "@/lib/i18n";
 import { getIdentityRepository } from "@/lib/identity-repository";
 import { requireCustomerIdentity } from "@/lib/require-customer-identity";
 import { getTravelRepository } from "@/lib/travel-repository";
@@ -12,6 +15,8 @@ export const metadata = {
 };
 
 export default async function AccountPage() {
+  const locale = await getLocale();
+  const copy = getAccountCopy(locale).account;
   const identity = await requireCustomerIdentity();
   const identityRepository = getIdentityRepository();
 
@@ -20,51 +25,50 @@ export default async function AccountPage() {
     getTravelRepository().listTrips(),
     getBookingRepository().listReservations(identity.id)
   ]);
+  const suggestedTrip = trips[0] ? localizeTrip(trips[0], locale) : null;
+  const reservationLabel = locale === "es"
+    ? reservations.length === 1 ? "reserva" : "reservas"
+    : reservations.length === 1 ? "reservation" : "reservations";
 
   return (
     <main className="section">
       <div className={`container ${styles.grid}`}>
         <section className={styles.panel}>
-          <div className="eyebrow">Customer account</div>
+          <div className="eyebrow">{copy.eyebrow}</div>
           <h1>{identity.displayName}</h1>
-          <p className={styles.lead}>
-            Review your profile and keep your demo reservations together in one place.
-          </p>
 
           <dl className={styles.profileList}>
             <div><dt>Email</dt><dd>{profile?.email ?? identity.email}</dd></div>
-            <div><dt>Role</dt><dd>{identity.role}</dd></div>
-            <div><dt>Country</dt><dd>{profile?.country ?? "Not set"}</dd></div>
-            <div><dt>Locale</dt><dd>{profile?.preferredLocale ?? "Not set"}</dd></div>
+            <div><dt>{copy.role}</dt><dd>{locale === "es" ? "cliente" : identity.role}</dd></div>
+            <div><dt>{copy.country}</dt><dd>{profile?.country ?? "—"}</dd></div>
+            <div><dt>{copy.language}</dt><dd>{locale.toUpperCase()}</dd></div>
             <div>
-              <dt>Reservations</dt>
+              <dt>{copy.reservations}</dt>
               <dd>
-                {reservations.length} demo record{reservations.length === 1 ? "" : "s"} ·{" "}
-                <Link className="text-link" href="/account/reservations">View all →</Link>
+                {reservations.length} {reservationLabel} ·{" "}
+                <Link className="text-link" href="/account/reservations">{copy.viewAll}</Link>
               </dd>
             </div>
           </dl>
 
           <div className={styles.actions}>
             <form action={endDemoSession}>
-              <button className="button button-secondary" type="submit">End demo session</button>
+              <button className="button button-secondary" type="submit">{copy.endSession}</button>
             </form>
-            <Link className="button button-secondary" href="/operator/sign-in">Switch to staff demo</Link>
+            <Link className="button button-secondary" href="/operator/sign-in">{copy.switchStaff}</Link>
           </div>
         </section>
 
         <aside className={styles.panel}>
-          <div className="eyebrow">Suggested next trip</div>
-          {trips[0] ? (
+          <div className="eyebrow">{copy.suggested}</div>
+          {suggestedTrip && trips[0] ? (
             <>
-              <h2>{trips[0].title}</h2>
-              <p>{trips[0].summary}</p>
-              <Link className="text-link" href={`/trips/${trips[0].slug}`}>
-                View itinerary →
-              </Link>
+              <h2>{suggestedTrip.title}</h2>
+              <p>{suggestedTrip.summary}</p>
+              <Link className="text-link" href={`/trips/${trips[0].slug}`}>{copy.viewItinerary}</Link>
             </>
           ) : (
-            <p>No trips are currently available.</p>
+            <p>{copy.noTrips}</p>
           )}
         </aside>
       </div>

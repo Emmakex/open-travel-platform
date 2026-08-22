@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { CatalogueExplorer } from "@/components/catalogue-explorer";
+import { getLocale } from "@/lib/get-locale";
+import { getDictionary } from "@/lib/i18n";
 import { getTravelRepository } from "@/lib/travel-repository";
 
 export const metadata: Metadata = {
@@ -9,6 +11,8 @@ export const metadata: Metadata = {
 
 export default async function TripsPage() {
   const repository = getTravelRepository();
+  const locale = await getLocale();
+  const copy = getDictionary(locale);
   const [destinations, trips] = await Promise.all([
     repository.listDestinations(),
     repository.listTrips()
@@ -19,15 +23,12 @@ export default async function TripsPage() {
       <div className="container">
         <div className="section-heading">
           <div>
-            <div className="eyebrow">Find your journey</div>
-            <h2>Explore trips</h2>
+            <div className="eyebrow">{copy.trips.eyebrow}</div>
+            <h2>{copy.trips.title}</h2>
           </div>
-          <p>
-            Search by destination and compare journey length, highlights and starting price before
-            checking available departures.
-          </p>
+          <p>{copy.trips.copy}</p>
         </div>
-        <CatalogueExplorer destinations={destinations} trips={trips} />
+        <CatalogueExplorer destinations={destinations} trips={trips} locale={locale} />
       </div>
     </main>
   );
