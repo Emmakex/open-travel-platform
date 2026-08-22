@@ -14,7 +14,7 @@ class DisabledIdentityRepository implements IdentityRepository {
 }
 
 export function getIdentityRepository(): IdentityRepository {
-  if (identityConfig.mode === "mongodb") {
+  if (identityConfig.mode === "mongodb" || identityConfig.staffAuthEnabled) {
     return new MongoIdentityRepository();
   }
 

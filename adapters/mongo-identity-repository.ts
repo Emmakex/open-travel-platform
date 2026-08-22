@@ -9,8 +9,10 @@ import {
 import {
   DEMO_SESSION_COOKIE,
   KTRAVEL_SESSION_COOKIE,
+  KTRAVEL_STAFF_SESSION_COOKIE,
   identityConfig
 } from "@/lib/identity-config";
+import { resolveStaffSession, type SafeStaffUser } from "@/lib/staff-auth";
 import type { IdentityRepository } from "@/repositories/identity-repository";
 
 function toIdentity(user: StoredCustomerUser): UserIdentity {
@@ -19,6 +21,15 @@ function toIdentity(user: StoredCustomerUser): UserIdentity {
     email: user.email,
     displayName: user.displayName,
     role: "customer"
+  };
+}
+
+function toStaffIdentity(user: SafeStaffUser): UserIdentity {
+  return {
+    id: user.id,
+    email: user.email,
+    displayName: user.displayName,
+    role: user.role
   };
 }
 
@@ -37,8 +48,16 @@ function toProfile(user: StoredCustomerUser): CustomerProfile {
 export class MongoIdentityRepository implements IdentityRepository {
   async getCurrentIdentity() {
     const cookieStore = await cookies();
-    const customerToken = cookieStore.get(KTRAVEL_SESSION_COOKIE)?.value;
 
+    if (identityConfig.staffAuthEnabled) {
+      const staffToken = cookieStore.get(KTRAVEL_STAFF_SESSION_COOKIE)?.value;
+      if (staffToken) {
+        const staff = await resolveStaffSession(staffToken);
+        if (staff) return toStaffIdentity(staff);
+      }
+    }
+
+    const customerToken = cookieStore.get(KTRAVEL_SESSION_COOKIE)?.value;
     if (customerToken) {
       const customer = await resolveCustomerSession(customerToken);
       if (customer) return toIdentity(customer);
