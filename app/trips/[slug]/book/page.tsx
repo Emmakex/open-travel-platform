@@ -5,33 +5,33 @@ import styles from "@/app/trips/[slug]/book/booking.module.css";
 import { hasCustomerAccess, hasOperationsAccess } from "@/lib/access-control";
 import { bookingConfig } from "@/lib/booking-config";
 import { getBookingRepository } from "@/lib/booking-repository";
+import { getLocale } from "@/lib/get-locale";
+import { getDictionary, localizeTrip } from "@/lib/i18n";
 import { getIdentityRepository } from "@/lib/identity-repository";
 import { getTravelRepository } from "@/lib/travel-repository";
+import type { TravelLocale } from "@/domain/travel/types";
 
-const dateFormatter = new Intl.DateTimeFormat("en", {
-  year: "numeric",
-  month: "short",
-  day: "numeric"
-});
-
-const errorMessages: Record<string, string> = {
-  "booking-disabled": "Demo reservations are currently disabled.",
-  "invalid-party-size": "Choose a party size between 1 and 8 travellers.",
-  "invalid-availability": "The selected departure is no longer available.",
-  "insufficient-space": "The selected departure does not have enough remaining spaces."
-};
-
-function formatDate(value: string) {
-  return dateFormatter.format(new Date(`${value}T00:00:00Z`));
+function formatDate(value: string, locale: TravelLocale) {
+  return new Intl.DateTimeFormat(locale === "es" ? "es-ES" : "en-GB", {
+    year: "numeric",
+    month: "short",
+    day: "numeric"
+  }).format(new Date(`${value}T00:00:00Z`));
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  const locale = await getLocale();
   const trip = await getTravelRepository().getTripBySlug(slug);
+  const localizedTrip = trip ? localizeTrip(trip, locale) : null;
 
   return {
-    title: trip ? `Book ${trip.title}` : "Book trip",
-    description: trip ? `Choose a departure for ${trip.title}.` : "Choose a trip departure."
+    title: localizedTrip
+      ? locale === "es" ? `Reservar ${localizedTrip.title}` : `Book ${localizedTrip.title}`
+      : locale === "es" ? "Reservar viaje" : "Book trip",
+    description: localizedTrip
+      ? locale === "es" ? `Elige una salida para ${localizedTrip.title}.` : `Choose a departure for ${localizedTrip.title}.`
+      : locale === "es" ? "Elige una salida para tu viaje." : "Choose a trip departure."
   };
 }
 
@@ -44,11 +44,20 @@ export default async function BookTripPage({
 }) {
   const { slug } = await params;
   const { error } = await searchParams;
+  const locale = await getLocale();
+  const copy = getDictionary(locale);
+  const errorMessages: Record<string, string> = {
+    "booking-disabled": copy.booking.errors.bookingDisabled,
+    "invalid-party-size": copy.booking.errors.invalidParty,
+    "invalid-availability": copy.booking.errors.invalidAvailability,
+    "insufficient-space": copy.booking.errors.insufficientSpace
+  };
   const travelRepository = getTravelRepository();
   const trip = await travelRepository.getTripBySlug(slug);
 
   if (!trip) notFound();
 
+  const localizedTrip = localizeTrip(trip, locale);
   const [availability, identity] = await Promise.all([
     getBookingRepository().listAvailability(trip.id),
     getIdentityRepository().getCurrentIdentity()
@@ -60,12 +69,9 @@ export default async function BookTripPage({
     <main className="section">
       <div className={`container ${styles.grid}`}>
         <section className={styles.panel}>
-          <div className="eyebrow">Choose your departure</div>
-          <h1>{trip.title}</h1>
-          <p className={styles.lead}>
-            Select a departure and the number of travellers. This public environment uses fictional
-            availability and reservations so the complete booking journey can be explored safely.
-          </p>
+          <div className="eyebrow">{copy.booking.eyebrow}</div>
+          <h1>{localizedTrip.title}</h1>
+          <p className={styles.lead}>{copy.booking.intro}</p>
 
           {error && errorMessages[error] ? (
             <div className={styles.error}>{errorMessages[error]}</div>
@@ -73,15 +79,15 @@ export default async function BookTripPage({
 
           {!identity ? (
             <div className={styles.notice}>
-              <strong>Customer session required.</strong> Start the demo customer account before
-              creating a reservation. <Link className="text-link" href="/account/sign-in">Continue →</Link>
+              <strong>{copy.booking.customerRequired}</strong> {copy.booking.customerRequiredCopy}{" "}
+              <Link className="text-link" href="/account/sign-in">{copy.booking.signIn}</Link>
             </div>
           ) : null}
 
           {staff ? (
             <div className={styles.notice}>
-              A staff session is active. Reservations can only be created from the customer demo.{" "}
-              <Link className="text-link" href="/operator">Open operations →</Link>
+              {copy.booking.staffActive}{" "}
+              <Link className="text-link" href="/operator">{copy.booking.openOperator}</Link>
             </div>
           ) : null}
 
@@ -90,50 +96,48 @@ export default async function BookTripPage({
               <input type="hidden" name="tripSlug" value={trip.slug} />
 
               <label className={styles.field}>
-                <span>Departure</span>
+                <span>{copy.booking.departure}</span>
                 <select name="availabilityId" required defaultValue={availability[0].id}>
                   {availability.map((item) => (
                     <option key={item.id} value={item.id}>
-                      {formatDate(item.departureDate)} → {formatDate(item.returnDate)} · {item.remainingSpaces} spaces
+                      {formatDate(item.departureDate, locale)} → {formatDate(item.returnDate, locale)} · {item.remainingSpaces} {copy.booking.spaces}
                     </option>
                   ))}
                 </select>
               </label>
 
               <label className={styles.field}>
-                <span>Travellers</span>
+                <span>{copy.booking.travellers}</span>
                 <input name="partySize" type="number" min="1" max="8" step="1" defaultValue="2" required />
               </label>
 
-              <button className="button button-primary" type="submit">Create demo reservation</button>
+              <button className="button button-primary" type="submit">{copy.booking.create}</button>
             </form>
           ) : null}
 
           {customer && !bookingConfig.demoWritesEnabled ? (
-            <div className={styles.notice}>
-              Demo reservation creation is disabled in this environment.
-            </div>
+            <div className={styles.notice}>{copy.booking.writesDisabled}</div>
           ) : null}
 
           {availability.length === 0 ? (
-            <div className={styles.notice}>No departures are currently available for this trip.</div>
+            <div className={styles.notice}>{copy.booking.noDepartures}</div>
           ) : null}
 
-          <p><Link className="text-link" href={`/trips/${trip.slug}`}>← Back to trip</Link></p>
+          <p><Link className="text-link" href={`/trips/${trip.slug}`}>{copy.booking.back}</Link></p>
         </section>
 
         <aside className={styles.panel}>
-          <div className="eyebrow">Availability</div>
-          <h2>Upcoming departures</h2>
-          <p className={styles.muted}>These dates and spaces are fictional demo inventory, not live supplier availability.</p>
+          <div className="eyebrow">{copy.booking.availabilityEyebrow}</div>
+          <h2>{copy.booking.departuresTitle}</h2>
+          <p className={styles.muted}>{copy.booking.departuresCopy}</p>
           <div className={styles.availabilityList}>
             {availability.map((item) => (
               <div className={styles.availabilityItem} key={item.id}>
                 <div>
-                  <strong>{formatDate(item.departureDate)}</strong><br />
-                  <span>to {formatDate(item.returnDate)}</span>
+                  <strong>{formatDate(item.departureDate, locale)}</strong><br />
+                  <span>{locale === "es" ? "a" : "to"} {formatDate(item.returnDate, locale)}</span>
                 </div>
-                <strong>{item.remainingSpaces} left</strong>
+                <strong>{item.remainingSpaces} {copy.booking.left}</strong>
               </div>
             ))}
           </div>
