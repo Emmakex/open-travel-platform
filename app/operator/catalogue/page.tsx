@@ -2,7 +2,12 @@ import Link from "next/link";
 import { seedMongoCatalogueAction } from "@/app/operator/catalogue/actions";
 import styles from "@/app/operator/operator.module.css";
 import { getMongoCatalogueStatus } from "@/lib/mongo-travel-admin";
-import { isMongoConfigured } from "@/lib/mongodb";
+import {
+  diagnoseMongoConnectionError,
+  getMongoDatabaseName,
+  isMongoConfigured,
+  type MongoConnectionDiagnostic
+} from "@/lib/mongodb";
 import { requireOperationsIdentity } from "@/lib/require-operations-identity";
 import { travelDataConfig } from "@/lib/travel-data-config";
 
@@ -26,14 +31,19 @@ export default async function OperatorCataloguePage({
   const configured = isMongoConfigured();
 
   let status: Awaited<ReturnType<typeof getMongoCatalogueStatus>> | null = null;
-  let connectionError = false;
+  let diagnostic: MongoConnectionDiagnostic | null = null;
 
   try {
     status = await getMongoCatalogueStatus();
   } catch (error) {
-    connectionError = true;
-    console.error("MongoDB catalogue status check failed", error);
+    diagnostic = diagnoseMongoConnectionError(error);
+    console.error("MongoDB catalogue status check failed", {
+      code: diagnostic.code,
+      database: getMongoDatabaseName()
+    });
   }
+
+  const databaseName = status?.databaseName ?? getMongoDatabaseName();
 
   return (
     <main className="section">
@@ -52,7 +62,7 @@ export default async function OperatorCataloguePage({
               <span>Active mode</span>
             </div>
             <div className={styles.metric}>
-              <strong>{status?.databaseName ?? "—"}</strong>
+              <strong>{databaseName}</strong>
               <span>Database</span>
             </div>
             <div className={styles.metric}>
@@ -73,10 +83,19 @@ export default async function OperatorCataloguePage({
             </div>
           ) : null}
 
-          {connectionError ? (
+          {diagnostic ? (
             <div className={styles.notice}>
-              <strong>MongoDB is configured but the connection check failed.</strong> Verify the Atlas
-              network access list, database user and connection string, then redeploy.
+              <strong>{diagnostic.title}</strong> {diagnostic.detail}
+              <div style={{ marginTop: "0.65rem" }}>
+                Safe diagnostic code: <code>{diagnostic.code}</code>
+              </div>
+            </div>
+          ) : null}
+
+          {configured && status ? (
+            <div className={styles.notice}>
+              <strong>MongoDB connection successful.</strong> Atlas is reachable and the application can
+              read the <code>{databaseName}</code> catalogue collections.
             </div>
           ) : null}
 
@@ -93,7 +112,7 @@ export default async function OperatorCataloguePage({
             </div>
           ) : null}
 
-          {configured && !connectionError ? (
+          {configured && status ? (
             <>
               <div className={styles.notice}>
                 The seed is idempotent: it inserts only missing demo records by stable <code>id</code> and
