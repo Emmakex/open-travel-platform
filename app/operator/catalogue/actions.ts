@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import type { TripDeparture, TripDepartureStatus } from "@/domain/booking/types";
 import type {
   CurrencyCode,
+  TravellerPricingBand,
   TravelMedia,
   TravelMediaFocalPoint,
   TravelPublicationStatus,
@@ -20,6 +21,7 @@ import {
   seedDemoCatalogueToMongo
 } from "@/lib/mongo-travel-admin";
 import { requireOperationsIdentity } from "@/lib/require-operations-identity";
+import { validateTravellerPricingBands } from "@/lib/traveller-pricing";
 
 function text(formData: FormData, name: string) {
   const value = formData.get(name);
@@ -46,6 +48,10 @@ function normalizeSlug(value: string) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+function normalizeCode(value: string) {
+  return normalizeSlug(value).replace(/-/g, "_");
 }
 
 function safeReturnTo(formData: FormData, fallback: string) {
@@ -162,34 +168,58 @@ function parseItinerary(formData: FormData, suffix = ""): TripDay[] | null {
   return itinerary;
 }
 
-function parseDepartures(formData: FormData, tripId: string): TripDeparture[] | null {
-  const ids = texts(formData, "departureId");
-  const departureDates = texts(formData, "departureDate");
-  const returnDates = texts(formData, "returnDate");
-  const capacities = texts(formData, "departureCapacity");
-  const reservedValues = texts(formData, "departureReserved");
-  const prices = texts(formData, "departurePrice");
-  const statuses = texts(formData, "departureStatus");
-  const length = Math.max(ids.length, departureDates.length, returnDates.length, capacities.length, reservedValues.length, prices.length, statuses.length);
+function parseTravellerPricing(formData: FormData): TravellerPricingBand[] | null {
+  const ids = texts(formData, "pricingBandId").filter(Boolean);
+  const bands: TravellerPricingBand[] = ids.map((id) => {
+    const rawMaxAge = text(formData, `pricingMaxAge:${id}`);
+    return {
+      id,
+      code: normalizeCode(text(formData, `pricingCode:${id}`)),
+      label: text(formData, `pricingLabel:${id}`),
+      labelEs: text(formData, `pricingLabelEs:${id}`) || undefined,
+      minAge: Number(text(formData, `pricingMinAge:${id}`)),
+      maxAge: rawMaxAge === "" ? undefined : Number(rawMaxAge),
+      price: Number(text(formData, `pricingPrice:${id}`)),
+      consumesInventory: text(formData, `pricingConsumesInventory:${id}`) === "1"
+    };
+  });
+
+  bands.sort((a, b) => a.minAge - b.minAge);
+  return validateTravellerPricingBands(bands) ? bands : null;
+}
+
+function parseDepartures(
+  formData: FormData,
+  tripId: string,
+  pricingBands: TravellerPricingBand[]
+): TripDeparture[] | null {
+  const ids = texts(formData, "departureId").filter(Boolean);
   const departures: TripDeparture[] = [];
 
-  for (let index = 0; index < length; index += 1) {
-    const id = ids[index] || randomUUID();
-    const departureDate = departureDates[index] ?? "";
-    const returnDate = returnDates[index] ?? "";
-    const rawCapacity = capacities[index] ?? "";
-    const rawReserved = reservedValues[index] ?? "0";
-    const rawPrice = prices[index] ?? "";
-    const rawStatus = statuses[index] ?? "open";
+  for (const rawId of ids) {
+    const id = rawId || randomUUID();
+    const departureDate = text(formData, `departureDate:${id}`);
+    const returnDate = text(formData, `returnDate:${id}`);
+    const rawCapacity = text(formData, `departureCapacity:${id}`);
+    const rawReserved = text(formData, `departureReserved:${id}`) || "0";
+    const rawStatus = text(formData, `departureStatus:${id}`) || "open";
 
-    if (!departureDate && !returnDate && !rawCapacity && !rawPrice) continue;
+    if (!departureDate && !returnDate && !rawCapacity) continue;
 
     const capacity = Number(rawCapacity);
-    const reservedSpaces = Number(rawReserved || "0");
-    const unitPrice = rawPrice === "" ? undefined : Number(rawPrice);
+    const reservedSpaces = Number(rawReserved);
     const status = departureStatuses.has(rawStatus as TripDepartureStatus)
       ? (rawStatus as TripDepartureStatus)
       : "open";
+    const travellerPrices: Record<string, number> = {};
+
+    for (const band of pricingBands) {
+      const rawPrice = text(formData, `departureTravellerPrice:${id}:${band.id}`);
+      if (rawPrice === "") continue;
+      const price = Number(rawPrice);
+      if (!Number.isFinite(price) || price < 0) return null;
+      travellerPrices[band.id] = price;
+    }
 
     if (
       !isoDatePattern.test(departureDate) ||
@@ -199,12 +229,12 @@ function parseDepartures(formData: FormData, tripId: string): TripDeparture[] | 
       capacity < 1 ||
       !Number.isInteger(reservedSpaces) ||
       reservedSpaces < 0 ||
-      reservedSpaces > capacity ||
-      (unitPrice !== undefined && (!Number.isFinite(unitPrice) || unitPrice < 0))
+      reservedSpaces > capacity
     ) {
       return null;
     }
 
+    const adultBand = pricingBands.find((band) => band.code === "adult");
     departures.push({
       id,
       tripId,
@@ -213,7 +243,8 @@ function parseDepartures(formData: FormData, tripId: string): TripDeparture[] | 
       capacity,
       reservedSpaces,
       status: remainingStatus(status, capacity, reservedSpaces),
-      unitPrice
+      unitPrice: adultBand ? travellerPrices[adultBand.id] : undefined,
+      travellerPrices: Object.keys(travellerPrices).length ? travellerPrices : undefined
     });
   }
 
@@ -323,7 +354,8 @@ export async function saveTripAction(formData: FormData) {
   const gallery = parseGallery(formData);
   const itinerary = parseItinerary(formData);
   const itineraryEs = parseItinerary(formData, "Es");
-  const departures = parseDepartures(formData, id);
+  const travellerPricing = parseTravellerPricing(formData);
+  const departures = travellerPricing ? parseDepartures(formData, id, travellerPricing) : null;
 
   if (
     !title ||
@@ -338,6 +370,7 @@ export async function saveTripAction(formData: FormData) {
     gallery === null ||
     itinerary === null ||
     itineraryEs === null ||
+    travellerPricing === null ||
     departures === null
   ) {
     redirect(`${returnTo}?error=validation`);
@@ -368,6 +401,7 @@ export async function saveTripAction(formData: FormData) {
       durationDays: Math.round(durationDays),
       fromPrice,
       currency,
+      travellerPricing,
       highlights,
       itinerary,
       included,
