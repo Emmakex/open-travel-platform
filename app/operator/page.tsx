@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { endDemoStaffSession } from "@/app/operator/actions";
+import { endStaffSession } from "@/app/operator/actions";
 import styles from "@/app/operator/operator.module.css";
 import { operationsConfig } from "@/lib/operations-config";
 import { getOperationsRepository } from "@/lib/operations-repository";
@@ -35,7 +35,7 @@ export default async function OperatorPage() {
     <main className="section">
       <div className={`container ${styles.shell}`}>
         <section className={styles.panel}>
-          <div className="eyebrow">Operations console</div>
+          <div className="eyebrow">Operations console · {identity.role}</div>
           <h1>{identity.displayName}</h1>
           <p className={styles.lead}>
             {persistentOperations
@@ -60,9 +60,12 @@ export default async function OperatorPage() {
             <Link className="button button-primary" href="/operator/reservations">Review reservations</Link>
             <Link className="button button-secondary" href="/operator/customers">Customers</Link>
             <Link className="button button-secondary" href="/operator/catalogue">Catalogue data</Link>
+            {identity.role === "admin" ? (
+              <Link className="button button-secondary" href="/operator/staff">Staff access</Link>
+            ) : null}
             <Link className="button button-secondary" href="/trips">Public catalogue</Link>
-            <form action={endDemoStaffSession}>
-              <button className="button button-secondary" type="submit">End staff session</button>
+            <form action={endStaffSession}>
+              <button className="button button-secondary" type="submit">Sign out</button>
             </form>
           </div>
         </section>
