@@ -33,6 +33,9 @@ export interface Reservation {
   status: ReservationStatus;
   createdAt: string;
   updatedAt?: string;
+  tripTitle?: string;
+  departureDate?: string;
+  returnDate?: string;
 }
 
 export interface CreateReservationInput {
@@ -43,4 +46,7 @@ export interface CreateReservationInput {
   unitPrice: number;
   totalPrice: number;
   currency: string;
+  tripTitle?: string;
+  departureDate?: string;
+  returnDate?: string;
 }

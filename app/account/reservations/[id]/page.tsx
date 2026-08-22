@@ -21,7 +21,7 @@ function formatDate(value: string, locale: TravelLocale) {
 
 export const metadata = {
   title: "Reservation detail",
-  description: "Review a fictional reservation in the Kairoseth Travel demo account."
+  description: "Review a Kairoseth Travel reservation."
 };
 
 export default async function ReservationDetailPage({
@@ -51,17 +51,24 @@ export default async function ReservationDetailPage({
   const trip = trips.find((item) => item.id === reservation.tripId);
   const localizedTrip = trip ? localizeTrip(trip, locale) : null;
   const departure = availability.find((item) => item.id === reservation.availabilityId);
+  const departureDate = reservation.departureDate ?? departure?.departureDate;
+  const returnDate = reservation.returnDate ?? departure?.returnDate;
   const status = locale === "es"
     ? reservation.status === "confirmed" ? "confirmada" : reservation.status === "cancelled" ? "cancelada" : "pendiente"
     : reservation.status;
+  const persistenceNote = bookingConfig.mode === "mongodb"
+    ? locale === "es"
+      ? "Esta reserva está almacenada de forma persistente en Kairoseth Travel."
+      : "This reservation is stored persistently in Kairoseth Travel."
+    : copy.demoNote;
 
   return (
     <main className="section">
       <div className={`container ${styles.shell}`}>
         <section className={styles.panel}>
           <div className="eyebrow">{copy.detailEyebrow}</div>
-          <h1>{localizedTrip?.title ?? copy.detailEyebrow}</h1>
-          <p className={styles.lead}>{copy.demoNote}</p>
+          <h1>{localizedTrip?.title ?? reservation.tripTitle ?? copy.detailEyebrow}</h1>
+          <p className={styles.lead}>{persistenceNote}</p>
 
           {updated === "cancelled" ? (
             <div className={styles.notice}>{copy.cancelled}</div>
@@ -72,12 +79,12 @@ export default async function ReservationDetailPage({
             <div><dt>{generalCopy.booking.travellers}</dt><dd>{reservation.partySize}</dd></div>
             <div><dt>{copy.unitPrice}</dt><dd>{formatCurrency(reservation.unitPrice, reservation.currency, locale)}</dd></div>
             <div><dt>{copy.total}</dt><dd>{formatCurrency(reservation.totalPrice, reservation.currency, locale)}</dd></div>
-            <div><dt>{copy.departure}</dt><dd>{departure ? formatDate(departure.departureDate, locale) : copy.unavailable}</dd></div>
-            <div><dt>{copy.return}</dt><dd>{departure ? formatDate(departure.returnDate, locale) : copy.unavailable}</dd></div>
+            <div><dt>{copy.departure}</dt><dd>{departureDate ? formatDate(departureDate, locale) : copy.unavailable}</dd></div>
+            <div><dt>{copy.return}</dt><dd>{returnDate ? formatDate(returnDate, locale) : copy.unavailable}</dd></div>
             <div><dt>{copy.reference}</dt><dd>{reservation.id}</dd></div>
           </dl>
 
-          {reservation.status === "pending" && bookingConfig.demoWritesEnabled ? (
+          {reservation.status === "pending" && bookingConfig.writesEnabled ? (
             <form action={cancelReservationAction}>
               <input type="hidden" name="reservationId" value={reservation.id} />
               <button className="button button-secondary" type="submit">{copy.cancel}</button>

@@ -9,7 +9,7 @@ import { getTravelRepository } from "@/lib/travel-repository";
 
 export const metadata = {
   title: "My reservations",
-  description: "Review your fictional Kairoseth Travel demo reservations."
+  description: "Review your Kairoseth Travel reservations."
 };
 
 export default async function ReservationsPage() {
@@ -43,7 +43,7 @@ export default async function ReservationsPage() {
 
                 return (
                   <div key={reservation.id}>
-                    <dt>{localizedTrip?.title ?? (locale === "es" ? "Viaje" : "Trip")}</dt>
+                    <dt>{localizedTrip?.title ?? reservation.tripTitle ?? (locale === "es" ? "Viaje" : "Trip")}</dt>
                     <dd>
                       {reservation.partySize} {travellerLabel} · {total} · {status}
                       <br />

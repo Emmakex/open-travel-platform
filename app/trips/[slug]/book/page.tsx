@@ -64,6 +64,12 @@ export default async function BookTripPage({
   ]);
   const customer = hasCustomerAccess(identity);
   const staff = hasOperationsAccess(identity);
+  const persistentBooking = bookingConfig.mode === "mongodb";
+  const availabilityCopy = persistentBooking
+    ? locale === "es"
+      ? "Disponibilidad gestionada por Kairoseth Travel y almacenada de forma persistente en el inventario del viaje."
+      : "Availability is managed by Kairoseth Travel and stored persistently against the trip inventory."
+    : copy.booking.departuresCopy;
 
   return (
     <main className="section">
@@ -91,7 +97,7 @@ export default async function BookTripPage({
             </div>
           ) : null}
 
-          {customer && bookingConfig.demoWritesEnabled && availability.length > 0 ? (
+          {customer && bookingConfig.writesEnabled && availability.length > 0 ? (
             <form action={createReservationAction} className={styles.form}>
               <input type="hidden" name="tripSlug" value={trip.slug} />
 
@@ -118,7 +124,7 @@ export default async function BookTripPage({
             </form>
           ) : null}
 
-          {customer && !bookingConfig.demoWritesEnabled ? (
+          {customer && !bookingConfig.writesEnabled ? (
             <div className={styles.notice}>{copy.booking.writesDisabled}</div>
           ) : null}
 
@@ -132,7 +138,7 @@ export default async function BookTripPage({
         <aside className={styles.panel}>
           <div className="eyebrow">{copy.booking.availabilityEyebrow}</div>
           <h2>{copy.booking.departuresTitle}</h2>
-          <p className={styles.muted}>{copy.booking.departuresCopy}</p>
+          <p className={styles.muted}>{availabilityCopy}</p>
           <div className={styles.availabilityList}>
             {availability.map((item) => (
               <div className={styles.availabilityItem} key={item.id}>

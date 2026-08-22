@@ -18,7 +18,7 @@ export async function createReservationAction(formData: FormData) {
   const requestedPartySize = Number(value(formData, "partySize"));
   const backToBooking = tripSlug ? `/trips/${encodeURIComponent(tripSlug)}/book` : "/trips";
 
-  if (!bookingConfig.demoWritesEnabled) {
+  if (!bookingConfig.writesEnabled) {
     redirect(`${backToBooking}?error=booking-disabled`);
   }
 
@@ -58,7 +58,10 @@ export async function createReservationAction(formData: FormData) {
       partySize: requestedPartySize,
       unitPrice,
       totalPrice,
-      currency: trip.currency
+      currency: trip.currency,
+      tripTitle: trip.title,
+      departureDate: availability.departureDate,
+      returnDate: availability.returnDate
     });
   } catch (error) {
     if (error && typeof error === "object" && "code" in error && error.code === "DEPARTURE_UNAVAILABLE") {
@@ -74,7 +77,7 @@ export async function cancelReservationAction(formData: FormData) {
   const identity = await requireCustomerIdentity();
   const reservationId = value(formData, "reservationId");
 
-  if (!bookingConfig.demoWritesEnabled || !reservationId) {
+  if (!bookingConfig.writesEnabled || !reservationId) {
     redirect("/account/reservations");
   }
 

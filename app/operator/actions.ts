@@ -63,7 +63,7 @@ export async function updateReservationStatusAction(formData: FormData) {
     ? `/operator/reservations/${encodeURIComponent(reservationId)}`
     : "/operator/reservations";
 
-  if (!operationsConfig.demoWritesEnabled) {
+  if (!operationsConfig.writesEnabled) {
     redirect(`${detailUrl}?error=operations-disabled`);
   }
 

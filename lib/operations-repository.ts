@@ -1,4 +1,5 @@
 import { DemoOperationsRepository } from "@/adapters/demo-operations-repository";
+import { MongoOperationsRepository } from "@/adapters/mongo-operations-repository";
 import type { Reservation } from "@/domain/booking/types";
 import type { ReservationStatusUpdate } from "@/domain/operations/types";
 import { operationsConfig } from "@/lib/operations-config";
@@ -27,6 +28,10 @@ class DisabledOperationsRepository implements OperationsRepository {
 }
 
 export function getOperationsRepository(): OperationsRepository {
+  if (operationsConfig.mode === "mongodb") {
+    return new MongoOperationsRepository();
+  }
+
   if (operationsConfig.mode === "demo") {
     return new DemoOperationsRepository();
   }

@@ -16,7 +16,7 @@ function formatMoney(value: number, currency: string) {
 
 export const metadata = {
   title: "Operator dashboard",
-  description: "Role-protected fictional operations dashboard for Open Travel Platform."
+  description: "Role-protected operations dashboard for Kairoseth Travel."
 };
 
 export default async function OperatorPage() {
@@ -29,6 +29,8 @@ export default async function OperatorPage() {
     getTravelRepository().listTrips()
   ]);
 
+  const persistentOperations = operationsConfig.mode === "mongodb";
+
   return (
     <main className="section">
       <div className={`container ${styles.shell}`}>
@@ -36,7 +38,9 @@ export default async function OperatorPage() {
           <div className="eyebrow">Operations console</div>
           <h1>{identity.displayName}</h1>
           <p className={styles.lead}>
-            A role-protected staff surface backed by a dedicated OperationsRepository rather than customer booking methods.
+            {persistentOperations
+              ? "Reservations, status changes and audit history are persisted in MongoDB while access remains protected by the operations role boundary."
+              : "A role-protected staff surface backed by a dedicated OperationsRepository rather than customer booking methods."}
           </p>
 
           <div className={styles.metrics}>
@@ -46,9 +50,9 @@ export default async function OperatorPage() {
             <div className={styles.metric}><strong>{summary.cancelled}</strong><span>Cancelled</span></div>
           </div>
 
-          {!operationsConfig.demoWritesEnabled ? (
+          {!operationsConfig.writesEnabled ? (
             <div className={styles.notice}>
-              Operations are read-only/disabled in this deployment. Production writes require an explicit trusted adapter.
+              Operations are read-only/disabled in this deployment. Writes require an explicitly enabled operations adapter.
             </div>
           ) : null}
 
@@ -67,11 +71,11 @@ export default async function OperatorPage() {
           <h2>Operational queue</h2>
           {reservations.length ? (
             <div className={styles.list}>
-              {reservations.slice(-5).reverse().map((reservation) => {
+              {reservations.slice(0, 5).map((reservation) => {
                 const trip = trips.find((item) => item.id === reservation.tripId);
                 return (
                   <Link className={styles.row} href={`/operator/reservations/${reservation.id}`} key={reservation.id}>
-                    <strong>{trip?.title ?? reservation.tripId}</strong>
+                    <strong>{trip?.title ?? reservation.tripTitle ?? reservation.tripId}</strong>
                     <span>{reservation.partySize} pax</span>
                     <span className={styles.badge}>{reservation.status}</span>
                     <span>{formatMoney(reservation.totalPrice, reservation.currency)}</span>
@@ -81,7 +85,7 @@ export default async function OperatorPage() {
             </div>
           ) : (
             <div className={styles.notice}>
-              No fictional reservations exist in this browser yet. Create one as the demo customer, then switch to staff mode.
+              No reservations have been created yet. Create one from the customer booking flow, then return to the operator console.
             </div>
           )}
         </section>
@@ -98,7 +102,7 @@ export default async function OperatorPage() {
               ))}
             </div>
           ) : (
-            <p className={styles.muted}>No staff status changes have been recorded in this demo session.</p>
+            <p className={styles.muted}>No staff status changes have been recorded yet.</p>
           )}
         </section>
       </div>

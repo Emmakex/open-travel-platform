@@ -1,18 +1,23 @@
-export type OperationsMode = "demo" | "disabled";
+export type OperationsMode = "demo" | "mongodb" | "disabled";
 
 const requestedMode = process.env.OPERATIONS_MODE;
 const defaultMode: OperationsMode = process.env.NODE_ENV === "production" ? "disabled" : "demo";
-const mode: OperationsMode = requestedMode === "demo" || requestedMode === "disabled"
-  ? requestedMode
-  : defaultMode;
+const mode: OperationsMode =
+  requestedMode === "demo" || requestedMode === "mongodb" || requestedMode === "disabled"
+    ? requestedMode
+    : defaultMode;
+
+const demoWritesEnabled =
+  mode === "demo" &&
+  (process.env.NODE_ENV !== "production" || process.env.DEMO_OPERATIONS_ENABLED === "true");
 
 export const operationsConfig = {
   mode,
-  demoWritesEnabled:
-    mode === "demo" &&
-    (process.env.NODE_ENV !== "production" || process.env.DEMO_OPERATIONS_ENABLED === "true")
+  writesEnabled: mode === "mongodb" || demoWritesEnabled,
+  demoWritesEnabled
 } satisfies {
   mode: OperationsMode;
+  writesEnabled: boolean;
   demoWritesEnabled: boolean;
 };
 
