@@ -33,12 +33,16 @@ function toTrip(document: WithId<StoredTrip>): Trip {
   return trip;
 }
 
+const publicDocumentFilter = {
+  publicationStatus: { $ne: "draft" }
+} as const;
+
 export class MongoTravelRepository implements TravelRepository {
   async listDestinations() {
     const database = await getMongoDatabase();
     const documents = await database
       .collection<StoredDestination>(travelCollectionNames.destinations)
-      .find({})
+      .find(publicDocumentFilter)
       .sort({ featured: -1, name: 1 })
       .toArray();
 
@@ -49,7 +53,7 @@ export class MongoTravelRepository implements TravelRepository {
     const database = await getMongoDatabase();
     const document = await database
       .collection<StoredDestination>(travelCollectionNames.destinations)
-      .findOne({ slug });
+      .findOne({ slug, ...publicDocumentFilter });
 
     return document ? toDestination(document) : null;
   }
@@ -58,7 +62,7 @@ export class MongoTravelRepository implements TravelRepository {
     const database = await getMongoDatabase();
     const documents = await database
       .collection<StoredTrip>(travelCollectionNames.trips)
-      .find({})
+      .find(publicDocumentFilter)
       .sort({ featured: -1, title: 1 })
       .toArray();
 
@@ -69,7 +73,7 @@ export class MongoTravelRepository implements TravelRepository {
     const database = await getMongoDatabase();
     const document = await database
       .collection<StoredTrip>(travelCollectionNames.trips)
-      .findOne({ slug });
+      .findOne({ slug, ...publicDocumentFilter });
 
     return document ? toTrip(document) : null;
   }
