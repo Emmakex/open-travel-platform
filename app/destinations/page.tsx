@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { DestinationCard } from "@/components/destination-card";
+import { getLocale } from "@/lib/get-locale";
+import { getDictionary } from "@/lib/i18n";
 import { getTravelRepository } from "@/lib/travel-repository";
 
 export const metadata: Metadata = {
@@ -8,6 +10,8 @@ export const metadata: Metadata = {
 };
 
 export default async function DestinationsPage() {
+  const locale = await getLocale();
+  const copy = getDictionary(locale);
   const destinations = await getTravelRepository().listDestinations();
 
   return (
@@ -15,18 +19,15 @@ export default async function DestinationsPage() {
       <div className="container">
         <div className="section-heading">
           <div>
-            <div className="eyebrow">Explore the world</div>
-            <h2>Destinations</h2>
+            <div className="eyebrow">{copy.destinations.eyebrow}</div>
+            <h2>{copy.destinations.title}</h2>
           </div>
-          <p>
-            Discover places through their culture, landscapes and travel possibilities, then choose
-            the itinerary that best matches the experience you want.
-          </p>
+          <p>{copy.destinations.copy}</p>
         </div>
 
         <div className="grid-3">
           {destinations.map((destination) => (
-            <DestinationCard destination={destination} key={destination.id} />
+            <DestinationCard destination={destination} locale={locale} key={destination.id} />
           ))}
         </div>
       </div>
