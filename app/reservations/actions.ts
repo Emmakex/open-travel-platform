@@ -1,30 +1,62 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import type { GuardianRelationship } from "@/domain/booking/types";
 import { bookingConfig } from "@/lib/booking-config";
 import { getBookingRepository } from "@/lib/booking-repository";
 import { notifyReservationEvent } from "@/lib/reservation-emails";
 import { requireCustomerIdentity } from "@/lib/require-customer-identity";
 import { getTravelRepository } from "@/lib/travel-repository";
+import {
+  priceTravellerComposition,
+  TravellerPricingError,
+  type TravellerBookingDraft
+} from "@/lib/traveller-pricing";
 
 function value(formData: FormData, key: string) {
   const item = formData.get(key);
   return typeof item === "string" ? item.trim() : "";
 }
 
+function values(formData: FormData, key: string) {
+  return formData.getAll(key).map((item) => typeof item === "string" ? item.trim() : "");
+}
+
+const guardianRelationships = new Set<GuardianRelationship>(["parent", "legal-guardian", "other"]);
+
+function parseTravellers(formData: FormData): TravellerBookingDraft[] | null {
+  const ids = values(formData, "travellerId").filter(Boolean);
+  if (!ids.length || ids.length > 8 || new Set(ids).size !== ids.length) return null;
+
+  return ids.map((id) => {
+    const rawRelationship = value(formData, `travellerGuardianRelationship:${id}`);
+    return {
+      id,
+      firstName: value(formData, `travellerFirstName:${id}`),
+      lastName: value(formData, `travellerLastName:${id}`),
+      dateOfBirth: value(formData, `travellerDateOfBirth:${id}`),
+      nationality: value(formData, `travellerNationality:${id}`),
+      guardianTravellerId: value(formData, `travellerGuardian:${id}`) || undefined,
+      guardianRelationship: guardianRelationships.has(rawRelationship as GuardianRelationship)
+        ? (rawRelationship as GuardianRelationship)
+        : undefined
+    };
+  });
+}
+
 export async function createReservationAction(formData: FormData) {
   const identity = await requireCustomerIdentity();
   const tripSlug = value(formData, "tripSlug");
   const availabilityId = value(formData, "availabilityId");
-  const requestedPartySize = Number(value(formData, "partySize"));
+  const travellerDrafts = parseTravellers(formData);
   const backToBooking = tripSlug ? `/trips/${encodeURIComponent(tripSlug)}/book` : "/trips";
 
   if (!bookingConfig.writesEnabled) {
     redirect(`${backToBooking}?error=booking-disabled`);
   }
 
-  if (!Number.isInteger(requestedPartySize) || requestedPartySize < 1 || requestedPartySize > 8) {
-    redirect(`${backToBooking}?error=invalid-party-size`);
+  if (!travellerDrafts) {
+    redirect(`${backToBooking}?error=invalid-travellers`);
   }
 
   const travelRepository = getTravelRepository();
@@ -43,12 +75,30 @@ export async function createReservationAction(formData: FormData) {
     redirect(`${backToBooking}?error=invalid-availability`);
   }
 
-  if (requestedPartySize > availability.remainingSpaces) {
-    redirect(`${backToBooking}?error=insufficient-space`);
+  let priced;
+  try {
+    priced = priceTravellerComposition({
+      trip,
+      availability,
+      drafts: travellerDrafts
+    });
+  } catch (error) {
+    if (error instanceof TravellerPricingError) {
+      const query = error.code === "LEAD_MUST_BE_ADULT"
+        ? "lead-must-be-adult"
+        : error.code === "MINOR_GUARDIAN_REQUIRED"
+          ? "minor-guardian-required"
+          : error.code === "NO_PRICING_BAND"
+            ? "pricing-unavailable"
+            : "invalid-travellers";
+      redirect(`${backToBooking}?error=${query}`);
+    }
+    throw error;
   }
 
-  const unitPrice = availability.unitPrice ?? trip.fromPrice;
-  const totalPrice = unitPrice * requestedPartySize;
+  if (priced.inventorySpaces > availability.remainingSpaces) {
+    redirect(`${backToBooking}?error=insufficient-space`);
+  }
 
   let reservation;
   try {
@@ -56,9 +106,11 @@ export async function createReservationAction(formData: FormData) {
       identityId: identity.id,
       tripId: trip.id,
       availabilityId: availability.id,
-      partySize: requestedPartySize,
-      unitPrice,
-      totalPrice,
+      partySize: priced.travellers.length,
+      inventorySpaces: priced.inventorySpaces,
+      travellers: priced.travellers,
+      unitPrice: priced.leadUnitPrice,
+      totalPrice: priced.totalPrice,
       currency: trip.currency,
       tripTitle: trip.title,
       departureDate: availability.departureDate,

@@ -83,6 +83,9 @@ function reservationRows(input: {
         departure: "Salida",
         returnDate: "Regreso",
         travellers: "Viajeros",
+        traveller: "Viajero",
+        lead: "principal",
+        years: "años",
         unitPrice: "Precio por persona",
         total: "Total",
         reference: "Referencia"
@@ -92,20 +95,41 @@ function reservationRows(input: {
         departure: "Departure",
         returnDate: "Return",
         travellers: "Travellers",
+        traveller: "Traveller",
+        lead: "lead",
+        years: "years",
         unitPrice: "Price per traveller",
         total: "Total",
         reference: "Reference"
       };
 
-  return [
+  const rows: Array<readonly [string, string]> = [
     [labels.trip, tripTitle],
     [labels.departure, formatDate(reservation.departureDate, locale)],
     [labels.returnDate, formatDate(reservation.returnDate, locale)],
-    [labels.travellers, String(reservation.partySize)],
-    [labels.unitPrice, formatMoney(reservation.unitPrice, reservation.currency, locale)],
+    [labels.travellers, String(reservation.partySize)]
+  ];
+
+  if (reservation.travellers?.length) {
+    reservation.travellers.forEach((traveller, index) => {
+      const fareLabel = locale === "es"
+        ? (traveller.pricingLabelEs || traveller.pricingLabel)
+        : traveller.pricingLabel;
+      rows.push([
+        `${labels.traveller} ${index + 1}`,
+        `${traveller.firstName} ${traveller.lastName}${traveller.isLead ? ` · ${labels.lead}` : ""} · ${traveller.ageAtDeparture} ${labels.years} · ${fareLabel} · ${formatMoney(traveller.unitPrice, reservation.currency, locale)}`
+      ]);
+    });
+  } else {
+    rows.push([labels.unitPrice, formatMoney(reservation.unitPrice, reservation.currency, locale)]);
+  }
+
+  rows.push(
     [labels.total, formatMoney(reservation.totalPrice, reservation.currency, locale)],
     [labels.reference, reservation.id]
-  ] as const;
+  );
+
+  return rows;
 }
 
 function rowsToText(rows: ReadonlyArray<readonly [string, string]>) {

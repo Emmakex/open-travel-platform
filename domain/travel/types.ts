@@ -19,6 +19,17 @@ export type TripDay = {
   summary: string;
 };
 
+export type TravellerPricingBand = {
+  id: string;
+  code: string;
+  label: string;
+  labelEs?: string;
+  minAge: number;
+  maxAge?: number;
+  price: number;
+  consumesInventory: boolean;
+};
+
 export type DestinationTranslation = {
   name?: string;
   country?: string;
@@ -58,6 +69,7 @@ export type Trip = {
   durationDays: number;
   fromPrice: number;
   currency: CurrencyCode;
+  travellerPricing?: TravellerPricingBand[];
   highlights: string[];
   itinerary?: TripDay[];
   included?: string[];

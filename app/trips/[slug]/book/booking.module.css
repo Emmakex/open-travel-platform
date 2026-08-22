@@ -75,6 +75,115 @@
   background: rgba(255, 90, 90, 0.08);
 }
 
+.bookingSectionHeader,
+.travellerHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.bookingSectionHeader > div,
+.travellerHeader > div {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.bookingSectionHeader span,
+.travellerHeader span {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.travellerList {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.travellerCard {
+  display: grid;
+  gap: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 1rem;
+  background: rgba(255,255,255,0.025);
+}
+
+.travellerGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.minorBox {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 0.9rem;
+  background: rgba(255,255,255,0.035);
+}
+
+.minorBox p {
+  color: var(--muted);
+  margin: 0.35rem 0 0.8rem;
+  font-size: 0.9rem;
+}
+
+.removeButton {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.priceSummary {
+  display: grid;
+  gap: 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 1rem;
+  background: rgba(255,255,255,0.035);
+}
+
+.priceSummary > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.priceSummary span {
+  color: var(--muted);
+}
+
+.priceSummary .totalRow {
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--line);
+  font-size: 1.05rem;
+}
+
+.fareBands {
+  display: grid;
+  gap: 0.5rem;
+  margin: 1rem 0 1.25rem;
+  padding: 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255,255,255,0.025);
+}
+
+.fareBands > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.fareBands span {
+  color: var(--muted);
+}
+
 .availabilityList {
   display: grid;
   gap: 0.75rem;
@@ -96,5 +205,15 @@
 @media (max-width: 780px) {
   .grid {
     grid-template-columns: 1fr;
+  }
+
+  .travellerGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .bookingSectionHeader,
+  .travellerHeader {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }

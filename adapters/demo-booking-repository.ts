@@ -44,14 +44,16 @@ export class DemoBookingRepository implements BookingRepository {
 
   async createReservation(input: CreateReservationInput) {
     let inventoryReserved = false;
+    const inventorySpaces = input.inventorySpaces ?? input.partySize;
 
     if (travelDataConfig.mode === "mongodb") {
-      inventoryReserved = await reserveMongoDeparture(input.tripId, input.availabilityId, input.partySize);
+      inventoryReserved = await reserveMongoDeparture(input.tripId, input.availabilityId, inventorySpaces);
       if (!inventoryReserved) throw inventoryError();
     }
 
     const reservation: Reservation = {
       ...input,
+      inventorySpaces,
       id: `demo-${randomUUID()}`,
       status: "pending",
       createdAt: new Date().toISOString()
@@ -63,7 +65,7 @@ export class DemoBookingRepository implements BookingRepository {
       return reservation;
     } catch (error) {
       if (inventoryReserved) {
-        await releaseMongoDeparture(input.tripId, input.availabilityId, input.partySize).catch(() => false);
+        await releaseMongoDeparture(input.tripId, input.availabilityId, inventorySpaces).catch(() => false);
       }
       throw error;
     }
@@ -90,7 +92,11 @@ export class DemoBookingRepository implements BookingRepository {
     await writeDemoReservations(next);
 
     if (travelDataConfig.mode === "mongodb") {
-      await releaseMongoDeparture(current.tripId, current.availabilityId, current.partySize).catch((error) => {
+      await releaseMongoDeparture(
+        current.tripId,
+        current.availabilityId,
+        current.inventorySpaces ?? current.partySize
+      ).catch((error) => {
         console.error("Failed to release MongoDB departure inventory after cancellation", error);
         return false;
       });

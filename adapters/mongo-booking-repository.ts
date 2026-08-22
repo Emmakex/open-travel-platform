@@ -50,8 +50,10 @@ export class MongoBookingRepository implements BookingRepository {
     const reservations = database.collection<StoredReservation>(travelReservationCollectionName);
     const departures = database.collection(travelDepartureCollectionName);
     const session = client.startSession();
+    const inventorySpaces = input.inventorySpaces ?? input.partySize;
     const reservation: Reservation = {
       ...input,
+      inventorySpaces,
       id: `res-${randomUUID()}`,
       status: "pending",
       createdAt: new Date().toISOString()
@@ -69,12 +71,12 @@ export class MongoBookingRepository implements BookingRepository {
             $expr: {
               $gte: [
                 { $subtract: ["$capacity", "$reservedSpaces"] },
-                input.partySize
+                inventorySpaces
               ]
             }
           },
           {
-            $inc: { reservedSpaces: input.partySize },
+            $inc: { reservedSpaces: inventorySpaces },
             $set: { updatedAt: new Date() }
           },
           { session }
@@ -121,14 +123,15 @@ export class MongoBookingRepository implements BookingRepository {
 
         if (update.modifiedCount !== 1) return;
 
+        const inventorySpaces = current.inventorySpaces ?? current.partySize;
         await departures.updateOne(
           {
             id: current.availabilityId,
             tripId: current.tripId,
-            reservedSpaces: { $gte: current.partySize }
+            reservedSpaces: { $gte: inventorySpaces }
           },
           {
-            $inc: { reservedSpaces: -current.partySize },
+            $inc: { reservedSpaces: -inventorySpaces },
             $set: { updatedAt: new Date() }
           },
           { session }

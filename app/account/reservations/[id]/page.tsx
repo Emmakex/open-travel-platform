@@ -103,7 +103,7 @@ export default async function ReservationDetailPage({
             <div><dt>{copy.status}</dt><dd>{status}</dd></div>
             <div><dt>{locale === "es" ? "Estado del pago" : "Payment status"}</dt><dd>{paymentStatusLabel(paymentSummary.status, locale)}</dd></div>
             <div><dt>{generalCopy.booking.travellers}</dt><dd>{reservation.partySize}</dd></div>
-            <div><dt>{copy.unitPrice}</dt><dd>{formatCurrency(reservation.unitPrice, reservation.currency, locale)}</dd></div>
+            {!reservation.travellers?.length ? <div><dt>{copy.unitPrice}</dt><dd>{formatCurrency(reservation.unitPrice, reservation.currency, locale)}</dd></div> : null}
             <div><dt>{copy.total}</dt><dd>{formatCurrency(reservation.totalPrice, reservation.currency, locale)}</dd></div>
             <div><dt>{copy.departure}</dt><dd>{departureDate ? formatDate(departureDate, locale) : copy.unavailable}</dd></div>
             <div><dt>{copy.return}</dt><dd>{returnDate ? formatDate(returnDate, locale) : copy.unavailable}</dd></div>
@@ -119,6 +119,37 @@ export default async function ReservationDetailPage({
 
           <p><Link className="text-link" href="/account/reservations">{copy.all}</Link></p>
         </section>
+
+        {reservation.travellers?.length ? (
+          <section className={styles.panel} style={{ marginTop: "1rem" }}>
+            <div className="eyebrow">{locale === "es" ? "Viajeros" : "Travellers"}</div>
+            <h2>{locale === "es" ? "Pasajeros de la reserva" : "Reservation travellers"}</h2>
+            <p className={styles.lead}>
+              {locale === "es"
+                ? "Las edades y tarifas quedan fijadas con referencia a la fecha de salida de esta reserva."
+                : "Traveller ages and fares are snapshotted against this reservation's departure date."}
+            </p>
+            <dl className={styles.profileList}>
+              {reservation.travellers.map((traveller) => {
+                const guardian = traveller.guardianTravellerId
+                  ? reservation.travellers?.find((item) => item.id === traveller.guardianTravellerId)
+                  : null;
+                return (
+                  <div key={traveller.id}>
+                    <dt>
+                      {traveller.firstName} {traveller.lastName}{traveller.isLead ? ` · ${locale === "es" ? "principal" : "lead"}` : ""}
+                    </dt>
+                    <dd>
+                      {traveller.ageAtDeparture} {locale === "es" ? "años" : "years"} · {locale === "es" ? (traveller.pricingLabelEs || traveller.pricingLabel) : traveller.pricingLabel} · {formatCurrency(traveller.unitPrice, reservation.currency, locale)}<br />
+                      {formatDate(traveller.dateOfBirth, locale)} · {traveller.nationality}
+                      {guardian ? <><br />{locale === "es" ? "Adulto responsable" : "Responsible adult"}: {guardian.firstName} {guardian.lastName}</> : null}
+                    </dd>
+                  </div>
+                );
+              })}
+            </dl>
+          </section>
+        ) : null}
 
         <section className={styles.panel} style={{ marginTop: "1rem" }}>
           <div className="eyebrow">{locale === "es" ? "Pagos" : "Payments"}</div>
