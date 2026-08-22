@@ -18,7 +18,7 @@ export async function createReservationAction(formData: FormData) {
   const requestedPartySize = Number(value(formData, "partySize"));
   const backToBooking = tripSlug ? `/trips/${encodeURIComponent(tripSlug)}/book` : "/trips";
 
-  if (!bookingConfig.demoWritesEnabled) {
+  if (!bookingConfig.writesEnabled) {
     redirect(`${backToBooking}?error=booking-disabled`);
   }
 
@@ -74,7 +74,7 @@ export async function cancelReservationAction(formData: FormData) {
   const identity = await requireCustomerIdentity();
   const reservationId = value(formData, "reservationId");
 
-  if (!bookingConfig.demoWritesEnabled || !reservationId) {
+  if (!bookingConfig.writesEnabled || !reservationId) {
     redirect("/account/reservations");
   }
 
