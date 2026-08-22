@@ -52,7 +52,7 @@ export function DepartureEditor({ departures = [] }: { departures?: TripDepartur
       <div className={styles.sectionHeaderCompact}>
         <div>
           <div className="eyebrow">Departures & availability</div>
-          <p className={styles.muted}>Manage real departure dates, inventory and optional departure-specific pricing. Remaining spaces are calculated from capacity minus reserved spaces.</p>
+          <p className={styles.muted}>Manage real departure dates, capacity, status and optional departure-specific pricing. Reserved spaces are updated automatically by the booking flow.</p>
         </div>
         <button className="button button-secondary" type="button" onClick={add}>+ Add departure</button>
       </div>
@@ -66,7 +66,7 @@ export function DepartureEditor({ departures = [] }: { departures?: TripDepartur
                 <div className={departureStyles.header}>
                   <div>
                     <strong>Departure {index + 1}</strong>
-                    <span>{remaining} of {item.capacity} spaces available</span>
+                    <span>{remaining} of {item.capacity} spaces available · {item.reservedSpaces} reserved</span>
                   </div>
                   <div className={styles.reorderActions}>
                     <button type="button" onClick={() => move(index, -1)} disabled={index === 0} aria-label="Move departure up">↑</button>
@@ -87,11 +87,11 @@ export function DepartureEditor({ departures = [] }: { departures?: TripDepartur
                   </label>
                   <label className={styles.field}>
                     <span>Capacity *</span>
-                    <input name="departureCapacity" type="number" min="1" step="1" value={item.capacity} onChange={(event) => update(index, { capacity: Number(event.target.value) })} required />
+                    <input name="departureCapacity" type="number" min={Math.max(1, item.reservedSpaces)} step="1" value={item.capacity} onChange={(event) => update(index, { capacity: Number(event.target.value) })} required />
                   </label>
                   <label className={styles.field}>
                     <span>Reserved spaces</span>
-                    <input name="departureReserved" type="number" min="0" step="1" max={Math.max(item.capacity, item.reservedSpaces)} value={item.reservedSpaces} onChange={(event) => update(index, { reservedSpaces: Number(event.target.value) })} />
+                    <input name="departureReserved" type="number" value={item.reservedSpaces} readOnly aria-readonly="true" />
                   </label>
                   <label className={styles.field}>
                     <span>Price per traveller</span>
