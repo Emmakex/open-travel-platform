@@ -2,35 +2,24 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import styles from "@/app/operator/operator.module.css";
 import { getCustomerForOperations } from "@/lib/customer-auth";
+import { getLocale } from "@/lib/get-locale";
+import {
+  accountStatusLabel,
+  formatOperatorDate,
+  formatOperatorMoney,
+  reservationStatusLabel,
+  tr
+} from "@/lib/operator-i18n";
 import { getOperationsRepository } from "@/lib/operations-repository";
 import { requireOperationsIdentity } from "@/lib/require-operations-identity";
 
-function formatMoney(value: number, currency = "EUR") {
-  return new Intl.NumberFormat("en", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 0
-  }).format(value);
-}
-
-function formatTimestamp(value?: string | Date) {
-  if (!value) return "—";
-  return new Intl.DateTimeFormat("en", {
-    dateStyle: "medium",
-    timeStyle: typeof value === "string" && value.includes("T") ? "short" : undefined
-  }).format(new Date(value));
-}
-
 export const metadata = {
-  title: "Customer detail | Kairoseth Travel",
-  description: "Role-protected Kairoseth Travel customer relationship detail."
+  title: "Customer | Kairoseth Travel",
+  description: "Protected Kairoseth Travel customer relationship detail."
 };
 
-export default async function OperatorCustomerDetailPage({
-  params
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function OperatorCustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const locale = await getLocale();
   await requireOperationsIdentity();
   const { id } = await params;
   const [customer, reservations] = await Promise.all([
@@ -56,64 +45,68 @@ export default async function OperatorCustomerDetailPage({
       <div className={`container ${styles.shell}`}>
         <div className={styles.detailGrid}>
           <section className={styles.panel}>
-            <div className="eyebrow">Customer relationship</div>
+            <div className="eyebrow">{tr(locale, "Customer relationship", "Relación con el cliente")}</div>
             <h1>{customer.displayName}</h1>
             <p className={styles.lead}>
-              Customer profile and booking history. Authentication secrets are intentionally excluded from the operations surface.
+              {tr(
+                locale,
+                "Customer profile and reservation history. Authentication secrets are intentionally excluded from this operations view.",
+                "Perfil del cliente e historial de reservas. Los secretos de autenticación se excluyen intencionadamente de esta vista operativa."
+              )}
             </p>
 
             <dl className={styles.definitionList}>
               <div><dt>Email</dt><dd>{customer.email}</dd></div>
-              <div><dt>Phone</dt><dd>{customer.phone ?? "—"}</dd></div>
-              <div><dt>Country</dt><dd>{customer.country ?? "—"}</dd></div>
-              <div><dt>Language</dt><dd>{customer.preferredLocale?.toUpperCase() ?? "—"}</dd></div>
-              <div><dt>Status</dt><dd><span className={styles.badge}>{customer.status}</span></dd></div>
-              <div><dt>Registered</dt><dd>{formatTimestamp(customer.createdAt)}</dd></div>
-              <div><dt>Last profile update</dt><dd>{formatTimestamp(customer.updatedAt)}</dd></div>
-              <div><dt>Customer ID</dt><dd>{customer.id}</dd></div>
+              <div><dt>{tr(locale, "Phone", "Teléfono")}</dt><dd>{customer.phone ?? "—"}</dd></div>
+              <div><dt>{tr(locale, "Country", "País")}</dt><dd>{customer.country ?? "—"}</dd></div>
+              <div><dt>{tr(locale, "Language", "Idioma")}</dt><dd>{customer.preferredLocale?.toUpperCase() ?? "—"}</dd></div>
+              <div><dt>{tr(locale, "Status", "Estado")}</dt><dd><span className={styles.badge}>{accountStatusLabel(customer.status, locale)}</span></dd></div>
+              <div><dt>{tr(locale, "Registered", "Registro")}</dt><dd>{formatOperatorDate(customer.createdAt, locale)}</dd></div>
+              <div><dt>{tr(locale, "Last profile update", "Última actualización del perfil")}</dt><dd>{customer.updatedAt ? formatOperatorDate(customer.updatedAt, locale) : "—"}</dd></div>
+              <div><dt>{tr(locale, "Customer ID", "ID de cliente")}</dt><dd>{customer.id}</dd></div>
             </dl>
 
             <div className={styles.actions}>
-              <Link className="button button-secondary" href="/operator/customers">← Customers</Link>
-              <Link className="button button-secondary" href="/operator/reservations">Reservation queue</Link>
+              <Link className="button button-secondary" href="/operator/customers">{tr(locale, "← Customers", "← Clientes")}</Link>
+              <Link className="button button-secondary" href="/operator/reservations">{tr(locale, "Reservation queue", "Cola de reservas")}</Link>
             </div>
           </section>
 
           <aside className={styles.panel}>
-            <div className="eyebrow">Customer value</div>
-            <h2>Booking summary</h2>
+            <div className="eyebrow">{tr(locale, "Customer value", "Valor del cliente")}</div>
+            <h2>{tr(locale, "Booking summary", "Resumen de reservas")}</h2>
             <div className={styles.metrics} style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
-              <div className={styles.metric}><strong>{customerReservations.length}</strong><span>Total</span></div>
-              <div className={styles.metric}><strong>{pending}</strong><span>Pending</span></div>
-              <div className={styles.metric}><strong>{confirmed}</strong><span>Confirmed</span></div>
-              <div className={styles.metric}><strong>{cancelled}</strong><span>Cancelled</span></div>
+              <div className={styles.metric}><strong>{customerReservations.length}</strong><span>{tr(locale, "Total", "Total")}</span></div>
+              <div className={styles.metric}><strong>{pending}</strong><span>{tr(locale, "Pending", "Pendientes")}</span></div>
+              <div className={styles.metric}><strong>{confirmed}</strong><span>{tr(locale, "Confirmed", "Confirmadas")}</span></div>
+              <div className={styles.metric}><strong>{cancelled}</strong><span>{tr(locale, "Cancelled", "Canceladas")}</span></div>
             </div>
             <div className={styles.metric}>
-              <strong>{formatMoney(confirmedValue, currency)}</strong>
-              <span>Confirmed value</span>
+              <strong>{formatOperatorMoney(confirmedValue, currency, locale)}</strong>
+              <span>{tr(locale, "Confirmed value", "Valor confirmado")}</span>
             </div>
           </aside>
         </div>
 
         <section className={styles.panel} style={{ marginTop: "1rem" }}>
-          <div className="eyebrow">Reservations</div>
-          <h2>Customer booking history</h2>
+          <div className="eyebrow">{tr(locale, "Reservations", "Reservas")}</div>
+          <h2>{tr(locale, "Customer reservation history", "Historial de reservas del cliente")}</h2>
           {customerReservations.length ? (
             <div className={styles.list}>
               {customerReservations.map((reservation) => (
                 <Link className={styles.row} href={`/operator/reservations/${reservation.id}`} key={reservation.id}>
                   <div>
                     <strong>{reservation.tripTitle ?? reservation.tripId}</strong><br />
-                    <span className={styles.muted}>{formatTimestamp(reservation.createdAt)}</span>
+                    <span className={styles.muted}>{formatOperatorDate(reservation.createdAt, locale, true)}</span>
                   </div>
-                  <span>{reservation.partySize} pax</span>
-                  <span className={styles.badge}>{reservation.status}</span>
-                  <span>{formatMoney(reservation.totalPrice, reservation.currency)}</span>
+                  <span>{reservation.partySize} {tr(locale, "travellers", "viajeros")}</span>
+                  <span className={styles.badge}>{reservationStatusLabel(reservation.status, locale)}</span>
+                  <span>{formatOperatorMoney(reservation.totalPrice, reservation.currency, locale)}</span>
                 </Link>
               ))}
             </div>
           ) : (
-            <div className={styles.notice}>This customer has not created a reservation yet.</div>
+            <div className={styles.notice}>{tr(locale, "This customer has not created a reservation yet.", "Este cliente todavía no ha creado ninguna reserva.")}</div>
           )}
         </section>
       </div>

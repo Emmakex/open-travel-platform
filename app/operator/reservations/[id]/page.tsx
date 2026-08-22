@@ -2,36 +2,23 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { updateReservationStatusAction } from "@/app/operator/actions";
 import styles from "@/app/operator/operator.module.css";
+import { getLocale } from "@/lib/get-locale";
+import { localizeTrip } from "@/lib/i18n";
+import {
+  formatOperatorDate,
+  formatOperatorMoney,
+  reservationStatusLabel,
+  staffRoleLabel,
+  tr
+} from "@/lib/operator-i18n";
 import { operationsConfig } from "@/lib/operations-config";
 import { getOperationsRepository } from "@/lib/operations-repository";
 import { requireOperationsIdentity } from "@/lib/require-operations-identity";
 import { getTravelRepository } from "@/lib/travel-repository";
 
-function formatMoney(value: number, currency: string) {
-  return new Intl.NumberFormat("en", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 0
-  }).format(value);
-}
-
-function formatTimestamp(value?: string) {
-  if (!value) return "Not updated";
-  return new Intl.DateTimeFormat("en", {
-    dateStyle: "medium",
-    timeStyle: "short"
-  }).format(new Date(value));
-}
-
-const errorMessages: Record<string, string> = {
-  "operations-disabled": "Operational writes are disabled in this deployment.",
-  "invalid-request": "The requested status change is invalid.",
-  "invalid-transition": "That reservation status transition is not allowed."
-};
-
 export const metadata = {
-  title: "Operator reservation detail",
-  description: "Role-protected reservation operations detail for Kairoseth Travel."
+  title: "Reservation | Kairoseth Travel",
+  description: "Protected Kairoseth Travel reservation detail."
 };
 
 export default async function OperatorReservationDetailPage({
@@ -41,6 +28,7 @@ export default async function OperatorReservationDetailPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ updated?: string; error?: string }>;
 }) {
+  const locale = await getLocale();
   const staff = await requireOperationsIdentity();
   const { id } = await params;
   const { updated, error } = await searchParams;
@@ -54,36 +42,44 @@ export default async function OperatorReservationDetailPage({
   if (!reservation) notFound();
 
   const trip = trips.find((item) => item.id === reservation.tripId);
+  const localizedTrip = trip ? localizeTrip(trip, locale) : null;
   const reservationAudit = audit.filter((event) => event.reservationId === reservation.id);
+  const errors: Record<string, string> = {
+    "operations-disabled": tr(locale, "Operational writes are disabled in this deployment.", "Los cambios operativos están desactivados en este despliegue."),
+    "invalid-request": tr(locale, "The requested status change is invalid.", "El cambio de estado solicitado no es válido."),
+    "invalid-transition": tr(locale, "That reservation status transition is not allowed.", "Ese cambio de estado de la reserva no está permitido.")
+  };
 
   return (
     <main className="section">
       <div className={`container ${styles.shell}`}>
         <div className={styles.detailGrid}>
           <section className={styles.panel}>
-            <div className="eyebrow">Reservation operations</div>
-            <h1>{trip?.title ?? reservation.tripTitle ?? "Reservation"}</h1>
+            <div className="eyebrow">{tr(locale, "Reservation operations", "Gestión de reserva")}</div>
+            <h1>{localizedTrip?.title ?? reservation.tripTitle ?? tr(locale, "Reservation", "Reserva")}</h1>
             <p className={styles.lead}>
-              Staff identity <strong>{staff.displayName}</strong> is authorized on the server before this record can be read or changed.
+              {tr(locale, "Authorized staff member", "Personal autorizado")}{" "}
+              <strong>{staff.displayName}</strong>{" "}
+              {tr(locale, "can review and manage this persistent reservation.", "puede revisar y gestionar esta reserva persistente.")}
             </p>
 
             {updated ? (
-              <div className={styles.notice}>Reservation status updated to {updated}.</div>
+              <div className={styles.notice}>
+                {tr(locale, "Reservation status updated to", "Estado de la reserva actualizado a")} {reservationStatusLabel(updated, locale)}.
+              </div>
             ) : null}
-            {error && errorMessages[error] ? (
-              <div className={styles.notice}>{errorMessages[error]}</div>
-            ) : null}
+            {error && errors[error] ? <div className={styles.notice}>{errors[error]}</div> : null}
 
             <dl className={styles.definitionList}>
-              <div><dt>Status</dt><dd><span className={styles.badge}>{reservation.status}</span></dd></div>
-              <div><dt>Customer identity</dt><dd>{reservation.identityId}</dd></div>
-              <div><dt>Travellers</dt><dd>{reservation.partySize}</dd></div>
-              <div><dt>Total</dt><dd>{formatMoney(reservation.totalPrice, reservation.currency)}</dd></div>
-              {reservation.departureDate ? <div><dt>Departure</dt><dd>{reservation.departureDate}</dd></div> : null}
-              {reservation.returnDate ? <div><dt>Return</dt><dd>{reservation.returnDate}</dd></div> : null}
-              <div><dt>Reference</dt><dd>{reservation.id}</dd></div>
-              <div><dt>Created</dt><dd>{formatTimestamp(reservation.createdAt)}</dd></div>
-              <div><dt>Last update</dt><dd>{formatTimestamp(reservation.updatedAt)}</dd></div>
+              <div><dt>{tr(locale, "Status", "Estado")}</dt><dd><span className={styles.badge}>{reservationStatusLabel(reservation.status, locale)}</span></dd></div>
+              <div><dt>{tr(locale, "Customer ID", "ID de cliente")}</dt><dd>{reservation.identityId}</dd></div>
+              <div><dt>{tr(locale, "Travellers", "Viajeros")}</dt><dd>{reservation.partySize}</dd></div>
+              <div><dt>{tr(locale, "Total", "Total")}</dt><dd>{formatOperatorMoney(reservation.totalPrice, reservation.currency, locale)}</dd></div>
+              {reservation.departureDate ? <div><dt>{tr(locale, "Departure", "Salida")}</dt><dd>{formatOperatorDate(`${reservation.departureDate}T00:00:00Z`, locale)}</dd></div> : null}
+              {reservation.returnDate ? <div><dt>{tr(locale, "Return", "Regreso")}</dt><dd>{formatOperatorDate(`${reservation.returnDate}T00:00:00Z`, locale)}</dd></div> : null}
+              <div><dt>{tr(locale, "Reference", "Referencia")}</dt><dd>{reservation.id}</dd></div>
+              <div><dt>{tr(locale, "Created", "Creada")}</dt><dd>{formatOperatorDate(reservation.createdAt, locale, true)}</dd></div>
+              <div><dt>{tr(locale, "Last update", "Última actualización")}</dt><dd>{reservation.updatedAt ? formatOperatorDate(reservation.updatedAt, locale, true) : tr(locale, "Not updated", "Sin actualizar")}</dd></div>
             </dl>
 
             {operationsConfig.writesEnabled && reservation.status !== "cancelled" ? (
@@ -92,35 +88,35 @@ export default async function OperatorReservationDetailPage({
                   <form action={updateReservationStatusAction}>
                     <input type="hidden" name="reservationId" value={reservation.id} />
                     <input type="hidden" name="status" value="confirmed" />
-                    <button className="button button-primary" type="submit">Confirm reservation</button>
+                    <button className="button button-primary" type="submit">{tr(locale, "Confirm reservation", "Confirmar reserva")}</button>
                   </form>
                 ) : null}
                 <form action={updateReservationStatusAction}>
                   <input type="hidden" name="reservationId" value={reservation.id} />
                   <input type="hidden" name="status" value="cancelled" />
-                  <button className="button button-secondary" type="submit">Cancel reservation</button>
+                  <button className="button button-secondary" type="submit">{tr(locale, "Cancel reservation", "Cancelar reserva")}</button>
                 </form>
               </div>
             ) : null}
 
-            <Link className="text-link" href="/operator/reservations">← Reservation queue</Link>
+            <Link className="text-link" href="/operator/reservations">{tr(locale, "← Reservation queue", "← Cola de reservas")}</Link>
           </section>
 
           <aside className={styles.panel}>
-            <div className="eyebrow">Audit</div>
-            <h2>Status history</h2>
+            <div className="eyebrow">{tr(locale, "Audit", "Auditoría")}</div>
+            <h2>{tr(locale, "Status history", "Historial de estados")}</h2>
             {reservationAudit.length ? (
               <div className={styles.auditList}>
                 {reservationAudit.map((event) => (
                   <div className={styles.auditItem} key={event.id}>
-                    <strong>{event.actorRole}</strong><br />
-                    {event.fromStatus} → {event.toStatus}<br />
-                    {formatTimestamp(event.occurredAt)}
+                    <strong>{staffRoleLabel(event.actorRole, locale)}</strong><br />
+                    {reservationStatusLabel(event.fromStatus, locale)} → {reservationStatusLabel(event.toStatus, locale)}<br />
+                    {formatOperatorDate(event.occurredAt, locale, true)}
                   </div>
                 ))}
               </div>
             ) : (
-              <p className={styles.muted}>No staff status changes recorded for this reservation.</p>
+              <p className={styles.muted}>{tr(locale, "No staff status changes recorded for this reservation.", "No hay cambios de estado registrados por el personal para esta reserva.")}</p>
             )}
           </aside>
         </div>
