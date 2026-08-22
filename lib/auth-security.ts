@@ -9,6 +9,8 @@ export type AuthAuditEventType =
   | "sign_in_failure"
   | "sign_out"
   | "password_changed"
+  | "password_reset_requested"
+  | "password_reset_completed"
   | "account_locked";
 
 export type StoredAuthAuditEvent = {
