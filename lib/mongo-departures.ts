@@ -1,4 +1,4 @@
-import type { Filter, WithId } from "mongodb";
+import type { Filter, UpdateFilter, WithId } from "mongodb";
 import type { AvailabilityWindow, TripDeparture } from "@/domain/booking/types";
 import { getMongoDatabase } from "@/lib/mongodb";
 
@@ -9,9 +9,32 @@ type StoredDeparture = TripDeparture & {
   updatedAt?: Date;
 };
 
+function normalizeTravellerPrices(value: TripDeparture["travellerPrices"]) {
+  if (!value || typeof value !== "object") return undefined;
+  const entries = Object.entries(value).filter(([, price]) => typeof price === "number" && Number.isFinite(price));
+  return entries.length ? Object.fromEntries(entries) : undefined;
+}
+
+function normalizeDeparture(departure: TripDeparture): TripDeparture {
+  const travellerPrices = normalizeTravellerPrices(departure.travellerPrices);
+  return {
+    id: departure.id,
+    tripId: departure.tripId,
+    departureDate: departure.departureDate,
+    returnDate: departure.returnDate,
+    capacity: Number(departure.capacity),
+    reservedSpaces: Number(departure.reservedSpaces),
+    status: departure.status,
+    ...(typeof departure.unitPrice === "number" && Number.isFinite(departure.unitPrice)
+      ? { unitPrice: departure.unitPrice }
+      : {}),
+    ...(travellerPrices ? { travellerPrices } : {})
+  };
+}
+
 function stripMongoMetadata(document: WithId<StoredDeparture>): TripDeparture {
   const { _id: _ignored, createdAt: _createdAt, updatedAt: _updatedAt, ...departure } = document;
-  return departure;
+  return normalizeDeparture(departure);
 }
 
 async function ensureDepartureIndexes() {
@@ -52,15 +75,18 @@ export async function listPublicMongoAvailability(tripId: string): Promise<Avail
     .sort({ departureDate: 1 })
     .toArray();
 
-  return documents.map((document) => ({
-    id: document.id,
-    tripId: document.tripId,
-    departureDate: document.departureDate,
-    returnDate: document.returnDate,
-    remainingSpaces: Math.max(0, document.capacity - document.reservedSpaces),
-    unitPrice: document.unitPrice,
-    travellerPrices: document.travellerPrices
-  }));
+  return documents.map((document) => {
+    const normalized = stripMongoMetadata(document);
+    return {
+      id: normalized.id,
+      tripId: normalized.tripId,
+      departureDate: normalized.departureDate,
+      returnDate: normalized.returnDate,
+      remainingSpaces: Math.max(0, normalized.capacity - normalized.reservedSpaces),
+      unitPrice: normalized.unitPrice,
+      travellerPrices: normalized.travellerPrices
+    };
+  });
 }
 
 export async function replaceMongoTripDepartures(tripId: string, departures: TripDeparture[]) {
@@ -68,7 +94,8 @@ export async function replaceMongoTripDepartures(tripId: string, departures: Tri
   const database = await getMongoDatabase();
   const collection = database.collection<StoredDeparture>(travelDepartureCollectionName);
   const now = new Date();
-  const ids = departures.map((departure) => departure.id);
+  const normalizedDepartures = departures.map((departure) => normalizeDeparture({ ...departure, tripId }));
+  const ids = normalizedDepartures.map((departure) => departure.id);
   const removedFilter: Filter<StoredDeparture> = ids.length
     ? { tripId, id: { $nin: ids } }
     : { tripId };
@@ -83,31 +110,43 @@ export async function replaceMongoTripDepartures(tripId: string, departures: Tri
     throw error;
   }
 
-  if (departures.length) {
+  if (normalizedDepartures.length) {
     await collection.bulkWrite(
-      departures.map((departure) => ({
-        updateOne: {
-          filter: { id: departure.id, tripId },
-          update: {
-            $set: {
-              id: departure.id,
-              tripId,
-              departureDate: departure.departureDate,
-              returnDate: departure.returnDate,
-              capacity: departure.capacity,
-              status: departure.status,
-              unitPrice: departure.unitPrice,
-              travellerPrices: departure.travellerPrices,
-              updatedAt: now
-            },
-            $setOnInsert: {
-              reservedSpaces: departure.reservedSpaces,
-              createdAt: now
-            }
+      normalizedDepartures.map((departure) => {
+        const setFields: Record<string, unknown> = {
+          id: departure.id,
+          tripId,
+          departureDate: departure.departureDate,
+          returnDate: departure.returnDate,
+          capacity: departure.capacity,
+          status: departure.status,
+          updatedAt: now
+        };
+        const unsetFields: Record<string, ""> = {};
+
+        if (departure.unitPrice !== undefined) setFields.unitPrice = departure.unitPrice;
+        else unsetFields.unitPrice = "";
+
+        if (departure.travellerPrices) setFields.travellerPrices = departure.travellerPrices;
+        else unsetFields.travellerPrices = "";
+
+        const update: UpdateFilter<StoredDeparture> = {
+          $set: setFields,
+          $setOnInsert: {
+            reservedSpaces: departure.reservedSpaces,
+            createdAt: now
           },
-          upsert: true
-        }
-      })),
+          ...(Object.keys(unsetFields).length ? { $unset: unsetFields } : {})
+        };
+
+        return {
+          updateOne: {
+            filter: { id: departure.id, tripId },
+            update,
+            upsert: true
+          }
+        };
+      }),
       { ordered: false }
     );
   }
