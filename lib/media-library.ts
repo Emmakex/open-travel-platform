@@ -21,6 +21,8 @@ export type MediaLibraryChoice = {
   id: string;
   url: string;
   label: string;
+  alt?: string;
+  credit?: string;
 };
 
 type TravelMediaMetadata = {
@@ -66,7 +68,9 @@ export async function listMediaLibraryChoices(limit = 100): Promise<MediaLibrary
   return (await listMediaLibrary(limit)).map((item) => ({
     id: item.id,
     url: item.url,
-    label: item.alt || item.originalName
+    label: item.alt || item.originalName,
+    alt: item.alt,
+    credit: item.credit
   }));
 }
 
