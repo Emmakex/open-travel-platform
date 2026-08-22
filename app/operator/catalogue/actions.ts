@@ -24,7 +24,7 @@ import { requireOperationsIdentity } from "@/lib/require-operations-identity";
 import { validateTravellerPricingBands } from "@/lib/traveller-pricing";
 
 function text(formData: FormData, name: string) {
-  const value = formData.get(name);
+  const value = formData.get(name) ?? (name.includes(":") ? formData.get(name.replaceAll(":", "__")) : null);
   return typeof value === "string" ? value.trim() : "";
 }
 
