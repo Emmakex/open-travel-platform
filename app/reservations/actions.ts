@@ -14,7 +14,7 @@ import {
 } from "@/lib/traveller-pricing";
 
 function value(formData: FormData, key: string) {
-  const item = formData.get(key);
+  const item = formData.get(key) ?? (key.includes(":") ? formData.get(key.replaceAll(":", "__")) : null);
   return typeof item === "string" ? item.trim() : "";
 }
 
