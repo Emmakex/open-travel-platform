@@ -5,17 +5,29 @@ import { redirect } from "next/navigation";
 import { demoIdentities } from "@/data/demo-identities";
 import type { Reservation, ReservationStatus } from "@/domain/booking/types";
 import { hasOperationsAccess } from "@/lib/access-control";
-import { DEMO_SESSION_COOKIE, identityConfig } from "@/lib/identity-config";
+import { revokeCustomerSession } from "@/lib/customer-auth";
+import {
+  DEMO_SESSION_COOKIE,
+  KTRAVEL_SESSION_COOKIE,
+  identityConfig
+} from "@/lib/identity-config";
 import { getIdentityRepository } from "@/lib/identity-repository";
 import { operationsConfig } from "@/lib/operations-config";
 import { getOperationsRepository } from "@/lib/operations-repository";
 
 async function startDemoStaffSession(identityId: string) {
-  if (!identityConfig.demoSessionEnabled) {
+  if (!identityConfig.demoStaffEnabled) {
     redirect("/operator/sign-in?demo=disabled");
   }
 
   const cookieStore = await cookies();
+  const customerToken = cookieStore.get(KTRAVEL_SESSION_COOKIE)?.value;
+
+  if (customerToken) {
+    await revokeCustomerSession(customerToken).catch(() => undefined);
+    cookieStore.delete(KTRAVEL_SESSION_COOKIE);
+  }
+
   cookieStore.set(DEMO_SESSION_COOKIE, identityId, {
     httpOnly: true,
     sameSite: "lax",

@@ -57,6 +57,54 @@
   align-items: center;
 }
 
+.authForm {
+  display: grid;
+  gap: 1rem;
+  margin: 1.4rem 0;
+}
+
+.authGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.field span {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.field input {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  padding: 0.8rem 0.9rem;
+  background: rgba(5, 19, 34, 0.72);
+  color: var(--text);
+  font: inherit;
+}
+
+.field input:focus {
+  outline: 2px solid rgba(74, 222, 198, 0.35);
+  outline-offset: 2px;
+}
+
+.field small {
+  color: var(--muted);
+}
+
+.authFooter {
+  margin: 1.15rem 0;
+  color: var(--muted);
+}
+
 .profileList {
   display: grid;
   gap: 0;
@@ -82,7 +130,8 @@
 }
 
 @media (max-width: 760px) {
-  .grid {
+  .grid,
+  .authGrid {
     grid-template-columns: 1fr;
   }
 

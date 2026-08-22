@@ -4,8 +4,105 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { demoIdentities } from "@/data/demo-identities";
 import { DEMO_RESERVATIONS_COOKIE } from "@/lib/booking-config";
-import { DEMO_SESSION_COOKIE, identityConfig } from "@/lib/identity-config";
+import {
+  authenticateCustomer,
+  createCustomerSession,
+  registerCustomer,
+  revokeCustomerSession
+} from "@/lib/customer-auth";
+import { getLocale } from "@/lib/get-locale";
+import {
+  DEMO_SESSION_COOKIE,
+  KTRAVEL_SESSION_COOKIE,
+  identityConfig
+} from "@/lib/identity-config";
 import { DEMO_OPERATIONS_AUDIT_COOKIE } from "@/lib/operations-config";
+
+function value(formData: FormData, key: string) {
+  const item = formData.get(key);
+  return typeof item === "string" ? item.trim() : "";
+}
+
+function validEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email.length <= 254;
+}
+
+async function setCustomerSessionCookie(token: string, expiresAt: Date) {
+  const cookieStore = await cookies();
+  cookieStore.delete(DEMO_SESSION_COOKIE);
+  cookieStore.set(KTRAVEL_SESSION_COOKIE, token, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    expires: expiresAt
+  });
+}
+
+export async function registerCustomerAction(formData: FormData) {
+  if (!identityConfig.customerAuthEnabled) {
+    redirect("/account/sign-in?error=registration-disabled");
+  }
+
+  const firstName = value(formData, "firstName");
+  const lastName = value(formData, "lastName");
+  const email = value(formData, "email");
+  const password = value(formData, "password");
+  const country = value(formData, "country");
+
+  if (
+    !firstName || firstName.length > 80 ||
+    !lastName || lastName.length > 80 ||
+    !validEmail(email) ||
+    password.length < 10 || password.length > 128 ||
+    country.length > 80
+  ) {
+    redirect("/account/register?error=validation");
+  }
+
+  try {
+    const locale = await getLocale();
+    const user = await registerCustomer({
+      email,
+      password,
+      firstName,
+      lastName,
+      country: country || undefined,
+      preferredLocale: locale
+    });
+    const session = await createCustomerSession(user.id);
+    await setCustomerSessionCookie(session.token, session.expiresAt);
+  } catch (error) {
+    if (error && typeof error === "object" && "code" in error && error.code === "EMAIL_EXISTS") {
+      redirect("/account/register?error=email-exists");
+    }
+    throw error;
+  }
+
+  redirect("/account?created=1");
+}
+
+export async function signInCustomerAction(formData: FormData) {
+  if (!identityConfig.customerAuthEnabled) {
+    redirect("/account/sign-in?error=auth-disabled");
+  }
+
+  const email = value(formData, "email");
+  const password = value(formData, "password");
+
+  if (!validEmail(email) || !password) {
+    redirect("/account/sign-in?error=invalid-credentials");
+  }
+
+  const user = await authenticateCustomer(email, password);
+  if (!user) {
+    redirect("/account/sign-in?error=invalid-credentials");
+  }
+
+  const session = await createCustomerSession(user.id);
+  await setCustomerSessionCookie(session.token, session.expiresAt);
+  redirect("/account");
+}
 
 export async function startDemoSession() {
   if (!identityConfig.demoSessionEnabled) {
@@ -24,8 +121,15 @@ export async function startDemoSession() {
   redirect("/account");
 }
 
-export async function endDemoSession() {
+export async function endCustomerSession() {
   const cookieStore = await cookies();
+  const mongoToken = cookieStore.get(KTRAVEL_SESSION_COOKIE)?.value;
+
+  if (mongoToken) {
+    await revokeCustomerSession(mongoToken).catch(() => undefined);
+  }
+
+  cookieStore.delete(KTRAVEL_SESSION_COOKIE);
   cookieStore.delete(DEMO_SESSION_COOKIE);
   cookieStore.delete(DEMO_RESERVATIONS_COOKIE);
   cookieStore.delete(DEMO_OPERATIONS_AUDIT_COOKIE);
