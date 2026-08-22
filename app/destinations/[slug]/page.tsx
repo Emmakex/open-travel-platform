@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { notFound } from "next/navigation";
+import { TravelMediaGallery } from "@/components/travel-media-gallery";
 import { TripCard } from "@/components/trip-card";
 import { getLocale } from "@/lib/get-locale";
 import { getDictionary, localizeDestination } from "@/lib/i18n";
@@ -45,20 +47,41 @@ export default async function DestinationDetailPage({ params }: PageProps) {
 
   return (
     <main>
-      <section className="detail-hero">
+      <section className="detail-hero detail-hero-with-media">
         <div className="container detail-grid">
           <div>
             <div className="eyebrow">{localizedDestination.region}</div>
             <h1>{localizedDestination.name}</h1>
             <p className="hero-copy">{localizedDestination.summary}</p>
           </div>
-          <div className="detail-facts">
-            <div><span>{copy.destinations.country}</span><strong>{localizedDestination.country}</strong></div>
-            <div><span>{copy.destinations.region}</span><strong>{localizedDestination.region}</strong></div>
-            <div><span>{copy.destinations.availableTrips}</span><strong>{relatedTrips.length}</strong></div>
+          <div className="detail-side">
+            {destination.coverImage ? (
+              <div className="detail-cover">
+                <Image
+                  src={destination.coverImage.src}
+                  alt={destination.coverImage.alt ?? localizedDestination.name}
+                  fill
+                  priority
+                  sizes="(max-width: 880px) 100vw, 38vw"
+                />
+              </div>
+            ) : null}
+            <div className="detail-facts">
+              <div><span>{copy.destinations.country}</span><strong>{localizedDestination.country}</strong></div>
+              <div><span>{copy.destinations.region}</span><strong>{localizedDestination.region}</strong></div>
+              <div><span>{copy.destinations.availableTrips}</span><strong>{relatedTrips.length}</strong></div>
+            </div>
           </div>
         </div>
       </section>
+
+      {destination.gallery?.length ? (
+        <section className="media-gallery-section">
+          <div className="container">
+            <TravelMediaGallery items={destination.gallery} title={localizedDestination.name} />
+          </div>
+        </section>
+      ) : null}
 
       <section className="section">
         <div className="container">
