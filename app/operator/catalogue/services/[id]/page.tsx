@@ -26,6 +26,7 @@ export default async function EditServicePage({ params, searchParams }: PageProp
     listMediaLibraryChoices(100),
     service.serviceType === "insurance" ? Promise.resolve([]) : listServiceAvailabilityForAdmin(service.id)
   ]);
+  const serviceFormError = query.error === "validation" || query.error === "save" ? query.error : undefined;
 
   return (
     <main className="section">
@@ -43,7 +44,7 @@ export default async function EditServicePage({ params, searchParams }: PageProp
           {query.error === "availability-save" ? (
             <div className={styles.notice}>{tr(locale, "The availability schedule could not be saved. Review the server logs.", "No se pudo guardar el calendario de disponibilidad. Revisa los logs del servidor.")}</div>
           ) : null}
-          <ServiceForm service={service} type={service.serviceType} error={query.error} mediaLibrary={mediaLibrary} locale={locale} />
+          <ServiceForm service={service} type={service.serviceType} error={serviceFormError} mediaLibrary={mediaLibrary} locale={locale} />
           {service.serviceType !== "insurance" ? (
             <ServiceAvailabilityEditor service={service} slots={availability} locale={locale} />
           ) : (
