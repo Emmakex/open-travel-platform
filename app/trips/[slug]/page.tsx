@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { TravelImage } from "@/components/travel-image";
 import { TravelMediaGallery } from "@/components/travel-media-gallery";
 import { getLocale } from "@/lib/get-locale";
 import {
@@ -67,12 +67,12 @@ export default async function TripDetailPage({ params }: PageProps) {
           <div className="detail-side">
             {trip.coverImage ? (
               <div className="detail-cover">
-                <Image
-                  src={trip.coverImage.src}
-                  alt={trip.coverImage.alt ?? localizedTrip.title}
-                  fill
+                <TravelImage
+                  media={trip.coverImage}
+                  fallbackAlt={localizedTrip.title}
                   priority
                   sizes="(max-width: 880px) 100vw, 38vw"
+                  quality={88}
                 />
               </div>
             ) : null}
