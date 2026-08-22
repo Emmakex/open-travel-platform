@@ -73,6 +73,7 @@ export default async function OperatorPage() {
           <div className={styles.actions}>
             <Link className="button button-primary" href="/operator/reservations">{tr(locale, "Review reservations", "Revisar reservas")}</Link>
             <Link className="button button-secondary" href="/operator/customers">{tr(locale, "Customers", "Clientes")}</Link>
+            <Link className="button button-secondary" href="/operator/payments">{tr(locale, "Payments", "Pagos")}</Link>
             <Link className="button button-secondary" href="/operator/catalogue">{tr(locale, "Catalogue", "Catálogo")}</Link>
             <Link className="button button-secondary" href="/operator/media">{tr(locale, "Media", "Multimedia")}</Link>
             <Link className="button button-secondary" href="/operator/security">{tr(locale, "Security", "Seguridad")}</Link>
