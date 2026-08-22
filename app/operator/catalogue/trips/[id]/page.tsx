@@ -29,7 +29,7 @@ export default async function EditTripPage({ params, searchParams }: PageProps) 
         <section className={styles.panel}>
           <div className="eyebrow">{tr(locale, "Catalogue · Trips", "Catálogo · Viajes")}</div>
           <h1>{tr(locale, "Edit", "Editar")} {trip.title}</h1>
-          <p className={styles.lead}>{tr(locale, "Manage product content, departures, inventory, itinerary, media, publication and translations in MongoDB.", "Gestiona contenido, salidas, inventario, itinerario, multimedia, publicación y traducciones en MongoDB.")}</p>
+          <p className={styles.lead}>{tr(locale, "Manage product content, departures, inventory, itinerary, media, publication and translations for this trip.", "Gestiona contenido, salidas, inventario, itinerario, multimedia, publicación y traducciones de este viaje.")}</p>
           <TripForm trip={trip} destinations={destinations} departures={departures} error={query.error} mediaLibrary={mediaLibrary} locale={locale} />
         </section>
       </div>
