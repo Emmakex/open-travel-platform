@@ -73,6 +73,9 @@ export default async function AccountPage({
             <Link className="button button-primary" href="/account/profile">
               {locale === "es" ? "Editar perfil" : "Edit profile"}
             </Link>
+            <Link className="button button-secondary" href="/account/security">
+              {locale === "es" ? "Seguridad" : "Security"}
+            </Link>
             <form action={endCustomerSession}>
               <button className="button button-secondary" type="submit">{copy.endSession}</button>
             </form>
