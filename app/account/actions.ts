@@ -15,10 +15,12 @@ import { getLocale, localeCookieName } from "@/lib/get-locale";
 import {
   DEMO_SESSION_COOKIE,
   KTRAVEL_SESSION_COOKIE,
+  KTRAVEL_STAFF_SESSION_COOKIE,
   identityConfig
 } from "@/lib/identity-config";
 import { DEMO_OPERATIONS_AUDIT_COOKIE } from "@/lib/operations-config";
 import { requireCustomerIdentity } from "@/lib/require-customer-identity";
+import { revokeStaffSession } from "@/lib/staff-auth";
 
 function value(formData: FormData, key: string) {
   const item = formData.get(key);
@@ -31,6 +33,13 @@ function validEmail(email: string) {
 
 async function setCustomerSessionCookie(token: string, expiresAt: Date) {
   const cookieStore = await cookies();
+  const staffToken = cookieStore.get(KTRAVEL_STAFF_SESSION_COOKIE)?.value;
+
+  if (staffToken) {
+    await revokeStaffSession(staffToken).catch(() => undefined);
+    cookieStore.delete(KTRAVEL_STAFF_SESSION_COOKIE);
+  }
+
   cookieStore.delete(DEMO_SESSION_COOKIE);
   cookieStore.set(KTRAVEL_SESSION_COOKIE, token, {
     httpOnly: true,
