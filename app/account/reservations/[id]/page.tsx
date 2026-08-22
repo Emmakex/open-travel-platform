@@ -2,19 +2,21 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cancelReservationAction } from "@/app/reservations/actions";
 import styles from "@/app/account/account.module.css";
+import { getAccountCopy } from "@/lib/account-i18n";
 import { bookingConfig } from "@/lib/booking-config";
 import { getBookingRepository } from "@/lib/booking-repository";
+import { getLocale } from "@/lib/get-locale";
+import { formatCurrency, getDictionary, localizeTrip } from "@/lib/i18n";
 import { requireCustomerIdentity } from "@/lib/require-customer-identity";
 import { getTravelRepository } from "@/lib/travel-repository";
+import type { TravelLocale } from "@/domain/travel/types";
 
-const dateFormatter = new Intl.DateTimeFormat("en", {
-  year: "numeric",
-  month: "short",
-  day: "numeric"
-});
-
-function formatDate(value: string) {
-  return dateFormatter.format(new Date(`${value}T00:00:00Z`));
+function formatDate(value: string, locale: TravelLocale) {
+  return new Intl.DateTimeFormat(locale === "es" ? "es-ES" : "en-GB", {
+    year: "numeric",
+    month: "short",
+    day: "numeric"
+  }).format(new Date(`${value}T00:00:00Z`));
 }
 
 export const metadata = {
@@ -29,6 +31,9 @@ export default async function ReservationDetailPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ updated?: string }>;
 }) {
+  const locale = await getLocale();
+  const copy = getAccountCopy(locale).reservations;
+  const generalCopy = getDictionary(locale);
   const identity = await requireCustomerIdentity();
   const { id } = await params;
   const { updated } = await searchParams;
@@ -44,50 +49,42 @@ export default async function ReservationDetailPage({
   ]);
 
   const trip = trips.find((item) => item.id === reservation.tripId);
+  const localizedTrip = trip ? localizeTrip(trip, locale) : null;
   const departure = availability.find((item) => item.id === reservation.availabilityId);
-  const money = new Intl.NumberFormat("en", {
-    style: "currency",
-    currency: reservation.currency,
-    maximumFractionDigits: 0
-  });
+  const status = locale === "es"
+    ? reservation.status === "confirmed" ? "confirmada" : reservation.status === "cancelled" ? "cancelada" : "pendiente"
+    : reservation.status;
 
   return (
     <main className="section">
       <div className={`container ${styles.shell}`}>
         <section className={styles.panel}>
-          <div className="eyebrow">Reservation</div>
-          <h1>{trip?.title ?? "Reservation"}</h1>
-          <p className={styles.lead}>
-            Review the travellers, dates, price and current status for this fictional demo reservation.
-          </p>
+          <div className="eyebrow">{copy.detailEyebrow}</div>
+          <h1>{localizedTrip?.title ?? copy.detailEyebrow}</h1>
+          <p className={styles.lead}>{copy.demoNote}</p>
 
           {updated === "cancelled" ? (
-            <div className={styles.notice}>Reservation status updated to cancelled.</div>
+            <div className={styles.notice}>{copy.cancelled}</div>
           ) : null}
 
           <dl className={styles.profileList}>
-            <div><dt>Status</dt><dd>{reservation.status}</dd></div>
-            <div><dt>Travellers</dt><dd>{reservation.partySize}</dd></div>
-            <div><dt>Unit price</dt><dd>{money.format(reservation.unitPrice)}</dd></div>
-            <div><dt>Total</dt><dd>{money.format(reservation.totalPrice)}</dd></div>
-            <div><dt>Departure</dt><dd>{departure ? formatDate(departure.departureDate) : "Unavailable"}</dd></div>
-            <div><dt>Return</dt><dd>{departure ? formatDate(departure.returnDate) : "Unavailable"}</dd></div>
-            <div><dt>Reference</dt><dd>{reservation.id}</dd></div>
+            <div><dt>{copy.status}</dt><dd>{status}</dd></div>
+            <div><dt>{generalCopy.booking.travellers}</dt><dd>{reservation.partySize}</dd></div>
+            <div><dt>{copy.unitPrice}</dt><dd>{formatCurrency(reservation.unitPrice, reservation.currency, locale)}</dd></div>
+            <div><dt>{copy.total}</dt><dd>{formatCurrency(reservation.totalPrice, reservation.currency, locale)}</dd></div>
+            <div><dt>{copy.departure}</dt><dd>{departure ? formatDate(departure.departureDate, locale) : copy.unavailable}</dd></div>
+            <div><dt>{copy.return}</dt><dd>{departure ? formatDate(departure.returnDate, locale) : copy.unavailable}</dd></div>
+            <div><dt>{copy.reference}</dt><dd>{reservation.id}</dd></div>
           </dl>
-
-          <div className={styles.notice}>
-            <strong>Demo record.</strong> This reservation is fictional and is not connected to a live
-            booking, supplier or payment system.
-          </div>
 
           {reservation.status === "pending" && bookingConfig.demoWritesEnabled ? (
             <form action={cancelReservationAction}>
               <input type="hidden" name="reservationId" value={reservation.id} />
-              <button className="button button-secondary" type="submit">Cancel demo reservation</button>
+              <button className="button button-secondary" type="submit">{copy.cancel}</button>
             </form>
           ) : null}
 
-          <p><Link className="text-link" href="/account/reservations">← All reservations</Link></p>
+          <p><Link className="text-link" href="/account/reservations">{copy.all}</Link></p>
         </section>
       </div>
     </main>
