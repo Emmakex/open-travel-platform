@@ -4,7 +4,7 @@ import { getTravelRepository } from "@/lib/travel-repository";
 
 export const metadata: Metadata = {
   title: "Destinations",
-  description: "Destination catalogue for Open Travel Platform."
+  description: "Explore destinations and travel inspiration with Kairoseth Travel."
 };
 
 export default async function DestinationsPage() {
@@ -15,11 +15,12 @@ export default async function DestinationsPage() {
       <div className="container">
         <div className="section-heading">
           <div>
-            <div className="eyebrow">Catalogue</div>
+            <div className="eyebrow">Explore the world</div>
             <h2>Destinations</h2>
           </div>
           <p>
-            Records come from the active repository adapter. Each destination now has a stable detail URL and related-trip view.
+            Discover places through their culture, landscapes and travel possibilities, then choose
+            the itinerary that best matches the experience you want.
           </p>
         </div>
 
