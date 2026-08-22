@@ -7,6 +7,7 @@ import {
 } from "@/app/operator/actions";
 import styles from "@/app/operator/operator.module.css";
 import { hasOperationsAccess } from "@/lib/access-control";
+import { isEmailDeliveryConfigured } from "@/lib/email";
 import { identityConfig } from "@/lib/identity-config";
 import { getIdentityRepository } from "@/lib/identity-repository";
 import { ensureBootstrapAdmin } from "@/lib/staff-auth";
@@ -19,10 +20,10 @@ export const metadata = {
 export default async function OperatorSignInPage({
   searchParams
 }: {
-  searchParams: Promise<{ error?: string; demo?: string }>;
+  searchParams: Promise<{ error?: string; demo?: string; reset?: string }>;
 }) {
   const identity = await getIdentityRepository().getCurrentIdentity();
-  const { error, demo } = await searchParams;
+  const { error, demo, reset } = await searchParams;
 
   if (hasOperationsAccess(identity)) {
     redirect("/operator");
@@ -31,6 +32,7 @@ export default async function OperatorSignInPage({
   const bootstrap = identityConfig.staffAuthEnabled
     ? await ensureBootstrapAdmin().catch(() => ({ created: false, count: 0, configured: false }))
     : null;
+  const recoveryEnabled = identityConfig.staffAuthEnabled && isEmailDeliveryConfigured();
 
   const errors: Record<string, string> = {
     "invalid-credentials": "Sign in was not successful. Check your credentials. After repeated failures, staff access is temporarily locked for 15 minutes.",
@@ -48,6 +50,7 @@ export default async function OperatorSignInPage({
             Staff accounts use a separate protected identity boundary from customer accounts.
           </p>
 
+          {reset === "success" ? <div className={styles.notice}>Your password has been reset. Sign in with the new password.</div> : null}
           {error && errors[error] ? <div className={styles.notice}>{errors[error]}</div> : null}
           {demo === "disabled" ? (
             <div className={styles.notice}>Demo staff identity is disabled in this deployment.</div>
@@ -77,6 +80,9 @@ export default async function OperatorSignInPage({
                 </label>
                 <button className="button button-primary" type="submit">Sign in to operations</button>
               </form>
+              {recoveryEnabled ? (
+                <p><Link className="text-link" href="/operator/forgot-password">Forgot your password? →</Link></p>
+              ) : null}
               <div className={styles.notice}>
                 Staff sessions expire after 8 hours. Customer and staff sessions cannot be active at the same time. Authentication activity is audited without storing raw passwords or session tokens.
               </div>
