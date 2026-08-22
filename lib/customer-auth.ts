@@ -6,9 +6,11 @@ import {
   timingSafeEqual
 } from "node:crypto";
 import { promisify } from "node:util";
+import { authLockout, recordAuthAudit } from "@/lib/auth-security";
 import { getMongoDatabase } from "@/lib/mongodb";
 
 const scrypt = promisify(scryptCallback);
+const dummyPasswordSalt = "ktravel-customer-auth-dummy-salt-v1";
 
 export const customerUserCollectionName = "travel_users";
 export const customerSessionCollectionName = "travel_sessions";
@@ -27,6 +29,10 @@ export type StoredCustomerUser = {
   country?: string;
   preferredLocale?: string;
   status: "active" | "disabled";
+  failedSignInAttempts?: number;
+  lockedUntil?: Date;
+  lastSignedInAt?: Date;
+  passwordChangedAt?: Date;
   createdAt: Date;
   updatedAt?: Date;
 };
@@ -67,6 +73,8 @@ export type SafeCustomerUser = {
   country?: string;
   preferredLocale?: string;
   status: "active" | "disabled";
+  lastSignedInAt?: Date;
+  passwordChangedAt?: Date;
   createdAt: Date;
   updatedAt?: Date;
 };
@@ -91,6 +99,8 @@ function toSafeCustomerUser(user: StoredCustomerUser): SafeCustomerUser {
     country: user.country,
     preferredLocale: user.preferredLocale,
     status: user.status,
+    lastSignedInAt: user.lastSignedInAt,
+    passwordChangedAt: user.passwordChangedAt,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt
   };
@@ -121,6 +131,13 @@ async function ensureAuthIndexes() {
 async function derivePassword(password: string, salt: string) {
   const result = (await scrypt(password, salt, 64)) as Buffer;
   return result.toString("hex");
+}
+
+async function passwordMatches(password: string, salt: string, expectedHash: string) {
+  const candidateHash = await derivePassword(password, salt);
+  const candidate = Buffer.from(candidateHash, "hex");
+  const expected = Buffer.from(expectedHash, "hex");
+  return candidate.length === expected.length && timingSafeEqual(candidate, expected);
 }
 
 export async function registerCustomer(input: RegisterCustomerInput) {
@@ -163,22 +180,79 @@ export async function registerCustomer(input: RegisterCustomerInput) {
 export async function authenticateCustomer(email: string, password: string) {
   await ensureAuthIndexes();
   const database = await getMongoDatabase();
-  const user = await database.collection<StoredCustomerUser>(customerUserCollectionName).findOne({
-    emailNormalized: normalizeEmail(email),
-    status: "active"
-  });
+  const users = database.collection<StoredCustomerUser>(customerUserCollectionName);
+  const emailNormalized = normalizeEmail(email);
+  const user = await users.findOne({ emailNormalized, status: "active" });
 
-  if (!user) return null;
-
-  const candidateHash = await derivePassword(password, user.passwordSalt);
-  const candidate = Buffer.from(candidateHash, "hex");
-  const expected = Buffer.from(user.passwordHash, "hex");
-
-  if (candidate.length !== expected.length || !timingSafeEqual(candidate, expected)) {
+  if (!user) {
+    await derivePassword(password, dummyPasswordSalt);
+    await recordAuthAudit({ scope: "customer", event: "sign_in_failure", email });
     return null;
   }
 
-  return user;
+  const now = new Date();
+  if (user.lockedUntil && user.lockedUntil > now) {
+    await recordAuthAudit({
+      scope: "customer",
+      event: "sign_in_failure",
+      subjectId: user.id,
+      email: user.email
+    });
+    return null;
+  }
+
+  const matches = await passwordMatches(password, user.passwordSalt, user.passwordHash);
+  if (!matches) {
+    const attempts = (user.failedSignInAttempts ?? 0) + 1;
+    const shouldLock = attempts >= authLockout.maxFailedAttempts;
+    const lockedUntil = shouldLock
+      ? new Date(now.getTime() + authLockout.lockMinutes * 60 * 1000)
+      : undefined;
+
+    await users.updateOne(
+      { id: user.id },
+      {
+        $set: {
+          failedSignInAttempts: shouldLock ? 0 : attempts,
+          ...(lockedUntil ? { lockedUntil } : {}),
+          updatedAt: now
+        },
+        ...(!lockedUntil ? { $unset: { lockedUntil: "" } } : {})
+      }
+    );
+
+    await recordAuthAudit({
+      scope: "customer",
+      event: "sign_in_failure",
+      subjectId: user.id,
+      email: user.email
+    });
+    if (shouldLock) {
+      await recordAuthAudit({
+        scope: "customer",
+        event: "account_locked",
+        subjectId: user.id,
+        email: user.email
+      });
+    }
+    return null;
+  }
+
+  await users.updateOne(
+    { id: user.id },
+    {
+      $set: { failedSignInAttempts: 0, lastSignedInAt: now, updatedAt: now },
+      $unset: { lockedUntil: "" }
+    }
+  );
+  await recordAuthAudit({
+    scope: "customer",
+    event: "sign_in_success",
+    subjectId: user.id,
+    email: user.email
+  });
+
+  return { ...user, failedSignInAttempts: 0, lockedUntil: undefined, lastSignedInAt: now };
 }
 
 export async function createCustomerSession(userId: string) {
@@ -207,6 +281,11 @@ export async function revokeCustomerSession(token: string) {
   });
 }
 
+export async function revokeAllCustomerSessions(userId: string) {
+  const database = await getMongoDatabase();
+  await database.collection<StoredCustomerSession>(customerSessionCollectionName).deleteMany({ userId });
+}
+
 export async function resolveCustomerSession(token: string) {
   if (!token) return null;
   await ensureAuthIndexes();
@@ -231,6 +310,43 @@ export async function getCustomerUserById(id: string) {
     id,
     status: "active"
   });
+}
+
+export async function changeCustomerPassword(userId: string, currentPassword: string, newPassword: string) {
+  await ensureAuthIndexes();
+  const database = await getMongoDatabase();
+  const users = database.collection<StoredCustomerUser>(customerUserCollectionName);
+  const user = await users.findOne({ id: userId, role: "customer", status: "active" });
+  if (!user) return false;
+
+  const validCurrent = await passwordMatches(currentPassword, user.passwordSalt, user.passwordHash);
+  if (!validCurrent) return false;
+
+  const passwordSalt = randomBytes(16).toString("hex");
+  const passwordHash = await derivePassword(newPassword, passwordSalt);
+  const now = new Date();
+
+  await users.updateOne(
+    { id: user.id },
+    {
+      $set: {
+        passwordSalt,
+        passwordHash,
+        passwordChangedAt: now,
+        failedSignInAttempts: 0,
+        updatedAt: now
+      },
+      $unset: { lockedUntil: "" }
+    }
+  );
+  await revokeAllCustomerSessions(user.id);
+  await recordAuthAudit({
+    scope: "customer",
+    event: "password_changed",
+    subjectId: user.id,
+    email: user.email
+  });
+  return true;
 }
 
 export async function updateCustomerProfile(userId: string, input: UpdateCustomerProfileInput) {
