@@ -5,6 +5,10 @@ import type { TravelService } from "@/domain/services/types";
 import type { TravelLocale } from "@/domain/travel/types";
 import { formatCurrency } from "@/lib/i18n";
 import {
+  availableInventory,
+  listPublishedServiceAvailability
+} from "@/lib/service-availability";
+import {
   localizeTravelService,
   serviceBasePath,
   serviceTypeLabel
@@ -24,7 +28,7 @@ function detailRows(service: TravelService, locale: TravelLocale) {
       [locale === "es" ? "Tipo" : "Mode", service.transportMode],
       [locale === "es" ? "Origen" : "Origin", service.origin],
       [locale === "es" ? "Destino" : "Destination", service.destination],
-      ...(service.capacity ? [[locale === "es" ? "Capacidad" : "Capacity", `${service.capacity}`]] : [])
+      ...(service.capacity ? [[locale === "es" ? "Capacidad por unidad" : "Capacity per unit", `${service.capacity}`]] : [])
     ];
   }
   return [
@@ -43,10 +47,23 @@ function pricingModeLabel(service: TravelService, locale: TravelLocale) {
   return locale === "es" ? labels[service.pricingMode][1] : labels[service.pricingMode][0];
 }
 
-export function ServiceDetail({ service, locale }: { service: TravelService; locale: TravelLocale }) {
+function formatSlotDate(date: string, locale: TravelLocale) {
+  return new Intl.DateTimeFormat(locale === "es" ? "es-ES" : "en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC"
+  }).format(new Date(`${date}T12:00:00Z`));
+}
+
+export async function ServiceDetail({ service, locale }: { service: TravelService; locale: TravelLocale }) {
   const item = localizeTravelService(service, locale);
   const price = formatCurrency(item.fromPrice, item.currency, locale);
   const rows = detailRows(item, locale);
+  const availability = item.serviceType === "insurance"
+    ? []
+    : await listPublishedServiceAvailability(item.id);
 
   return (
     <main>
@@ -72,13 +89,62 @@ export function ServiceDetail({ service, locale }: { service: TravelService; loc
           <div className="grid-3" style={{ marginTop: "1.5rem" }}>
             <section className="card"><div className="card-body"><div className="card-kicker">{locale === "es" ? "Información" : "Information"}</div><h3>{locale === "es" ? "Detalles del servicio" : "Service details"}</h3><ul className="highlight-list">{rows.map(([label, value]) => <li key={label}><strong>{label}:</strong> {value}</li>)}</ul></div></section>
             <section className="card"><div className="card-body"><div className="card-kicker">{locale === "es" ? "Precio" : "Pricing"}</div><h3>{locale === "es" ? "Precio desde" : "Starting price"}</h3><p><strong>{price}</strong></p><p>{pricingModeLabel(item, locale)}</p></div></section>
-            <section className="card"><div className="card-body"><div className="card-kicker">{locale === "es" ? "Flexible" : "Flexible"}</div><h3>{locale === "es" ? "Producto independiente" : "Independent product"}</h3><p>{locale === "es" ? "Puedes contratar este servicio aunque tu viaje se haya reservado en otra plataforma." : "You can contract this service even when your trip was booked on another platform."}</p></div></section>
+            <section className="card"><div className="card-body"><div className="card-kicker">Flexible</div><h3>{locale === "es" ? "Producto independiente" : "Independent product"}</h3><p>{locale === "es" ? "Puedes contratar este servicio aunque tu viaje se haya reservado en otra plataforma." : "You can contract this service even when your trip was booked on another platform."}</p></div></section>
           </div>
         </div>
       </section>
 
+      {item.serviceType !== "insurance" ? (
+        <section className="section section-soft">
+          <div className="container">
+            <div className="section-heading">
+              <div><div className="eyebrow">{locale === "es" ? "Disponibilidad" : "Availability"}</div><h2>{locale === "es" ? "Próximas fechas y horarios" : "Upcoming dates and times"}</h2></div>
+              <p>{locale === "es" ? "El cupo mostrado pertenece únicamente a este servicio y es independiente del inventario de los viajes." : "The inventory shown belongs only to this service and is independent from trip inventory."}</p>
+            </div>
+            {availability.length ? (
+              <div className="grid-3">
+                {availability.slice(0, 12).map((slot) => {
+                  const remaining = availableInventory(slot);
+                  const unit = slot.inventoryMode === "units"
+                    ? (remaining === 1 ? (locale === "es" ? "unidad" : "unit") : (locale === "es" ? "unidades" : "units"))
+                    : (remaining === 1 ? (locale === "es" ? "plaza" : "place") : (locale === "es" ? "plazas" : "places"));
+                  const slotPrice = slot.priceOverride === undefined ? null : formatCurrency(slot.priceOverride, item.currency, locale);
+                  return (
+                    <article className="card" key={slot.id}>
+                      <div className="card-body">
+                        <div className="card-kicker">{formatSlotDate(slot.date, locale)}</div>
+                        <h3>{slot.startTime}{slot.endTime ? ` – ${slot.endTime}` : ""}</h3>
+                        <p><strong>{remaining}</strong> {unit} {locale === "es" ? "disponibles" : "available"}</p>
+                        {item.serviceType === "transport" && slot.inventoryMode === "units" && item.capacity ? <p>{locale === "es" ? `Hasta ${item.capacity} pasajeros por unidad` : `Up to ${item.capacity} passengers per unit`}</p> : null}
+                        {slotPrice ? <p><strong>{slotPrice}</strong> · {locale === "es" ? "precio de esta salida" : "price for this slot"}</p> : null}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="empty-state"><strong>{locale === "es" ? "No hay fechas publicadas todavía." : "No dates are published yet."}</strong><p>{locale === "es" ? "El producto sigue disponible para consulta y el equipo puede publicar nuevos horarios desde Operator." : "The product remains visible for discovery and the team can publish schedules from Operator."}</p></div>
+            )}
+          </div>
+        </section>
+      ) : (
+        <section className="section section-soft">
+          <div className="container">
+            <div className="section-heading">
+              <div><div className="eyebrow">{locale === "es" ? "Cotización" : "Quote basis"}</div><h2>{locale === "es" ? "Seguro adaptado a tu viaje" : "Insurance matched to your trip"}</h2></div>
+              <p>{locale === "es" ? "Este producto no utiliza cupos por fecha. Para contratarlo se validarán los datos reales del viaje." : "This product does not use dated inventory. Real trip details will be validated when it becomes bookable."}</p>
+            </div>
+            <div className="grid-3">
+              <article className="card"><div className="card-body"><div className="card-kicker">1</div><h3>{locale === "es" ? "Fechas y destino" : "Dates and destination"}</h3><p>{locale === "es" ? "Inicio, fin y destino real del viaje." : "Actual trip start, end and destination."}</p></div></article>
+              <article className="card"><div className="card-body"><div className="card-kicker">2</div><h3>{locale === "es" ? "Viajeros y edades" : "Travellers and ages"}</h3><p>{locale === "es" ? "La prima podrá variar por composición y edad." : "The premium may vary by party composition and age."}</p></div></article>
+              <article className="card"><div className="card-body"><div className="card-kicker">3</div><h3>{locale === "es" ? "Elegibilidad" : "Eligibility"}</h3><p>{item.maxTripDays ? (locale === "es" ? `Este producto admite viajes de hasta ${item.maxTripDays} días.` : `This product supports trips up to ${item.maxTripDays} days.`) : (locale === "es" ? "Se validarán las condiciones del producto antes de contratar." : "Product conditions will be validated before purchase.")}</p></div></article>
+            </div>
+          </div>
+        </section>
+      )}
+
       {item.highlights.length ? (
-        <section className="section section-soft"><div className="container"><div className="section-heading"><div><div className="eyebrow">{locale === "es" ? "Experiencia" : "Experience"}</div><h2>{locale === "es" ? "Lo más importante" : "Highlights"}</h2></div></div><div className="grid-3">{item.highlights.map((highlight) => <article className="card" key={highlight}><div className="card-body"><p>{highlight}</p></div></article>)}</div></div></section>
+        <section className="section"><div className="container"><div className="section-heading"><div><div className="eyebrow">{locale === "es" ? "Experiencia" : "Experience"}</div><h2>{locale === "es" ? "Lo más importante" : "Highlights"}</h2></div></div><div className="grid-3">{item.highlights.map((highlight) => <article className="card" key={highlight}><div className="card-body"><p>{highlight}</p></div></article>)}</div></div></section>
       ) : null}
 
       {item.included?.length || item.notIncluded?.length ? (
