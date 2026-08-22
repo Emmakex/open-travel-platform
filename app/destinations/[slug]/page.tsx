@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { TripCard } from "@/components/trip-card";
+import { getLocale } from "@/lib/get-locale";
+import { getDictionary, localizeDestination } from "@/lib/i18n";
 import { getTravelRepository } from "@/lib/travel-repository";
 
 type PageProps = {
@@ -14,18 +16,22 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
+  const locale = await getLocale();
   const destination = await getTravelRepository().getDestinationBySlug(slug);
 
   if (!destination) return { title: "Destination not found" };
 
+  const localizedDestination = localizeDestination(destination, locale);
   return {
-    title: destination.name,
-    description: destination.summary
+    title: localizedDestination.name,
+    description: localizedDestination.summary
   };
 }
 
 export default async function DestinationDetailPage({ params }: PageProps) {
   const { slug } = await params;
+  const locale = await getLocale();
+  const copy = getDictionary(locale);
   const repository = getTravelRepository();
   const [destination, trips] = await Promise.all([
     repository.getDestinationBySlug(slug),
@@ -34,6 +40,7 @@ export default async function DestinationDetailPage({ params }: PageProps) {
 
   if (!destination) notFound();
 
+  const localizedDestination = localizeDestination(destination, locale);
   const relatedTrips = trips.filter((trip) => trip.destinationId === destination.id);
 
   return (
@@ -41,14 +48,14 @@ export default async function DestinationDetailPage({ params }: PageProps) {
       <section className="detail-hero">
         <div className="container detail-grid">
           <div>
-            <div className="eyebrow">{destination.region}</div>
-            <h1>{destination.name}</h1>
-            <p className="hero-copy">{destination.summary}</p>
+            <div className="eyebrow">{localizedDestination.region}</div>
+            <h1>{localizedDestination.name}</h1>
+            <p className="hero-copy">{localizedDestination.summary}</p>
           </div>
           <div className="detail-facts">
-            <div><span>Country</span><strong>{destination.country}</strong></div>
-            <div><span>Region</span><strong>{destination.region}</strong></div>
-            <div><span>Available trips</span><strong>{relatedTrips.length}</strong></div>
+            <div><span>{copy.destinations.country}</span><strong>{localizedDestination.country}</strong></div>
+            <div><span>{copy.destinations.region}</span><strong>{localizedDestination.region}</strong></div>
+            <div><span>{copy.destinations.availableTrips}</span><strong>{relatedTrips.length}</strong></div>
           </div>
         </div>
       </section>
@@ -57,22 +64,19 @@ export default async function DestinationDetailPage({ params }: PageProps) {
         <div className="container">
           <div className="section-heading">
             <div>
-              <div className="eyebrow">Journeys</div>
-              <h2>Trips in {destination.name}</h2>
+              <div className="eyebrow">{copy.destinations.itineraries}</div>
+              <h2>{copy.destinations.tripsIn} {localizedDestination.name}</h2>
             </div>
-            <p>
-              Choose an itinerary and continue to trip highlights, starting price and available
-              departures when you are ready to plan your journey.
-            </p>
+            <p>{copy.destinations.relatedCopy}</p>
           </div>
 
           {relatedTrips.length ? (
             <div className="grid-3">
-              {relatedTrips.map((trip) => <TripCard trip={trip} key={trip.id} />)}
+              {relatedTrips.map((trip) => <TripCard trip={trip} locale={locale} key={trip.id} />)}
             </div>
           ) : (
             <div className="empty-state">
-              <strong>No trips published for this destination yet.</strong>
+              <strong>{copy.destinations.noTrips}</strong>
             </div>
           )}
         </div>
