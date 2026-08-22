@@ -1,7 +1,7 @@
 import type { WithId } from "mongodb";
 import { travelCollectionNames } from "@/adapters/mongo-travel-repository";
 import { demoCatalogue } from "@/data/demo-catalogue";
-import type { Destination, Trip } from "@/domain/travel/types";
+import type { Destination, TravellerPricingBand, Trip } from "@/domain/travel/types";
 import { getMongoDatabase, getMongoDatabaseName, isMongoConfigured } from "@/lib/mongodb";
 
 type StoredDestination = Destination & { createdAt?: Date; updatedAt?: Date };
@@ -17,9 +17,33 @@ function toDestination(document: WithId<StoredDestination>): Destination {
   return destination;
 }
 
+function normalizeTravellerPricingBand(band: TravellerPricingBand): TravellerPricingBand {
+  return {
+    id: band.id,
+    code: band.code,
+    label: band.label,
+    ...(typeof band.labelEs === "string" && band.labelEs.trim() ? { labelEs: band.labelEs } : {}),
+    minAge: Number(band.minAge),
+    ...(typeof band.maxAge === "number" && Number.isFinite(band.maxAge) ? { maxAge: band.maxAge } : {}),
+    price: Number(band.price),
+    consumesInventory: Boolean(band.consumesInventory)
+  };
+}
+
+function normalizeTravellerPricing(value: Trip["travellerPricing"]): TravellerPricingBand[] | undefined {
+  if (!Array.isArray(value) || value.length === 0) return undefined;
+  return value.map(normalizeTravellerPricingBand);
+}
+
+function cleanTripForStorage(trip: Trip): Trip {
+  const travellerPricing = normalizeTravellerPricing(trip.travellerPricing);
+  const { travellerPricing: _ignored, ...rest } = trip;
+  return travellerPricing ? { ...rest, travellerPricing } : rest;
+}
+
 function toTrip(document: WithId<StoredTrip>): Trip {
   const { createdAt: _createdAt, updatedAt: _updatedAt, ...trip } = stripStoredMetadata(document);
-  return trip;
+  return cleanTripForStorage(trip);
 }
 
 async function ensureTravelIndexes() {
@@ -123,13 +147,14 @@ export async function saveMongoTrip(trip: Trip) {
   await ensureTravelIndexes();
   const database = await getMongoDatabase();
   const now = new Date();
+  const cleanTrip = cleanTripForStorage(trip);
 
   await database.collection<StoredTrip>(travelCollectionNames.trips).updateOne(
     { id: trip.id },
     {
       $set: {
-        ...trip,
-        publicationStatus: trip.publicationStatus ?? "draft",
+        ...cleanTrip,
+        publicationStatus: cleanTrip.publicationStatus ?? "draft",
         updatedAt: now
       },
       $setOnInsert: { createdAt: now }
@@ -172,7 +197,7 @@ export async function seedDemoCatalogueToMongo() {
           filter: { id: trip.id },
           update: {
             $setOnInsert: {
-              ...trip,
+              ...cleanTripForStorage(trip),
               publicationStatus: trip.publicationStatus ?? "published",
               createdAt: now
             }
