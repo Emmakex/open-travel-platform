@@ -66,7 +66,7 @@ export default async function TripDetailPage({ params }: PageProps) {
       <section className="section">
         <div className="container detail-content">
           <div>
-            <div className="eyebrow">What this demo includes</div>
+            <div className="eyebrow">Your journey</div>
             <h2>Trip highlights</h2>
             <ul className="feature-list">
               {trip.highlights.map((highlight, index) => (
@@ -78,10 +78,11 @@ export default async function TripDetailPage({ params }: PageProps) {
             </ul>
           </div>
           <aside className="booking-preview">
-            <div className="card-kicker">Reservation layer</div>
+            <div className="card-kicker">Plan your departure</div>
             <h3>Check availability</h3>
             <p>
-              Availability and reservation writes live behind a separate `BookingRepository`, keeping this public catalogue route independent from booking infrastructure.
+              Review available departures and current pricing, then continue to the reservation flow
+              when you have found the option that works for you.
             </p>
             <Link className="button button-primary" href={`/trips/${trip.slug}/book`}>View departures</Link>
           </aside>
