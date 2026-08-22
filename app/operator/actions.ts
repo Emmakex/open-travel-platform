@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { demoIdentities } from "@/data/demo-identities";
 import type { Reservation, ReservationStatus } from "@/domain/booking/types";
 import { hasOperationsAccess } from "@/lib/access-control";
+import { recordAuthAudit } from "@/lib/auth-security";
 import { revokeCustomerSession } from "@/lib/customer-auth";
 import {
   DEMO_SESSION_COOKIE,
@@ -17,6 +18,7 @@ import { operationsConfig } from "@/lib/operations-config";
 import { getOperationsRepository } from "@/lib/operations-repository";
 import {
   authenticateStaff,
+  changeStaffPassword,
   createStaffSession,
   ensureBootstrapAdmin,
   revokeStaffSession
@@ -37,6 +39,19 @@ async function clearCustomerSession(cookieStore: Awaited<ReturnType<typeof cooki
     await revokeCustomerSession(customerToken).catch(() => undefined);
     cookieStore.delete(KTRAVEL_SESSION_COOKIE);
   }
+}
+
+async function setStaffSessionCookie(token: string, expiresAt: Date) {
+  const cookieStore = await cookies();
+  await clearCustomerSession(cookieStore);
+  cookieStore.delete(DEMO_SESSION_COOKIE);
+  cookieStore.set(KTRAVEL_STAFF_SESSION_COOKIE, token, {
+    httpOnly: true,
+    sameSite: "strict",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    expires: expiresAt
+  });
 }
 
 async function startDemoStaffSession(identityId: string) {
@@ -84,23 +99,54 @@ export async function signInStaffAction(formData: FormData) {
   }
 
   const session = await createStaffSession(staff.id);
-  const cookieStore = await cookies();
-  await clearCustomerSession(cookieStore);
-  cookieStore.delete(DEMO_SESSION_COOKIE);
-  cookieStore.set(KTRAVEL_STAFF_SESSION_COOKIE, session.token, {
-    httpOnly: true,
-    sameSite: "strict",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    expires: session.expiresAt
-  });
+  await setStaffSessionCookie(session.token, session.expiresAt);
   redirect("/operator");
 }
 
+export async function changeStaffPasswordAction(formData: FormData) {
+  const identity = await getIdentityRepository().getCurrentIdentity();
+  if (!hasOperationsAccess(identity) || !identityConfig.staffAuthEnabled) {
+    redirect("/operator/sign-in?error=forbidden");
+  }
+
+  const currentPassword = value(formData, "currentPassword");
+  const newPassword = value(formData, "newPassword");
+  const confirmPassword = value(formData, "confirmPassword");
+  if (
+    !currentPassword ||
+    newPassword.length < 12 ||
+    newPassword.length > 128 ||
+    newPassword !== confirmPassword ||
+    newPassword === currentPassword
+  ) {
+    redirect("/operator/security?error=validation");
+  }
+
+  const changed = await changeStaffPassword(identity.id, currentPassword, newPassword);
+  if (!changed) {
+    redirect("/operator/security?error=current-password");
+  }
+
+  const session = await createStaffSession(identity.id);
+  await setStaffSessionCookie(session.token, session.expiresAt);
+  redirect("/operator/security?changed=1");
+}
+
 export async function endStaffSession() {
+  const identity = await getIdentityRepository().getCurrentIdentity();
   const cookieStore = await cookies();
   const token = cookieStore.get(KTRAVEL_STAFF_SESSION_COOKIE)?.value;
-  if (token) await revokeStaffSession(token).catch(() => undefined);
+  if (token) {
+    await revokeStaffSession(token).catch(() => undefined);
+    if (hasOperationsAccess(identity)) {
+      await recordAuthAudit({
+        scope: "staff",
+        event: "sign_out",
+        subjectId: identity.id,
+        email: identity.email
+      }).catch(() => undefined);
+    }
+  }
   cookieStore.delete(KTRAVEL_STAFF_SESSION_COOKIE);
   cookieStore.delete(DEMO_SESSION_COOKIE);
   redirect("/operator/sign-in");
