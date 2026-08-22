@@ -86,7 +86,7 @@ export function TravellerPricingEditor({
         {items.map((item, index) => (
           <div className={styles.panel} key={item.key} style={{ padding: "1rem" }}>
             <input type="hidden" name="pricingBandId" value={item.id} />
-            <input type="hidden" name={`pricingConsumesInventory:${item.id}`} value={item.consumesInventory ? "1" : "0"} />
+            <input type="hidden" name={`pricingConsumesInventory__${item.id}`} value={item.consumesInventory ? "1" : "0"} />
             <div className={styles.sectionHeaderCompact}>
               <div>
                 <strong>{item.label || tr(locale, "Traveller band", "Banda de viajero")}</strong>
@@ -104,27 +104,27 @@ export function TravellerPricingEditor({
             <div className={styles.formGrid}>
               <label className={styles.field}>
                 <span>{tr(locale, "Internal code *", "Código interno *")}</span>
-                <input name={`pricingCode:${item.id}`} value={item.code} onChange={(event) => update(index, { code: event.target.value })} required />
+                <input name={`pricingCode__${item.id}`} value={item.code} onChange={(event) => update(index, { code: event.target.value })} required />
               </label>
               <label className={styles.field}>
                 <span>{tr(locale, "Label (EN) *", "Etiqueta (EN) *")}</span>
-                <input name={`pricingLabel:${item.id}`} value={item.label} onChange={(event) => update(index, { label: event.target.value })} required />
+                <input name={`pricingLabel__${item.id}`} value={item.label} onChange={(event) => update(index, { label: event.target.value })} required />
               </label>
               <label className={styles.field}>
                 <span>{tr(locale, "Label (ES)", "Etiqueta (ES)")}</span>
-                <input name={`pricingLabelEs:${item.id}`} value={item.labelEs ?? ""} onChange={(event) => update(index, { labelEs: event.target.value || undefined })} />
+                <input name={`pricingLabelEs__${item.id}`} value={item.labelEs ?? ""} onChange={(event) => update(index, { labelEs: event.target.value || undefined })} />
               </label>
               <label className={styles.field}>
                 <span>{tr(locale, "Minimum age *", "Edad mínima *")}</span>
-                <input type="number" min="0" max="120" step="1" name={`pricingMinAge:${item.id}`} value={item.minAge} onChange={(event) => update(index, { minAge: Number(event.target.value) })} required />
+                <input type="number" min="0" max="120" step="1" name={`pricingMinAge__${item.id}`} value={item.minAge} onChange={(event) => update(index, { minAge: Number(event.target.value) })} required />
               </label>
               <label className={styles.field}>
                 <span>{tr(locale, "Maximum age", "Edad máxima")}</span>
-                <input type="number" min={item.minAge} max="120" step="1" name={`pricingMaxAge:${item.id}`} value={item.maxAge ?? ""} onChange={(event) => update(index, { maxAge: event.target.value === "" ? undefined : Number(event.target.value) })} placeholder={tr(locale, "No limit", "Sin límite")} />
+                <input type="number" min={item.minAge} max="120" step="1" name={`pricingMaxAge__${item.id}`} value={item.maxAge ?? ""} onChange={(event) => update(index, { maxAge: event.target.value === "" ? undefined : Number(event.target.value) })} placeholder={tr(locale, "No limit", "Sin límite")} />
               </label>
               <label className={styles.field}>
                 <span>{tr(locale, "Base price *", "Precio base *")}</span>
-                <input type="number" min="0" step="0.01" name={`pricingPrice:${item.id}`} value={item.price} onChange={(event) => update(index, { price: Number(event.target.value) })} required />
+                <input type="number" min="0" step="0.01" name={`pricingPrice__${item.id}`} value={item.price} onChange={(event) => update(index, { price: Number(event.target.value) })} required />
               </label>
             </div>
 
