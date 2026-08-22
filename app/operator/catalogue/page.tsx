@@ -114,6 +114,7 @@ export default async function OperatorCataloguePage({
             <div className={styles.toolbar}>
               <Link className="button button-primary" href="/operator/catalogue/destinations/new">+ New destination</Link>
               <Link className="button button-primary" href="/operator/catalogue/trips/new">+ New trip</Link>
+              <Link className="button button-secondary" href="/operator/media">Media library</Link>
               <form action={seedMongoCatalogueAction}>
                 <button className="button button-secondary" type="submit">Seed missing demo catalogue</button>
               </form>
@@ -184,6 +185,7 @@ export default async function OperatorCataloguePage({
 
         <div className={styles.actions}>
           <Link className="button button-secondary" href="/operator">← Operator dashboard</Link>
+          <Link className="button button-secondary" href="/operator/media">Media library</Link>
           <Link className="button button-secondary" href="/trips">Public catalogue</Link>
         </div>
       </div>
