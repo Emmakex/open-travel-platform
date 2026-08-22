@@ -9,7 +9,13 @@ export const metadata: Metadata = {
     default: appConfig.siteName,
     template: `%s · ${appConfig.siteName}`
   },
-  description: appConfig.siteTagline
+  description: appConfig.siteTagline,
+  robots: appConfig.dataMode === "demo"
+    ? {
+        index: false,
+        follow: false
+      }
+    : undefined
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
