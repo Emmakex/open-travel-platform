@@ -18,7 +18,7 @@ export default async function HomePage() {
     <main>
       <section className="hero">
         <div className="container hero-grid">
-          <div>
+          <div className="hero-copy-block">
             <div className="eyebrow">Kairoseth Travel</div>
             <h1>Discover extraordinary journeys. Book with clarity. Travel with confidence.</h1>
             <p className="hero-copy">
@@ -29,10 +29,29 @@ export default async function HomePage() {
               <Link className="button button-primary" href="/trips">Explore trips</Link>
               <Link className="button button-secondary" href="/destinations">Discover destinations</Link>
             </div>
+            <div className="hero-trust" aria-label="Platform highlights">
+              <span>Curated journeys</span>
+              <span>Clear availability</span>
+              <span>Connected booking flow</span>
+            </div>
           </div>
 
           <div className="hero-panel" aria-label="Kairoseth Travel journey overview">
-            <div className="panel-map" />
+            <div className="panel-map">
+              <div className="journey-card journey-card-primary">
+                <span>Featured journey</span>
+                <strong>Peru Andes Discovery</strong>
+                <small>10 days · from €1,640</small>
+              </div>
+              <div className="journey-card journey-card-secondary">
+                <span>City escape</span>
+                <strong>Barcelona</strong>
+                <small>4 days · Mediterranean</small>
+              </div>
+              <div className="journey-pin journey-pin-one" aria-hidden="true" />
+              <div className="journey-pin journey-pin-two" aria-hidden="true" />
+              <div className="journey-route" aria-hidden="true" />
+            </div>
             <div className="stat-row">
               <div className="stat"><strong>{destinations.length}</strong><span>Destinations</span></div>
               <div className="stat"><strong>{trips.length}</strong><span>Curated journeys</span></div>
@@ -62,7 +81,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="section" id="trips">
+      <section className="section section-soft" id="trips">
         <div className="container">
           <div className="section-heading">
             <div>
