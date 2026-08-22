@@ -33,7 +33,7 @@ export default async function OperatorSignInPage({
     : null;
 
   const errors: Record<string, string> = {
-    "invalid-credentials": "Email or password is incorrect.",
+    "invalid-credentials": "Sign in was not successful. Check your credentials. After repeated failures, staff access is temporarily locked for 15 minutes.",
     "auth-disabled": "Persistent staff authentication is disabled in this deployment.",
     forbidden: "The current identity does not have operator access."
   };
@@ -78,7 +78,7 @@ export default async function OperatorSignInPage({
                 <button className="button button-primary" type="submit">Sign in to operations</button>
               </form>
               <div className={styles.notice}>
-                Staff sessions expire after 8 hours. Customer and staff sessions cannot be active at the same time.
+                Staff sessions expire after 8 hours. Customer and staff sessions cannot be active at the same time. Authentication activity is audited without storing raw passwords or session tokens.
               </div>
             </>
           ) : identityConfig.demoStaffEnabled ? (

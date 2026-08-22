@@ -7,9 +7,11 @@ import {
 } from "node:crypto";
 import { promisify } from "node:util";
 import type { UserRole } from "@/domain/identity/types";
+import { authLockout, recordAuthAudit } from "@/lib/auth-security";
 import { getMongoDatabase } from "@/lib/mongodb";
 
 const scrypt = promisify(scryptCallback);
+const dummyPasswordSalt = "ktravel-staff-auth-dummy-salt-v1";
 
 export const staffUserCollectionName = "travel_staff_users";
 export const staffSessionCollectionName = "travel_staff_sessions";
@@ -25,9 +27,12 @@ export type StoredStaffUser = {
   passwordHash: string;
   passwordSalt: string;
   status: "active" | "disabled";
+  failedSignInAttempts?: number;
+  lockedUntil?: Date;
   createdAt: Date;
   updatedAt?: Date;
   lastSignedInAt?: Date;
+  passwordChangedAt?: Date;
 };
 
 type StoredStaffSession = {
@@ -38,7 +43,10 @@ type StoredStaffSession = {
   expiresAt: Date;
 };
 
-export type SafeStaffUser = Omit<StoredStaffUser, "passwordHash" | "passwordSalt" | "emailNormalized">;
+export type SafeStaffUser = Omit<
+  StoredStaffUser,
+  "passwordHash" | "passwordSalt" | "emailNormalized" | "failedSignInAttempts" | "lockedUntil"
+>;
 
 type CreateStaffInput = {
   email: string;
@@ -58,6 +66,13 @@ function hashSessionToken(token: string) {
 async function derivePassword(password: string, salt: string) {
   const result = (await scrypt(password, salt, 64)) as Buffer;
   return result.toString("hex");
+}
+
+async function passwordMatches(password: string, salt: string, expectedHash: string) {
+  const candidateHash = await derivePassword(password, salt);
+  const candidate = Buffer.from(candidateHash, "hex");
+  const expected = Buffer.from(expectedHash, "hex");
+  return candidate.length === expected.length && timingSafeEqual(candidate, expected);
 }
 
 async function ensureStaffIndexes() {
@@ -83,7 +98,14 @@ async function ensureStaffIndexes() {
 }
 
 function safeStaffUser(user: StoredStaffUser): SafeStaffUser {
-  const { passwordHash: _passwordHash, passwordSalt: _passwordSalt, emailNormalized: _emailNormalized, ...safe } = user;
+  const {
+    passwordHash: _passwordHash,
+    passwordSalt: _passwordSalt,
+    emailNormalized: _emailNormalized,
+    failedSignInAttempts: _failedSignInAttempts,
+    lockedUntil: _lockedUntil,
+    ...safe
+  } = user;
   return safe;
 }
 
@@ -122,24 +144,78 @@ export async function createStaffUser(input: CreateStaffInput) {
 export async function authenticateStaff(email: string, password: string) {
   await ensureStaffIndexes();
   const database = await getMongoDatabase();
-  const user = await database.collection<StoredStaffUser>(staffUserCollectionName).findOne({
-    emailNormalized: normalizeEmail(email),
-    status: "active"
+  const users = database.collection<StoredStaffUser>(staffUserCollectionName);
+  const emailNormalized = normalizeEmail(email);
+  const user = await users.findOne({ emailNormalized, status: "active" });
+
+  if (!user) {
+    await derivePassword(password, dummyPasswordSalt);
+    await recordAuthAudit({ scope: "staff", event: "sign_in_failure", email });
+    return null;
+  }
+
+  const now = new Date();
+  if (user.lockedUntil && user.lockedUntil > now) {
+    await recordAuthAudit({
+      scope: "staff",
+      event: "sign_in_failure",
+      subjectId: user.id,
+      email: user.email
+    });
+    return null;
+  }
+
+  const matches = await passwordMatches(password, user.passwordSalt, user.passwordHash);
+  if (!matches) {
+    const attempts = (user.failedSignInAttempts ?? 0) + 1;
+    const shouldLock = attempts >= authLockout.maxFailedAttempts;
+    const lockedUntil = shouldLock
+      ? new Date(now.getTime() + authLockout.lockMinutes * 60 * 1000)
+      : undefined;
+
+    await users.updateOne(
+      { id: user.id },
+      {
+        $set: {
+          failedSignInAttempts: shouldLock ? 0 : attempts,
+          ...(lockedUntil ? { lockedUntil } : {}),
+          updatedAt: now
+        },
+        ...(!lockedUntil ? { $unset: { lockedUntil: "" } } : {})
+      }
+    );
+    await recordAuthAudit({
+      scope: "staff",
+      event: "sign_in_failure",
+      subjectId: user.id,
+      email: user.email
+    });
+    if (shouldLock) {
+      await recordAuthAudit({
+        scope: "staff",
+        event: "account_locked",
+        subjectId: user.id,
+        email: user.email
+      });
+    }
+    return null;
+  }
+
+  await users.updateOne(
+    { id: user.id },
+    {
+      $set: { failedSignInAttempts: 0, lastSignedInAt: now, updatedAt: now },
+      $unset: { lockedUntil: "" }
+    }
+  );
+  await recordAuthAudit({
+    scope: "staff",
+    event: "sign_in_success",
+    subjectId: user.id,
+    email: user.email
   });
 
-  if (!user) return null;
-
-  const candidateHash = await derivePassword(password, user.passwordSalt);
-  const candidate = Buffer.from(candidateHash, "hex");
-  const expected = Buffer.from(user.passwordHash, "hex");
-  if (candidate.length !== expected.length || !timingSafeEqual(candidate, expected)) return null;
-
-  await database.collection<StoredStaffUser>(staffUserCollectionName).updateOne(
-    { id: user.id },
-    { $set: { lastSignedInAt: new Date() } }
-  );
-
-  return safeStaffUser(user);
+  return safeStaffUser({ ...user, failedSignInAttempts: 0, lockedUntil: undefined, lastSignedInAt: now });
 }
 
 export async function createStaffSession(userId: string) {
@@ -188,6 +264,42 @@ export async function resolveStaffSession(token: string) {
     status: "active"
   });
   return user ? safeStaffUser(user) : null;
+}
+
+export async function changeStaffPassword(userId: string, currentPassword: string, newPassword: string) {
+  await ensureStaffIndexes();
+  const database = await getMongoDatabase();
+  const users = database.collection<StoredStaffUser>(staffUserCollectionName);
+  const user = await users.findOne({ id: userId, status: "active" });
+  if (!user) return false;
+
+  const validCurrent = await passwordMatches(currentPassword, user.passwordSalt, user.passwordHash);
+  if (!validCurrent) return false;
+
+  const passwordSalt = randomBytes(16).toString("hex");
+  const passwordHash = await derivePassword(newPassword, passwordSalt);
+  const now = new Date();
+  await users.updateOne(
+    { id: user.id },
+    {
+      $set: {
+        passwordSalt,
+        passwordHash,
+        passwordChangedAt: now,
+        failedSignInAttempts: 0,
+        updatedAt: now
+      },
+      $unset: { lockedUntil: "" }
+    }
+  );
+  await revokeAllStaffSessions(user.id);
+  await recordAuthAudit({
+    scope: "staff",
+    event: "password_changed",
+    subjectId: user.id,
+    email: user.email
+  });
+  return true;
 }
 
 export async function listStaffUsers() {

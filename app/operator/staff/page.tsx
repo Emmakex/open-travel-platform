@@ -4,6 +4,7 @@ import {
   setStaffStatusAction
 } from "@/app/operator/staff/actions";
 import styles from "@/app/operator/operator.module.css";
+import { listRecentAuthAudit } from "@/lib/auth-security";
 import { identityConfig } from "@/lib/identity-config";
 import { requireAdminIdentity } from "@/lib/require-admin-identity";
 import { listStaffUsers } from "@/lib/staff-auth";
@@ -18,6 +19,10 @@ function formatDate(value?: Date) {
   return new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(value);
 }
 
+function formatAuthEvent(value: string) {
+  return value.replaceAll("_", " ");
+}
+
 export default async function StaffPage({
   searchParams
 }: {
@@ -25,7 +30,9 @@ export default async function StaffPage({
 }) {
   const identity = await requireAdminIdentity();
   const { error, created, updated } = await searchParams;
-  const users = identityConfig.staffAuthEnabled ? await listStaffUsers() : [];
+  const [users, authAudit] = identityConfig.staffAuthEnabled
+    ? await Promise.all([listStaffUsers(), listRecentAuthAudit(30)])
+    : [[], []];
 
   const errors: Record<string, string> = {
     validation: "Check the name, email, role and password. Passwords require at least 12 characters.",
@@ -100,36 +107,59 @@ export default async function StaffPage({
         </section>
 
         {identityConfig.staffAuthEnabled ? (
-          <section className={styles.panel} style={{ marginTop: "1rem" }}>
-            <div className="eyebrow">Team directory</div>
-            <h2>Operations users</h2>
-            <div className={styles.managementList}>
-              {users.map((user) => (
-                <div className={styles.managementRow} key={user.id}>
-                  <div>
-                    <strong>{user.displayName}{user.id === identity.id ? " · You" : ""}</strong>
-                    <span>{user.email} · created {formatDate(user.createdAt)} · last sign-in {formatDate(user.lastSignedInAt)}</span>
+          <>
+            <section className={styles.panel} style={{ marginTop: "1rem" }}>
+              <div className="eyebrow">Team directory</div>
+              <h2>Operations users</h2>
+              <div className={styles.managementList}>
+                {users.map((user) => (
+                  <div className={styles.managementRow} key={user.id}>
+                    <div>
+                      <strong>{user.displayName}{user.id === identity.id ? " · You" : ""}</strong>
+                      <span>{user.email} · created {formatDate(user.createdAt)} · last sign-in {formatDate(user.lastSignedInAt)}</span>
+                    </div>
+                    <span className={styles.badge}>{user.role}</span>
+                    <span className={styles.badge}>{user.status}</span>
+                    <form action={setStaffStatusAction}>
+                      <input type="hidden" name="userId" value={user.id} />
+                      <input type="hidden" name="status" value={user.status === "active" ? "disabled" : "active"} />
+                      <button
+                        className="button button-secondary"
+                        type="submit"
+                        disabled={user.id === identity.id && user.status === "active"}
+                      >
+                        {user.status === "active" ? "Disable" : "Enable"}
+                      </button>
+                    </form>
                   </div>
-                  <span className={styles.badge}>{user.role}</span>
-                  <span className={styles.badge}>{user.status}</span>
-                  <form action={setStaffStatusAction}>
-                    <input type="hidden" name="userId" value={user.id} />
-                    <input type="hidden" name="status" value={user.status === "active" ? "disabled" : "active"} />
-                    <button
-                      className="button button-secondary"
-                      type="submit"
-                      disabled={user.id === identity.id && user.status === "active"}
-                    >
-                      {user.status === "active" ? "Disable" : "Enable"}
-                    </button>
-                  </form>
+                ))}
+              </div>
+            </section>
+
+            <section className={styles.panel} style={{ marginTop: "1rem" }}>
+              <div className="eyebrow">Authentication audit</div>
+              <h2>Recent account security activity</h2>
+              <p className={styles.muted}>
+                Authentication events never store raw passwords or session tokens. Attempted email addresses are represented only by one-way hashes when no account can be resolved.
+              </p>
+              {authAudit.length ? (
+                <div className={styles.auditList}>
+                  {authAudit.map((event) => (
+                    <div className={styles.auditItem} key={event.id}>
+                      <strong>{event.scope}</strong> · {formatAuthEvent(event.event)} · {formatDate(event.occurredAt)}
+                      {event.subjectId ? ` · ${event.subjectId}` : " · unresolved account"}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </section>
+              ) : (
+                <p className={styles.muted}>No authentication events have been recorded yet.</p>
+              )}
+            </section>
+          </>
         ) : null}
 
         <div className={styles.toolbar}>
+          <Link className="button button-secondary" href="/operator/security">Security settings</Link>
           <Link className="button button-secondary" href="/operator">← Operator dashboard</Link>
         </div>
       </div>
