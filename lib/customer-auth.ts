@@ -48,12 +48,52 @@ export type RegisterCustomerInput = {
   preferredLocale?: string;
 };
 
+export type UpdateCustomerProfileInput = {
+  firstName: string;
+  lastName: string;
+  phone?: string;
+  country?: string;
+  preferredLocale?: "en" | "es";
+};
+
+export type SafeCustomerUser = {
+  id: string;
+  email: string;
+  displayName: string;
+  firstName: string;
+  lastName: string;
+  role: "customer";
+  phone?: string;
+  country?: string;
+  preferredLocale?: string;
+  status: "active" | "disabled";
+  createdAt: Date;
+  updatedAt?: Date;
+};
+
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
 function hashSessionToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
+}
+
+function toSafeCustomerUser(user: StoredCustomerUser): SafeCustomerUser {
+  return {
+    id: user.id,
+    email: user.email,
+    displayName: user.displayName,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    role: user.role,
+    phone: user.phone,
+    country: user.country,
+    preferredLocale: user.preferredLocale,
+    status: user.status,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt
+  };
 }
 
 async function ensureAuthIndexes() {
@@ -191,4 +231,52 @@ export async function getCustomerUserById(id: string) {
     id,
     status: "active"
   });
+}
+
+export async function updateCustomerProfile(userId: string, input: UpdateCustomerProfileInput) {
+  await ensureAuthIndexes();
+  const database = await getMongoDatabase();
+  const firstName = input.firstName.trim();
+  const lastName = input.lastName.trim();
+  const now = new Date();
+
+  const result = await database.collection<StoredCustomerUser>(customerUserCollectionName).findOneAndUpdate(
+    { id: userId, role: "customer", status: "active" },
+    {
+      $set: {
+        firstName,
+        lastName,
+        displayName: `${firstName} ${lastName}`.trim(),
+        phone: input.phone?.trim() || undefined,
+        country: input.country?.trim() || undefined,
+        preferredLocale: input.preferredLocale,
+        updatedAt: now
+      }
+    },
+    { returnDocument: "after" }
+  );
+
+  return result ? toSafeCustomerUser(result) : null;
+}
+
+export async function listCustomersForOperations() {
+  await ensureAuthIndexes();
+  const database = await getMongoDatabase();
+  const users = await database.collection<StoredCustomerUser>(customerUserCollectionName)
+    .find({ role: "customer" })
+    .sort({ createdAt: -1 })
+    .toArray();
+
+  return users.map(toSafeCustomerUser);
+}
+
+export async function getCustomerForOperations(id: string) {
+  await ensureAuthIndexes();
+  const database = await getMongoDatabase();
+  const user = await database.collection<StoredCustomerUser>(customerUserCollectionName).findOne({
+    id,
+    role: "customer"
+  });
+
+  return user ? toSafeCustomerUser(user) : null;
 }
