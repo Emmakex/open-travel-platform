@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { TravelLocale, Trip } from "@/domain/travel/types";
 import { formatCurrency, getDictionary, localizeTrip } from "@/lib/i18n";
@@ -15,6 +16,16 @@ export function TripCard({ trip, locale = "en" }: { trip: Trip; locale?: TravelL
         href={`/trips/${trip.slug}`}
         aria-label={`${copy.trips.explore} ${localizedTrip.title}`}
       >
+        {trip.coverImage ? (
+          <Image
+            className="card-media-image"
+            src={trip.coverImage.src}
+            alt={trip.coverImage.alt ?? localizedTrip.title}
+            fill
+            sizes="(max-width: 880px) 100vw, 33vw"
+          />
+        ) : null}
+        <span className="card-media-shade" aria-hidden="true" />
         <span className="card-media-label">{trip.durationDays} {copy.trips.days}</span>
         <span className="card-media-title">{copy.trips.from} {price}</span>
       </Link>

@@ -22,6 +22,16 @@ Returns an array of destination objects matching `domain/travel/types.ts`.
     "region": "Catalonia",
     "summary": "...",
     "featured": true,
+    "coverImage": {
+      "src": "/media/barcelona-cover.svg",
+      "alt": "Barcelona Mediterranean skyline"
+    },
+    "gallery": [
+      {
+        "src": "/media/barcelona-cover.svg",
+        "alt": "Barcelona Mediterranean skyline"
+      }
+    ],
     "translations": {
       "es": {
         "name": "Barcelona",
@@ -34,7 +44,7 @@ Returns an array of destination objects matching `domain/travel/types.ts`.
 ]
 ```
 
-`translations` is optional. The canonical fields remain valid on their own, while supported localized fields can be supplied under a locale key such as `en` or `es`.
+`coverImage`, `gallery` and `translations` are optional. Media can point to local assets, a CMS, object storage or another delivery layer as long as the final URL is usable by the frontend.
 
 ## GET `/destinations/:slug`
 
@@ -65,6 +75,20 @@ Returns an array of trip objects.
     ],
     "included": ["Accommodation"],
     "notIncluded": ["Flights"],
+    "coverImage": {
+      "src": "/media/barcelona-trip.svg",
+      "alt": "Barcelona city break"
+    },
+    "gallery": [
+      {
+        "src": "/media/barcelona-cover.svg",
+        "alt": "Barcelona Mediterranean skyline"
+      },
+      {
+        "src": "/media/barcelona-trip.svg",
+        "alt": "Barcelona architecture and city atmosphere"
+      }
+    ],
     "featured": true,
     "translations": {
       "es": {
@@ -86,7 +110,21 @@ Returns an array of trip objects.
 ]
 ```
 
-`itinerary`, `included`, `notIncluded` and `translations` are optional so existing catalogue adapters can continue returning the smaller core trip shape. Rich product pages progressively enhance when those fields are present.
+`itinerary`, `included`, `notIncluded`, `coverImage`, `gallery` and `translations` are optional so existing catalogue adapters can continue returning the smaller core trip shape. Rich product pages progressively enhance when those fields are present.
+
+## Media
+
+`TravelMedia` currently accepts:
+
+```json
+{
+  "src": "/media/example.svg",
+  "alt": "Accessible description",
+  "caption": "Optional caption"
+}
+```
+
+The demo uses repository-owned local SVG artwork to avoid external hotlinking and licensing dependencies. A production adapter can replace those paths with CMS or object-storage URLs without changing page/component contracts.
 
 ## GET `/trips/:slug`
 
