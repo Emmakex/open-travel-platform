@@ -8,7 +8,7 @@ Kairoseth Travel treats destination and trip media as first-class catalogue data
 
 ```ts
 {
-  src: "/media/peru-cover.webp",
+  src: "/media/68a8...",
   alt: "Andean landscape in Peru",
   caption: "Sacred Valley",
   width: 1600,
@@ -18,7 +18,7 @@ Kairoseth Travel treats destination and trip media as first-class catalogue data
 }
 ```
 
-Only `src` is required. The remaining fields progressively improve accessibility, cropping, editorial presentation and future backoffice management.
+Only `src` is required. The remaining fields progressively improve accessibility, cropping and editorial presentation.
 
 ## Rendering
 
@@ -32,15 +32,43 @@ All catalogue and detail images go through `components/travel-image.tsx`, which 
 - AVIF and WebP generation for optimizable raster sources
 - one-day optimized image cache by default
 
-The current demo artwork is SVG and therefore remains lightweight without raster conversion. Real JPEG/PNG/WebP photography will use the Next.js optimizer automatically.
+## Built-in MongoDB media library
+
+The operator media manager is available at `/operator/media` and is protected by the existing operator/admin authorization boundary.
+
+Uploaded images are stored in the `ktravel` MongoDB database using GridFS bucket `travel_media`. GridFS creates the standard collections:
+
+- `travel_media.files`
+- `travel_media.chunks`
+
+This makes uploaded media persistent across Hostinger redeploys without relying on the application server filesystem.
+
+Supported upload formats:
+
+- JPEG
+- PNG
+- WebP
+- AVIF
+
+The default upload limit is 8 MB per file. SVG uploads are intentionally not accepted because user-supplied same-origin SVG can introduce active-content security risks.
+
+Every uploaded asset receives a stable application URL:
+
+```text
+/media/<GridFS ObjectId>
+```
+
+Catalogue editors can select those URLs directly from the media library. The same URL can be reused by multiple destinations and trips.
+
+Deletion is protected: an asset cannot be deleted while a destination or trip references it as a cover or gallery image.
 
 ## Recommended source assets
 
-For future real photography:
+For real photography:
 
 - cover / hero: at least 1600×1000 px
 - gallery: at least 1400 px on the long edge
-- source format: high-quality JPEG, PNG or WebP
+- source format: high-quality JPEG, PNG, WebP or AVIF
 - preferred aspect ratio: approximately 16:10 for covers
 - avoid baking text or logos into travel photos
 - always provide meaningful `alt` text
@@ -50,29 +78,26 @@ Do not upload images unless Kairoseth or the customer has the right to use them.
 
 ## Remote media hosts
 
-Local assets under `/public` work without configuration.
+The built-in `/media/<id>` GridFS URLs and local assets under `/public` work without additional host configuration.
 
-For a future CDN or media storage provider, set a comma-separated server-side build variable:
+For an optional external CDN or storage provider, set a comma-separated server-side build variable:
 
 ```env
 TRAVEL_MEDIA_HOSTS=media.example.com,cdn.example.com
 ```
 
-Only HTTPS hosts in that allowlist are accepted by the Next.js image configuration. Do not use `NEXT_PUBLIC_*` for secrets; this value contains hostnames only.
+Only HTTPS hosts in that allowlist are accepted by the Next.js image configuration. Changing `TRAVEL_MEDIA_HOSTS` requires a new build because `next.config.ts` reads the allowlist at build time.
 
-When using Hostinger auto-deploy, changing `TRAVEL_MEDIA_HOSTS` requires a new build because `next.config.ts` reads the allowlist at build time.
-
-## Backoffice / API readiness
-
-The media fields belong to the provider-neutral domain entities, so a future MongoDB/CMS/backoffice implementation can persist them directly. A typical media-management flow can become:
+## Architecture
 
 ```text
-Upload image
-  → storage/CDN
-  → save src + dimensions + alt + focal point + credit
-  → assign as cover or gallery item
+Operator media manager
+  → protected upload API
+  → MongoDB GridFS (ktravel / travel_media)
+  → stable /media/<id> URL
+  → cover/gallery selection in catalogue editor
   → TravelRepository
   → Kairoseth Travel UI
 ```
 
-This keeps storage/provider choices outside the page components and allows the current demo repository, a MongoDB-backed repository or an HTTP adapter to expose the same contract.
+Storage remains separate from catalogue entities: destinations and trips store media metadata and URLs, while GridFS owns the binary files. This keeps the domain provider-neutral and leaves the door open for a future CDN/S3-compatible storage adapter without redesigning the catalogue.

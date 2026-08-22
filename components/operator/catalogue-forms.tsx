@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { saveDestinationAction, saveTripAction } from "@/app/operator/catalogue/actions";
 import styles from "@/app/operator/operator.module.css";
+import { MediaSourceField } from "@/components/operator/media-source-field";
 import type { Destination, TravelMedia, Trip, TripDay } from "@/domain/travel/types";
+import type { MediaLibraryChoice } from "@/lib/media-library";
 
 function ErrorNotice({ error }: { error?: string }) {
   if (!error) return null;
@@ -17,18 +19,26 @@ function ErrorNotice({ error }: { error?: string }) {
 
 const focalPointOptions = ["center", "top", "bottom", "left", "right"] as const;
 
-function CoverMediaFields({ media }: { media?: TravelMedia }) {
+function CoverMediaFields({
+  media,
+  mediaLibrary
+}: {
+  media?: TravelMedia;
+  mediaLibrary: MediaLibraryChoice[];
+}) {
   return (
     <div className={styles.editorSection}>
       <div>
         <div className="eyebrow">Cover media</div>
-        <p className={styles.muted}>Use a local <code>/...</code> path or an HTTPS URL from an allowed media host.</p>
+        <p className={styles.muted}>Choose an uploaded image from the media library, or use a local <code>/...</code> path / HTTPS URL.</p>
       </div>
       <div className={styles.formGrid}>
-        <label className={styles.field}>
-          <span>Image URL</span>
-          <input name="coverSrc" defaultValue={media?.src ?? ""} placeholder="/travel/peru/cover.jpg" />
-        </label>
+        <MediaSourceField
+          name="coverSrc"
+          label="Image URL"
+          defaultValue={media?.src ?? ""}
+          choices={mediaLibrary}
+        />
         <label className={styles.field}>
           <span>Focal point</span>
           <select name="coverFocalPoint" defaultValue={media?.focalPoint ?? "center"}>
@@ -52,14 +62,20 @@ function CoverMediaFields({ media }: { media?: TravelMedia }) {
   );
 }
 
-function GalleryFields({ gallery = [] }: { gallery?: TravelMedia[] }) {
+function GalleryFields({
+  gallery = [],
+  mediaLibrary
+}: {
+  gallery?: TravelMedia[];
+  mediaLibrary: MediaLibraryChoice[];
+}) {
   const slots = Math.max(4, gallery.length + 1);
 
   return (
     <div className={styles.editorSection}>
       <div>
         <div className="eyebrow">Gallery</div>
-        <p className={styles.muted}>Leave a row empty to ignore it. You can add more gallery slots later without changing the data model.</p>
+        <p className={styles.muted}>Choose uploaded media or enter a URL. Leave a row empty to ignore it.</p>
       </div>
       <div className={styles.repeatList}>
         {Array.from({ length: slots }).map((_, index) => {
@@ -68,10 +84,12 @@ function GalleryFields({ gallery = [] }: { gallery?: TravelMedia[] }) {
             <div className={styles.repeatCard} key={index}>
               <strong>Gallery image {index + 1}</strong>
               <div className={styles.formGrid}>
-                <label className={styles.field}>
-                  <span>Image URL</span>
-                  <input name="gallerySrc" defaultValue={media?.src ?? ""} />
-                </label>
+                <MediaSourceField
+                  name="gallerySrc"
+                  label="Image URL"
+                  defaultValue={media?.src ?? ""}
+                  choices={mediaLibrary}
+                />
                 <label className={styles.field}>
                   <span>Focal point</span>
                   <select name="galleryFocalPoint" defaultValue={media?.focalPoint ?? "center"}>
@@ -143,10 +161,12 @@ function ItineraryFields({
 
 export function DestinationForm({
   destination,
-  error
+  error,
+  mediaLibrary = []
 }: {
   destination?: Destination | null;
   error?: string;
+  mediaLibrary?: MediaLibraryChoice[];
 }) {
   const isEditing = Boolean(destination);
   const returnTo = isEditing
@@ -183,8 +203,8 @@ export function DestinationForm({
         </label>
       </div>
 
-      <CoverMediaFields media={destination?.coverImage} />
-      <GalleryFields gallery={destination?.gallery} />
+      <CoverMediaFields media={destination?.coverImage} mediaLibrary={mediaLibrary} />
+      <GalleryFields gallery={destination?.gallery} mediaLibrary={mediaLibrary} />
 
       <div className={styles.editorSection}>
         <div className="eyebrow">Spanish translation</div>
@@ -199,6 +219,7 @@ export function DestinationForm({
       <div className={styles.actions}>
         <button className="button button-primary" type="submit">{isEditing ? "Save destination" : "Create destination"}</button>
         <Link className="button button-secondary" href="/operator/catalogue">Cancel</Link>
+        <Link className="button button-secondary" href="/operator/media">Media library</Link>
       </div>
     </form>
   );
@@ -207,11 +228,13 @@ export function DestinationForm({
 export function TripForm({
   trip,
   destinations,
-  error
+  error,
+  mediaLibrary = []
 }: {
   trip?: Trip | null;
   destinations: Destination[];
   error?: string;
+  mediaLibrary?: MediaLibraryChoice[];
 }) {
   const isEditing = Boolean(trip);
   const returnTo = isEditing ? `/operator/catalogue/trips/${trip?.id}` : "/operator/catalogue/trips/new";
@@ -263,8 +286,8 @@ export function TripForm({
         </label>
       </div>
 
-      <CoverMediaFields media={trip?.coverImage} />
-      <GalleryFields gallery={trip?.gallery} />
+      <CoverMediaFields media={trip?.coverImage} mediaLibrary={mediaLibrary} />
+      <GalleryFields gallery={trip?.gallery} mediaLibrary={mediaLibrary} />
       <ItineraryFields itinerary={trip?.itinerary} label="English itinerary" />
 
       <div className={styles.editorSection}>
@@ -283,6 +306,7 @@ export function TripForm({
       <div className={styles.actions}>
         <button className="button button-primary" type="submit">{isEditing ? "Save trip" : "Create trip"}</button>
         <Link className="button button-secondary" href="/operator/catalogue">Cancel</Link>
+        <Link className="button button-secondary" href="/operator/media">Media library</Link>
       </div>
     </form>
   );
