@@ -12,7 +12,7 @@ export function TripCard({ trip }: { trip: Trip }) {
 
   return (
     <article className="card">
-      <div className="card-kicker">{trip.durationDays} day itinerary</div>
+      <div className="card-kicker">{trip.durationDays} days</div>
       <h3><Link href={`/trips/${trip.slug}`}>{trip.title}</Link></h3>
       <p>{trip.summary}</p>
       <ul className="highlight-list">
@@ -21,7 +21,7 @@ export function TripCard({ trip }: { trip: Trip }) {
         ))}
       </ul>
       <div className="trip-meta">
-        <Link className="text-link" href={`/trips/${trip.slug}`}>View trip →</Link>
+        <Link className="text-link" href={`/trips/${trip.slug}`}>Explore trip →</Link>
         <strong>From {price}</strong>
       </div>
     </article>
