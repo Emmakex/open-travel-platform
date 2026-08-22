@@ -17,12 +17,12 @@ export const metadata = {
 export default async function AccountPage({
   searchParams
 }: {
-  searchParams: Promise<{ created?: string }>;
+  searchParams: Promise<{ created?: string; profile?: string }>;
 }) {
   const locale = await getLocale();
   const copy = getAccountCopy(locale).account;
   const identity = await requireCustomerIdentity();
-  const { created } = await searchParams;
+  const { created, profile: profileStatus } = await searchParams;
   const identityRepository = getIdentityRepository();
 
   const [profile, trips, reservations] = await Promise.all([
@@ -48,11 +48,18 @@ export default async function AccountPage({
             </div>
           ) : null}
 
+          {profileStatus === "updated" ? (
+            <div className={styles.notice}>
+              {locale === "es" ? "Tu perfil se ha actualizado correctamente." : "Your profile has been updated successfully."}
+            </div>
+          ) : null}
+
           <dl className={styles.profileList}>
             <div><dt>Email</dt><dd>{profile?.email ?? identity.email}</dd></div>
             <div><dt>{copy.role}</dt><dd>{locale === "es" ? "cliente" : identity.role}</dd></div>
+            <div><dt>{locale === "es" ? "Teléfono" : "Phone"}</dt><dd>{profile?.phone ?? "—"}</dd></div>
             <div><dt>{copy.country}</dt><dd>{profile?.country ?? "—"}</dd></div>
-            <div><dt>{copy.language}</dt><dd>{locale.toUpperCase()}</dd></div>
+            <div><dt>{copy.language}</dt><dd>{(profile?.preferredLocale ?? locale).toUpperCase()}</dd></div>
             <div>
               <dt>{copy.reservations}</dt>
               <dd>
@@ -63,6 +70,9 @@ export default async function AccountPage({
           </dl>
 
           <div className={styles.actions}>
+            <Link className="button button-primary" href="/account/profile">
+              {locale === "es" ? "Editar perfil" : "Edit profile"}
+            </Link>
             <form action={endCustomerSession}>
               <button className="button button-secondary" type="submit">{copy.endSession}</button>
             </form>
