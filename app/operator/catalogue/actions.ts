@@ -3,7 +3,13 @@
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import type { CurrencyCode, TravelPublicationStatus } from "@/domain/travel/types";
+import type {
+  CurrencyCode,
+  TravelMedia,
+  TravelMediaFocalPoint,
+  TravelPublicationStatus,
+  TripDay
+} from "@/domain/travel/types";
 import {
   getMongoDestinationForAdmin,
   getMongoTripForAdmin,
@@ -16,6 +22,12 @@ import { requireOperationsIdentity } from "@/lib/require-operations-identity";
 function text(formData: FormData, name: string) {
   const value = formData.get(name);
   return typeof value === "string" ? value.trim() : "";
+}
+
+function texts(formData: FormData, name: string) {
+  return formData
+    .getAll(name)
+    .map((value) => (typeof value === "string" ? value.trim() : ""));
 }
 
 function lines(formData: FormData, name: string) {
@@ -49,6 +61,101 @@ function revalidateCatalogue() {
   revalidatePath("/trips");
   revalidatePath("/operator");
   revalidatePath("/operator/catalogue");
+}
+
+const focalPoints = new Set<TravelMediaFocalPoint>(["center", "top", "bottom", "left", "right"]);
+
+function parseMediaSrc(value: string) {
+  if (!value) return "";
+  if (value.startsWith("/")) return value;
+
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+function mediaFromFields(
+  src: string,
+  alt: string,
+  caption: string,
+  credit: string,
+  focalPoint: string
+): TravelMedia | null | undefined {
+  const parsedSrc = parseMediaSrc(src);
+  if (parsedSrc === null) return null;
+  if (!parsedSrc) return undefined;
+
+  return {
+    src: parsedSrc,
+    alt: alt || undefined,
+    caption: caption || undefined,
+    credit: credit || undefined,
+    focalPoint: focalPoints.has(focalPoint as TravelMediaFocalPoint)
+      ? (focalPoint as TravelMediaFocalPoint)
+      : "center"
+  };
+}
+
+function parseCoverImage(formData: FormData): TravelMedia | null | undefined {
+  return mediaFromFields(
+    text(formData, "coverSrc"),
+    text(formData, "coverAlt"),
+    text(formData, "coverCaption"),
+    text(formData, "coverCredit"),
+    text(formData, "coverFocalPoint")
+  );
+}
+
+function parseGallery(formData: FormData): TravelMedia[] | null {
+  const sources = texts(formData, "gallerySrc");
+  const alts = texts(formData, "galleryAlt");
+  const captions = texts(formData, "galleryCaption");
+  const credits = texts(formData, "galleryCredit");
+  const focalPointsInput = texts(formData, "galleryFocalPoint");
+  const length = Math.max(sources.length, alts.length, captions.length, credits.length, focalPointsInput.length);
+  const gallery: TravelMedia[] = [];
+
+  for (let index = 0; index < length; index += 1) {
+    const media = mediaFromFields(
+      sources[index] ?? "",
+      alts[index] ?? "",
+      captions[index] ?? "",
+      credits[index] ?? "",
+      focalPointsInput[index] ?? "center"
+    );
+
+    if (media === null) return null;
+    if (media) gallery.push(media);
+  }
+
+  return gallery;
+}
+
+function parseItinerary(formData: FormData, suffix = ""): TripDay[] | null {
+  const dayValues = texts(formData, `itineraryDay${suffix}`);
+  const titles = texts(formData, `itineraryTitle${suffix}`);
+  const summaries = texts(formData, `itinerarySummary${suffix}`);
+  const length = Math.max(dayValues.length, titles.length, summaries.length);
+  const itinerary: TripDay[] = [];
+
+  for (let index = 0; index < length; index += 1) {
+    const rawDay = dayValues[index] ?? "";
+    const title = titles[index] ?? "";
+    const summary = summaries[index] ?? "";
+
+    if (!rawDay && !title && !summary) continue;
+
+    const day = Number(rawDay);
+    if (!Number.isInteger(day) || day < 1 || !title || !summary) return null;
+
+    itinerary.push({ day, title, summary });
+  }
+
+  itinerary.sort((a, b) => a.day - b.day);
+  return itinerary;
 }
 
 export async function seedMongoCatalogueAction() {
@@ -85,8 +192,10 @@ export async function saveDestinationAction(formData: FormData) {
   const region = text(formData, "region");
   const summary = text(formData, "summary");
   const returnTo = safeReturnTo(formData, requestedId ? `/operator/catalogue/destinations/${id}` : "/operator/catalogue/destinations/new");
+  const coverImage = parseCoverImage(formData);
+  const gallery = parseGallery(formData);
 
-  if (!name || !slug || !country || !region || !summary) {
+  if (!name || !slug || !country || !region || !summary || coverImage === null || gallery === null) {
     redirect(`${returnTo}?error=validation`);
   }
 
@@ -110,6 +219,8 @@ export async function saveDestinationAction(formData: FormData) {
       summary,
       featured: formData.get("featured") === "on",
       publicationStatus: publicationStatus(formData),
+      coverImage,
+      gallery,
       translations: {
         ...(existing?.translations ?? {}),
         es
@@ -139,8 +250,25 @@ export async function saveTripAction(formData: FormData) {
   const rawCurrency = text(formData, "currency");
   const currency: CurrencyCode = rawCurrency === "USD" || rawCurrency === "GBP" ? rawCurrency : "EUR";
   const returnTo = safeReturnTo(formData, requestedId ? `/operator/catalogue/trips/${id}` : "/operator/catalogue/trips/new");
+  const coverImage = parseCoverImage(formData);
+  const gallery = parseGallery(formData);
+  const itinerary = parseItinerary(formData);
+  const itineraryEs = parseItinerary(formData, "Es");
 
-  if (!title || !slug || !destinationId || !summary || !Number.isFinite(durationDays) || durationDays < 1 || !Number.isFinite(fromPrice) || fromPrice < 0) {
+  if (
+    !title ||
+    !slug ||
+    !destinationId ||
+    !summary ||
+    !Number.isFinite(durationDays) ||
+    durationDays < 1 ||
+    !Number.isFinite(fromPrice) ||
+    fromPrice < 0 ||
+    coverImage === null ||
+    gallery === null ||
+    itinerary === null ||
+    itineraryEs === null
+  ) {
     redirect(`${returnTo}?error=validation`);
   }
 
@@ -152,7 +280,10 @@ export async function saveTripAction(formData: FormData) {
     ...(existing?.translations?.es ?? {}),
     title: text(formData, "titleEs") || undefined,
     summary: text(formData, "summaryEs") || undefined,
-    highlights: lines(formData, "highlightsEs")
+    highlights: lines(formData, "highlightsEs"),
+    itinerary: itineraryEs,
+    included: lines(formData, "includedEs"),
+    notIncluded: lines(formData, "notIncludedEs")
   };
 
   try {
@@ -167,8 +298,11 @@ export async function saveTripAction(formData: FormData) {
       fromPrice,
       currency,
       highlights,
+      itinerary,
       included,
       notIncluded,
+      coverImage,
+      gallery,
       featured: formData.get("featured") === "on",
       publicationStatus: publicationStatus(formData),
       translations: {

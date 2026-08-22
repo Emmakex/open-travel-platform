@@ -1,5 +1,5 @@
 .shell {
-  max-width: 980px;
+  max-width: 1080px;
 }
 
 .panel {
@@ -69,7 +69,8 @@
 }
 
 .list,
-.managementList {
+.managementList,
+.repeatList {
   display: grid;
   gap: 0.75rem;
 }
@@ -253,6 +254,29 @@
   background: rgba(255,255,255,0.02);
 }
 
+.repeatCard,
+.itineraryRow {
+  display: grid;
+  gap: 0.85rem;
+  padding: 1rem;
+  border: 1px solid color-mix(in srgb, var(--line) 84%, transparent);
+  border-radius: 14px;
+  background: rgba(7, 18, 32, 0.38);
+}
+
+.repeatCard > strong {
+  color: var(--text);
+}
+
+.itineraryRow {
+  grid-template-columns: 90px minmax(180px, 0.75fr) minmax(0, 1.5fr);
+  align-items: start;
+}
+
+.itineraryRow .field textarea {
+  min-height: 88px;
+}
+
 @media (max-width: 880px) {
   .metrics {
     grid-template-columns: 1fr 1fr;
@@ -260,7 +284,8 @@
 
   .row,
   .detailGrid,
-  .managementRow {
+  .managementRow,
+  .itineraryRow {
     grid-template-columns: 1fr;
   }
 
