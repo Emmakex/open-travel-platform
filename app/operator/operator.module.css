@@ -148,12 +148,24 @@
   color: var(--text);
 }
 
-.sectionHeader {
+.sectionHeader,
+.sectionHeaderCompact {
   display: flex;
   align-items: end;
   justify-content: space-between;
   gap: 1rem;
+}
+
+.sectionHeader {
   margin-bottom: 1rem;
+}
+
+.sectionHeaderCompact {
+  align-items: center;
+}
+
+.sectionHeaderCompact p {
+  margin: 0.35rem 0 0;
 }
 
 .managementRow {
@@ -192,6 +204,7 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
+  align-items: start;
 }
 
 .field {
@@ -202,7 +215,9 @@
 
 .field > label,
 .field > span,
-.checkboxField span {
+.checkboxField span,
+.compactField > span,
+.mediaSourceLabel {
   color: var(--muted);
   font-size: 0.86rem;
   font-weight: 700;
@@ -210,7 +225,9 @@
 
 .field input,
 .field textarea,
-.field select {
+.field select,
+.compactField input,
+.compactField select {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -227,7 +244,9 @@
 
 .field input:focus,
 .field textarea:focus,
-.field select:focus {
+.field select:focus,
+.compactField input:focus,
+.compactField select:focus {
   outline: 2px solid color-mix(in srgb, var(--accent) 60%, transparent);
   outline-offset: 2px;
 }
@@ -255,27 +274,222 @@
   background: rgba(255,255,255,0.02);
 }
 
-.repeatCard,
-.itineraryRow {
+.mediaEditorCard,
+.itineraryCard {
   display: grid;
-  gap: 0.85rem;
+  gap: 0.9rem;
   padding: 1rem;
-  border: 1px solid color-mix(in srgb, var(--line) 84%, transparent);
-  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--line) 88%, transparent);
+  border-radius: 16px;
   background: rgba(7, 18, 32, 0.38);
 }
 
-.repeatCard > strong {
+.mediaEditorHeader,
+.itineraryCardHeader,
+.reorderToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.mediaEditorHeader strong,
+.itineraryCardHeader strong,
+.reorderToolbar span {
   color: var(--text);
 }
 
-.itineraryRow {
-  grid-template-columns: 90px minmax(180px, 0.75fr) minmax(0, 1.5fr);
+.mediaEditorLayout {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.95fr) minmax(300px, 1.05fr);
+  gap: 1rem;
   align-items: start;
 }
 
-.itineraryRow .field textarea {
-  min-height: 88px;
+.mediaMetadataGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+  align-items: start;
+}
+
+.mediaSourceField {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.mediaSourceExperience {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.mediaSourcePreview {
+  overflow: hidden;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(5, 14, 25, 0.86);
+}
+
+.mediaSourcePreview img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mediaPlaceholder {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 0.35rem;
+  height: 100%;
+  padding: 1rem;
+  text-align: center;
+  color: var(--muted);
+}
+
+.mediaPlaceholder span {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.mediaSourceControls {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.inlineMediaActions,
+.actionsCompact,
+.reorderActions,
+.reorderToolbar > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: center;
+}
+
+.inlineMediaActions :global(.button) {
+  padding: 0.62rem 0.85rem;
+  font-size: 0.82rem;
+}
+
+.hiddenFileInput {
+  display: none;
+}
+
+.compactField {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.compactField select,
+.compactField input {
+  padding: 0.65rem 0.75rem;
+  font-size: 0.88rem;
+}
+
+.advancedMediaSource {
+  border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  padding-top: 0.65rem;
+}
+
+.advancedMediaSource summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.advancedMediaSource[open] summary {
+  margin-bottom: 0.65rem;
+}
+
+.inlineMediaStatus {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.textButtonDanger,
+.reorderActions button,
+.reorderToolbar button {
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 0.4rem 0.6rem;
+  background: rgba(255,255,255,0.025);
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.textButtonDanger {
+  color: #ffb0b0;
+}
+
+.reorderActions button:disabled,
+.reorderToolbar button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.reorderToolbar {
+  padding: 0.25rem 0.15rem 0.35rem;
+}
+
+.itineraryCard {
+  grid-template-columns: 1fr;
+}
+
+.itineraryCard textarea {
+  min-height: 90px;
+}
+
+.emptyEditorState {
+  display: grid;
+  place-items: center;
+  gap: 0.55rem;
+  padding: 2rem 1rem;
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.emptyEditorState strong {
+  color: var(--text);
+}
+
+.stickySaveBar {
+  position: sticky;
+  bottom: 0.75rem;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
+  border-radius: 16px;
+  background: color-mix(in srgb, #091626 92%, transparent);
+  box-shadow: 0 14px 40px rgba(0,0,0,0.28);
+  backdrop-filter: blur(14px);
+}
+
+.stickySaveBar > div:first-child {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.stickySaveBar strong {
+  color: var(--text);
+}
+
+.stickySaveBar span {
+  color: var(--muted);
+  font-size: 0.78rem;
 }
 
 .mediaUploadForm {
@@ -331,57 +545,6 @@
   overflow-wrap: anywhere;
 }
 
-.mediaSourcePicker {
-  display: grid;
-  gap: 0.6rem;
-}
-
-.mediaSourcePicker select {
-  width: 100%;
-  border: 1px dashed var(--line);
-  border-radius: 10px;
-  padding: 0.65rem 0.75rem;
-  background: rgba(255,255,255,0.025);
-  color: var(--muted);
-}
-
-.inlineMediaActions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.55rem;
-}
-
-.inlineMediaActions :global(.button) {
-  padding: 0.55rem 0.8rem;
-  font-size: 0.82rem;
-}
-
-.hiddenFileInput {
-  display: none;
-}
-
-.inlineMediaPreview {
-  overflow: hidden;
-  width: min(100%, 320px);
-  aspect-ratio: 16 / 10;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: rgba(7, 18, 32, 0.72);
-}
-
-.inlineMediaPreview img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.inlineMediaStatus {
-  color: var(--muted);
-  font-size: 0.78rem;
-  line-height: 1.4;
-}
-
 @media (max-width: 880px) {
   .metrics {
     grid-template-columns: 1fr 1fr;
@@ -390,7 +553,7 @@
   .row,
   .detailGrid,
   .managementRow,
-  .itineraryRow {
+  .mediaEditorLayout {
     grid-template-columns: 1fr;
   }
 
@@ -404,7 +567,8 @@
 }
 
 @media (max-width: 620px) {
-  .formGrid {
+  .formGrid,
+  .mediaMetadataGrid {
     grid-template-columns: 1fr;
   }
 
@@ -412,9 +576,21 @@
     padding-top: 0;
   }
 
-  .sectionHeader {
+  .sectionHeader,
+  .sectionHeaderCompact,
+  .stickySaveBar {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .sectionHeaderCompact :global(.button),
+  .stickySaveBar .actionsCompact,
+  .stickySaveBar .actionsCompact :global(.button) {
+    width: 100%;
+  }
+
+  .stickySaveBar .actionsCompact :global(.button) {
+    justify-content: center;
   }
 
   .mediaGrid {
@@ -430,5 +606,16 @@
   .definitionList div {
     grid-template-columns: 1fr;
     gap: 0.2rem;
+  }
+
+  .panel {
+    padding: 1rem;
+    border-radius: 18px;
+  }
+
+  .editorSection,
+  .mediaEditorCard,
+  .itineraryCard {
+    padding: 0.85rem;
   }
 }
