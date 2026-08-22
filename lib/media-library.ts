@@ -17,6 +17,12 @@ export type MediaLibraryItem = {
   credit?: string;
 };
 
+export type MediaLibraryChoice = {
+  id: string;
+  url: string;
+  label: string;
+};
+
 type TravelMediaMetadata = {
   originalName?: string;
   contentType?: string;
@@ -54,6 +60,14 @@ export async function listMediaLibrary(limit = 100): Promise<MediaLibraryItem[]>
   const bucket = await getBucket();
   const files = await bucket.find({}).sort({ uploadDate: -1 }).limit(Math.max(1, Math.min(limit, 200))).toArray();
   return files.map(toItem);
+}
+
+export async function listMediaLibraryChoices(limit = 100): Promise<MediaLibraryChoice[]> {
+  return (await listMediaLibrary(limit)).map((item) => ({
+    id: item.id,
+    url: item.url,
+    label: item.alt || item.originalName
+  }));
 }
 
 export async function getMediaLibraryItem(id: string): Promise<MediaLibraryItem | null> {
