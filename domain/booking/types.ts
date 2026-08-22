@@ -1,4 +1,16 @@
 export type ReservationStatus = "pending" | "confirmed" | "cancelled";
+export type TripDepartureStatus = "open" | "closed" | "sold-out";
+
+export interface TripDeparture {
+  id: string;
+  tripId: string;
+  departureDate: string;
+  returnDate: string;
+  capacity: number;
+  reservedSpaces: number;
+  status: TripDepartureStatus;
+  unitPrice?: number;
+}
 
 export interface AvailabilityWindow {
   id: string;
@@ -6,6 +18,7 @@ export interface AvailabilityWindow {
   departureDate: string;
   returnDate: string;
   remainingSpaces: number;
+  unitPrice?: number;
 }
 
 export interface Reservation {

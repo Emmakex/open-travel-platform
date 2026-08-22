@@ -8,10 +8,25 @@ import {
   readDemoReservations,
   writeDemoReservations
 } from "@/lib/demo-reservation-store";
+import {
+  listPublicMongoAvailability,
+  releaseMongoDeparture,
+  reserveMongoDeparture
+} from "@/lib/mongo-departures";
+import { travelDataConfig } from "@/lib/travel-data-config";
 import type { BookingRepository } from "@/repositories/booking-repository";
+
+function inventoryError() {
+  const error = new Error("Departure inventory is no longer available.");
+  Object.assign(error, { code: "DEPARTURE_UNAVAILABLE" });
+  return error;
+}
 
 export class DemoBookingRepository implements BookingRepository {
   async listAvailability(tripId: string) {
+    if (travelDataConfig.mode === "mongodb") {
+      return listPublicMongoAvailability(tripId);
+    }
     return demoAvailability.filter((item) => item.tripId === tripId);
   }
 
@@ -28,6 +43,13 @@ export class DemoBookingRepository implements BookingRepository {
   }
 
   async createReservation(input: CreateReservationInput) {
+    let inventoryReserved = false;
+
+    if (travelDataConfig.mode === "mongodb") {
+      inventoryReserved = await reserveMongoDeparture(input.tripId, input.availabilityId, input.partySize);
+      if (!inventoryReserved) throw inventoryError();
+    }
+
     const reservation: Reservation = {
       ...input,
       id: `demo-${randomUUID()}`,
@@ -35,9 +57,16 @@ export class DemoBookingRepository implements BookingRepository {
       createdAt: new Date().toISOString()
     };
 
-    const reservations = await readDemoReservations();
-    await writeDemoReservations([...reservations, reservation]);
-    return reservation;
+    try {
+      const reservations = await readDemoReservations();
+      await writeDemoReservations([...reservations, reservation]);
+      return reservation;
+    } catch (error) {
+      if (inventoryReserved) {
+        await releaseMongoDeparture(input.tripId, input.availabilityId, input.partySize).catch(() => false);
+      }
+      throw error;
+    }
   }
 
   async cancelReservation(identityId: string, reservationId: string) {
@@ -59,6 +88,14 @@ export class DemoBookingRepository implements BookingRepository {
     const next = [...reservations];
     next[index] = cancelled;
     await writeDemoReservations(next);
+
+    if (travelDataConfig.mode === "mongodb") {
+      await releaseMongoDeparture(current.tripId, current.availabilityId, current.partySize).catch((error) => {
+        console.error("Failed to release MongoDB departure inventory after cancellation", error);
+        return false;
+      });
+    }
+
     return cancelled;
   }
 }

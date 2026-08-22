@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { saveDestinationAction, saveTripAction } from "@/app/operator/catalogue/actions";
 import styles from "@/app/operator/operator.module.css";
+import { DepartureEditor } from "@/components/operator/departure-editor";
 import {
   GalleryEditor,
   ItineraryEditor,
   MediaEditorCard
 } from "@/components/operator/structured-editors";
+import type { TripDeparture } from "@/domain/booking/types";
 import type { Destination, Trip } from "@/domain/travel/types";
 import type { MediaLibraryChoice } from "@/lib/media-library";
 
@@ -15,7 +17,7 @@ function ErrorNotice({ error }: { error?: string }) {
   return (
     <div className={styles.notice}>
       {error === "validation"
-        ? "Please complete all required fields with valid values. Media URLs must be local / paths or HTTPS URLs, and itinerary rows require title and summary."
+        ? "Please complete all required fields with valid values. Media URLs must be local / paths or HTTPS URLs, itinerary rows require title and summary, and departure dates/capacity must be valid."
         : "The record could not be saved. Check for a duplicate slug and review the runtime log."}
     </div>
   );
@@ -120,11 +122,13 @@ export function DestinationForm({
 export function TripForm({
   trip,
   destinations,
+  departures = [],
   error,
   mediaLibrary = []
 }: {
   trip?: Trip | null;
   destinations: Destination[];
+  departures?: TripDeparture[];
   error?: string;
   mediaLibrary?: MediaLibraryChoice[];
 }) {
@@ -188,6 +192,8 @@ export function TripForm({
         </div>
       </div>
 
+      <DepartureEditor departures={departures} />
+
       <div className={styles.editorSection}>
         <div>
           <div className="eyebrow">Cover media</div>
@@ -229,7 +235,7 @@ export function TripForm({
       <div className={styles.stickySaveBar}>
         <div>
           <strong>{isEditing ? "Save trip changes" : "Create trip"}</strong>
-          <span>Images upload immediately; catalogue changes apply when you save.</span>
+          <span>Product, departures and inventory are written to MongoDB when you save.</span>
         </div>
         <div className={styles.actionsCompact}>
           <Link className="button button-secondary" href="/operator/catalogue">Cancel</Link>
