@@ -9,6 +9,7 @@ import { hasCustomerAccess, hasOperationsAccess } from "@/lib/access-control";
 import { getLocale } from "@/lib/get-locale";
 import { identityConfig } from "@/lib/identity-config";
 import { getIdentityRepository } from "@/lib/identity-repository";
+import { isEmailDeliveryConfigured } from "@/lib/email";
 
 export const metadata = {
   title: "Sign in | Kairoseth Travel",
@@ -18,16 +19,17 @@ export const metadata = {
 export default async function SignInPage({
   searchParams
 }: {
-  searchParams: Promise<{ error?: string; demo?: string }>;
+  searchParams: Promise<{ error?: string; demo?: string; reset?: string }>;
 }) {
   const locale = await getLocale();
   const identity = await getIdentityRepository().getCurrentIdentity();
-  const { error, demo } = await searchParams;
+  const { error, demo, reset } = await searchParams;
 
   if (hasCustomerAccess(identity)) redirect("/account");
   if (hasOperationsAccess(identity)) redirect("/operator");
 
   const isEs = locale === "es";
+  const recoveryEnabled = identityConfig.customerAuthEnabled && isEmailDeliveryConfigured();
   const errors: Record<string, string> = {
     "invalid-credentials": isEs
       ? "No se ha podido iniciar sesión. Comprueba tus credenciales. Tras varios intentos fallidos, el acceso se bloquea temporalmente durante 15 minutos."
@@ -52,6 +54,13 @@ export default async function SignInPage({
               : "Review your reservations, departures and travel details from your persistent customer account."}
           </p>
 
+          {reset === "success" ? (
+            <div className={styles.notice}>
+              {isEs
+                ? "Tu contraseña se ha restablecido. Ya puedes iniciar sesión con la nueva contraseña."
+                : "Your password has been reset. You can now sign in with the new password."}
+            </div>
+          ) : null}
           {error && errors[error] ? <div className={styles.notice}>{errors[error]}</div> : null}
           {demo === "disabled" ? (
             <div className={styles.notice}>{isEs ? "La sesión demo está desactivada." : "The demo session is disabled."}</div>
@@ -80,6 +89,14 @@ export default async function SignInPage({
           ) : (
             <div className={styles.notice}>{isEs ? "El acceso de clientes no está disponible." : "Customer access is unavailable."}</div>
           )}
+
+          {recoveryEnabled ? (
+            <p>
+              <Link className="text-link" href="/account/forgot-password">
+                {isEs ? "¿Has olvidado tu contraseña? →" : "Forgot your password? →"}
+              </Link>
+            </p>
+          ) : null}
 
           {identityConfig.customerAuthEnabled ? (
             <div className={styles.authFooter}>
