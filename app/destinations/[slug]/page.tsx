@@ -57,11 +57,12 @@ export default async function DestinationDetailPage({ params }: PageProps) {
         <div className="container">
           <div className="section-heading">
             <div>
-              <div className="eyebrow">Itineraries</div>
+              <div className="eyebrow">Journeys</div>
               <h2>Trips in {destination.name}</h2>
             </div>
             <p>
-              Related products are resolved through domain IDs, keeping destination and trip data independent from presentation.
+              Choose an itinerary and continue to trip highlights, starting price and available
+              departures when you are ready to plan your journey.
             </p>
           </div>
 

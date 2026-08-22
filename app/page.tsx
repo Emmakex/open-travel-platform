@@ -20,10 +20,10 @@ export default async function HomePage() {
         <div className="container hero-grid">
           <div>
             <div className="eyebrow">Kairoseth Travel</div>
-            <h1>Travel discovery, booking and operations in one adaptable platform.</h1>
+            <h1>Discover extraordinary journeys. Book with clarity. Travel with confidence.</h1>
             <p className="hero-copy">
-              {appConfig.siteTagline} Explore a complete travel journey today, with an architecture
-              ready to connect real catalogues, booking engines, suppliers and operational systems.
+              {appConfig.siteTagline} Browse curated destinations and itineraries, check availability
+              and manage your journey from one connected experience.
             </p>
             <div className="actions">
               <Link className="button button-primary" href="/trips">Explore trips</Link>
@@ -31,12 +31,12 @@ export default async function HomePage() {
             </div>
           </div>
 
-          <div className="hero-panel" aria-label="Kairoseth Travel platform overview">
+          <div className="hero-panel" aria-label="Kairoseth Travel journey overview">
             <div className="panel-map" />
             <div className="stat-row">
               <div className="stat"><strong>{destinations.length}</strong><span>Destinations</span></div>
-              <div className="stat"><strong>{trips.length}</strong><span>Itineraries</span></div>
-              <div className="stat"><strong>{appConfig.dataMode}</strong><span>Current environment</span></div>
+              <div className="stat"><strong>{trips.length}</strong><span>Curated journeys</span></div>
+              <div className="stat"><strong>End-to-end</strong><span>Booking journey</span></div>
             </div>
           </div>
         </div>
@@ -47,10 +47,11 @@ export default async function HomePage() {
           <div className="section-heading">
             <div>
               <div className="eyebrow">Destinations</div>
-              <h2>Discover places worth building a journey around.</h2>
+              <h2>Where will you go next?</h2>
             </div>
             <p>
-              Browse destination experiences through a fast, structured catalogue designed to grow from curated demo content into live travel inventory.
+              Start with places that inspire you, then discover journeys built around culture,
+              landscapes, food and memorable local experiences.
             </p>
           </div>
           <div className="grid-3">
@@ -65,11 +66,12 @@ export default async function HomePage() {
         <div className="container">
           <div className="section-heading">
             <div>
-              <div className="eyebrow">Trips</div>
-              <h2>From inspiration to a bookable itinerary.</h2>
+              <div className="eyebrow">Featured journeys</div>
+              <h2>Trips designed around the experience.</h2>
             </div>
             <p>
-              Compare durations, prices and highlights, then continue into availability, reservation and customer-account flows without leaving the platform.
+              Compare duration, starting price and highlights, then continue directly to available
+              departures and reservation.
             </p>
           </div>
           <div className="grid-3">
@@ -81,22 +83,23 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="section" id="architecture">
+      <section className="section" id="platform">
         <div className="container">
           <div className="section-heading">
             <div>
-              <div className="eyebrow">Platform</div>
-              <h2>Built to evolve with the travel operation behind it.</h2>
+              <div className="eyebrow">One connected journey</div>
+              <h2>From inspiration to operations.</h2>
             </div>
             <p>
-              The experience is separated from infrastructure so catalogues, identity, booking and backoffice systems can evolve independently as the product grows.
+              Kairoseth Travel brings the customer journey and the operational workflow together
+              while keeping each part ready to evolve as the business grows.
             </p>
           </div>
           <div className="architecture">
-            <div><strong>Experience</strong>Fast destination and trip discovery across the public catalogue.</div>
-            <div><strong>Booking</strong>Availability and reservation flows validated on the server.</div>
-            <div><strong>Operations</strong>Customer accounts, staff workflows and reservation audit history.</div>
-            <div><strong>Integrations</strong>Replaceable adapters for APIs, CMS, suppliers, CRM and booking systems.</div>
+            <div><strong>Discover</strong>Explore destinations and compare curated travel experiences.</div>
+            <div><strong>Reserve</strong>Check departures, availability and pricing before booking.</div>
+            <div><strong>Manage</strong>Keep reservations and journey details together in the customer area.</div>
+            <div><strong>Operate</strong>Give travel teams a clear workflow for reservations and status changes.</div>
           </div>
         </div>
       </section>

@@ -7,8 +7,8 @@ import { identityConfig } from "@/lib/identity-config";
 import { getIdentityRepository } from "@/lib/identity-repository";
 
 export const metadata = {
-  title: "Sign in",
-  description: "Identity adapter demo for Open Travel Platform."
+  title: "Customer demo",
+  description: "Explore the Kairoseth Travel customer account and booking journey with fictional demo data."
 };
 
 export default async function SignInPage() {
@@ -26,32 +26,31 @@ export default async function SignInPage() {
     <main className="section">
       <div className={`container ${styles.shell}`}>
         <section className={styles.panel}>
-          <div className="eyebrow">Identity boundary</div>
-          <h1>Customer accounts without provider lock-in.</h1>
+          <div className="eyebrow">Customer demo</div>
+          <h1>Explore the customer journey.</h1>
           <p className={styles.lead}>
-            This starter keeps authentication providers behind an identity boundary. The built-in
-            demo session uses no password and grants access only to fictional local account data.
+            Start a fictional customer session to create a demo reservation, review your trip and
+            explore the account experience. No password or real personal data is required.
           </p>
 
           {identityConfig.demoSessionEnabled ? (
             <form action={startDemoSession}>
               <button className="button button-primary" type="submit">
-                Start demo customer session
+                Start customer demo
               </button>
             </form>
           ) : (
             <div className={styles.notice}>
-              Demo identity is disabled in this deployment. Connect a production identity provider
-              by implementing the documented repository contract.
+              Customer demo access is disabled in this deployment.
             </div>
           )}
 
           <div className={styles.notice}>
-            <strong>Production note.</strong> The demo session is not a replacement for a real
-            authentication provider and must never be used as an authorization boundary for real data.
+            <strong>Demo environment.</strong> The identity and account information shown here are
+            fictional and must not be used for real customer or commercial data.
           </div>
 
-          <p><Link className="text-link" href="/operator/sign-in">Operator/admin demo →</Link></p>
+          <p><Link className="text-link" href="/operator/sign-in">Staff demo →</Link></p>
           <Link className="text-link" href="/">← Back to catalogue</Link>
         </section>
       </div>

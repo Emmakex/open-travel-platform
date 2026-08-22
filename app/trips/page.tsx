@@ -4,7 +4,7 @@ import { getTravelRepository } from "@/lib/travel-repository";
 
 export const metadata: Metadata = {
   title: "Trips",
-  description: "Search and filter travel itineraries in the Open Travel Platform catalogue."
+  description: "Search and compare curated travel itineraries with Kairoseth Travel."
 };
 
 export default async function TripsPage() {
@@ -19,11 +19,12 @@ export default async function TripsPage() {
       <div className="container">
         <div className="section-heading">
           <div>
-            <div className="eyebrow">Catalogue explorer</div>
-            <h2>Find a trip</h2>
+            <div className="eyebrow">Find your journey</div>
+            <h2>Explore trips</h2>
           </div>
           <p>
-            Search and filter the active catalogue without coupling the interface to a specific backend.
+            Search by destination and compare journey length, highlights and starting price before
+            checking available departures.
           </p>
         </div>
         <CatalogueExplorer destinations={destinations} trips={trips} />

@@ -15,10 +15,10 @@ const dateFormatter = new Intl.DateTimeFormat("en", {
 });
 
 const errorMessages: Record<string, string> = {
-  "booking-disabled": "Demo reservation writes are disabled in this deployment.",
+  "booking-disabled": "Demo reservations are currently disabled.",
   "invalid-party-size": "Choose a party size between 1 and 8 travellers.",
   "invalid-availability": "The selected departure is no longer available.",
-  "insufficient-space": "The selected departure does not have enough remaining demo spaces."
+  "insufficient-space": "The selected departure does not have enough remaining spaces."
 };
 
 function formatDate(value: string) {
@@ -31,7 +31,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   return {
     title: trip ? `Book ${trip.title}` : "Book trip",
-    description: trip ? `Demo reservation flow for ${trip.title}.` : "Demo reservation flow."
+    description: trip ? `Choose a departure for ${trip.title}.` : "Choose a trip departure."
   };
 }
 
@@ -60,11 +60,11 @@ export default async function BookTripPage({
     <main className="section">
       <div className={`container ${styles.grid}`}>
         <section className={styles.panel}>
-          <div className="eyebrow">Reservation demo</div>
+          <div className="eyebrow">Choose your departure</div>
           <h1>{trip.title}</h1>
           <p className={styles.lead}>
-            Select a fictional departure and party size. The server validates the trip, availability,
-            remaining spaces and price before creating the demo reservation.
+            Select a departure and the number of travellers. This public environment uses fictional
+            availability and reservations so the complete booking journey can be explored safely.
           </p>
 
           {error && errorMessages[error] ? (
@@ -73,15 +73,15 @@ export default async function BookTripPage({
 
           {!identity ? (
             <div className={styles.notice}>
-              <strong>Customer session required.</strong> Start the fictional demo account before
-              creating a reservation. <Link className="text-link" href="/account/sign-in">Sign in →</Link>
+              <strong>Customer session required.</strong> Start the demo customer account before
+              creating a reservation. <Link className="text-link" href="/account/sign-in">Continue →</Link>
             </div>
           ) : null}
 
           {staff ? (
             <div className={styles.notice}>
-              A staff session is active. Reservation creation is customer-only.{" "}
-              <Link className="text-link" href="/operator">Open operator console →</Link>
+              A staff session is active. Reservations can only be created from the customer demo.{" "}
+              <Link className="text-link" href="/operator">Open operations →</Link>
             </div>
           ) : null}
 
@@ -111,13 +111,12 @@ export default async function BookTripPage({
 
           {customer && !bookingConfig.demoWritesEnabled ? (
             <div className={styles.notice}>
-              Reservation writes are disabled in this deployment. A production booking adapter can
-              implement the same `BookingRepository` contract.
+              Demo reservation creation is disabled in this environment.
             </div>
           ) : null}
 
           {availability.length === 0 ? (
-            <div className={styles.notice}>No departures are available from the current booking adapter.</div>
+            <div className={styles.notice}>No departures are currently available for this trip.</div>
           ) : null}
 
           <p><Link className="text-link" href={`/trips/${trip.slug}`}>← Back to trip</Link></p>
@@ -125,8 +124,8 @@ export default async function BookTripPage({
 
         <aside className={styles.panel}>
           <div className="eyebrow">Availability</div>
-          <h2>Fictional departure windows</h2>
-          <p className={styles.muted}>Demo availability is original sample data and is not connected to a supplier.</p>
+          <h2>Upcoming departures</h2>
+          <p className={styles.muted}>These dates and spaces are fictional demo inventory, not live supplier availability.</p>
           <div className={styles.availabilityList}>
             {availability.map((item) => (
               <div className={styles.availabilityItem} key={item.id}>

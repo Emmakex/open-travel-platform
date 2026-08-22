@@ -12,7 +12,7 @@ const money = new Intl.NumberFormat("en", {
 
 export const metadata = {
   title: "My reservations",
-  description: "Fictional reservation history for the Open Travel Platform demo account."
+  description: "Review your fictional Kairoseth Travel demo reservations."
 };
 
 export default async function ReservationsPage() {
@@ -30,7 +30,8 @@ export default async function ReservationsPage() {
           <div className="eyebrow">Customer account</div>
           <h1>My reservations</h1>
           <p className={styles.lead}>
-            Reservations shown here are fictional demo records stored only in the demo session cookie.
+            Review the trips created during this demo session. These records are fictional and are not
+            connected to a real booking or payment system.
           </p>
 
           {reservations.length ? (

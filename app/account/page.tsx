@@ -8,7 +8,7 @@ import { getTravelRepository } from "@/lib/travel-repository";
 
 export const metadata = {
   title: "My account",
-  description: "Customer account demo for Open Travel Platform."
+  description: "Customer account experience for the Kairoseth Travel demo."
 };
 
 export default async function AccountPage() {
@@ -28,7 +28,7 @@ export default async function AccountPage() {
           <div className="eyebrow">Customer account</div>
           <h1>{identity.displayName}</h1>
           <p className={styles.lead}>
-            Provider-neutral identity and booking capabilities joined through server-side boundaries.
+            Review your profile and keep your demo reservations together in one place.
           </p>
 
           <dl className={styles.profileList}>
@@ -64,7 +64,7 @@ export default async function AccountPage() {
               </Link>
             </>
           ) : (
-            <p>No trips are available from the current data adapter.</p>
+            <p>No trips are currently available.</p>
           )}
         </aside>
       </div>
