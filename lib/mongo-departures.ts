@@ -68,6 +68,19 @@ export async function replaceMongoTripDepartures(tripId: string, departures: Tri
   const collection = database.collection<StoredDeparture>(travelDepartureCollectionName);
   const now = new Date();
   const ids = departures.map((departure) => departure.id);
+  const removedFilter: Filter<StoredDeparture> = ids.length
+    ? { tripId, id: { $nin: ids } }
+    : { tripId };
+
+  const removedWithReservations = await collection.countDocuments({
+    ...removedFilter,
+    reservedSpaces: { $gt: 0 }
+  });
+  if (removedWithReservations > 0) {
+    const error = new Error("A departure with reservations cannot be removed.");
+    Object.assign(error, { code: "DEPARTURE_IN_USE" });
+    throw error;
+  }
 
   if (departures.length) {
     await collection.bulkWrite(
@@ -97,7 +110,7 @@ export async function replaceMongoTripDepartures(tripId: string, departures: Tri
     );
   }
 
-  await collection.deleteMany(ids.length ? { tripId, id: { $nin: ids } } : { tripId });
+  await collection.deleteMany(removedFilter);
 }
 
 export async function reserveMongoDeparture(tripId: string, departureId: string, partySize: number) {
