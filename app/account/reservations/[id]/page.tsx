@@ -19,7 +19,7 @@ function formatDate(value: string) {
 
 export const metadata = {
   title: "Reservation detail",
-  description: "Fictional reservation detail for the Open Travel Platform demo account."
+  description: "Review a fictional reservation in the Kairoseth Travel demo account."
 };
 
 export default async function ReservationDetailPage({
@@ -55,11 +55,10 @@ export default async function ReservationDetailPage({
     <main className="section">
       <div className={`container ${styles.shell}`}>
         <section className={styles.panel}>
-          <div className="eyebrow">Demo reservation</div>
+          <div className="eyebrow">Reservation</div>
           <h1>{trip?.title ?? "Reservation"}</h1>
           <p className={styles.lead}>
-            This record is fictional and stored only in the demo session cookie. A production adapter
-            would persist reservations in a trusted booking system or database.
+            Review the travellers, dates, price and current status for this fictional demo reservation.
           </p>
 
           {updated === "cancelled" ? (
@@ -75,6 +74,11 @@ export default async function ReservationDetailPage({
             <div><dt>Return</dt><dd>{departure ? formatDate(departure.returnDate) : "Unavailable"}</dd></div>
             <div><dt>Reference</dt><dd>{reservation.id}</dd></div>
           </dl>
+
+          <div className={styles.notice}>
+            <strong>Demo record.</strong> This reservation is fictional and is not connected to a live
+            booking, supplier or payment system.
+          </div>
 
           {reservation.status === "pending" && bookingConfig.demoWritesEnabled ? (
             <form action={cancelReservationAction}>
