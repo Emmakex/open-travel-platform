@@ -1,6 +1,12 @@
 export type CurrencyCode = "EUR" | "USD" | "GBP";
 export type TravelLocale = "en" | "es";
 
+export type TravelMedia = {
+  src: string;
+  alt?: string;
+  caption?: string;
+};
+
 export type TripDay = {
   day: number;
   title: string;
@@ -31,6 +37,8 @@ export type Destination = {
   region: string;
   summary: string;
   featured: boolean;
+  coverImage?: TravelMedia;
+  gallery?: TravelMedia[];
   translations?: Partial<Record<TravelLocale, DestinationTranslation>>;
 };
 
@@ -47,6 +55,8 @@ export type Trip = {
   itinerary?: TripDay[];
   included?: string[];
   notIncluded?: string[];
+  coverImage?: TravelMedia;
+  gallery?: TravelMedia[];
   featured: boolean;
   translations?: Partial<Record<TravelLocale, TripTranslation>>;
 };
