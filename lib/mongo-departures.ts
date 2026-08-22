@@ -75,8 +75,20 @@ export async function replaceMongoTripDepartures(tripId: string, departures: Tri
         updateOne: {
           filter: { id: departure.id, tripId },
           update: {
-            $set: { ...departure, tripId, updatedAt: now },
-            $setOnInsert: { createdAt: now }
+            $set: {
+              id: departure.id,
+              tripId,
+              departureDate: departure.departureDate,
+              returnDate: departure.returnDate,
+              capacity: departure.capacity,
+              status: departure.status,
+              unitPrice: departure.unitPrice,
+              updatedAt: now
+            },
+            $setOnInsert: {
+              reservedSpaces: departure.reservedSpaces,
+              createdAt: now
+            }
           },
           upsert: true
         }
@@ -121,13 +133,16 @@ export async function releaseMongoDeparture(tripId: string, departureId: string,
   const database = await getMongoDatabase();
   const collection = database.collection<StoredDeparture>(travelDepartureCollectionName);
 
-  const current = await collection.findOne({ id: departureId, tripId });
-  if (!current) return false;
-
-  const nextReserved = Math.max(0, current.reservedSpaces - partySize);
   const result = await collection.updateOne(
     { id: departureId, tripId },
-    { $set: { reservedSpaces: nextReserved, updatedAt: new Date() } }
+    [
+      {
+        $set: {
+          reservedSpaces: { $max: [0, { $subtract: ["$reservedSpaces", partySize] }] },
+          updatedAt: new Date()
+        }
+      }
+    ]
   );
   return result.modifiedCount === 1;
 }
