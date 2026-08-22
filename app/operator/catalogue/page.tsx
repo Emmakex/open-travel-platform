@@ -7,34 +7,14 @@ import {
   listMongoDestinationsForAdmin,
   listMongoTripsForAdmin
 } from "@/lib/mongo-travel-admin";
-import {
-  diagnoseMongoConnectionError,
-  getMongoDatabaseName,
-  isMongoConfigured,
-  type MongoConnectionDiagnostic
-} from "@/lib/mongodb";
+import { diagnoseMongoConnectionError, isMongoConfigured } from "@/lib/mongodb";
 import { publicationStatusLabel, tr } from "@/lib/operator-i18n";
 import { requireOperationsIdentity } from "@/lib/require-operations-identity";
-import { travelDataConfig } from "@/lib/travel-data-config";
 
 export const metadata = {
   title: "Catalogue | Kairoseth Travel",
   description: "Protected Kairoseth Travel catalogue controls."
 };
-
-function diagnosticText(code: string, locale: "en" | "es") {
-  const messages: Record<string, [string, string]> = {
-    network: ["MongoDB cannot be reached. Check Atlas Network Access and the Hostinger outbound IP.", "No se puede acceder a MongoDB. Revisa Network Access de Atlas y la IP de salida de Hostinger."],
-    authentication: ["MongoDB authentication failed. Check the database username and password.", "La autenticación de MongoDB ha fallado. Revisa el usuario y la contraseña de la base de datos."],
-    authorization: ["The MongoDB user does not have enough permissions for this database.", "El usuario de MongoDB no tiene permisos suficientes para esta base de datos."],
-    dns: ["The MongoDB SRV/DNS record could not be resolved.", "No se ha podido resolver el registro SRV/DNS de MongoDB."],
-    tls: ["The secure MongoDB connection could not be established.", "No se ha podido establecer la conexión segura con MongoDB."],
-    "connection-string": ["The MongoDB connection string is invalid.", "La cadena de conexión de MongoDB no es válida."],
-    unknown: ["The MongoDB connection check failed. Review the runtime logs.", "La comprobación de MongoDB ha fallado. Revisa los logs de ejecución."]
-  };
-  const message = messages[code] ?? messages.unknown;
-  return locale === "es" ? message[1] : message[0];
-}
 
 export default async function OperatorCataloguePage({
   searchParams
@@ -47,7 +27,7 @@ export default async function OperatorCataloguePage({
   const configured = isMongoConfigured();
 
   let status: Awaited<ReturnType<typeof getMongoCatalogueStatus>> | null = null;
-  let diagnostic: MongoConnectionDiagnostic | null = null;
+  let storageError = false;
   let destinations: Awaited<ReturnType<typeof listMongoDestinationsForAdmin>> = [];
   let trips: Awaited<ReturnType<typeof listMongoTripsForAdmin>> = [];
 
@@ -60,52 +40,45 @@ export default async function OperatorCataloguePage({
       ]);
     }
   } catch (error) {
-    diagnostic = diagnoseMongoConnectionError(error);
-    console.error("MongoDB catalogue status check failed", { code: diagnostic.code, database: getMongoDatabaseName() });
+    storageError = true;
+    const diagnostic = diagnoseMongoConnectionError(error);
+    console.error("Catalogue storage status check failed", { code: diagnostic.code });
   }
 
-  const databaseName = status?.databaseName ?? getMongoDatabaseName();
+  const catalogueReady = configured && Boolean(status?.configured) && !storageError;
+  const publishedItems = destinations.filter((item) => (item.publicationStatus ?? "published") === "published").length
+    + trips.filter((item) => (item.publicationStatus ?? "published") === "published").length;
+  const draftItems = destinations.length + trips.length - publishedItems;
 
   return (
     <main className="section">
       <div className={`container ${styles.shell}`}>
         <section className={styles.panel}>
-          <div className="eyebrow">{tr(locale, "Catalogue data", "Datos del catálogo")}</div>
-          <h1>{tr(locale, "MongoDB catalogue", "Catálogo MongoDB")}</h1>
+          <div className="eyebrow">{tr(locale, "Catalogue management", "Gestión del catálogo")}</div>
+          <h1>{tr(locale, "Travel catalogue", "Catálogo de viajes")}</h1>
           <p className={styles.lead}>
             {tr(
               locale,
-              "Manage persistent destinations and travel products. Draft records remain hidden until they are published.",
-              "Gestiona destinos y productos de viaje persistentes. Los borradores permanecen ocultos hasta que se publican."
+              "Manage destinations and travel products. Draft records remain hidden until they are published.",
+              "Gestiona destinos y productos de viaje. Los borradores permanecen ocultos hasta que se publican."
             )}
           </p>
 
           <div className={styles.metrics}>
-            <div className={styles.metric}><strong>{travelDataConfig.mode}</strong><span>{tr(locale, "Active mode", "Modo activo")}</span></div>
-            <div className={styles.metric}><strong>{databaseName}</strong><span>{tr(locale, "Database", "Base de datos")}</span></div>
-            <div className={styles.metric}><strong>{status?.destinations ?? "—"}</strong><span>{tr(locale, "Destinations", "Destinos")}</span></div>
-            <div className={styles.metric}><strong>{status?.trips ?? "—"}</strong><span>{tr(locale, "Trips", "Viajes")}</span></div>
+            <div className={styles.metric}><strong>{catalogueReady ? destinations.length : "—"}</strong><span>{tr(locale, "Destinations", "Destinos")}</span></div>
+            <div className={styles.metric}><strong>{catalogueReady ? trips.length : "—"}</strong><span>{tr(locale, "Trips", "Viajes")}</span></div>
+            <div className={styles.metric}><strong>{catalogueReady ? publishedItems : "—"}</strong><span>{tr(locale, "Published", "Publicados")}</span></div>
+            <div className={styles.metric}><strong>{catalogueReady ? draftItems : "—"}</strong><span>{tr(locale, "Drafts", "Borradores")}</span></div>
           </div>
 
-          {!configured ? (
+          {!catalogueReady ? (
             <div className={styles.notice}>
-              <strong>{tr(locale, "MongoDB URI not detected.", "No se ha detectado la URI de MongoDB.")}</strong>{" "}
-              {tr(locale, "Add the server-only MONGODB_URI environment variable in Hostinger.", "Añade en Hostinger la variable de servidor MONGODB_URI.")}
-            </div>
-          ) : null}
-
-          {diagnostic ? (
-            <div className={styles.notice}>
-              <strong>{tr(locale, "MongoDB connection issue.", "Problema de conexión con MongoDB.")}</strong>{" "}
-              {diagnosticText(diagnostic.code, locale)}
-              <div style={{ marginTop: "0.65rem" }}>{tr(locale, "Diagnostic code", "Código de diagnóstico")}: <code>{diagnostic.code}</code></div>
-            </div>
-          ) : null}
-
-          {configured && status ? (
-            <div className={styles.notice}>
-              <strong>{tr(locale, "MongoDB connection successful.", "Conexión con MongoDB correcta.")}</strong>{" "}
-              {tr(locale, "The application can read the catalogue collections in", "La aplicación puede leer las colecciones del catálogo en")} <code>{databaseName}</code>.
+              <strong>{tr(locale, "Catalogue temporarily unavailable.", "Catálogo temporalmente no disponible.")}</strong>{" "}
+              {tr(
+                locale,
+                "Please contact an administrator or review the server diagnostics.",
+                "Contacta con un administrador o revisa los diagnósticos del servidor."
+              )}
             </div>
           ) : null}
 
@@ -118,15 +91,15 @@ export default async function OperatorCataloguePage({
           {params.updated ? (
             <div className={styles.notice}>
               <strong>{tr(locale, "Saved.", "Guardado.")}</strong>{" "}
-              {tr(locale, "The record was written to MongoDB successfully.", "El registro se guardó correctamente en MongoDB.")}
+              {tr(locale, "The catalogue record was saved successfully.", "El registro del catálogo se guardó correctamente.")}
             </div>
           ) : null}
 
           {params.error === "mongodb-seed" ? (
-            <div className={styles.notice}>{tr(locale, "The initial catalogue import could not be completed. Review the runtime logs and Atlas settings.", "No se pudo completar la importación inicial del catálogo. Revisa los logs y la configuración de Atlas.")}</div>
+            <div className={styles.notice}>{tr(locale, "The initial catalogue import could not be completed. Review the server logs.", "No se pudo completar la importación inicial del catálogo. Revisa los logs del servidor.")}</div>
           ) : null}
 
-          {configured && status ? (
+          {catalogueReady ? (
             <div className={styles.toolbar}>
               <Link className="button button-primary" href="/operator/catalogue/destinations/new">{tr(locale, "+ New destination", "+ Nuevo destino")}</Link>
               <Link className="button button-primary" href="/operator/catalogue/trips/new">{tr(locale, "+ New trip", "+ Nuevo viaje")}</Link>
@@ -138,7 +111,7 @@ export default async function OperatorCataloguePage({
           ) : null}
         </section>
 
-        {configured && status ? (
+        {catalogueReady ? (
           <>
             <section className={styles.panel} style={{ marginTop: "1rem" }}>
               <div className={styles.sectionHeader}>
@@ -159,7 +132,7 @@ export default async function OperatorCataloguePage({
                     </div>
                   ))}
                 </div>
-              ) : <div className={styles.notice}>{tr(locale, "No destinations are stored in MongoDB yet.", "Todavía no hay destinos almacenados en MongoDB.")}</div>}
+              ) : <div className={styles.notice}>{tr(locale, "No destinations have been created yet.", "Todavía no se han creado destinos.")}</div>}
             </section>
 
             <section className={styles.panel} style={{ marginTop: "1rem" }}>
@@ -184,7 +157,7 @@ export default async function OperatorCataloguePage({
                     );
                   })}
                 </div>
-              ) : <div className={styles.notice}>{tr(locale, "No trips are stored in MongoDB yet.", "Todavía no hay viajes almacenados en MongoDB.")}</div>}
+              ) : <div className={styles.notice}>{tr(locale, "No trips have been created yet.", "Todavía no se han creado viajes.")}</div>}
             </section>
           </>
         ) : null}
