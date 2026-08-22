@@ -1,4 +1,4 @@
-import type { IdentityRole } from "@/domain/identity/types";
+import type { UserRole } from "@/domain/identity/types";
 
 export type PaymentStatus =
   | "unpaid"
@@ -23,7 +23,7 @@ export interface PaymentTransaction {
   providerReference?: string;
   note?: string;
   actorIdentityId?: string;
-  actorRole?: IdentityRole;
+  actorRole?: UserRole;
   createdAt: string;
   updatedAt?: string;
 }
@@ -53,7 +53,7 @@ export interface CreatePaymentTransactionInput {
   providerReference?: string;
   note?: string;
   actorIdentityId?: string;
-  actorRole?: IdentityRole;
+  actorRole?: UserRole;
 }
 
 export interface UpdatePaymentTransactionInput {
