@@ -60,6 +60,7 @@ export default async function OperatorPage() {
             <Link className="button button-primary" href="/operator/reservations">Review reservations</Link>
             <Link className="button button-secondary" href="/operator/customers">Customers</Link>
             <Link className="button button-secondary" href="/operator/catalogue">Catalogue data</Link>
+            <Link className="button button-secondary" href="/operator/security">Security</Link>
             {identity.role === "admin" ? (
               <Link className="button button-secondary" href="/operator/staff">Staff access</Link>
             ) : null}
