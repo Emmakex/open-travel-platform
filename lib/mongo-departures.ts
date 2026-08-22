@@ -58,7 +58,8 @@ export async function listPublicMongoAvailability(tripId: string): Promise<Avail
     departureDate: document.departureDate,
     returnDate: document.returnDate,
     remainingSpaces: Math.max(0, document.capacity - document.reservedSpaces),
-    unitPrice: document.unitPrice
+    unitPrice: document.unitPrice,
+    travellerPrices: document.travellerPrices
   }));
 }
 
@@ -96,6 +97,7 @@ export async function replaceMongoTripDepartures(tripId: string, departures: Tri
               capacity: departure.capacity,
               status: departure.status,
               unitPrice: departure.unitPrice,
+              travellerPrices: departure.travellerPrices,
               updatedAt: now
             },
             $setOnInsert: {
@@ -113,7 +115,7 @@ export async function replaceMongoTripDepartures(tripId: string, departures: Tri
   await collection.deleteMany(removedFilter);
 }
 
-export async function reserveMongoDeparture(tripId: string, departureId: string, partySize: number) {
+export async function reserveMongoDeparture(tripId: string, departureId: string, inventorySpaces: number) {
   await ensureDepartureIndexes();
   const database = await getMongoDatabase();
   const collection = database.collection<StoredDeparture>(travelDepartureCollectionName);
@@ -128,12 +130,12 @@ export async function reserveMongoDeparture(tripId: string, departureId: string,
       $expr: {
         $gte: [
           { $subtract: ["$capacity", "$reservedSpaces"] },
-          partySize
+          inventorySpaces
         ]
       }
     },
     {
-      $inc: { reservedSpaces: partySize },
+      $inc: { reservedSpaces: inventorySpaces },
       $set: { updatedAt: new Date() }
     }
   );
@@ -141,7 +143,7 @@ export async function reserveMongoDeparture(tripId: string, departureId: string,
   return result.modifiedCount === 1;
 }
 
-export async function releaseMongoDeparture(tripId: string, departureId: string, partySize: number) {
+export async function releaseMongoDeparture(tripId: string, departureId: string, inventorySpaces: number) {
   await ensureDepartureIndexes();
   const database = await getMongoDatabase();
   const collection = database.collection<StoredDeparture>(travelDepartureCollectionName);
@@ -151,7 +153,7 @@ export async function releaseMongoDeparture(tripId: string, departureId: string,
     [
       {
         $set: {
-          reservedSpaces: { $max: [0, { $subtract: ["$reservedSpaces", partySize] }] },
+          reservedSpaces: { $max: [0, { $subtract: ["$reservedSpaces", inventorySpaces] }] },
           updatedAt: new Date()
         }
       }
