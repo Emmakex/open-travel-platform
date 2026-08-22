@@ -16,6 +16,7 @@ import {
 import { getIdentityRepository } from "@/lib/identity-repository";
 import { operationsConfig } from "@/lib/operations-config";
 import { getOperationsRepository } from "@/lib/operations-repository";
+import { notifyReservationEvent } from "@/lib/reservation-emails";
 import {
   authenticateStaff,
   changeStaffPassword,
@@ -182,9 +183,11 @@ export async function updateReservationStatusAction(formData: FormData) {
   }
 
   let reservation: Reservation | null = null;
+  const operationsRepository = getOperationsRepository();
+  const previous = await operationsRepository.getReservation(reservationId);
 
   try {
-    reservation = await getOperationsRepository().updateReservationStatus({
+    reservation = await operationsRepository.updateReservationStatus({
       reservationId,
       actorIdentityId: identity.id,
       actorRole: identity.role,
@@ -196,6 +199,13 @@ export async function updateReservationStatusAction(formData: FormData) {
 
   if (!reservation) {
     redirect("/operator/reservations?error=not-found");
+  }
+
+  if (previous && previous.status !== reservation.status) {
+    await notifyReservationEvent(
+      reservation,
+      reservation.status === "confirmed" ? "confirmed" : "cancelled"
+    ).catch(() => undefined);
   }
 
   redirect(`${detailUrl}?updated=${reservation.status}`);
