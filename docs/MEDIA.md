@@ -58,7 +58,16 @@ Every uploaded asset receives a stable application URL:
 /media/<GridFS ObjectId>
 ```
 
-Catalogue editors can select those URLs directly from the media library. The same URL can be reused by multiple destinations and trips.
+## Catalogue-editor workflow
+
+Destination and trip editors support both workflows:
+
+1. **Upload image** directly beside a cover or gallery field. The file is written to GridFS immediately, its `/media/<id>` URL is selected automatically, and saving the destination/trip assigns it to that field.
+2. **Choose from media library** to reuse an image that has already been uploaded.
+
+The editor shows an immediate preview of the selected source and also lets the operator clear the assignment before saving. Inline uploads still become normal media-library assets, so there is only one underlying storage system.
+
+ALT text, caption, credit and focal point remain catalogue metadata and can be edited alongside the selected image.
 
 Deletion is protected: an asset cannot be deleted while a destination or trip references it as a cover or gallery image.
 
@@ -91,11 +100,11 @@ Only HTTPS hosts in that allowlist are accepted by the Next.js image configurati
 ## Architecture
 
 ```text
-Operator media manager
+Catalogue editor / media library
   → protected upload API
   → MongoDB GridFS (ktravel / travel_media)
   → stable /media/<id> URL
-  → cover/gallery selection in catalogue editor
+  → cover/gallery assignment
   → TravelRepository
   → Kairoseth Travel UI
 ```
