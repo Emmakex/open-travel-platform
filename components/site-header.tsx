@@ -9,13 +9,16 @@ export function SiteHeader() {
       <div className="container nav">
         <Link className="brand" href="/" aria-label={`${appConfig.siteName} home`}>
           <span className="brand-mark" aria-hidden="true">{brandInitial}</span>
-          <span>{appConfig.siteName}</span>
+          <span className="brand-copy">
+            <strong>{appConfig.siteName}</strong>
+            <small>Travel experiences & operations</small>
+          </span>
         </Link>
         <nav className="nav-links" aria-label="Primary navigation">
           <Link href="/destinations">Destinations</Link>
           <Link href="/trips">Trips</Link>
           <Link href="/account">Account</Link>
-          <Link href="/operator/sign-in">Operator</Link>
+          <Link className="nav-operator" href="/operator/sign-in">Operator</Link>
         </nav>
       </div>
     </header>
