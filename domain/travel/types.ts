@@ -1,10 +1,15 @@
 export type CurrencyCode = "EUR" | "USD" | "GBP";
 export type TravelLocale = "en" | "es";
+export type TravelMediaFocalPoint = "center" | "top" | "bottom" | "left" | "right";
 
 export type TravelMedia = {
   src: string;
   alt?: string;
   caption?: string;
+  width?: number;
+  height?: number;
+  focalPoint?: TravelMediaFocalPoint;
+  credit?: string;
 };
 
 export type TripDay = {
