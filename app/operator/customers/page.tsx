@@ -1,20 +1,14 @@
 import Link from "next/link";
 import styles from "@/app/operator/operator.module.css";
 import { listCustomersForOperations } from "@/lib/customer-auth";
+import { getLocale } from "@/lib/get-locale";
+import { formatOperatorMoney, tr } from "@/lib/operator-i18n";
 import { getOperationsRepository } from "@/lib/operations-repository";
 import { requireOperationsIdentity } from "@/lib/require-operations-identity";
 
-function formatMoney(value: number, currency = "EUR") {
-  return new Intl.NumberFormat("en", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 0
-  }).format(value);
-}
-
 export const metadata = {
   title: "Customers | Kairoseth Travel",
-  description: "Role-protected customer directory for Kairoseth Travel operations."
+  description: "Protected Kairoseth Travel customer directory."
 };
 
 export default async function OperatorCustomersPage({
@@ -22,6 +16,7 @@ export default async function OperatorCustomersPage({
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
+  const locale = await getLocale();
   await requireOperationsIdentity();
   const { q = "" } = await searchParams;
   const query = q.trim().toLowerCase();
@@ -35,23 +30,13 @@ export default async function OperatorCustomersPage({
     const confirmedReservations = customerReservations.filter((item) => item.status === "confirmed");
     const confirmedValue = confirmedReservations.reduce((sum, item) => sum + item.totalPrice, 0);
     const currency = confirmedReservations[0]?.currency ?? "EUR";
-    const latestReservation = customerReservations
-      .slice()
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
-
-    return {
-      customer,
-      reservationCount: customerReservations.length,
-      confirmedValue,
-      currency,
-      latestReservationAt: latestReservation?.createdAt
-    };
+    return { customer, reservationCount: customerReservations.length, confirmedValue, currency };
   });
 
   const filteredRows = query
     ? customerRows.filter(({ customer }) =>
         [customer.displayName, customer.email, customer.country ?? "", customer.phone ?? ""]
-          .some((value) => value.toLowerCase().includes(query))
+          .some((item) => item.toLowerCase().includes(query))
       )
     : customerRows;
 
@@ -65,27 +50,31 @@ export default async function OperatorCustomersPage({
     <main className="section">
       <div className={`container ${styles.shell}`}>
         <section className={styles.panel}>
-          <div className="eyebrow">Customer operations</div>
-          <h1>Customers</h1>
+          <div className="eyebrow">{tr(locale, "Customer operations", "Gestión de clientes")}</div>
+          <h1>{tr(locale, "Customers", "Clientes")}</h1>
           <p className={styles.lead}>
-            Search registered customers and review their booking relationship without exposing passwords, session tokens or authentication secrets.
+            {tr(
+              locale,
+              "Search registered customers and review their booking relationship without exposing authentication secrets.",
+              "Busca clientes registrados y revisa su relación de reservas sin exponer secretos de autenticación."
+            )}
           </p>
 
           <div className={styles.metrics}>
-            <div className={styles.metric}><strong>{customers.length}</strong><span>Total customers</span></div>
-            <div className={styles.metric}><strong>{activeCustomers}</strong><span>Active</span></div>
-            <div className={styles.metric}><strong>{customersWithBookings}</strong><span>With bookings</span></div>
-            <div className={styles.metric}><strong>{formatMoney(confirmedRevenue)}</strong><span>Confirmed value</span></div>
+            <div className={styles.metric}><strong>{customers.length}</strong><span>{tr(locale, "Total customers", "Total clientes")}</span></div>
+            <div className={styles.metric}><strong>{activeCustomers}</strong><span>{tr(locale, "Active", "Activos")}</span></div>
+            <div className={styles.metric}><strong>{customersWithBookings}</strong><span>{tr(locale, "With reservations", "Con reservas")}</span></div>
+            <div className={styles.metric}><strong>{formatOperatorMoney(confirmedRevenue, "EUR", locale)}</strong><span>{tr(locale, "Confirmed value", "Valor confirmado")}</span></div>
           </div>
 
           <form className={styles.toolbar} method="get">
             <label className={styles.field} style={{ minWidth: "280px", flex: "1 1 320px" }}>
-              <span>Search customers</span>
-              <input name="q" defaultValue={q} placeholder="Name, email, country or phone…" />
+              <span>{tr(locale, "Search customers", "Buscar clientes")}</span>
+              <input name="q" defaultValue={q} placeholder={tr(locale, "Name, email, country or phone…", "Nombre, email, país o teléfono…")} />
             </label>
             <div className={styles.actions} style={{ alignItems: "end", margin: 0 }}>
-              <button className="button button-primary" type="submit">Search</button>
-              {q ? <Link className="button button-secondary" href="/operator/customers">Clear</Link> : null}
+              <button className="button button-primary" type="submit">{tr(locale, "Search", "Buscar")}</button>
+              {q ? <Link className="button button-secondary" href="/operator/customers">{tr(locale, "Clear", "Limpiar")}</Link> : null}
             </div>
           </form>
 
@@ -97,18 +86,16 @@ export default async function OperatorCustomersPage({
                   <span className={styles.muted}>{customer.email}</span>
                 </div>
                 <span>{customer.country ?? "—"}</span>
-                <span>{reservationCount} booking{reservationCount === 1 ? "" : "s"}</span>
-                <span>{formatMoney(confirmedValue, currency)}</span>
+                <span>{reservationCount} {reservationCount === 1 ? tr(locale, "reservation", "reserva") : tr(locale, "reservations", "reservas")}</span>
+                <span>{formatOperatorMoney(confirmedValue, currency, locale)}</span>
               </Link>
             ))}
           </div>
 
-          {!filteredRows.length ? (
-            <div className={styles.notice}>No customers match this search.</div>
-          ) : null}
+          {!filteredRows.length ? <div className={styles.notice}>{tr(locale, "No customers match this search.", "No hay clientes que coincidan con esta búsqueda.")}</div> : null}
 
           <div className={styles.actions}>
-            <Link className="button button-secondary" href="/operator">← Operator dashboard</Link>
+            <Link className="button button-secondary" href="/operator">{tr(locale, "← Operator dashboard", "← Panel de operador")}</Link>
           </div>
         </section>
       </div>
