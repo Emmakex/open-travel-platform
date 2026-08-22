@@ -58,7 +58,10 @@ export async function createReservationAction(formData: FormData) {
       partySize: requestedPartySize,
       unitPrice,
       totalPrice,
-      currency: trip.currency
+      currency: trip.currency,
+      tripTitle: trip.title,
+      departureDate: availability.departureDate,
+      returnDate: availability.returnDate
     });
   } catch (error) {
     if (error && typeof error === "object" && "code" in error && error.code === "DEPARTURE_UNAVAILABLE") {
