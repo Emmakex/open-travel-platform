@@ -178,19 +178,19 @@ export function TravellerBookingForm({
               <div className={styles.travellerGrid}>
                 <label className={styles.field}>
                   <span>{t("First name *", "Nombre *")}</span>
-                  <input name={`travellerFirstName:${traveller.id}`} value={traveller.firstName} onChange={(event) => update(traveller.id, { firstName: event.target.value })} autoComplete="given-name" required />
+                  <input name={`travellerFirstName__${traveller.id}`} value={traveller.firstName} onChange={(event) => update(traveller.id, { firstName: event.target.value })} autoComplete="given-name" required />
                 </label>
                 <label className={styles.field}>
                   <span>{t("Last name *", "Apellidos *")}</span>
-                  <input name={`travellerLastName:${traveller.id}`} value={traveller.lastName} onChange={(event) => update(traveller.id, { lastName: event.target.value })} autoComplete="family-name" required />
+                  <input name={`travellerLastName__${traveller.id}`} value={traveller.lastName} onChange={(event) => update(traveller.id, { lastName: event.target.value })} autoComplete="family-name" required />
                 </label>
                 <label className={styles.field}>
                   <span>{t("Date of birth *", "Fecha de nacimiento *")}</span>
-                  <input name={`travellerDateOfBirth:${traveller.id}`} type="date" value={traveller.dateOfBirth} onChange={(event) => update(traveller.id, { dateOfBirth: event.target.value, guardianTravellerId: "", guardianRelationship: "" })} required />
+                  <input name={`travellerDateOfBirth__${traveller.id}`} type="date" value={traveller.dateOfBirth} onChange={(event) => update(traveller.id, { dateOfBirth: event.target.value, guardianTravellerId: "", guardianRelationship: "" })} required />
                 </label>
                 <label className={styles.field}>
                   <span>{t("Nationality *", "Nacionalidad *")}</span>
-                  <input name={`travellerNationality:${traveller.id}`} value={traveller.nationality} onChange={(event) => update(traveller.id, { nationality: event.target.value })} placeholder={t("e.g. Spanish", "p. ej. Española")} required />
+                  <input name={`travellerNationality__${traveller.id}`} value={traveller.nationality} onChange={(event) => update(traveller.id, { nationality: event.target.value })} placeholder={t("e.g. Spanish", "p. ej. Española")} required />
                 </label>
               </div>
 
@@ -201,7 +201,7 @@ export function TravellerBookingForm({
                   <div className={styles.travellerGrid}>
                     <label className={styles.field}>
                       <span>{t("Responsible adult *", "Adulto responsable *")}</span>
-                      <select name={`travellerGuardian:${traveller.id}`} value={traveller.guardianTravellerId} onChange={(event) => update(traveller.id, { guardianTravellerId: event.target.value })} required>
+                      <select name={`travellerGuardian__${traveller.id}`} value={traveller.guardianTravellerId} onChange={(event) => update(traveller.id, { guardianTravellerId: event.target.value })} required>
                         <option value="">{t("Choose adult", "Seleccionar adulto")}</option>
                         {adultChoices.filter((adult) => adult.traveller.id !== traveller.id).map((adult) => (
                           <option value={adult.traveller.id} key={adult.traveller.id}>
@@ -212,7 +212,7 @@ export function TravellerBookingForm({
                     </label>
                     <label className={styles.field}>
                       <span>{t("Relationship *", "Relación *")}</span>
-                      <select name={`travellerGuardianRelationship:${traveller.id}`} value={traveller.guardianRelationship} onChange={(event) => update(traveller.id, { guardianRelationship: event.target.value as GuardianRelationship | "" })} required>
+                      <select name={`travellerGuardianRelationship__${traveller.id}`} value={traveller.guardianRelationship} onChange={(event) => update(traveller.id, { guardianRelationship: event.target.value as GuardianRelationship | "" })} required>
                         <option value="">{t("Choose relationship", "Seleccionar relación")}</option>
                         <option value="parent">{t("Parent", "Padre / madre")}</option>
                         <option value="legal-guardian">{t("Legal guardian", "Tutor legal")}</option>
@@ -223,8 +223,8 @@ export function TravellerBookingForm({
                 </div>
               ) : (
                 <>
-                  <input type="hidden" name={`travellerGuardian:${traveller.id}`} value="" />
-                  <input type="hidden" name={`travellerGuardianRelationship:${traveller.id}`} value="" />
+                  <input type="hidden" name={`travellerGuardian__${traveller.id}`} value="" />
+                  <input type="hidden" name={`travellerGuardianRelationship__${traveller.id}`} value="" />
                 </>
               )}
             </div>

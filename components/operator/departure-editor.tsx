@@ -107,13 +107,13 @@ export function DepartureEditor({
                 </div>
                 <input type="hidden" name="departureId" value={item.id} />
                 <div className={departureStyles.grid}>
-                  <label className={styles.field}><span>{tr(locale, "Departure date *", "Fecha de salida *")}</span><input name={`departureDate:${item.id}`} type="date" value={item.departureDate} onChange={(event) => update(index, { departureDate: event.target.value })} required /></label>
-                  <label className={styles.field}><span>{tr(locale, "Return date *", "Fecha de regreso *")}</span><input name={`returnDate:${item.id}`} type="date" value={item.returnDate} onChange={(event) => update(index, { returnDate: event.target.value })} required /></label>
-                  <label className={styles.field}><span>{tr(locale, "Capacity *", "Cupo total *")}</span><input name={`departureCapacity:${item.id}`} type="number" min={Math.max(1, item.reservedSpaces)} step="1" value={item.capacity} onChange={(event) => update(index, { capacity: Number(event.target.value) })} required /></label>
-                  <label className={styles.field}><span>{tr(locale, "Reserved spaces", "Plazas reservadas")}</span><input name={`departureReserved:${item.id}`} type="number" value={item.reservedSpaces} readOnly aria-readonly="true" /></label>
+                  <label className={styles.field}><span>{tr(locale, "Departure date *", "Fecha de salida *")}</span><input name={`departureDate__${item.id}`} type="date" value={item.departureDate} onChange={(event) => update(index, { departureDate: event.target.value })} required /></label>
+                  <label className={styles.field}><span>{tr(locale, "Return date *", "Fecha de regreso *")}</span><input name={`returnDate__${item.id}`} type="date" value={item.returnDate} onChange={(event) => update(index, { returnDate: event.target.value })} required /></label>
+                  <label className={styles.field}><span>{tr(locale, "Capacity *", "Cupo total *")}</span><input name={`departureCapacity__${item.id}`} type="number" min={Math.max(1, item.reservedSpaces)} step="1" value={item.capacity} onChange={(event) => update(index, { capacity: Number(event.target.value) })} required /></label>
+                  <label className={styles.field}><span>{tr(locale, "Reserved spaces", "Plazas reservadas")}</span><input name={`departureReserved__${item.id}`} type="number" value={item.reservedSpaces} readOnly aria-readonly="true" /></label>
                   <label className={styles.field}>
                     <span>{tr(locale, "Status", "Estado")}</span>
-                    <select name={`departureStatus:${item.id}`} value={item.status} onChange={(event) => update(index, { status: event.target.value as TripDeparture["status"] })}>
+                    <select name={`departureStatus__${item.id}`} value={item.status} onChange={(event) => update(index, { status: event.target.value as TripDeparture["status"] })}>
                       {(["open", "closed", "sold-out"] as const).map((status) => <option value={status} key={status}>{departureStatusLabel(status, locale)}</option>)}
                     </select>
                   </label>
@@ -129,7 +129,7 @@ export function DepartureEditor({
                       <label className={styles.field} key={band.id}>
                         <span>{locale === "es" ? (band.labelEs || band.label) : band.label} · {band.minAge}{band.maxAge === undefined ? "+" : `–${band.maxAge}`}</span>
                         <input
-                          name={`departureTravellerPrice:${item.id}:${band.id}`}
+                          name={`departureTravellerPrice__${item.id}__${band.id}`}
                           type="number"
                           min="0"
                           step="0.01"
