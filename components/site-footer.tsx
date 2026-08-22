@@ -8,7 +8,7 @@ export function SiteFooter() {
           <strong>{appConfig.siteName}</strong>
           <div>{appConfig.siteTagline}</div>
         </div>
-        <div>MIT licensed · Clean-room implementation · 2026</div>
+        <div>A Kairoseth travel technology product · 2026</div>
       </div>
     </footer>
   );
