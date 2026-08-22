@@ -21,6 +21,7 @@ export function SiteHeader({ locale }: { locale: TravelLocale }) {
         <nav className="nav-links" aria-label="Primary navigation">
           <Link href="/destinations">{copy.nav.destinations}</Link>
           <Link href="/trips">{copy.nav.trips}</Link>
+          <Link href="/services">{locale === "es" ? "Servicios" : "Services"}</Link>
           <Link href="/account">{copy.nav.account}</Link>
           <Link className="nav-operator" href="/operator/sign-in">{copy.nav.operator}</Link>
           <form action={setLocaleAction} className="locale-switcher" aria-label={copy.language.label}>

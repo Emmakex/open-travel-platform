@@ -23,7 +23,7 @@ export default async function EditDestinationPage({ params, searchParams }: Page
         <section className={styles.panel}>
           <div className="eyebrow">{tr(locale, "Catalogue · Destinations", "Catálogo · Destinos")}</div>
           <h1>{tr(locale, "Edit", "Editar")} {destination.name}</h1>
-          <p className={styles.lead}>{tr(locale, "Update catalogue content, media and translations stored in MongoDB.", "Actualiza el contenido, las imágenes y las traducciones almacenadas en MongoDB.")}</p>
+          <p className={styles.lead}>{tr(locale, "Update catalogue content, media, publication and translations for this destination.", "Actualiza el contenido, las imágenes, la publicación y las traducciones de este destino.")}</p>
           <DestinationForm destination={destination} error={query.error} mediaLibrary={mediaLibrary} locale={locale} />
         </section>
       </div>

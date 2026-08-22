@@ -32,11 +32,13 @@ function newBand(items: EditableBand[]): EditableBand {
 export function TravellerPricingEditor({
   bands,
   fromPrice,
-  locale
+  locale,
+  context = "trip"
 }: {
   bands?: TravellerPricingBand[];
   fromPrice: number;
   locale: TravelLocale;
+  context?: "trip" | "service";
 }) {
   const initial = useMemo(
     () => (bands?.length ? bands : defaultTravellerPricingBands(fromPrice)).map(editable),
@@ -56,31 +58,26 @@ export function TravellerPricingEditor({
     setItems((current) => [...current, newBand(current)]);
   }
 
+  const intro = context === "service"
+    ? tr(locale, "Define contiguous age bands for this service. The same engine is reused for adults, minors and infants.", "Define bandas de edad continuas para este servicio. Se reutiliza el mismo motor para adultos, menores y bebés.")
+    : tr(locale, "Define contiguous age bands. The traveller age is calculated on the departure date and the server applies the matching price.", "Define bandas de edad continuas. La edad se calcula en la fecha de salida y el servidor aplica el precio correspondiente.");
+  const notice = context === "service"
+    ? tr(locale, "Bands must start at age 0, have no gaps or overlaps, and the final band must have no maximum age.", "Las bandas deben empezar en 0 años, no pueden tener huecos ni solaparse y la última debe quedar sin edad máxima.")
+    : tr(locale, "Bands must start at age 0, have no gaps/overlaps and the final band must have no maximum age. Existing trips default to the old price for every age until you save explicit values.", "Las bandas deben empezar en 0 años, no pueden tener huecos ni solaparse y la última debe quedar sin edad máxima. Los viajes existentes mantienen por defecto el precio anterior para todas las edades hasta que guardes valores explícitos.");
+
   return (
     <div className={styles.editorSection}>
       <div className={styles.sectionHeaderCompact}>
         <div>
           <div className="eyebrow">{tr(locale, "Traveller pricing", "Precios por viajero")}</div>
-          <p className={styles.muted}>
-            {tr(
-              locale,
-              "Define contiguous age bands. The traveller age is calculated on the departure date and the server applies the matching price.",
-              "Define bandas de edad continuas. La edad se calcula en la fecha de salida y el servidor aplica el precio correspondiente."
-            )}
-          </p>
+          <p className={styles.muted}>{intro}</p>
         </div>
         <button className="button button-secondary" type="button" onClick={add}>
           {tr(locale, "+ Add age band", "+ Añadir banda de edad")}
         </button>
       </div>
 
-      <div className={styles.notice}>
-        {tr(
-          locale,
-          "Bands must start at age 0, have no gaps/overlaps and the final band must have no maximum age. Existing trips default to the old price for every age until you save explicit values.",
-          "Las bandas deben empezar en 0 años, no pueden tener huecos ni solaparse y la última debe quedar sin edad máxima. Los viajes existentes mantienen por defecto el precio anterior para todas las edades hasta que guardes valores explícitos."
-        )}
-      </div>
+      <div className={styles.notice}>{notice}</div>
 
       <div className={styles.repeatList}>
         {items.map((item, index) => (
@@ -130,7 +127,7 @@ export function TravellerPricingEditor({
 
             <label className={styles.checkboxField}>
               <input type="checkbox" checked={item.consumesInventory} onChange={(event) => update(index, { consumesInventory: event.target.checked })} />
-              <span>{tr(locale, "Consumes one trip inventory space", "Consume una plaza del cupo del viaje")}</span>
+              <span>{context === "service" ? tr(locale, "Consumes one service capacity unit", "Consume una unidad de capacidad del servicio") : tr(locale, "Consumes one trip inventory space", "Consume una plaza del cupo del viaje")}</span>
             </label>
           </div>
         ))}
