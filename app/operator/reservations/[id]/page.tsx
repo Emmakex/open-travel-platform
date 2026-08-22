@@ -31,7 +31,7 @@ const errorMessages: Record<string, string> = {
 
 export const metadata = {
   title: "Operator reservation detail",
-  description: "Role-protected reservation operations detail for Open Travel Platform."
+  description: "Role-protected reservation operations detail for Kairoseth Travel."
 };
 
 export default async function OperatorReservationDetailPage({
@@ -62,7 +62,7 @@ export default async function OperatorReservationDetailPage({
         <div className={styles.detailGrid}>
           <section className={styles.panel}>
             <div className="eyebrow">Reservation operations</div>
-            <h1>{trip?.title ?? "Reservation"}</h1>
+            <h1>{trip?.title ?? reservation.tripTitle ?? "Reservation"}</h1>
             <p className={styles.lead}>
               Staff identity <strong>{staff.displayName}</strong> is authorized on the server before this record can be read or changed.
             </p>
@@ -79,12 +79,14 @@ export default async function OperatorReservationDetailPage({
               <div><dt>Customer identity</dt><dd>{reservation.identityId}</dd></div>
               <div><dt>Travellers</dt><dd>{reservation.partySize}</dd></div>
               <div><dt>Total</dt><dd>{formatMoney(reservation.totalPrice, reservation.currency)}</dd></div>
+              {reservation.departureDate ? <div><dt>Departure</dt><dd>{reservation.departureDate}</dd></div> : null}
+              {reservation.returnDate ? <div><dt>Return</dt><dd>{reservation.returnDate}</dd></div> : null}
               <div><dt>Reference</dt><dd>{reservation.id}</dd></div>
               <div><dt>Created</dt><dd>{formatTimestamp(reservation.createdAt)}</dd></div>
               <div><dt>Last update</dt><dd>{formatTimestamp(reservation.updatedAt)}</dd></div>
             </dl>
 
-            {operationsConfig.demoWritesEnabled && reservation.status !== "cancelled" ? (
+            {operationsConfig.writesEnabled && reservation.status !== "cancelled" ? (
               <div className={styles.actions}>
                 {reservation.status === "pending" ? (
                   <form action={updateReservationStatusAction}>
