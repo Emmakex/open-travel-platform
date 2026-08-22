@@ -8,6 +8,22 @@ import type {
 
 export type TravelServiceType = "activity" | "transport" | "insurance";
 export type TravelServicePricingMode = "per-person" | "per-booking" | "per-unit" | "per-age-band";
+export type ServiceInventoryMode = "people" | "units";
+export type ServiceAvailabilityStatus = "open" | "closed";
+
+export type ServiceAvailabilitySlot = {
+  id: string;
+  serviceId: string;
+  serviceType: "activity" | "transport";
+  date: string;
+  startTime: string;
+  endTime?: string;
+  inventoryMode: ServiceInventoryMode;
+  capacity: number;
+  reserved: number;
+  status: ServiceAvailabilityStatus;
+  priceOverride?: number;
+};
 
 export type TravelServiceTranslation = {
   title?: string;
@@ -60,6 +76,7 @@ export type TransportService = TravelServiceBase & {
   origin: string;
   destination: string;
   capacity?: number;
+  inventoryMode?: ServiceInventoryMode;
 };
 
 export type InsuranceService = TravelServiceBase & {
