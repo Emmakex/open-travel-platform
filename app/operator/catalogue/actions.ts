@@ -3,6 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import type { TripDeparture, TripDepartureStatus } from "@/domain/booking/types";
 import type {
   CurrencyCode,
   TravelMedia,
@@ -10,6 +11,7 @@ import type {
   TravelPublicationStatus,
   TripDay
 } from "@/domain/travel/types";
+import { replaceMongoTripDepartures } from "@/lib/mongo-departures";
 import {
   getMongoDestinationForAdmin,
   getMongoTripForAdmin,
@@ -64,6 +66,8 @@ function revalidateCatalogue() {
 }
 
 const focalPoints = new Set<TravelMediaFocalPoint>(["center", "top", "bottom", "left", "right"]);
+const departureStatuses = new Set<TripDepartureStatus>(["open", "closed", "sold-out"]);
+const isoDatePattern = /^\d{4}-\d{2}-\d{2}$/;
 
 function parseMediaSrc(value: string) {
   if (!value) return "";
@@ -156,6 +160,71 @@ function parseItinerary(formData: FormData, suffix = ""): TripDay[] | null {
 
   itinerary.sort((a, b) => a.day - b.day);
   return itinerary;
+}
+
+function parseDepartures(formData: FormData, tripId: string): TripDeparture[] | null {
+  const ids = texts(formData, "departureId");
+  const departureDates = texts(formData, "departureDate");
+  const returnDates = texts(formData, "returnDate");
+  const capacities = texts(formData, "departureCapacity");
+  const reservedValues = texts(formData, "departureReserved");
+  const prices = texts(formData, "departurePrice");
+  const statuses = texts(formData, "departureStatus");
+  const length = Math.max(ids.length, departureDates.length, returnDates.length, capacities.length, reservedValues.length, prices.length, statuses.length);
+  const departures: TripDeparture[] = [];
+
+  for (let index = 0; index < length; index += 1) {
+    const id = ids[index] || randomUUID();
+    const departureDate = departureDates[index] ?? "";
+    const returnDate = returnDates[index] ?? "";
+    const rawCapacity = capacities[index] ?? "";
+    const rawReserved = reservedValues[index] ?? "0";
+    const rawPrice = prices[index] ?? "";
+    const rawStatus = statuses[index] ?? "open";
+
+    if (!departureDate && !returnDate && !rawCapacity && !rawPrice) continue;
+
+    const capacity = Number(rawCapacity);
+    const reservedSpaces = Number(rawReserved || "0");
+    const unitPrice = rawPrice === "" ? undefined : Number(rawPrice);
+    const status = departureStatuses.has(rawStatus as TripDepartureStatus)
+      ? (rawStatus as TripDepartureStatus)
+      : "open";
+
+    if (
+      !isoDatePattern.test(departureDate) ||
+      !isoDatePattern.test(returnDate) ||
+      returnDate < departureDate ||
+      !Number.isInteger(capacity) ||
+      capacity < 1 ||
+      !Number.isInteger(reservedSpaces) ||
+      reservedSpaces < 0 ||
+      reservedSpaces > capacity ||
+      (unitPrice !== undefined && (!Number.isFinite(unitPrice) || unitPrice < 0))
+    ) {
+      return null;
+    }
+
+    departures.push({
+      id,
+      tripId,
+      departureDate,
+      returnDate,
+      capacity,
+      reservedSpaces,
+      status: remainingStatus(status, capacity, reservedSpaces),
+      unitPrice
+    });
+  }
+
+  departures.sort((a, b) => a.departureDate.localeCompare(b.departureDate));
+  return departures;
+}
+
+function remainingStatus(status: TripDepartureStatus, capacity: number, reservedSpaces: number): TripDepartureStatus {
+  if (reservedSpaces >= capacity && status === "open") return "sold-out";
+  if (reservedSpaces < capacity && status === "sold-out") return "open";
+  return status;
 }
 
 export async function seedMongoCatalogueAction() {
@@ -254,6 +323,7 @@ export async function saveTripAction(formData: FormData) {
   const gallery = parseGallery(formData);
   const itinerary = parseItinerary(formData);
   const itineraryEs = parseItinerary(formData, "Es");
+  const departures = parseDepartures(formData, id);
 
   if (
     !title ||
@@ -267,7 +337,8 @@ export async function saveTripAction(formData: FormData) {
     coverImage === null ||
     gallery === null ||
     itinerary === null ||
-    itineraryEs === null
+    itineraryEs === null ||
+    departures === null
   ) {
     redirect(`${returnTo}?error=validation`);
   }
@@ -310,6 +381,7 @@ export async function saveTripAction(formData: FormData) {
         es
       }
     });
+    await replaceMongoTripDepartures(id, departures);
   } catch (error) {
     console.error("Failed to save MongoDB trip", { id, error });
     redirect(`${returnTo}?error=save`);
@@ -317,5 +389,6 @@ export async function saveTripAction(formData: FormData) {
 
   revalidateCatalogue();
   revalidatePath(`/trips/${slug}`);
+  revalidatePath(`/trips/${slug}/book`);
   redirect("/operator/catalogue?updated=trip");
 }
