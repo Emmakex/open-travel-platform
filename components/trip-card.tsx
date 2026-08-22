@@ -1,6 +1,6 @@
-import Image from "next/image";
 import Link from "next/link";
 import type { TravelLocale, Trip } from "@/domain/travel/types";
+import { TravelImage } from "@/components/travel-image";
 import { formatCurrency, getDictionary, localizeTrip } from "@/lib/i18n";
 
 export function TripCard({ trip, locale = "en" }: { trip: Trip; locale?: TravelLocale }) {
@@ -17,12 +17,11 @@ export function TripCard({ trip, locale = "en" }: { trip: Trip; locale?: TravelL
         aria-label={`${copy.trips.explore} ${localizedTrip.title}`}
       >
         {trip.coverImage ? (
-          <Image
+          <TravelImage
             className="card-media-image"
-            src={trip.coverImage.src}
-            alt={trip.coverImage.alt ?? localizedTrip.title}
-            fill
-            sizes="(max-width: 880px) 100vw, 33vw"
+            media={trip.coverImage}
+            fallbackAlt={localizedTrip.title}
+            sizes="(max-width: 700px) 100vw, (max-width: 1100px) 50vw, 33vw"
           />
         ) : null}
         <span className="card-media-shade" aria-hidden="true" />

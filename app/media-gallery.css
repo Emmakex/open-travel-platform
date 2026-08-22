@@ -1,4 +1,4 @@
-/* Phase 2D: first-class local media surfaces for Kairoseth Travel. */
+/* Phase 2D/2E: first-class travel media surfaces and optimized image presentation. */
 
 .card-media-image {
   position: absolute;
@@ -103,7 +103,7 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, transparent 55%, rgba(7, 17, 31, 0.28));
+  background: linear-gradient(180deg, transparent 52%, rgba(7, 17, 31, 0.46));
   pointer-events: none;
 }
 
@@ -113,9 +113,21 @@
   left: 1rem;
   right: 1rem;
   bottom: 0.85rem;
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
   color: var(--text);
   font-size: 0.78rem;
   font-weight: 700;
+}
+
+.travel-gallery-item figcaption small {
+  margin-left: auto;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.66rem;
+  font-weight: 600;
+  text-align: right;
 }
 
 .travel-gallery-count-1 {
@@ -179,6 +191,17 @@
 
   .travel-gallery-item-1 {
     min-height: 280px;
+  }
+
+  .travel-gallery-item figcaption {
+    align-items: start;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  .travel-gallery-item figcaption small {
+    margin-left: 0;
+    text-align: left;
   }
 }
 

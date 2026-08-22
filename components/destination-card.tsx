@@ -1,6 +1,6 @@
-import Image from "next/image";
 import Link from "next/link";
 import type { Destination, TravelLocale } from "@/domain/travel/types";
+import { TravelImage } from "@/components/travel-image";
 import { getDictionary, localizeDestination } from "@/lib/i18n";
 
 export function DestinationCard({
@@ -22,12 +22,11 @@ export function DestinationCard({
         aria-label={`${copy.destinations.discover} ${localizedDestination.name}`}
       >
         {destination.coverImage ? (
-          <Image
+          <TravelImage
             className="card-media-image"
-            src={destination.coverImage.src}
-            alt={destination.coverImage.alt ?? localizedDestination.name}
-            fill
-            sizes="(max-width: 880px) 100vw, 33vw"
+            media={destination.coverImage}
+            fallbackAlt={localizedDestination.name}
+            sizes="(max-width: 700px) 100vw, (max-width: 1100px) 50vw, 33vw"
           />
         ) : null}
         <span className="card-media-shade" aria-hidden="true" />

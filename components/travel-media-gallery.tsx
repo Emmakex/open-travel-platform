@@ -1,5 +1,5 @@
-import Image from "next/image";
 import type { TravelMedia } from "@/domain/travel/types";
+import { TravelImage } from "@/components/travel-image";
 
 export function TravelMediaGallery({
   items,
@@ -16,13 +16,17 @@ export function TravelMediaGallery({
     <div className={`travel-gallery travel-gallery-count-${visible.length}`} aria-label={`${title} gallery`}>
       {visible.map((item, index) => (
         <figure className={`travel-gallery-item travel-gallery-item-${index + 1}`} key={`${item.src}-${index}`}>
-          <Image
-            src={item.src}
-            alt={item.alt ?? title}
-            fill
+          <TravelImage
+            media={item}
+            fallbackAlt={title}
             sizes={index === 0 ? "(max-width: 880px) 100vw, 66vw" : "(max-width: 880px) 50vw, 33vw"}
           />
-          {item.caption ? <figcaption>{item.caption}</figcaption> : null}
+          {item.caption || item.credit ? (
+            <figcaption>
+              {item.caption ? <span>{item.caption}</span> : null}
+              {item.credit ? <small>{item.credit}</small> : null}
+            </figcaption>
+          ) : null}
         </figure>
       ))}
     </div>
