@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { bookingConfig } from "@/lib/booking-config";
 import { getBookingRepository } from "@/lib/booking-repository";
+import { notifyReservationEvent } from "@/lib/reservation-emails";
 import { requireCustomerIdentity } from "@/lib/require-customer-identity";
 import { getTravelRepository } from "@/lib/travel-repository";
 
@@ -70,6 +71,7 @@ export async function createReservationAction(formData: FormData) {
     throw error;
   }
 
+  await notifyReservationEvent(reservation, "created").catch(() => undefined);
   redirect(`/account/reservations/${encodeURIComponent(reservation.id)}`);
 }
 
@@ -87,5 +89,6 @@ export async function cancelReservationAction(formData: FormData) {
     redirect("/account/reservations");
   }
 
+  await notifyReservationEvent(reservation, "cancelled").catch(() => undefined);
   redirect(`/account/reservations/${encodeURIComponent(reservation.id)}?updated=cancelled`);
 }
