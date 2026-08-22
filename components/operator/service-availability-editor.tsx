@@ -11,8 +11,13 @@ import type {
 import type { TravelLocale } from "@/domain/travel/types";
 import { tr } from "@/lib/operator-i18n";
 
+function resolveInventoryMode(service: TravelService): ServiceInventoryMode {
+  if (service.serviceType !== "transport") return "people";
+  return service.inventoryMode ?? (service.pricingMode === "per-unit" ? "units" : "people");
+}
+
 function newSlot(service: TravelService): ServiceAvailabilitySlot {
-  const transportMode = service.serviceType === "transport" ? service.inventoryMode ?? "units" : "people";
+  const inventoryMode = resolveInventoryMode(service);
   return {
     id: crypto.randomUUID(),
     serviceId: service.id,
@@ -20,8 +25,8 @@ function newSlot(service: TravelService): ServiceAvailabilitySlot {
     date: "",
     startTime: "09:00",
     endTime: "",
-    inventoryMode: transportMode,
-    capacity: transportMode === "units" ? 1 : 10,
+    inventoryMode,
+    capacity: inventoryMode === "units" ? 1 : 10,
     reserved: 0,
     status: "open",
     priceOverride: undefined
@@ -37,9 +42,7 @@ export function ServiceAvailabilityEditor({
   slots: ServiceAvailabilitySlot[];
   locale: TravelLocale;
 }) {
-  const inventoryMode: ServiceInventoryMode = service.serviceType === "transport"
-    ? service.inventoryMode ?? "units"
-    : "people";
+  const inventoryMode = resolveInventoryMode(service);
   const initial = useMemo(
     () => slots.map((slot) => ({ ...slot, inventoryMode })),
     [slots, inventoryMode]
@@ -78,7 +81,7 @@ export function ServiceAvailabilityEditor({
             <p className={styles.muted}>
               {service.serviceType === "activity"
                 ? tr(locale, "Create dated activity sessions with their own capacity. Reserved inventory is protected from catalogue edits.", "Crea sesiones de actividad con fecha, horario y cupo propio. El inventario ya reservado queda protegido frente a cambios del catálogo.")
-                : tr(locale, "Create dated transport departures and manage inventory as passengers or units depending on the product model.", "Crea salidas de transporte con fecha y horario y gestiona el inventario como pasajeros o unidades según el modelo del producto.")}
+                : tr(locale, "Create dated transport departures and manage inventory as passengers or units depending on the pricing model.", "Crea salidas de transporte con fecha y horario y gestiona el inventario como pasajeros o unidades según el modelo de precio.")}
             </p>
           </div>
           <button className="button button-secondary" type="button" onClick={add}>
@@ -87,7 +90,7 @@ export function ServiceAvailabilityEditor({
         </div>
 
         <div className={styles.notice}>
-          {tr(locale, "Inventory mode", "Modo de inventario")}: <strong>{inventoryMode === "units" ? tr(locale, "Units", "Unidades") : tr(locale, "People", "Personas")}</strong>. {tr(locale, "Use the service editor above to change the transport inventory model.", "Usa el editor del servicio superior para cambiar el modelo de inventario del transporte.")}
+          {tr(locale, "Inventory mode", "Modo de inventario")}: <strong>{inventoryMode === "units" ? tr(locale, "Units", "Unidades") : tr(locale, "People", "Personas")}</strong>. {service.serviceType === "transport" ? tr(locale, "Per-unit pricing uses units; other transport pricing models use passenger capacity.", "El precio por unidad utiliza unidades; los demás modelos de transporte utilizan capacidad de pasajeros.") : tr(locale, "Activities always manage capacity by participant.", "Las actividades siempre gestionan el cupo por participante.")}
         </div>
 
         {items.length ? (
