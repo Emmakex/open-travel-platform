@@ -4,6 +4,7 @@ import styles from "@/app/operator/operator.module.css";
 import { DepartureEditor } from "@/components/operator/departure-editor";
 import { GalleryEditor, ItineraryEditor, MediaEditorCard } from "@/components/operator/structured-editors";
 import { TravellerPricingEditor } from "@/components/operator/traveller-pricing-editor";
+import { TravellerRequirementsEditor } from "@/components/operator/traveller-requirements-editor";
 import type { TripDeparture } from "@/domain/booking/types";
 import type { Destination, TravelLocale, Trip } from "@/domain/travel/types";
 import type { MediaLibraryChoice } from "@/lib/media-library";
@@ -142,6 +143,7 @@ export function TripForm({ trip, destinations, departures = [], error, mediaLibr
       ) : null}
 
       <DepartureEditor departures={departures} pricingBands={pricingBands} legacySinglePrice={!trip?.travellerPricing?.length} locale={locale} />
+      <TravellerRequirementsEditor profile={trip?.travellerRequirements} locale={locale} />
 
       <div className={styles.editorSection}>
         <div><div className="eyebrow">{tr(locale, "Cover media", "Imagen de portada")}</div><p className={styles.muted}>{tr(locale, "Upload or reuse the hero image for this travel product.", "Sube o reutiliza la imagen principal de este producto de viaje.")}</p></div>
