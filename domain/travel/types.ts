@@ -1,3 +1,5 @@
+import type { TravellerRequirementsProfile } from "@/domain/traveller/types";
+
 export type CurrencyCode = "EUR" | "USD" | "GBP";
 export type TravelLocale = "en" | "es";
 export type TravelPublicationStatus = "draft" | "published";
@@ -70,6 +72,8 @@ export type Trip = {
   fromPrice: number;
   currency: CurrencyCode;
   travellerPricing?: TravellerPricingBand[];
+  /** Advanced data requested after booking, snapshotted onto each reservation. */
+  travellerRequirements?: TravellerRequirementsProfile;
   highlights: string[];
   itinerary?: TripDay[];
   included?: string[];
