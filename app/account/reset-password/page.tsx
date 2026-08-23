@@ -4,7 +4,7 @@ import styles from "@/app/account/account.module.css";
 import { getLocale } from "@/lib/get-locale";
 
 export const metadata = {
-  title: "Reset password | Kairoseth Travel",
+  title: "Reset password",
   description: "Set a new password for your Kairoseth Travel customer account."
 };
 
