@@ -1,4 +1,4 @@
-import { savePaymentTermsAction } from "@/app/operator/payments/actions";
+import { savePaymentTermsAction, sendPaymentReminderAction } from "@/app/operator/payments/actions";
 import styles from "@/app/operator/operator.module.css";
 import type { Reservation } from "@/domain/booking/types";
 import type { PaymentSummary } from "@/domain/payment/types";
@@ -25,6 +25,10 @@ const errorKeys: Record<string, [string, string]> = {
   "terms-deposit-invalid": ["The deposit must be positive and lower than the reservation total.", "El depósito debe ser positivo y menor que el total de la reserva."],
   "terms-installment-count": ["Use between 2 and 6 installments.", "Utiliza entre 2 y 6 cuotas."],
   "terms-total-mismatch": ["The installments must add up exactly to the reservation total.", "Las cuotas deben sumar exactamente el total de la reserva."],
+  "reminder-unavailable": ["Email delivery is not configured.", "El envío de correo no está configurado."],
+  "reminder-customer-missing": ["The customer account could not be found.", "No se ha podido localizar la cuenta del cliente."],
+  "reminder-not-needed": ["There is no outstanding scheduled payment to remind.", "No hay ningún pago programado pendiente que recordar."],
+  "reminder-failed": ["The payment reminder email could not be sent.", "No se pudo enviar el recordatorio de pago."],
   "terms-error": ["Payment terms could not be saved.", "No se pudieron guardar las condiciones de pago."]
 };
 
@@ -37,13 +41,15 @@ export function PaymentTermsEditor({
   summary,
   locale,
   termsUpdated,
-  termsError
+  termsError,
+  termsReminder
 }: {
   reservation: Reservation;
   summary: PaymentSummary;
   locale: TravelLocale;
   termsUpdated?: string;
   termsError?: string;
+  termsReminder?: string;
 }) {
   const schedule = deriveReservationPaymentSchedule(reservation, summary);
   const terms = reservation.paymentTerms;
@@ -65,6 +71,7 @@ export function PaymentTermsEditor({
       </p>
 
       {termsUpdated ? <div className={styles.notice}>{tr(locale, "Payment terms saved.", "Condiciones de pago guardadas.")}</div> : null}
+      {termsReminder === "sent" ? <div className={styles.notice}>{tr(locale, "Payment reminder sent.", "Recordatorio de pago enviado.")}</div> : null}
       {errorCopy ? <div className={styles.notice}>{tr(locale, errorCopy[0], errorCopy[1])}</div> : null}
       {schedule.outdated ? (
         <div className={styles.notice}>
@@ -89,6 +96,15 @@ export function PaymentTermsEditor({
           </div>
         ))}
       </div>
+
+      {schedule.nextPaymentAmount > 0 ? (
+        <form action={sendPaymentReminderAction} className={styles.actions} style={{ marginTop: "1rem" }}>
+          <input type="hidden" name="reservationId" value={reservation.id} />
+          <button className="button button-secondary" type="submit">
+            {tr(locale, "Send payment reminder", "Enviar recordatorio de pago")}
+          </button>
+        </form>
+      ) : null}
 
       <div className={styles.formGrid}>
         <form action={savePaymentTermsAction} className={styles.editorForm}>
