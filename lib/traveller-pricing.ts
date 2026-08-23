@@ -119,7 +119,9 @@ export function findTravellerPricingBand(
 ): TravellerPricingBand | null {
   return bands.find((band) => {
     if (age < band.minAge) return false;
-    return band.maxAge === undefined || age <= band.maxAge;
+    // MongoDB/BSON may surface an omitted open-ended maxAge as null in older
+    // documents. Treat both null and undefined as an open-ended band.
+    return band.maxAge == null || age <= band.maxAge;
   }) ?? null;
 }
 
@@ -167,7 +169,7 @@ export function validateTravellerPricingBands(bands: TravellerPricingBand[]) {
       !Number.isInteger(band.minAge) ||
       band.minAge < 0 ||
       band.minAge > maxReasonableAge ||
-      (band.maxAge !== undefined &&
+      (band.maxAge != null &&
         (!Number.isInteger(band.maxAge) || band.maxAge < band.minAge || band.maxAge > maxReasonableAge)) ||
       !Number.isFinite(band.price) ||
       band.price < 0
@@ -178,14 +180,14 @@ export function validateTravellerPricingBands(bands: TravellerPricingBand[]) {
     if (index === 0 && band.minAge !== 0) return false;
     if (index > 0) {
       const previous = sorted[index - 1];
-      if (previous.maxAge === undefined || band.minAge !== previous.maxAge + 1) return false;
+      if (previous.maxAge == null || band.minAge !== previous.maxAge + 1) return false;
     }
 
     ids.add(band.id);
     codes.add(band.code);
   }
 
-  return sorted[sorted.length - 1].maxAge === undefined;
+  return sorted[sorted.length - 1].maxAge == null;
 }
 
 export function priceTravellerComposition({
