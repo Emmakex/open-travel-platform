@@ -15,9 +15,11 @@ _Last updated: 23 August 2026._
 
 ## Current position
 
-The project is beyond the original catalogue/booking MVP. The current codebase already includes persistent identity, customer/staff RBAC, trip and service reservations, traveller age pricing, independent activities/transport/insurance, transactional email, payment accounting, encrypted admin-managed PSP configuration and provider-neutral online checkout adapters.
+The project is beyond the original catalogue/booking MVP. The current codebase already includes persistent identity, customer/staff RBAC, trip and service reservations, traveller age pricing, independent activities/transport/insurance, transactional email, payment accounting, encrypted admin-managed PSP configuration, provider-neutral online checkout adapters, deposits/installments and encrypted post-purchase traveller data.
 
 Stripe/Redsys credentialed end-to-end validation is intentionally deferred until suitable provider accounts are available. The implementation is present, but production payment capability must not be considered validated until TEST and LIVE provider flows have been exercised.
+
+**Phase 6A is functionally complete.** Before starting 6B, a 6A.1 UX/documentation layer has been added so product activation and the `Not required / Pending / Complete` states are obvious to both customers and Operator staff.
 
 ---
 
@@ -85,8 +87,6 @@ Stripe/Redsys credentialed end-to-end validation is intentionally deferred until
 - configurable inventory consumption by age band;
 - historical pricing snapshots;
 - traveller details visible to customer and Operator.
-
-Advanced travel-document requirements remain future work and are tracked separately below.
 
 ## Phase 5C — Independent service catalogue — COMPLETE
 
@@ -163,51 +163,60 @@ Advanced travel-document requirements remain future work and are tracked separat
 - catalogue recommendation is only a fallback when no future trip exists;
 - fallback prefers a trip the customer has not previously reserved.
 
+## Phase 5G — Deposits, installments and payment terms — COMPLETE
+
+Goal achieved: support real travel-agency payment schedules without breaking the provider-neutral ledger.
+
+- full-payment versus deposit policies;
+- configurable deposits;
+- optional installments;
+- due dates;
+- payment-term snapshot stored with the reservation;
+- server-side outstanding-balance and next-payment calculation;
+- customer-facing payment schedule;
+- controlled Operator visibility/editing;
+- compatibility with manual movements and the existing online checkout;
+- safe fallback to the full outstanding balance when saved terms become stale relative to the reservation total.
+
+## Phase 6A — Secure post-purchase traveller data — COMPLETE
+
+Goal achieved: collect only the extra traveller data required by each product/supplier after purchase, keeping it separate from checkout and the main reservation record.
+
+- per-product requirement presets: `none`, `travel-document`, `international-air`, `spanish-lodging`, `maritime` and `custom`;
+- requirement snapshots stored with each reservation;
+- document, issuing-country, expiry, residence and other fields only when required;
+- customer post-purchase self-service editing until a configurable deadline;
+- AES-256-GCM encryption using `TRAVELLER_DATA_KEY`;
+- sensitive data stored separately from reservation collections;
+- configurable retention and automatic TTL deletion;
+- audit records that store changed field names, not old/new values;
+- Operator completion overview without exposing decrypted values;
+- no DNI/passport image-copy upload;
+- health/medical data deliberately excluded from the standard flow;
+- presets designed around data minimisation and reviewed regulatory use cases.
+
+Operational/document exports of traveller data remain outside this phase and fit **Phase 7B — Documents, exports and reporting**, where they can be implemented with dedicated permissions and audit controls.
+
+## Phase 6A.1 — Traveller-data UX and documentation — COMPLETE
+
+Goal: make the feature obvious and consistent for Operator and customer before starting reservation amendments.
+
+- product editor explains whether traveller data is `Not required` or `Active for new reservations`;
+- UI explicitly explains that the product must be saved and a new reservation created to test changed requirements;
+- existing reservations keep their snapshot and do not silently change;
+- Operator displays aggregate `NOT REQUIRED / PENDING / COMPLETE` status;
+- Operator displays per-traveller status without exposing sensitive values;
+- My account highlights the pending task for the next trip;
+- trip and service reservation details calculate real completion instead of permanently displaying “information required”;
+- customer sees `Action required` while data is missing and `Traveller information complete` when finished;
+- CTA changes from `Complete` to `Review` when all required data is complete;
+- README EN/ES and `docs/TRAVELLER-DATA.md` document activation, workflow, security and the test checklist.
+
 ---
 
 # Next priorities
 
-## Phase 5G — Deposits, installments and payment terms — NEXT
-
-Goal: support real travel-agency payment schedules rather than only a single outstanding balance.
-
-- full-payment vs deposit policy;
-- fixed-amount or percentage deposit;
-- deposit due date;
-- final-balance due date;
-- optional multi-installment schedules;
-- per-installment amount and due date;
-- automatic outstanding/due-now calculation;
-- overdue installment state;
-- payment reminders by email;
-- operator visibility of upcoming/overdue balances;
-- payment-term snapshots stored with the reservation;
-- customer-facing payment schedule;
-- compatibility with manual payments and future Stripe/Redsys payment execution;
-- explicit rules for refunds/cancellations against installment schedules.
-
-This phase can be completed on top of the current ledger without waiting for Stripe/Redsys credentials.
-
-## Phase 6A — Advanced traveller requirements and travel documents
-
-Goal: collect only the traveller data required by each product/supplier.
-
-Already available: lead traveller, individual travellers, minors/guardians, DOB, nationality, age pricing.
-
-Remaining work:
-
-- configurable required traveller fields per product;
-- passport / national ID only when required;
-- document number, issuing country and expiry date;
-- optional supplier-required fields;
-- traveller completion status;
-- customer self-service editing until a configurable deadline;
-- operator completion overview;
-- secure traveller export;
-- retention/minimisation rules for sensitive document data;
-- audit of traveller-data changes.
-
-## Phase 6B — Reservation amendments
+## Phase 6B — Reservation amendments — NEXT
 
 Goal: support the normal post-booking lifecycle without destroying the original record.
 
@@ -219,9 +228,11 @@ Goal: support the normal post-booking lifecycle without destroying the original 
 - amendment timeline/audit;
 - controlled inventory reallocation;
 - charge additional balance when price increases;
-- create refundable balance when price decreases;
+- create a refundable balance when price decreases;
 - amendment notifications;
 - configurable cancellation/change deadlines.
+
+Implementation principle: amendments must add history and financial adjustments rather than silently rewriting the past. Existing ledger movements remain historical facts.
 
 ## Phase 6C — Accommodation, supplements and package composition
 
@@ -263,6 +274,7 @@ Goal: support documents and reports commonly required by travel teams.
 - traveller lists / rooming lists;
 - vouchers;
 - reservation and service exports;
+- secure, audited traveller-data export where there is a legitimate operational need;
 - CSV/XLSX customer/payment exports;
 - payment reconciliation export;
 - outstanding-balance report;
@@ -308,7 +320,7 @@ Goal: complete the work required before positioning a deployment for real produc
 - cookie/session review;
 - dependency and secret scanning;
 - privileged-action audit review;
-- payment-secret recovery/rotation procedure;
+- payment/traveller-data secret recovery and rotation procedures;
 - backup/restore testing.
 
 ### Observability and operations
@@ -324,6 +336,7 @@ Goal: complete the work required before positioning a deployment for real produc
 ### Privacy/legal
 
 - privacy policy;
+- deployment-specific first-layer / GDPR Article 13 information at personal-data collection points;
 - terms and booking conditions;
 - cookie policy/consent where applicable;
 - data-retention/deletion policy;
@@ -353,10 +366,6 @@ Goal: make Open Travel Platform straightforward for third parties to adopt while
 # Suggested delivery order
 
 ```text
-5G  Deposits / installments / payment terms
- ↓
-6A  Advanced traveller requirements / documents
- ↓
 6B  Reservation amendments
  ↓
 6C  Accommodation / supplements / package composition
@@ -372,7 +381,7 @@ Goal: make Open Travel Platform straightforward for third parties to adopt while
 10  Open-source productisation / release
 ```
 
-Credentialed Stripe/Redsys TEST validation should be inserted as soon as the required provider accounts are available; it does not need to block Phase 5G.
+Credentialed Stripe/Redsys TEST validation should be inserted as soon as the required provider accounts are available; it does not need to block Phase 6B.
 
 Some Phase 9 testing/security work should continue incrementally rather than waiting until the end, especially around payments, traveller data and inventory concurrency.
 

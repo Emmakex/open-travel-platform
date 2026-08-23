@@ -16,6 +16,7 @@ import { getPaymentRepository } from "@/lib/payment-repository";
 import { deriveReservationPaymentSchedule } from "@/lib/payment-terms";
 import { requireCustomerIdentity } from "@/lib/require-customer-identity";
 import { getTravelRepository } from "@/lib/travel-repository";
+import { buildTravellerDataCompletion, listTravellerDataForCustomer } from "@/lib/traveller-data";
 import type { TravelLocale } from "@/domain/travel/types";
 
 function formatDate(value: string, locale: TravelLocale) {
@@ -95,11 +96,31 @@ export default async function ReservationDetailPage({
   const canPayOnline = reservation.status !== "cancelled" &&
     paymentSchedule.nextPaymentAmount > 0 &&
     paymentSummary.pendingPaymentAmount <= 0;
-  const needsTravellerData = Boolean(
+  const travellerRequirementsActive = Boolean(
     reservation.travellerRequirements &&
     reservation.travellerRequirements.preset !== "none" &&
     reservation.travellers?.length
   );
+  const storedTravellerData = travellerRequirementsActive
+    ? await listTravellerDataForCustomer({
+        identityId: identity.id,
+        targetType: "trip",
+        reservationId: reservation.id
+      })
+    : new Map();
+  const travellerDataCompletion = travellerRequirementsActive
+    ? reservation.travellers!.map((traveller) =>
+        buildTravellerDataCompletion(
+          reservation.travellerRequirements,
+          traveller,
+          storedTravellerData.get(traveller.id)
+        )
+      )
+    : [];
+  const travellerDataCompletedCount = travellerDataCompletion.filter((item) => item.complete).length;
+  const travellerDataComplete = travellerRequirementsActive &&
+    travellerDataCompletion.length === reservation.travellers!.length &&
+    travellerDataCompletedCount === reservation.travellers!.length;
 
   return (
     <main className="section">
@@ -131,19 +152,29 @@ export default async function ReservationDetailPage({
             <div><dt>{copy.reference}</dt><dd>{reservation.id}</dd></div>
           </dl>
 
-          {needsTravellerData ? (
+          {travellerRequirementsActive ? (
             <div className={styles.notice}>
-              <strong>{locale === "es" ? "Falta completar información de viajeros" : "Post-purchase traveller information required"}</strong><br />
-              {locale === "es"
-                ? "Este viaje requiere información adicional después de realizar la reserva."
-                : "This trip requires additional traveller information after booking."}
+              <strong>
+                {travellerDataComplete
+                  ? (locale === "es" ? "✓ Datos de viajeros completos" : "✓ Traveller information complete")
+                  : (locale === "es" ? "Acción pendiente · datos de viajeros" : "Action required · traveller information")}
+              </strong><br />
+              {travellerDataComplete
+                ? (locale === "es"
+                    ? "Ya has completado la información post-compra necesaria para todos los viajeros de esta reserva. Puedes revisarla mientras el plazo de edición siga abierto."
+                    : "You have completed the required post-purchase information for every traveller in this reservation. You can review it while customer editing remains open.")
+                : (locale === "es"
+                    ? `${travellerDataCompletedCount}/${reservation.travellers!.length} viajeros completos. Completa los datos pendientes para que el equipo pueda operar la reserva sin solicitar información durante el checkout.`
+                    : `${travellerDataCompletedCount}/${reservation.travellers!.length} travellers complete. Finish the pending details so the team can operate the reservation without collecting this information during checkout.`)}
             </div>
           ) : null}
 
           <div className={styles.actions}>
-            {needsTravellerData ? (
-              <Link className="button button-primary" href={`/account/traveller-data/trip/${encodeURIComponent(reservation.id)}`}>
-                {locale === "es" ? "Completar datos de viajeros" : "Complete traveller information"}
+            {travellerRequirementsActive ? (
+              <Link className={travellerDataComplete ? "button button-secondary" : "button button-primary"} href={`/account/traveller-data/trip/${encodeURIComponent(reservation.id)}`}>
+                {travellerDataComplete
+                  ? (locale === "es" ? "Revisar datos de viajeros" : "Review traveller information")
+                  : (locale === "es" ? "Completar datos de viajeros" : "Complete traveller information")}
               </Link>
             ) : null}
             {canCustomerCancel ? (
@@ -171,12 +202,16 @@ export default async function ReservationDetailPage({
                 const guardian = traveller.guardianTravellerId
                   ? reservation.travellers?.find((item) => item.id === traveller.guardianTravellerId)
                   : null;
+                const completion = travellerDataCompletion.find((item) => item.travellerId === traveller.id);
                 return (
                   <div key={traveller.id}>
                     <dt>
                       {traveller.firstName} {traveller.lastName}{traveller.isLead ? ` · ${locale === "es" ? "principal" : "lead"}` : ""}
                     </dt>
                     <dd>
+                      {travellerRequirementsActive ? (
+                        <><strong>{locale === "es" ? "Datos post-compra" : "Post-purchase data"}: {completion?.complete ? (locale === "es" ? "completos" : "complete") : (locale === "es" ? "pendientes" : "pending")}</strong><br /></>
+                      ) : null}
                       {traveller.ageAtDeparture} {locale === "es" ? "años" : "years"} · {locale === "es" ? (traveller.pricingLabelEs || traveller.pricingLabel) : traveller.pricingLabel} · {formatCurrency(traveller.unitPrice, reservation.currency, locale)}<br />
                       {formatDate(traveller.dateOfBirth, locale)} · {traveller.nationality}
                       {guardian ? <><br />{locale === "es" ? "Adulto responsable" : "Responsible adult"}: {guardian.firstName} {guardian.lastName}</> : null}

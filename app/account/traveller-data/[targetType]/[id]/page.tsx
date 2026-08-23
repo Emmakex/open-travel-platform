@@ -147,8 +147,8 @@ export default async function TravellerDataPage({
       <main className="section"><div className={`container ${styles.shell}`}><section className={styles.panel}>
         <div className="eyebrow">{t("Traveller information", "Información de viajeros")}</div>
         <h1>{context.label}</h1>
-        <div className={styles.notice}>{t("No additional post-purchase traveller information is required for this reservation.", "Esta reserva no requiere información adicional de viajeros después de la compra.")}</div>
-        <p><Link className="text-link" href={context.detailUrl}>{t("← Back to reservation", "← Volver a la reserva")}</Link></p>
+        <div className={styles.notice}><strong>{t("Nothing required", "No tienes nada pendiente")}</strong><br />{t("No additional post-purchase traveller information is required for this reservation.", "Esta reserva no requiere información adicional de viajeros después de la compra.")}</div>
+        <p><Link className="button button-secondary" href={context.detailUrl}>{t("Back to reservation", "Volver a la reserva")}</Link></p>
       </section></div></main>
     );
   }
@@ -157,6 +157,7 @@ export default async function TravellerDataPage({
     buildTravellerDataCompletion(profile, traveller, stored.get(traveller.id))
   );
   const completedCount = completions.filter((item) => item.complete).length;
+  const allComplete = completedCount === context.travellers.length;
 
   return (
     <main className="section">
@@ -170,8 +171,26 @@ export default async function TravellerDataPage({
               "Completa únicamente la información necesaria para gestionar esta reserva. Kairoseth Travel no te pide subir una copia ni una foto del pasaporte/DNI en este proceso."
             )}
           </p>
+
+          <div className={styles.notice}>
+            <strong>
+              {allComplete
+                ? t("✓ Everything is ready", "✓ Todo listo")
+                : t("Action required · finish traveller information", "Acción pendiente · completa los datos de viajeros")}
+            </strong><br />
+            {allComplete
+              ? t(
+                  `${completedCount}/${context.travellers.length} travellers complete. You have finished the required traveller information for this reservation.`,
+                  `${completedCount}/${context.travellers.length} viajeros completos. Has terminado la información requerida para esta reserva.`
+                )
+              : t(
+                  `${completedCount}/${context.travellers.length} travellers complete. Complete one traveller, save, and continue until everyone is marked Complete.`,
+                  `${completedCount}/${context.travellers.length} viajeros completos. Completa un viajero, guarda y continúa hasta que todos aparezcan como Completos.`
+                )}
+          </div>
+
           <dl className={styles.profileList}>
-            <div><dt>{t("Completion", "Completitud")}</dt><dd><strong>{completedCount}/{context.travellers.length}</strong></dd></div>
+            <div><dt>{t("Progress", "Progreso")}</dt><dd><strong>{completedCount}/{context.travellers.length}</strong></dd></div>
             {deadline ? <div><dt>{t("Customer editing deadline", "Fecha límite de edición")}</dt><dd>{deadline}</dd></div> : null}
             <div><dt>{t("Retention after trip/service", "Conservación tras viaje/servicio")}</dt><dd>{profile.retentionDaysAfterEnd} {t("days", "días")}</dd></div>
           </dl>
@@ -184,7 +203,9 @@ export default async function TravellerDataPage({
               "Los datos de documentación y residencia se almacenan cifrados y quedan programados para eliminación automática según el plazo de conservación configurado. Aquí no se solicitan datos de salud."
             )}
           </p>
-          <p><Link className="text-link" href={context.detailUrl}>{t("← Back to reservation", "← Volver a la reserva")}</Link></p>
+          <div className={styles.actions}>
+            <Link className="button button-secondary" href={context.detailUrl}>{t("Back to reservation", "Volver a la reserva")}</Link>
+          </div>
         </section>
 
         {context.travellers.map((traveller, index) => {
@@ -194,10 +215,15 @@ export default async function TravellerDataPage({
           const saved = query.saved === traveller.id;
           return (
             <section className={styles.panel} style={{ marginTop: "1rem" }} key={traveller.id}>
-              <div className="eyebrow">{completion.complete ? t("Complete", "Completo") : t("Action required", "Información pendiente")}</div>
-              <h2>{traveller.firstName} {traveller.lastName}</h2>
+              <div className="eyebrow">{completion.complete ? t("✓ Complete", "✓ Completo") : t("Action required", "Información pendiente")}</div>
+              <h2>{index + 1}. {traveller.firstName} {traveller.lastName}</h2>
+              <p className={styles.lead}>
+                {completion.complete
+                  ? t("This traveller has all required fields. You can review or correct them while editing remains open.", "Este viajero ya tiene todos los datos requeridos. Puedes revisarlos o corregirlos mientras el plazo de edición siga abierto.")
+                  : t("Complete the fields below and save this traveller before continuing with the next one.", "Completa los campos de abajo y guarda este viajero antes de continuar con el siguiente.")}
+              </p>
               <p className={styles.lead}>{traveller.ageAtDeparture} {t("years", "años")} · {traveller.nationality}</p>
-              {saved ? <div className={styles.notice}>{t("Traveller information saved securely.", "Información del viajero guardada de forma segura.")}</div> : null}
+              {saved ? <div className={styles.notice}><strong>{t("Saved", "Guardado")}</strong><br />{t("Traveller information saved securely.", "Información del viajero guardada de forma segura.")}</div> : null}
               <form action={savePostPurchaseTravellerDataAction} className={styles.form} autoComplete="off">
                 <input type="hidden" name="targetType" value={targetType} />
                 <input type="hidden" name="reservationId" value={context.reservationId} />
@@ -214,7 +240,9 @@ export default async function TravellerDataPage({
                   ))}
                 </div>
                 {editingOpen && encryptionReady ? (
-                  <button className="button button-primary" type="submit">{t("Save traveller information", "Guardar información del viajero")}</button>
+                  <button className="button button-primary" type="submit">
+                    {completion.complete ? t("Save changes", "Guardar cambios") : t("Save traveller and continue", "Guardar viajero y continuar")}
+                  </button>
                 ) : null}
               </form>
             </section>

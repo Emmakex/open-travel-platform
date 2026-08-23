@@ -31,7 +31,7 @@ That separation is intentional:
 
 **[travel.kairoseth.com](https://travel.kairoseth.com)** is used to validate the platform end to end.
 
-The current reference deployment includes persistent catalogue/media management, customer and staff authentication, reservation operations, traveller records, independent travel services, inventory, transactional email, payment accounting and admin-managed payment-provider configuration.
+The current reference deployment includes persistent catalogue/media management, customer and staff authentication, reservation operations, traveller records, independent travel services, inventory, transactional email, payment accounting, payment terms, post-purchase traveller data and admin-managed payment-provider configuration.
 
 Stripe and Redsys adapters plus the unified online checkout are already implemented in the codebase, but credentialed end-to-end payment testing is intentionally deferred until suitable provider accounts are available. No payment provider is enabled automatically.
 
@@ -56,7 +56,8 @@ Stripe and Redsys adapters plus the unified online checkout are already implemen
 - independent activity, transport and insurance products;
 - service pricing models: per person, per booking, per unit and age-based;
 - service availability/inventory calendars for activities and transport;
-- draft/published lifecycle.
+- draft/published lifecycle;
+- per-product activation of post-purchase traveller requirements.
 
 ### Travellers and pricing
 
@@ -68,7 +69,11 @@ Stripe and Redsys adapters plus the unified online checkout are already implemen
 - per-departure traveller-price overrides;
 - guardian relationship required for minors;
 - configurable inventory consumption by age band (for example infants can be free and consume no seat);
-- pricing snapshots stored with reservations so historical bookings do not change when catalogue prices change.
+- pricing snapshots stored with reservations so historical bookings do not change when catalogue prices change;
+- optional post-purchase identity/document/residence data requested only when a product snapshot requires it;
+- AES-256-GCM encryption for advanced traveller data;
+- retention deadlines and MongoDB TTL deletion;
+- Operator completion visibility without exposing decrypted document values in reservation overviews.
 
 ### Reservations and services
 
@@ -78,6 +83,7 @@ Stripe and Redsys adapters plus the unified online checkout are already implemen
 - inventory reservation/release protected transactionally where applicable;
 - customer reservation/service history;
 - customer account prioritizes the actual next future trip and only falls back to catalogue recommendations when no future trip exists;
+- customer account highlights pending post-purchase traveller-data tasks for the upcoming trip;
 - operator queues for trip reservations and service reservations;
 - confirm/cancel workflows and operational audit history.
 
@@ -91,7 +97,8 @@ Stripe and Redsys adapters plus the unified online checkout are already implemen
 - SMTP password-reset emails;
 - authentication audit events;
 - active-session role indicator in the frontend;
-- privileged payment-provider configuration restricted to admins.
+- privileged payment-provider configuration restricted to admins;
+- sensitive traveller data stored separately from the booking record and encrypted with a server-only key.
 
 ### Transactional email
 
@@ -116,7 +123,54 @@ Stripe and Redsys adapters plus the unified online checkout are already implemen
 - admin-managed TEST/LIVE payment profiles;
 - Stripe/Redsys secrets encrypted at rest with AES-256-GCM;
 - provider credentials are never returned to the browser after saving;
+- full-payment, deposit and installment payment-term snapshots stored with reservations;
+- server-derived outstanding balances and next-payment schedules;
 - adapters are designed so additional PSPs can be introduced without rewriting booking logic.
+
+## Post-purchase traveller data: how it works
+
+The default is **no additional traveller data**. The feature is activated by an Operator **per trip or service product**, not globally.
+
+### Operator
+
+For a trip:
+
+```text
+Operator → Catalogue → Trips → Edit trip
+→ Post-purchase traveller data
+```
+
+For an activity, transport service or insurance product, use the corresponding service editor under `Operator → Catalogue → Services`.
+
+The operator then:
+
+1. leaves **No additional data** when nothing extra is required, or selects the correct preset only when a supplier, route or legal obligation genuinely requires it;
+2. reviews the customer-editing deadline and retention period;
+3. saves the product;
+4. understands that the configuration applies to **new reservations only** because traveller requirements are snapshotted into each reservation.
+
+Operator sees a simple reservation state:
+
+```text
+NOT REQUIRED → PENDING → COMPLETE
+```
+
+When active, Operator sees `completed travellers / total travellers` and per-traveller completion status without decrypted document/residence values in the reservation overview.
+
+### Customer
+
+Advanced traveller fields are **not collected during checkout**. After purchase:
+
+1. **My account** highlights the task for the next upcoming trip when information is pending.
+2. The trip/service reservation detail shows **Action required · traveller information**.
+3. The customer opens **Complete traveller information**.
+4. `/account/traveller-data/<trip|service>/<reservation-id>` shows only the fields required by that reservation snapshot.
+5. Progress is shown per traveller.
+6. When every traveller is complete, the reservation changes to **Traveller information complete** and the CTA becomes **Review traveller information** while editing remains open.
+
+Existing reservations do not inherit later catalogue changes. To test a newly activated preset, save the product and create a **new reservation**.
+
+The standard flow intentionally does **not** request passport/DNI scans and does **not** include health/medical questions. See [`docs/TRAVELLER-DATA.md`](docs/TRAVELLER-DATA.md) for requirement presets, security, retention, GDPR/RGPD considerations and the production checklist.
 
 ## Architecture
 
@@ -223,6 +277,7 @@ A fresh clone can use the safe demo/read-only modes documented in `.env.example`
 /account/reservations/[id]             trip reservation + finance
 /account/services                      service reservations
 /account/services/[id]                 service reservation detail
+/account/traveller-data/[targetType]/[id] post-purchase traveller data
 /account/checkout/[targetType]/[id]    unified online checkout
 /account/security                      customer security
 
@@ -270,9 +325,12 @@ KTRAVEL_OPERATIONS_EMAILS=
 
 # Encrypts payment-provider secrets stored by Admin
 PAYMENT_SECRETS_KEY=
+
+# Encrypts post-purchase traveller identity/document data
+TRAVELLER_DATA_KEY=
 ```
 
-`PAYMENT_SECRETS_KEY` should be a stable high-entropy 32-byte key (for example generated with `openssl rand -base64 32`). Do not rotate it without a migration plan because it protects the PSP credentials stored by the application.
+`PAYMENT_SECRETS_KEY` and `TRAVELLER_DATA_KEY` should be stable high-entropy 32-byte keys (for example generated separately with `openssl rand -base64 32`). Do not rotate either key without a migration plan because they protect persisted encrypted records.
 
 Stripe/Redsys credentials themselves are managed from the admin UI and are not required as environment variables.
 
@@ -280,7 +338,7 @@ Stripe/Redsys credentials themselves are managed from the admin UI and are not r
 
 ## Persistent data
 
-MongoDB-backed deployments use separate collections for capability boundaries, including reservations, departures, service catalogue/availability/reservations, payment transactions, operations audit, authentication data and payment-provider configuration.
+MongoDB-backed deployments use separate collections for capability boundaries, including reservations, departures, service catalogue/availability/reservations, payment transactions, operations audit, authentication data, payment-provider configuration and encrypted post-purchase traveller data.
 
 Infrastructure-specific collection names and credentials are intentionally not exposed in the Operator UI.
 
@@ -296,6 +354,7 @@ Infrastructure-specific collection names and credentials are intentionally not e
 - [`docs/MEDIA.md`](docs/MEDIA.md) — media library and upload model.
 - [`docs/TRANSACTIONAL-EMAILS.md`](docs/TRANSACTIONAL-EMAILS.md) — SMTP notifications.
 - [`docs/PAYMENTS.md`](docs/PAYMENTS.md) — payment ledger and PSP integration contract.
+- [`docs/TRAVELLER-DATA.md`](docs/TRAVELLER-DATA.md) — post-purchase traveller requirements, UX, security and retention.
 - [`docs/ADAPTER-GUIDE.md`](docs/ADAPTER-GUIDE.md) — adding integrations.
 - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — deployment model.
 - [`docs/PRODUCTION-CHECKLIST.md`](docs/PRODUCTION-CHECKLIST.md) — production review.
@@ -321,7 +380,7 @@ CI resolves the dependency lock, performs a clean install, validates release con
 | MongoDB catalogue backoffice and media | Done |
 | Persistent customer/staff identity and security | Done |
 | Trip reservations and departure inventory | Done |
-| Traveller records, minors and age pricing | Done (advanced travel-document requirements remain) |
+| Traveller records, minors and age pricing | Done |
 | Independent activities / transport / insurance catalogue | Done |
 | Independent service availability and reservations | Done |
 | Operator/admin workflows and audit | Done |
@@ -329,23 +388,31 @@ CI resolves the dependency lock, performs a clean install, validates release con
 | Provider-neutral payment ledger | Done |
 | Admin TEST/LIVE Stripe and Redsys configuration | Done |
 | Unified Stripe/Redsys checkout adapters | Implemented; credentialed E2E validation pending |
-| Deposits / installments / payment terms | **Next** |
+| Deposits / installments / payment terms (Phase 5G) | Done |
+| Secure post-purchase traveller data (Phase 6A) | Done |
+| Traveller-data Operator/customer UX and documentation (Phase 6A.1) | In progress in this branch |
+| Reservation amendments (Phase 6B) | **Next** |
 
 Future work is tracked in **[ROADMAP.md](ROADMAP.md)** · **[ROADMAP.es.md](ROADMAP.es.md)**.
 
 ## Next development priority
 
-The next major block is **deposits, installments and payment terms**:
+The next major block is **Phase 6B — reservation amendments**.
 
-- full payment vs deposit;
-- fixed or percentage deposit;
-- deposit/final-balance due dates;
-- optional installment schedules;
-- outstanding-balance calculations;
-- reminder emails and overdue visibility;
-- payment-term snapshots stored with each reservation.
+The goal is to support normal post-booking changes without destroying the original booking record:
 
-This work can be completed on top of the current ledger before Stripe/Redsys credentials are available.
+- add/remove/update travellers under controlled rules;
+- change departure when inventory allows;
+- add/remove linked activities, transport and insurance;
+- recalculate affected totals server-side;
+- preserve before/after snapshots and an amendment timeline;
+- move inventory safely between old/new allocations;
+- collect an additional balance when the new total increases;
+- expose a refundable balance for controlled refund processing when the new total decreases;
+- notify the customer of material amendments;
+- support configurable amendment/cancellation deadlines.
+
+Phase 6B should preserve the payment ledger and original reservation history rather than rewriting past financial movements.
 
 ## Project principles
 
@@ -353,8 +420,10 @@ This work can be completed on top of the current ledger before Stripe/Redsys cre
 - provider-neutral capability interfaces;
 - server-authorized customer and staff operations;
 - server-validated pricing, inventory, ownership and state transitions;
-- traveller and financial snapshots preserve historical bookings;
+- traveller, requirement and financial snapshots preserve historical bookings;
 - reservation state separated from payment state;
+- advanced traveller data is collected only after purchase when required;
+- sensitive traveller values remain encrypted and are not exposed in general Operator overviews;
 - secrets remain server-side and encrypted when persisted;
 - no mandatory hosting, CMS, auth, CRM, payment or supplier vendor;
 - MIT-licensed open-source core.

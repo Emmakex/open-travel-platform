@@ -31,7 +31,7 @@ La separación es intencional:
 
 **[travel.kairoseth.com](https://travel.kairoseth.com)** se utiliza para validar la plataforma de extremo a extremo.
 
-El despliegue actual incluye catálogo y multimedia persistentes, autenticación de clientes y personal, operaciones de reserva, viajeros, servicios turísticos independientes, inventario, correo transaccional, contabilidad de pagos y configuración de pasarelas administrada desde Admin.
+El despliegue actual incluye catálogo y multimedia persistentes, autenticación de clientes y personal, operaciones de reserva, viajeros, servicios turísticos independientes, inventario, correo transaccional, contabilidad de pagos, condiciones de pago, datos post-compra de viajeros y configuración de pasarelas administrada desde Admin.
 
 Los adaptadores Stripe y Redsys, junto con el checkout online unificado, ya están implementados en el código, pero la validación end-to-end con credenciales se pospone deliberadamente hasta disponer de cuentas adecuadas. Ninguna pasarela se activa automáticamente.
 
@@ -56,7 +56,8 @@ Los adaptadores Stripe y Redsys, junto con el checkout online unificado, ya est�
 - productos independientes de actividad, transporte y seguro;
 - modelos de precio por persona, por reserva, por unidad y según edad;
 - calendarios de disponibilidad e inventario para actividades y transporte;
-- ciclo borrador/publicado.
+- ciclo borrador/publicado;
+- activación por producto de requisitos post-compra de viajeros.
 
 ### Viajeros y pricing
 
@@ -68,7 +69,11 @@ Los adaptadores Stripe y Redsys, junto con el checkout online unificado, ya est�
 - overrides de precio por salida;
 - adulto responsable obligatorio para menores;
 - consumo de inventario configurable por banda de edad (por ejemplo, un bebé puede ser gratuito y no consumir plaza);
-- snapshots de precio guardados en la reserva para que los cambios futuros del catálogo no alteren reservas históricas.
+- snapshots de precio guardados en la reserva para que los cambios futuros del catálogo no alteren reservas históricas;
+- datos opcionales post-compra de identidad/documentación/residencia solicitados solo cuando el snapshot del producto los exige;
+- cifrado AES-256-GCM para datos avanzados de viajeros;
+- plazos de edición, conservación y borrado TTL en MongoDB;
+- visibilidad de completitud en Operator sin exponer valores descifrados de documentación en las vistas generales.
 
 ### Reservas y servicios
 
@@ -78,6 +83,7 @@ Los adaptadores Stripe y Redsys, junto con el checkout online unificado, ya est�
 - reserva/liberación de inventario protegida transaccionalmente cuando aplica;
 - historial de viajes y servicios en la cuenta del cliente;
 - la cuenta prioriza el próximo viaje futuro real del cliente y solo usa recomendaciones del catálogo como fallback;
+- la cuenta del cliente destaca tareas pendientes de datos post-compra para el próximo viaje;
 - colas de Operator separadas para viajes y servicios;
 - flujos confirmar/cancelar y auditoría operativa.
 
@@ -91,7 +97,8 @@ Los adaptadores Stripe y Redsys, junto con el checkout online unificado, ya est�
 - correo SMTP de recuperación;
 - auditoría de eventos de autenticación;
 - indicador visible de sesión/rol activo en frontend;
-- configuración de pasarelas restringida a admin.
+- configuración de pasarelas restringida a admin;
+- datos sensibles post-compra separados del registro principal de reserva y cifrados con una clave exclusiva del servidor.
 
 ### Correo transaccional
 
@@ -116,7 +123,54 @@ Los adaptadores Stripe y Redsys, junto con el checkout online unificado, ya est�
 - perfiles TEST/LIVE administrados desde Admin;
 - secretos Stripe/Redsys cifrados en reposo con AES-256-GCM;
 - las credenciales guardadas nunca vuelven al navegador;
+- condiciones de pago completas, depósitos y cuotas guardadas como snapshot en cada reserva;
+- cálculo server-side de saldo pendiente y próxima cuota;
 - diseño preparado para añadir PSP adicionales sin reescribir la lógica de reservas.
+
+## Datos post-compra de viajeros: cómo funciona
+
+Por defecto **no se solicitan datos adicionales de viajeros**. La función se activa por un Operator **en cada viaje o servicio**, no globalmente.
+
+### Operator
+
+Para un viaje:
+
+```text
+Operator → Catálogo → Viajes → Editar viaje
+→ Datos de viajeros después de la compra
+```
+
+Para una actividad, transporte o seguro se utiliza el editor correspondiente dentro de `Operator → Catálogo → Servicios`.
+
+El operador:
+
+1. deja **Sin datos adicionales** cuando no hay ninguna necesidad real, o selecciona el perfil correcto solo cuando un proveedor, una ruta o una obligación legal lo exige;
+2. revisa el plazo de edición del cliente y el periodo de conservación;
+3. guarda el producto;
+4. tiene en cuenta que la configuración afecta únicamente a **nuevas reservas**, porque los requisitos quedan guardados como snapshot dentro de cada reserva.
+
+Operator utiliza un estado simple:
+
+```text
+NO REQUERIDO → PENDIENTE → COMPLETO
+```
+
+Cuando está activo, Operator muestra `viajeros completos / total de viajeros` y el estado individual de cada viajero sin mostrar en la vista general los valores descifrados del documento o residencia.
+
+### Cliente
+
+Los datos avanzados **no se solicitan durante el checkout**. Después de comprar:
+
+1. **Mi cuenta** destaca la tarea en el próximo viaje cuando todavía hay información pendiente.
+2. El detalle de la reserva de viaje o servicio muestra **Acción pendiente · datos de viajeros**.
+3. El cliente pulsa **Completar datos de viajeros**.
+4. `/account/traveller-data/<trip|service>/<reservation-id>` muestra únicamente los campos requeridos por el snapshot de esa reserva.
+5. El progreso se muestra por viajero.
+6. Cuando todos están completos, el estado cambia a **Datos de viajeros completos** y el CTA pasa a **Revisar datos de viajeros** mientras el plazo de edición siga abierto.
+
+Las reservas antiguas no heredan cambios posteriores del catálogo. Para probar un perfil recién activado hay que guardar el producto y crear una **reserva nueva**.
+
+El flujo estándar no solicita deliberadamente copias/fotos de pasaporte o DNI y tampoco incluye preguntas médicas o de salud. Consulta [`docs/TRAVELLER-DATA.md`](docs/TRAVELLER-DATA.md) para ver perfiles, seguridad, conservación, consideraciones RGPD y checklist de producción.
 
 ## Arquitectura
 
@@ -223,6 +277,7 @@ Un clon nuevo puede usar los modos demo/solo lectura seguros documentados en `.e
 /account/reservations/[id]             reserva + finanzas
 /account/services                      reservas de servicios
 /account/services/[id]                 detalle de servicio reservado
+/account/traveller-data/[targetType]/[id] datos post-compra de viajeros
 /account/checkout/[targetType]/[id]    checkout unificado
 /account/security                      seguridad cliente
 
@@ -270,9 +325,12 @@ KTRAVEL_OPERATIONS_EMAILS=
 
 # Cifra secretos de pasarelas guardados desde Admin
 PAYMENT_SECRETS_KEY=
+
+# Cifra datos post-compra de identidad/documentación de viajeros
+TRAVELLER_DATA_KEY=
 ```
 
-`PAYMENT_SECRETS_KEY` debe ser una clave estable y de alta entropía de 32 bytes (por ejemplo generada con `openssl rand -base64 32`). No debe rotarse sin un plan de migración porque protege las credenciales PSP almacenadas por la aplicación.
+`PAYMENT_SECRETS_KEY` y `TRAVELLER_DATA_KEY` deben ser claves estables y de alta entropía de 32 bytes, generadas de forma independiente (por ejemplo con `openssl rand -base64 32`). No deben rotarse sin un plan de migración porque protegen registros cifrados persistidos.
 
 Las credenciales Stripe/Redsys se administran desde la UI de Admin y no necesitan existir como variables de entorno.
 
@@ -280,7 +338,7 @@ Las variables `NEXT_PUBLIC_*` son visibles en navegador y nunca deben contener s
 
 ## Datos persistentes
 
-Los despliegues MongoDB utilizan colecciones separadas por capacidades: reservas, salidas, catálogo/disponibilidad/reservas de servicios, transacciones de pago, auditoría operativa, autenticación y configuración de proveedores de pago.
+Los despliegues MongoDB utilizan colecciones separadas por capacidades: reservas, salidas, catálogo/disponibilidad/reservas de servicios, transacciones de pago, auditoría operativa, autenticación, configuración de proveedores de pago y datos post-compra de viajeros cifrados.
 
 Los nombres internos de colecciones y credenciales de infraestructura no se muestran en la UI de Operator.
 
@@ -296,6 +354,7 @@ Los nombres internos de colecciones y credenciales de infraestructura no se mues
 - [`docs/MEDIA.md`](docs/MEDIA.md) — multimedia y subidas.
 - [`docs/TRANSACTIONAL-EMAILS.md`](docs/TRANSACTIONAL-EMAILS.md) — SMTP y notificaciones.
 - [`docs/PAYMENTS.md`](docs/PAYMENTS.md) — ledger y contrato PSP.
+- [`docs/TRAVELLER-DATA.md`](docs/TRAVELLER-DATA.md) — requisitos post-compra, UX, seguridad y conservación de datos de viajeros.
 - [`docs/ADAPTER-GUIDE.md`](docs/ADAPTER-GUIDE.md) — incorporación de integraciones.
 - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — despliegue.
 - [`docs/PRODUCTION-CHECKLIST.md`](docs/PRODUCTION-CHECKLIST.md) — revisión preproducción.
@@ -321,7 +380,7 @@ CI resuelve el lock de dependencias, realiza instalación limpia, valida consist
 | Backoffice MongoDB y multimedia | Completado |
 | Identidad persistente cliente/personal y seguridad | Completado |
 | Reservas de viaje e inventario | Completado |
-| Viajeros, menores y pricing por edad | Completado (quedan requisitos avanzados de documentación) |
+| Viajeros, menores y pricing por edad | Completado |
 | Catálogo independiente de actividades / transporte / seguros | Completado |
 | Disponibilidad y reservas independientes de servicios | Completado |
 | Workflows operator/admin y auditoría | Completado |
@@ -329,23 +388,31 @@ CI resuelve el lock de dependencias, realiza instalación limpia, valida consist
 | Ledger de pagos independiente de proveedor | Completado |
 | Configuración Admin TEST/LIVE de Stripe y Redsys | Completado |
 | Checkout/adapters Stripe y Redsys | Implementado; pendiente validación E2E con credenciales |
-| Depósitos / cuotas / condiciones de pago | **Siguiente** |
+| Depósitos / cuotas / condiciones de pago (Fase 5G) | Completado |
+| Datos seguros post-compra de viajeros (Fase 6A) | Completado |
+| UX cliente/Operator y documentación de datos de viajeros (Fase 6A.1) | En progreso en esta rama |
+| Modificaciones de reserva (Fase 6B) | **Siguiente** |
 
 El trabajo futuro está en **[ROADMAP.md](ROADMAP.md)** · **[ROADMAP.es.md](ROADMAP.es.md)**.
 
 ## Próxima prioridad de desarrollo
 
-El siguiente bloque principal es **depósitos, cuotas y condiciones de pago**:
+El siguiente bloque principal es **Fase 6B — modificaciones de reserva**.
 
-- pago completo frente a depósito;
-- depósito fijo o porcentual;
-- vencimiento del depósito y saldo final;
-- calendarios opcionales de cuotas;
-- cálculo automático del saldo pendiente;
-- recordatorios y visibilidad de vencidos;
-- snapshot de condiciones de pago guardado con cada reserva.
+El objetivo es permitir cambios normales después de reservar sin destruir el registro original:
 
-Esta fase puede desarrollarse completamente sobre el ledger actual antes de disponer de credenciales Stripe/Redsys.
+- añadir, eliminar o modificar viajeros bajo reglas controladas;
+- cambiar de salida cuando exista disponibilidad;
+- añadir/quitar actividades, transporte y seguros vinculados;
+- recalcular en servidor los totales afectados;
+- conservar snapshots antes/después y un timeline de modificaciones;
+- mover inventario de forma segura entre asignaciones antiguas y nuevas;
+- cobrar una diferencia cuando el nuevo total aumente;
+- mostrar un saldo potencialmente reembolsable cuando el nuevo total disminuya, para procesarlo de forma controlada;
+- notificar al cliente los cambios relevantes;
+- soportar deadlines configurables de cambios/cancelaciones.
+
+La Fase 6B debe conservar el ledger de pagos y la historia original de la reserva, sin reescribir movimientos financieros pasados.
 
 ## Principios del proyecto
 
@@ -353,8 +420,10 @@ Esta fase puede desarrollarse completamente sobre el ledger actual antes de disp
 - interfaces neutrales respecto a proveedores;
 - operaciones de cliente y personal autorizadas en servidor;
 - pricing, inventario, ownership y transiciones validados server-side;
-- snapshots de viajeros y finanzas preservan reservas históricas;
+- snapshots de viajeros, requisitos y finanzas preservan reservas históricas;
 - estado de reserva separado del estado de pago;
+- los datos avanzados de viajeros se solicitan solo después de la compra y cuando son necesarios;
+- los valores sensibles de viajeros permanecen cifrados y no se muestran en las vistas generales de Operator;
 - secretos únicamente server-side y cifrados cuando se persisten;
 - sin dependencia obligatoria de hosting, CMS, auth, CRM, pagos o proveedor turístico;
 - core open-source bajo licencia MIT.
