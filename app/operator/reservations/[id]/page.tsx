@@ -38,12 +38,21 @@ export default async function OperatorReservationDetailPage({
     paymentError?: string;
     termsUpdated?: string;
     termsError?: string;
+    termsReminder?: string;
   }>;
 }) {
   const locale = await getLocale();
   const staff = await requireOperationsIdentity();
   const { id } = await params;
-  const { updated, error, paymentUpdated, paymentError, termsUpdated, termsError } = await searchParams;
+  const {
+    updated,
+    error,
+    paymentUpdated,
+    paymentError,
+    termsUpdated,
+    termsError,
+    termsReminder
+  } = await searchParams;
   const operations = getOperationsRepository();
   const [reservation, trips, audit] = await Promise.all([
     operations.getReservation(id),
@@ -148,6 +157,7 @@ export default async function OperatorReservationDetailPage({
           locale={locale}
           termsUpdated={termsUpdated}
           termsError={termsError}
+          termsReminder={termsReminder}
         />
 
         <ReservationPaymentPanel
