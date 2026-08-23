@@ -3,6 +3,7 @@ import type { Reservation } from "@/domain/booking/types";
 import type {
   CreatePaymentTransactionInput,
   PaymentSummary,
+  PaymentTargetSnapshot,
   PaymentTransaction,
   UpdatePaymentTransactionInput
 } from "@/domain/payment/types";
@@ -12,12 +13,19 @@ import type { PaymentRepository } from "@/repositories/payment-repository";
 
 class DisabledPaymentRepository implements PaymentRepository {
   async getSummary(reservation: Reservation): Promise<PaymentSummary> {
-    return buildPaymentSummary(reservation, []);
+    return buildPaymentSummary({ ...reservation, targetType: "trip" }, []);
+  }
+
+  async getTargetSummary(target: PaymentTargetSnapshot): Promise<PaymentSummary> {
+    return buildPaymentSummary(target, []);
   }
 
   async getSummaries(reservations: Reservation[]) {
     return Object.fromEntries(
-      reservations.map((reservation) => [reservation.id, buildPaymentSummary(reservation, [])])
+      reservations.map((reservation) => [
+        reservation.id,
+        buildPaymentSummary({ ...reservation, targetType: "trip" }, [])
+      ])
     );
   }
 

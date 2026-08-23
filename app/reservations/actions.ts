@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import type { GuardianRelationship } from "@/domain/booking/types";
 import { bookingConfig } from "@/lib/booking-config";
 import { getBookingRepository } from "@/lib/booking-repository";
+import { getPaymentRepository } from "@/lib/payment-repository";
 import { notifyReservationEvent } from "@/lib/reservation-emails";
 import { requireCustomerIdentity } from "@/lib/require-customer-identity";
 import { getTravelRepository } from "@/lib/travel-repository";
@@ -135,7 +136,16 @@ export async function cancelReservationAction(formData: FormData) {
     redirect("/account/reservations");
   }
 
-  const reservation = await getBookingRepository().cancelReservation(identity.id, reservationId);
+  const bookingRepository = getBookingRepository();
+  const current = await bookingRepository.getReservation(identity.id, reservationId);
+  if (!current) redirect("/account/reservations");
+
+  const payment = await getPaymentRepository().getSummary(current);
+  if (payment.netPaidAmount > 0 || payment.pendingPaymentAmount > 0) {
+    redirect(`/account/reservations/${encodeURIComponent(reservationId)}?error=payment-active`);
+  }
+
+  const reservation = await bookingRepository.cancelReservation(identity.id, reservationId);
 
   if (!reservation) {
     redirect("/account/reservations");

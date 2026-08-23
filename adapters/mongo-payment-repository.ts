@@ -2,9 +2,12 @@ import { randomUUID } from "node:crypto";
 import type { Reservation } from "@/domain/booking/types";
 import type {
   CreatePaymentTransactionInput,
+  PaymentTargetSnapshot,
+  PaymentTargetType,
   PaymentTransaction,
   UpdatePaymentTransactionInput
 } from "@/domain/payment/types";
+import type { ServiceReservation } from "@/domain/services/booking-types";
 import {
   ensureMongoPaymentIndexes,
   travelPaymentTransactionCollectionName,
@@ -17,6 +20,10 @@ import {
 } from "@/lib/mongo-reservations";
 import { getMongoClient, getMongoDatabaseName } from "@/lib/mongodb";
 import { buildPaymentSummary } from "@/lib/payment-summary";
+import {
+  ensureServiceReservationIndexes,
+  serviceReservationCollectionName
+} from "@/lib/service-reservations";
 import type { PaymentRepository } from "@/repositories/payment-repository";
 
 function paymentError(code: string, message: string) {
@@ -33,20 +40,64 @@ function validAmount(value: number) {
   return Number.isFinite(value) && value > 0 && money(value) === value;
 }
 
+function targetTypeFor(id: string, explicit?: PaymentTargetType): PaymentTargetType {
+  if (explicit) return explicit;
+  return id.startsWith("srv-") ? "service" : "trip";
+}
+
+type StoredPaymentTarget = PaymentTargetSnapshot & { status?: string };
+
 export class MongoPaymentRepository implements PaymentRepository {
   private async database() {
     const client = await getMongoClient();
     const database = client.db(getMongoDatabaseName());
     await Promise.all([
       ensureMongoReservationIndexes(database),
+      ensureServiceReservationIndexes(database),
       ensureMongoPaymentIndexes(database)
     ]);
     return database;
   }
 
+  private async storedTarget(
+    database: Awaited<ReturnType<MongoPaymentRepository["database"]>>,
+    id: string,
+    explicitType?: PaymentTargetType
+  ): Promise<StoredPaymentTarget | null> {
+    const targetType = targetTypeFor(id, explicitType);
+    if (targetType === "service") {
+      const service = await database
+        .collection<ServiceReservation>(serviceReservationCollectionName)
+        .findOne({ id });
+      return service ? {
+        id: service.id,
+        totalPrice: service.totalPrice,
+        currency: service.currency,
+        targetType,
+        status: service.status
+      } : null;
+    }
+
+    const reservation = await database
+      .collection<StoredReservation>(travelReservationCollectionName)
+      .findOne({ id });
+    return reservation ? {
+      id: reservation.id,
+      totalPrice: reservation.totalPrice,
+      currency: reservation.currency,
+      targetType,
+      status: reservation.status
+    } : null;
+  }
+
   async getSummary(reservation: Reservation) {
     const transactions = await this.listTransactions(reservation.id);
-    return buildPaymentSummary(reservation, transactions);
+    return buildPaymentSummary({ ...reservation, targetType: "trip" }, transactions);
+  }
+
+  async getTargetSummary(target: PaymentTargetSnapshot) {
+    const transactions = await this.listTransactions(target.id);
+    return buildPaymentSummary(target, transactions);
   }
 
   async getSummaries(reservations: Reservation[]) {
@@ -69,7 +120,10 @@ export class MongoPaymentRepository implements PaymentRepository {
     return Object.fromEntries(
       reservations.map((reservation) => [
         reservation.id,
-        buildPaymentSummary(reservation, grouped.get(reservation.id) ?? [])
+        buildPaymentSummary(
+          { ...reservation, targetType: "trip" },
+          grouped.get(reservation.id) ?? []
+        )
       ])
     );
   }
@@ -95,17 +149,19 @@ export class MongoPaymentRepository implements PaymentRepository {
 
   async createTransaction(input: CreatePaymentTransactionInput) {
     const database = await this.database();
-    const reservations = database.collection<StoredReservation>(travelReservationCollectionName);
     const payments = database.collection<StoredPaymentTransaction>(travelPaymentTransactionCollectionName);
-    const reservation = await reservations.findOne({ id: input.reservationId });
+    const target = await this.storedTarget(database, input.reservationId, input.targetType);
 
-    if (!reservation) {
-      throw paymentError("PAYMENT_RESERVATION_NOT_FOUND", "Reservation not found.");
+    if (!target) {
+      throw paymentError("PAYMENT_RESERVATION_NOT_FOUND", "Payment target not found.");
+    }
+    if (target.status === "cancelled") {
+      throw paymentError("PAYMENT_TARGET_CANCELLED", "Cancelled reservations cannot receive payments.");
     }
     if (!validAmount(input.amount)) {
       throw paymentError("PAYMENT_AMOUNT_INVALID", "Payment amount must be a positive value with at most two decimals.");
     }
-    if (input.currency !== reservation.currency) {
+    if (input.currency !== target.currency) {
       throw paymentError("PAYMENT_CURRENCY_MISMATCH", "Payment currency does not match the reservation.");
     }
 
@@ -128,9 +184,9 @@ export class MongoPaymentRepository implements PaymentRepository {
     }
 
     const existingTransactions = await payments
-      .find({ reservationId: reservation.id })
+      .find({ reservationId: target.id })
       .toArray();
-    const summary = buildPaymentSummary(reservation, existingTransactions);
+    const summary = buildPaymentSummary(target, existingTransactions);
     const status = input.status ?? "pending";
     const amount = money(input.amount);
 
@@ -152,7 +208,8 @@ export class MongoPaymentRepository implements PaymentRepository {
 
     const transaction: PaymentTransaction = {
       id: `pay-${randomUUID()}`,
-      reservationId: reservation.id,
+      reservationId: target.id,
+      targetType: target.targetType,
       type: input.type,
       status,
       amount,
@@ -172,7 +229,6 @@ export class MongoPaymentRepository implements PaymentRepository {
 
   async updateTransaction(input: UpdatePaymentTransactionInput) {
     const database = await this.database();
-    const reservations = database.collection<StoredReservation>(travelReservationCollectionName);
     const payments = database.collection<StoredPaymentTransaction>(travelPaymentTransactionCollectionName);
     const current = await payments.findOne({ id: input.transactionId });
     if (!current) return null;
@@ -181,16 +237,16 @@ export class MongoPaymentRepository implements PaymentRepository {
       throw paymentError("PAYMENT_FINALIZED", "Only pending transactions can change status.");
     }
 
-    const reservation = await reservations.findOne({ id: current.reservationId });
-    if (!reservation) {
-      throw paymentError("PAYMENT_RESERVATION_NOT_FOUND", "Reservation not found.");
+    const target = await this.storedTarget(database, current.reservationId, current.targetType);
+    if (!target) {
+      throw paymentError("PAYMENT_RESERVATION_NOT_FOUND", "Payment target not found.");
     }
 
     if (input.status === "succeeded") {
       const otherTransactions = await payments
-        .find({ reservationId: reservation.id, id: { $ne: current.id } })
+        .find({ reservationId: target.id, id: { $ne: current.id } })
         .toArray();
-      const summary = buildPaymentSummary(reservation, otherTransactions);
+      const summary = buildPaymentSummary(target, otherTransactions);
       if (current.type === "payment" && current.amount > summary.outstandingAmount) {
         throw paymentError("PAYMENT_EXCEEDS_BALANCE", "Payment amount exceeds the reservation balance.");
       }

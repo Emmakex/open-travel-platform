@@ -8,12 +8,26 @@ export type PaymentStatus =
   | "partially_refunded"
   | "refunded";
 
+export type PaymentTargetType = "trip" | "service";
 export type PaymentTransactionType = "payment" | "refund";
 export type PaymentTransactionStatus = "pending" | "succeeded" | "failed";
 
+export interface PaymentTargetSnapshot {
+  id: string;
+  totalPrice: number;
+  currency: string;
+  targetType?: PaymentTargetType;
+}
+
 export interface PaymentTransaction {
   id: string;
+  /**
+   * Backwards-compatible payment target identifier. Trip reservation IDs and
+   * service reservation IDs are both stored here so existing ledger queries
+   * remain stable while targetType provides the semantic distinction.
+   */
   reservationId: string;
+  targetType?: PaymentTargetType;
   type: PaymentTransactionType;
   status: PaymentTransactionStatus;
   amount: number;
@@ -30,6 +44,8 @@ export interface PaymentTransaction {
 
 export interface PaymentSummary {
   reservationId: string;
+  targetId: string;
+  targetType?: PaymentTargetType;
   status: PaymentStatus;
   currency: string;
   totalAmount: number;
@@ -44,6 +60,7 @@ export interface PaymentSummary {
 
 export interface CreatePaymentTransactionInput {
   reservationId: string;
+  targetType?: PaymentTargetType;
   type: PaymentTransactionType;
   amount: number;
   currency: string;
