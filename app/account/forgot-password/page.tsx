@@ -5,7 +5,7 @@ import { getLocale } from "@/lib/get-locale";
 import { isEmailDeliveryConfigured } from "@/lib/email";
 
 export const metadata = {
-  title: "Forgot password | Kairoseth Travel",
+  title: "Forgot password",
   description: "Request a secure Kairoseth Travel password reset link."
 };
 
