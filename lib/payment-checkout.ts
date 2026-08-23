@@ -1,4 +1,5 @@
 import { randomInt, randomUUID } from "node:crypto";
+import type { ReservationPaymentTerms } from "@/domain/booking/types";
 import type { CheckoutOrder, CheckoutOrderStatus } from "@/domain/payment/checkout-types";
 import type { PaymentTargetType } from "@/domain/payment/types";
 import type { PaymentProviderId } from "@/lib/payment-provider-config";
@@ -6,6 +7,7 @@ import { getActivePaymentProviderCredentials } from "@/lib/payment-provider-conf
 import { getBookingRepository } from "@/lib/booking-repository";
 import { getMongoDatabase } from "@/lib/mongodb";
 import { getPaymentRepository } from "@/lib/payment-repository";
+import { derivePaymentSchedule } from "@/lib/payment-terms";
 import { getServiceReservationForCustomer } from "@/lib/service-reservations";
 
 export const paymentCheckoutOrderCollectionName = "travel_payment_checkout_orders";
@@ -19,6 +21,7 @@ export type CheckoutTarget = {
   currency: string;
   status: string;
   detailUrl: string;
+  paymentTerms?: ReservationPaymentTerms;
 };
 
 type StoredWebhookEvent = {
@@ -77,7 +80,8 @@ export async function resolveCheckoutTargetForCustomer(
       totalPrice: reservation.totalPrice,
       currency: reservation.currency,
       status: reservation.status,
-      detailUrl: `/account/reservations/${encodeURIComponent(reservation.id)}`
+      detailUrl: `/account/reservations/${encodeURIComponent(reservation.id)}`,
+      paymentTerms: reservation.paymentTerms
     };
   }
 
@@ -101,6 +105,19 @@ export async function getCheckoutSummaryForTarget(target: CheckoutTarget) {
     currency: target.currency,
     targetType: target.targetType
   });
+}
+
+export async function getCheckoutPaymentSchedule(target: CheckoutTarget) {
+  const summary = await getCheckoutSummaryForTarget(target);
+  return {
+    summary,
+    schedule: derivePaymentSchedule({
+      totalAmount: target.totalPrice,
+      currency: target.currency,
+      paymentTerms: target.paymentTerms,
+      netPaidAmount: summary.netPaidAmount
+    })
+  };
 }
 
 function redsysOrderNumber() {
@@ -131,19 +148,27 @@ export async function createCheckoutOrder(input: {
   if (summary.pendingPaymentAmount > 0) {
     throw checkoutError("CHECKOUT_PAYMENT_PENDING", "Another payment is already pending for this reservation.");
   }
+  const schedule = derivePaymentSchedule({
+    totalAmount: target.totalPrice,
+    currency: target.currency,
+    paymentTerms: target.paymentTerms,
+    netPaidAmount: summary.netPaidAmount
+  });
+  const payableAmount = Math.min(summary.outstandingAmount, schedule.nextPaymentAmount || summary.outstandingAmount);
+  if (payableAmount <= 0) throw checkoutError("CHECKOUT_ALREADY_PAID", "There is no scheduled payment outstanding.");
 
   const transaction = await payments.createTransaction({
     reservationId: target.targetId,
     targetType: target.targetType,
     type: "payment",
-    amount: summary.outstandingAmount,
+    amount: payableAmount,
     currency: target.currency,
     provider: input.provider,
     method: "online",
     status: "pending",
     actorIdentityId: input.identityId,
     actorRole: "customer",
-    note: `Online checkout · ${target.label}`
+    note: `Online checkout · ${target.label}${schedule.nextInstallment ? ` · ${schedule.nextInstallment.label}` : ""}`
   });
 
   const order: CheckoutOrder = {
@@ -152,7 +177,7 @@ export async function createCheckoutOrder(input: {
     targetType: target.targetType,
     targetId: target.targetId,
     targetLabel: target.label,
-    amount: summary.outstandingAmount,
+    amount: payableAmount,
     currency: target.currency,
     provider: input.provider,
     environment: credentials.environment,
