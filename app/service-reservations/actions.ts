@@ -176,7 +176,8 @@ export async function createServiceReservationAction(
       totalPrice: priced.totalPrice,
       travellers: priced.travellers,
       insuranceTrip,
-      relatedReservationId
+      relatedReservationId,
+      travellerRequirements: service.travellerRequirements
     });
   } catch (error) {
     if (error && typeof error === "object" && "code" in error && error.code === "SERVICE_UNAVAILABLE") {
