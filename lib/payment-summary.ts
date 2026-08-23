@@ -1,12 +1,15 @@
-import type { Reservation } from "@/domain/booking/types";
-import type { PaymentSummary, PaymentTransaction } from "@/domain/payment/types";
+import type {
+  PaymentSummary,
+  PaymentTargetSnapshot,
+  PaymentTransaction
+} from "@/domain/payment/types";
 
 function money(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
 export function buildPaymentSummary(
-  reservation: Reservation,
+  target: PaymentTargetSnapshot,
   transactions: PaymentTransaction[]
 ): PaymentSummary {
   const succeededPayments = transactions
@@ -22,7 +25,7 @@ export function buildPaymentSummary(
     .filter((item) => item.type === "refund" && item.status === "pending")
     .reduce((sum, item) => sum + item.amount, 0);
 
-  const totalAmount = money(Math.max(0, reservation.totalPrice));
+  const totalAmount = money(Math.max(0, target.totalPrice));
   const paidAmount = money(succeededPayments);
   const refundedAmount = money(succeededRefunds);
   const netPaidAmount = money(Math.max(0, paidAmount - refundedAmount));
@@ -43,9 +46,11 @@ export function buildPaymentSummary(
   }
 
   return {
-    reservationId: reservation.id,
+    reservationId: target.id,
+    targetId: target.id,
+    targetType: target.targetType,
     status,
-    currency: reservation.currency,
+    currency: target.currency,
     totalAmount,
     paidAmount,
     refundedAmount,
