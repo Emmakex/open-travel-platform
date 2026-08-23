@@ -9,6 +9,7 @@ import { getIdentityRepository } from "@/lib/identity-repository";
 import { requireCustomerIdentity } from "@/lib/require-customer-identity";
 import { listServiceReservationsForCustomer } from "@/lib/service-reservations";
 import { getTravelRepository } from "@/lib/travel-repository";
+import { buildTravellerDataCompletion, listTravellerDataForCustomer } from "@/lib/traveller-data";
 import type { TravelLocale } from "@/domain/travel/types";
 
 export const metadata = {
@@ -56,6 +57,35 @@ export default async function AccountPage({
     ? trips.find((trip) => trip.id === upcomingReservation.tripId) ?? null
     : null;
   const upcomingTrip = upcomingTripRecord ? localizeTrip(upcomingTripRecord, locale) : null;
+
+  const upcomingRequirementsActive = Boolean(
+    upcomingReservation?.travellerRequirements &&
+    upcomingReservation.travellerRequirements.preset !== "none" &&
+    upcomingReservation.travellers?.length
+  );
+  const upcomingStoredTravellerData = upcomingReservation && upcomingRequirementsActive
+    ? await listTravellerDataForCustomer({
+        identityId: identity.id,
+        targetType: "trip",
+        reservationId: upcomingReservation.id
+      }).catch(() => new Map())
+    : new Map();
+  const upcomingTravellerCompletion = upcomingReservation && upcomingRequirementsActive
+    ? upcomingReservation.travellers!.map((traveller) =>
+        buildTravellerDataCompletion(
+          upcomingReservation.travellerRequirements,
+          traveller,
+          upcomingStoredTravellerData.get(traveller.id)
+        )
+      )
+    : [];
+  const upcomingTravellerCompletedCount = upcomingTravellerCompletion.filter((item) => item.complete).length;
+  const upcomingTravellerDataComplete = Boolean(
+    upcomingReservation &&
+    upcomingRequirementsActive &&
+    upcomingTravellerCompletion.length === upcomingReservation.travellers!.length &&
+    upcomingTravellerCompletedCount === upcomingReservation.travellers!.length
+  );
 
   const reservedTripIds = new Set(reservations.map((reservation) => reservation.tripId));
   const recommendedTripRecord = trips.find((trip) => !reservedTripIds.has(trip.id)) ?? trips[0] ?? null;
@@ -113,6 +143,31 @@ export default async function AccountPage({
                   ? locale === "es" ? "Tu reserva está confirmada." : "Your reservation is confirmed."
                   : locale === "es" ? "Tu reserva está pendiente de confirmación." : "Your reservation is pending confirmation."}
               </p>
+
+              {upcomingRequirementsActive ? (
+                <div className={styles.notice}>
+                  <strong>
+                    {upcomingTravellerDataComplete
+                      ? (locale === "es" ? "✓ Datos de viajeros completos" : "✓ Traveller information complete")
+                      : (locale === "es" ? "Acción pendiente · datos de viajeros" : "Action required · traveller information")}
+                  </strong><br />
+                  {upcomingTravellerDataComplete
+                    ? (locale === "es"
+                        ? "No tienes nada pendiente en los datos post-compra de este viaje."
+                        : "There is nothing pending in this trip's post-purchase traveller information.")
+                    : (locale === "es"
+                        ? `${upcomingTravellerCompletedCount}/${upcomingReservation.travellers!.length} viajeros completos.`
+                        : `${upcomingTravellerCompletedCount}/${upcomingReservation.travellers!.length} travellers complete.`)}
+                </div>
+              ) : null}
+
+              {upcomingRequirementsActive && !upcomingTravellerDataComplete ? (
+                <p>
+                  <Link className="button button-primary" href={`/account/traveller-data/trip/${encodeURIComponent(upcomingReservation.id)}`}>
+                    {locale === "es" ? "Completar datos de viajeros" : "Complete traveller information"}
+                  </Link>
+                </p>
+              ) : null}
               <p><Link className="text-link" href={`/account/reservations/${upcomingReservation.id}`}>{copy.viewReservation}</Link></p>
               {upcomingTripRecord ? <p><Link className="text-link" href={`/trips/${upcomingTripRecord.slug}`}>{copy.viewItinerary}</Link></p> : null}
               <p><Link className="text-link" href="/services">{copy.addServices}</Link></p>
