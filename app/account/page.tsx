@@ -9,11 +9,21 @@ import { getIdentityRepository } from "@/lib/identity-repository";
 import { requireCustomerIdentity } from "@/lib/require-customer-identity";
 import { listServiceReservationsForCustomer } from "@/lib/service-reservations";
 import { getTravelRepository } from "@/lib/travel-repository";
+import type { TravelLocale } from "@/domain/travel/types";
 
 export const metadata = {
   title: "My account | Kairoseth Travel",
   description: "Customer account for Kairoseth Travel reservations and journeys."
 };
+
+function formatDate(value: string, locale: TravelLocale) {
+  return new Intl.DateTimeFormat(locale === "es" ? "es-ES" : "en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC"
+  }).format(new Date(`${value}T12:00:00Z`));
+}
 
 export default async function AccountPage({
   searchParams
@@ -32,7 +42,25 @@ export default async function AccountPage({
     getBookingRepository().listReservations(identity.id),
     listServiceReservationsForCustomer(identity.id)
   ]);
-  const suggestedTrip = trips[0] ? localizeTrip(trips[0], locale) : null;
+
+  const today = new Date().toISOString().slice(0, 10);
+  const upcomingReservation = reservations
+    .filter((reservation) => (
+      reservation.status !== "cancelled" &&
+      Boolean(reservation.departureDate) &&
+      (reservation.departureDate ?? "") >= today
+    ))
+    .sort((left, right) => (left.departureDate ?? "").localeCompare(right.departureDate ?? ""))[0] ?? null;
+
+  const upcomingTripRecord = upcomingReservation
+    ? trips.find((trip) => trip.id === upcomingReservation.tripId) ?? null
+    : null;
+  const upcomingTrip = upcomingTripRecord ? localizeTrip(upcomingTripRecord, locale) : null;
+
+  const reservedTripIds = new Set(reservations.map((reservation) => reservation.tripId));
+  const recommendedTripRecord = trips.find((trip) => !reservedTripIds.has(trip.id)) ?? trips[0] ?? null;
+  const recommendedTrip = recommendedTripRecord ? localizeTrip(recommendedTripRecord, locale) : null;
+
   const reservationLabel = locale === "es"
     ? reservations.length === 1 ? "reserva" : "reservas"
     : reservations.length === 1 ? "reservation" : "reservations";
@@ -70,8 +98,39 @@ export default async function AccountPage({
         </section>
 
         <aside className={styles.panel}>
-          <div className="eyebrow">{copy.suggested}</div>
-          {suggestedTrip && trips[0] ? <><h2>{suggestedTrip.title}</h2><p>{suggestedTrip.summary}</p><Link className="text-link" href={`/trips/${trips[0].slug}`}>{copy.viewItinerary}</Link><p><Link className="text-link" href="/services">{locale === "es" ? "Ver actividades, transporte y seguros →" : "Explore activities, transport and insurance →"}</Link></p></> : <p>{copy.noTrips}</p>}
+          {upcomingReservation ? (
+            <>
+              <div className="eyebrow">{copy.upcoming}</div>
+              <h2>{upcomingTrip?.title ?? upcomingReservation.tripTitle ?? (locale === "es" ? "Próximo viaje" : "Upcoming trip")}</h2>
+              {upcomingReservation.departureDate ? (
+                <p>
+                  <strong>{formatDate(upcomingReservation.departureDate, locale)}</strong>
+                  {upcomingReservation.returnDate ? ` → ${formatDate(upcomingReservation.returnDate, locale)}` : ""}
+                </p>
+              ) : null}
+              <p>
+                {upcomingReservation.status === "confirmed"
+                  ? locale === "es" ? "Tu reserva está confirmada." : "Your reservation is confirmed."
+                  : locale === "es" ? "Tu reserva está pendiente de confirmación." : "Your reservation is pending confirmation."}
+              </p>
+              <p><Link className="text-link" href={`/account/reservations/${upcomingReservation.id}`}>{copy.viewReservation}</Link></p>
+              {upcomingTripRecord ? <p><Link className="text-link" href={`/trips/${upcomingTripRecord.slug}`}>{copy.viewItinerary}</Link></p> : null}
+              <p><Link className="text-link" href="/services">{copy.addServices}</Link></p>
+            </>
+          ) : recommendedTrip && recommendedTripRecord ? (
+            <>
+              <div className="eyebrow">{copy.recommended}</div>
+              <h2>{recommendedTrip.title}</h2>
+              <p>{recommendedTrip.summary}</p>
+              <Link className="text-link" href={`/trips/${recommendedTripRecord.slug}`}>{copy.viewItinerary}</Link>
+              <p><Link className="text-link" href="/services">{copy.addServices}</Link></p>
+            </>
+          ) : (
+            <>
+              <div className="eyebrow">{copy.recommended}</div>
+              <p>{copy.noTrips}</p>
+            </>
+          )}
         </aside>
       </div>
     </main>
