@@ -2,24 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import styles from "@/app/account/account.module.css";
 import { getLocale } from "@/lib/get-locale";
-import {
-  finalizeCheckoutOrder,
-  getCheckoutOrderForCustomer,
-  resolveCheckoutTargetForCustomer
-} from "@/lib/payment-checkout";
+import { finalizeCheckoutOrder, getCheckoutOrderForCustomer, resolveCheckoutTargetForCustomer } from "@/lib/payment-checkout";
 import { getActivePaymentProviderCredentials } from "@/lib/payment-provider-config";
 import { retrieveStripeCheckoutSession } from "@/lib/payment-stripe";
 import { requireCustomerIdentity } from "@/lib/require-customer-identity";
 
-export default async function CheckoutReturnPage({
-  searchParams
-}: {
-  searchParams: Promise<{
-    checkout?: string;
-    provider?: string;
-    session_id?: string;
-    result?: string;
-  }>;
+export default async function CheckoutReturnPage({ searchParams }: {
+  searchParams: Promise<{ checkout?: string; provider?: string; session_id?: string; result?: string }>;
 }) {
   const [query, locale] = await Promise.all([searchParams, getLocale()]);
   const identity = await requireCustomerIdentity();
@@ -27,20 +16,12 @@ export default async function CheckoutReturnPage({
   let order = await getCheckoutOrderForCustomer(identity.id, query.checkout);
   if (!order) notFound();
 
-  if (
-    order.provider === "stripe" &&
-    order.status === "pending" &&
-    query.session_id &&
-    (!order.providerReference || order.providerReference === query.session_id)
-  ) {
+  if (order.provider === "stripe" && order.status === "pending" && query.session_id && (!order.providerReference || order.providerReference === query.session_id)) {
     const credentials = await getActivePaymentProviderCredentials("stripe");
     if (credentials?.provider === "stripe" && credentials.environment === order.environment) {
       try {
         const session = await retrieveStripeCheckoutSession(credentials, query.session_id);
-        if (
-          session.id === query.session_id &&
-          (session.payment_status === "paid" || session.payment_status === "no_payment_required")
-        ) {
+        if (session.id === query.session_id && (session.payment_status === "paid" || session.payment_status === "no_payment_required")) {
           await finalizeCheckoutOrder(order.id, "paid", session.id);
         } else if (session.status === "expired") {
           await finalizeCheckoutOrder(order.id, "failed", session.id);
@@ -60,25 +41,22 @@ export default async function CheckoutReturnPage({
       ? t("Payment not completed", "Pago no completado")
       : t("Payment is being confirmed", "Estamos confirmando el pago");
   const message = order.status === "paid"
-    ? t("The provider has confirmed the transaction and your payment ledger is updated.", "La pasarela ha confirmado la operación y el registro de pagos ya está actualizado.")
+    ? t("Your payment has been confirmed. You can return to the reservation to see the updated balance.", "Tu pago ha quedado confirmado. Puedes volver a la reserva para consultar el saldo actualizado.")
     : order.status === "failed"
-      ? t("The provider did not confirm the payment. You can return to the reservation and try again.", "La pasarela no ha confirmado el pago. Puedes volver a la reserva e intentarlo de nuevo.")
-      : t(
-          "We have not received a verified server confirmation yet. Do not repeat the payment while it is pending. Refresh this page shortly if needed.",
-          "Todavía no hemos recibido la confirmación verificada del servidor. No repitas el pago mientras esté pendiente. Actualiza esta página dentro de unos instantes si es necesario."
-        );
+      ? t("The payment was not completed. Return to the reservation when you are ready to try again.", "El pago no se ha completado. Vuelve a la reserva cuando quieras intentarlo de nuevo.")
+      : t("The payment is still being confirmed. Please do not pay again while this status is pending.", "El pago todavía se está confirmando. No vuelvas a pagar mientras este estado siga pendiente.");
 
   return (
     <main className="section">
       <div className={`container ${styles.shell}`}>
         <section className={styles.panel}>
-          <div className="eyebrow">{order.provider.toUpperCase()} · {order.environment === "test" ? t("TEST", "PRUEBAS") : t("LIVE", "PRODUCCIÓN")}</div>
+          <div className="eyebrow">{t("Payment status", "Estado del pago")}</div>
           <h1>{title}</h1>
           <p className={styles.lead}>{message}</p>
           <dl className={styles.profileList}>
             <div><dt>{t("Reservation", "Reserva")}</dt><dd>{order.targetLabel}</dd></div>
             <div><dt>{t("Amount", "Importe")}</dt><dd>{new Intl.NumberFormat(locale === "es" ? "es-ES" : "en-GB", { style: "currency", currency: order.currency }).format(order.amount)}</dd></div>
-            <div><dt>{t("Checkout reference", "Referencia de checkout")}</dt><dd>{order.id}</dd></div>
+            <div><dt>{t("Payment reference", "Referencia del pago")}</dt><dd>{order.id}</dd></div>
           </dl>
           <div className={styles.actions}>
             {target ? <Link className="button button-primary" href={target.detailUrl}>{t("View reservation", "Ver reserva")}</Link> : null}
