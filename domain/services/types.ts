@@ -86,6 +86,12 @@ export type InsuranceService = TravelServiceBase & {
   serviceType: "insurance";
   coverageType: string;
   maxTripDays?: number;
+  /** Provider responsible for the insurance/protection product. Required before publishing a real policy. */
+  providerName?: string;
+  /** Optional provider policy/product reference shown to staff and customers when available. */
+  policyReference?: string;
+  /** HTTPS link to the provider's policy wording, terms or equivalent pre-contract information. */
+  termsUrl?: string;
 };
 
 export type TravelService = ActivityService | TransportService | InsuranceService;
