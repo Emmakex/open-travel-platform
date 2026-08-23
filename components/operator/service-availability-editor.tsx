@@ -44,7 +44,7 @@ export function ServiceAvailabilityEditor({
 }) {
   const inventoryMode = resolveInventoryMode(service);
   const usesAgePricing = service.pricingMode === "per-age-band";
-  const initial = useMemo(
+  const initial = useMemo<ServiceAvailabilitySlot[]>(
     () => slots.map((slot) => ({
       ...slot,
       inventoryMode,
@@ -54,7 +54,7 @@ export function ServiceAvailabilityEditor({
     })),
     [slots, inventoryMode, usesAgePricing]
   );
-  const [items, setItems] = useState(initial);
+  const [items, setItems] = useState<ServiceAvailabilitySlot[]>(initial);
 
   if (service.serviceType === "insurance") return null;
 
