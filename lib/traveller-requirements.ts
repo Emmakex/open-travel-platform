@@ -114,8 +114,9 @@ export function travellerRequirementsDeadline(
   profile: TravellerRequirementsProfile | undefined,
   startDate?: string
 ) {
-  if (!profile?.completionDeadlineDaysBeforeStart || !startDate) return undefined;
+  if (!profile || !startDate) return undefined;
   const start = Date.parse(`${startDate}T00:00:00Z`);
   if (!Number.isFinite(start)) return undefined;
-  return new Date(start - profile.completionDeadlineDaysBeforeStart * 86400000).toISOString().slice(0, 10);
+  const daysBeforeStart = profile.completionDeadlineDaysBeforeStart ?? 0;
+  return new Date(start - daysBeforeStart * 86400000).toISOString().slice(0, 10);
 }
