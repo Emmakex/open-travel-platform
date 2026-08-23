@@ -1,196 +1,340 @@
 # Roadmap
 
-Open Travel Platform is the reusable MIT-licensed open-source core. Kairoseth Travel is the official commercial/reference implementation deployed at **https://travel.kairoseth.com**.
+<p align="center"><strong>English</strong> · <a href="./ROADMAP.es.md">Español</a></p>
 
-The roadmap keeps those two goals aligned:
+Open Travel Platform is the reusable MIT-licensed open-source core. **Kairoseth Travel** is the official commercial/reference implementation deployed at **https://travel.kairoseth.com**.
+
+The roadmap keeps two goals aligned:
 
 1. keep the public core portable, provider-neutral and useful to other agencies/developers;
-2. continue hardening Kairoseth Travel into a complete production travel platform without coupling the core to one payment gateway, supplier, CRM, ERP or hosting provider.
+2. continue hardening Kairoseth Travel into a complete production travel platform without coupling the core to one PSP, supplier, CRM, ERP, CMS or hosting provider.
 
-## Current status
-
-### Completed foundation
-- Next.js / React / TypeScript application foundation and CI quality gates;
-- bilingual EN/ES public and operator UI;
-- public destinations and trips catalogue;
-- MongoDB catalogue persistence and seed path;
-- operator catalogue backoffice;
-- cover media, galleries, GridFS media library and inline uploads;
-- structured multilingual itineraries;
-- departures, capacity and live inventory;
-- persistent customer registration, sessions and profiles;
-- persistent operator/admin authentication and RBAC separation;
-- account lockout, password changes, password recovery and authentication audit;
-- persistent reservations with inventory consumption/release;
-- customer CRM view for staff;
-- reservation status workflow and operations audit;
-- SMTP password recovery and transactional reservation emails;
-- provider-neutral payment ledger with manual payments/refunds and reconciliation summaries;
-- live reference deployment at `travel.kairoseth.com`.
-
-### Phase 5A — Payment foundation — COMPLETE
-- `travel_payment_transactions` ledger;
-- payment/refund records separated from reservation status;
-- unpaid / pending / partially paid / paid / partially refunded / refunded summaries;
-- manual bank transfer, cash, external terminal and reconciliation records;
-- overpayment and over-refund protection;
-- customer payment history;
-- operator payment dashboard and reservation payment controls;
-- provider/idempotency fields ready for PSP adapters.
+_Last updated: 23 August 2026._
 
 ---
 
-## Next priorities
+## Current position
 
-### Phase 5B — Real payment provider adapter — NEXT
-Goal: allow a customer to pay online while keeping the core provider-neutral.
+The project is beyond the original catalogue/booking MVP. The current codebase already includes persistent identity, customer/staff RBAC, trip and service reservations, traveller age pricing, independent activities/transport/insurance, transactional email, payment accounting, encrypted admin-managed PSP configuration and provider-neutral online checkout adapters.
 
-Planned Stripe reference adapter:
-- Stripe Checkout hosted payment flow;
-- test/live mode configuration;
-- payment intent / checkout session linkage to the internal ledger;
-- signed webhook verification;
-- idempotent webhook processing;
-- succeeded / failed / expired payment reconciliation;
-- success and cancellation return pages;
-- customer receipt/payment state refresh;
-- operator-visible provider reference and status;
-- server-side refund initiation from Operator where supported;
-- no browser-reported payment success trusted as authoritative.
+Stripe/Redsys credentialed end-to-end validation is intentionally deferred until suitable provider accounts are available. The implementation is present, but production payment capability must not be considered validated until TEST and LIVE provider flows have been exercised.
 
-The domain remains compatible with future Redsys, Adyen, Mollie or other PSP adapters.
+---
 
-### Phase 5C — Deposits, installments and payment terms
-Goal: support real travel-agency payment schedules instead of only one full balance.
+# Completed milestones
 
-- configurable deposit amount or percentage;
+## Foundation and catalogue — COMPLETE
+
+- Next.js / React / TypeScript application foundation;
+- CI quality gates and release checks;
+- bilingual EN/ES public and operator interfaces;
+- destinations and trips catalogue;
+- persistent MongoDB catalogue adapters;
+- protected catalogue backoffice;
+- GridFS media library, galleries, covers and focal points;
+- multilingual structured itineraries;
+- departures, capacity and live inventory;
+- public reference deployment at `travel.kairoseth.com`.
+
+## Identity, RBAC and account security — COMPLETE
+
+- persistent customer registration/sign-in;
+- persistent staff operator/admin authentication;
+- separate customer/staff sessions;
+- server-side RBAC checks;
+- account lockout after repeated failed sign-ins;
+- password change and session revocation;
+- password recovery with single-use expiring tokens;
+- SMTP password-reset delivery;
+- authentication audit events;
+- active-session/role indicator in the frontend.
+
+## Reservation operations and email — COMPLETE
+
+- persistent trip reservations;
+- server-authoritative ownership, pricing and inventory checks;
+- confirm/cancel state workflow;
+- inventory release on cancellation;
+- operator reservation queue;
+- customer CRM-style view;
+- operational audit history;
+- transactional reservation-received / confirmed / cancelled emails;
+- customer account reservation history.
+
+## Phase 5A — Provider-neutral payment foundation — COMPLETE
+
+- `travel_payment_transactions` ledger;
+- payment and refund movements separated from reservation state;
+- unpaid / pending / partially paid / paid / partially refunded / refunded summaries;
+- manual bank-transfer, cash and external-terminal payment recording;
+- manual refunds;
+- overpayment / over-refund protections;
+- customer payment history;
+- operator finance dashboard;
+- provider/idempotency metadata ready for PSP adapters.
+
+## Phase 5B — Traveller & age pricing engine — COMPLETE
+
+- lead traveller and individual traveller records;
+- date of birth and nationality;
+- age calculated against departure/service date;
+- configurable age bands;
+- per-traveller pricing;
+- per-departure traveller-price overrides;
+- guardian requirement for minors;
+- configurable inventory consumption by age band;
+- historical pricing snapshots;
+- traveller details visible to customer and Operator.
+
+Advanced travel-document requirements remain future work and are tracked separately below.
+
+## Phase 5C — Independent service catalogue — COMPLETE
+
+- independent **Activities**, **Transport** and **Insurance** products;
+- public catalogue and detail pages available without login;
+- protected Operator CRUD;
+- multilingual content;
+- pricing models: per person / per booking / per unit / by age;
+- age-band pricing reused from the traveller engine;
+- public/service-specific product URLs and navigation.
+
+## Phase 5D — Service availability & inventory — COMPLETE
+
+- independent availability calendar for activities and transport;
+- date/time slots;
+- capacity and reserved-space tracking;
+- transport unit inventory and capacity-per-unit;
+- safe slot closing instead of destructive deletion when reservations exist;
+- future/open/available public slot display;
+- service inventory kept independent from trip inventory.
+
+## Phase 5E — Independent service reservations — COMPLETE
+
+- activity reservations;
+- transport reservations;
+- insurance reservations using trip dates/destination/travellers rather than slot inventory;
+- service reservations linked optionally to a Kairoseth trip;
+- fully independent reservation mode for externally booked trips;
+- transactional service inventory consumption/release where applicable;
+- customer `My services` area;
+- operator service-reservation queue;
+- confirm/cancel service workflow;
+- service reservation support in the payment ledger.
+
+## Phase 5F — Payment providers and unified checkout — IMPLEMENTED
+
+### Admin provider management
+
+- admin-only payment-provider configuration;
+- separate TEST and LIVE profiles;
+- provider enable/disable switch;
+- Stripe and Redsys initial adapters;
+- AES-256-GCM encryption for persisted provider secrets;
+- stable `PAYMENT_SECRETS_KEY` server key;
+- saved secrets never returned to the browser;
+- infrastructure credentials remain outside the Operator UI.
+
+### Unified checkout
+
+- common checkout for trip and service reservations;
+- Stripe hosted Checkout Session flow;
+- signed Stripe webhook verification;
+- idempotent Stripe webhook processing;
+- Redsys redirect/form flow;
+- Redsys signed server notification validation;
+- provider references mapped back into the internal payment ledger;
+- browser success/cancel returns are not authoritative payment confirmation;
+- customers cannot directly cancel reservations with completed/pending financial movements that require operator handling.
+
+### Validation status
+
+- source safety: complete;
+- TypeScript/build/smoke CI: complete;
+- adapter implementation: complete;
+- **credentialed Stripe TEST E2E: pending provider account**;
+- **credentialed Redsys TEST E2E: pending provider account**;
+- LIVE activation: intentionally pending.
+
+## Customer-account trip context — COMPLETE
+
+- the account prioritizes the customer's actual next non-cancelled future trip;
+- future reservations are ordered by departure date;
+- direct links to reservation, itinerary and complementary services;
+- catalogue recommendation is only a fallback when no future trip exists;
+- fallback prefers a trip the customer has not previously reserved.
+
+---
+
+# Next priorities
+
+## Phase 5G — Deposits, installments and payment terms — NEXT
+
+Goal: support real travel-agency payment schedules rather than only a single outstanding balance.
+
+- full-payment vs deposit policy;
+- fixed-amount or percentage deposit;
 - deposit due date;
-- final balance due date;
-- optional installment schedules;
-- automatic outstanding balance calculation;
+- final-balance due date;
+- optional multi-installment schedules;
+- per-installment amount and due date;
+- automatic outstanding/due-now calculation;
+- overdue installment state;
 - payment reminders by email;
-- overdue status and operator visibility;
-- payment-term snapshots stored with reservations;
-- explicit refund/cancellation financial rules.
+- operator visibility of upcoming/overdue balances;
+- payment-term snapshots stored with the reservation;
+- customer-facing payment schedule;
+- compatibility with manual payments and future Stripe/Redsys payment execution;
+- explicit rules for refunds/cancellations against installment schedules.
 
-### Phase 6A — Traveller / passenger records
-Goal: move from a reservation with only `partySize` to operational traveller data.
+This phase can be completed on top of the current ledger without waiting for Stripe/Redsys credentials.
 
-- lead traveller;
-- traveller list per reservation;
-- first/last name and required travel fields;
-- optional date of birth/nationality/document fields when a trip requires them;
-- data-minimisation rules so sensitive fields are not collected unnecessarily;
+## Phase 6A — Advanced traveller requirements and travel documents
+
+Goal: collect only the traveller data required by each product/supplier.
+
+Already available: lead traveller, individual travellers, minors/guardians, DOB, nationality, age pricing.
+
+Remaining work:
+
+- configurable required traveller fields per product;
+- passport / national ID only when required;
+- document number, issuing country and expiry date;
+- optional supplier-required fields;
 - traveller completion status;
-- customer self-service editing before a configurable deadline;
-- operator view and export.
+- customer self-service editing until a configurable deadline;
+- operator completion overview;
+- secure traveller export;
+- retention/minimisation rules for sensitive document data;
+- audit of traveller-data changes.
 
-### Phase 6B — Reservation amendments
-Goal: handle the normal lifecycle after booking.
+## Phase 6B — Reservation amendments
 
-- change party size;
-- change departure where availability permits;
-- add/remove optional services;
-- recalculate reservation totals server-side;
-- retain historical pricing snapshots;
-- amendment audit trail;
-- cancellation policies and deadlines;
-- controlled inventory release/reallocation;
-- notifications for material changes.
+Goal: support the normal post-booking lifecycle without destroying the original record.
 
-### Phase 6C — Product components and advanced pricing
-Goal: represent richer travel products without hard-coding one business model.
+- add/remove/change travellers;
+- change departure when inventory permits;
+- add/remove activities, transport and insurance;
+- recalculate totals server-side;
+- preserve original and amended pricing snapshots;
+- amendment timeline/audit;
+- controlled inventory reallocation;
+- charge additional balance when price increases;
+- create refundable balance when price decreases;
+- amendment notifications;
+- configurable cancellation/change deadlines.
 
-- accommodation components;
-- transport components;
-- activities/services;
-- optional extras and supplements;
-- per-person / per-booking pricing;
-- age or traveller-type pricing where required;
-- seasonal/departure-specific supplements;
-- included/not-included service structure;
-- pricing calculation service with tests.
+## Phase 6C — Accommodation, supplements and package composition
 
-### Phase 7A — Rich operations workflow
-Goal: make the operator area usable for day-to-day agency operations.
+Goal: evolve from trips + independent services into richer package construction.
+
+- accommodation products/components;
+- room types;
+- occupancy rules;
+- single supplement;
+- double/twin/triple pricing;
+- child-sharing rules;
+- room inventory;
+- seasonal supplements;
+- optional extras;
+- included/not-included components;
+- package composition using reusable travel products;
+- server-side package pricing service with tests.
+
+## Phase 7A — Rich operations workflow
+
+Goal: make Operator suitable for day-to-day agency operations.
 
 - assign reservation owner/operator;
 - internal notes;
-- operational timeline;
 - tasks/follow-ups;
-- tags/priority;
-- richer search, filters and pagination;
-- bulk actions where safe;
+- tags and priority;
+- richer operational timeline;
 - supplier status fields;
 - customer contact history;
-- least-privilege permissions beyond the current operator/admin split.
+- search, filters and pagination;
+- safe bulk actions;
+- more granular least-privilege permissions beyond operator/admin.
 
-### Phase 7B — Documents, exports and reporting
-Goal: support the documents and reports travel teams commonly need.
+## Phase 7B — Documents, exports and reporting
 
-- booking confirmation document;
-- traveller/rooming lists;
-- voucher/document generation architecture;
-- CSV/XLSX exports for reservations/customers/payments;
+Goal: support documents and reports commonly required by travel teams.
+
+- booking confirmation PDF/document;
+- traveller lists / rooming lists;
+- vouchers;
+- reservation and service exports;
+- CSV/XLSX customer/payment exports;
 - payment reconciliation export;
-- operational and commercial dashboards;
-- basic revenue / outstanding balance reporting;
-- printable operator summaries.
+- outstanding-balance report;
+- revenue by product/service;
+- operational/commercial dashboards;
+- printable operator dossier.
 
-### Phase 8 — External integrations
-Goal: connect Kairoseth Travel to real business ecosystems through adapters.
+## Phase 8 — External integrations
+
+Goal: connect Kairoseth Travel to real business ecosystems through adapters while keeping provider payloads out of the core domain.
 
 Candidate adapters:
+
 - supplier/booking APIs;
-- CRM/ERP synchronization;
+- CRM synchronization;
+- ERP/accounting integrations;
 - generic outbound webhooks;
-- CMS/catalogue source example;
-- accounting/export connector;
+- CMS/catalogue-source example;
 - Auth.js/OIDC enterprise identity example;
-- generic REST booking adapter.
+- generic REST booking adapter;
+- payment providers beyond Stripe/Redsys.
 
-Provider-specific payloads must remain inside adapters and must not leak into the core domain/UI.
+## Phase 9 — Production hardening
 
-### Phase 9 — Production hardening
-Goal: complete the work required before positioning a deployment as production-ready for real customers.
+Goal: complete the work required before positioning a deployment for real production customers.
 
-#### Testing
-- browser end-to-end tests for registration → booking → payment → operator workflow;
+### Testing
+
+- browser E2E tests for registration → booking → service → payment → operator workflow;
 - MongoDB integration tests;
 - payment webhook/idempotency tests;
+- traveller/minor pricing tests;
+- inventory concurrency tests;
 - accessibility regression checks;
 - performance budgets;
 - production-adapter contract tests.
 
-#### Security
-- CSRF review for all state-changing flows;
-- rate limiting for authentication, password reset and sensitive write endpoints;
-- security header/CSP review;
-- session/cookie review;
+### Security
+
+- CSRF review for state-changing flows;
+- rate limiting for authentication, password reset and sensitive endpoints;
+- CSP/security-header review;
+- cookie/session review;
 - dependency and secret scanning;
 - privileged-action audit review;
+- payment-secret recovery/rotation procedure;
 - backup/restore testing.
 
-#### Observability and operations
+### Observability and operations
+
 - structured application logs;
-- error reporting;
+- centralized error reporting;
 - uptime/health monitoring;
 - payment/webhook failure visibility;
-- backup and disaster-recovery procedure;
+- backup/disaster-recovery procedure;
 - deployment rollback procedure;
 - database index/performance review.
 
-#### Privacy/legal
-- privacy policy;
-- terms/booking conditions;
-- cookie policy/consent where applicable;
-- retention/deletion policy;
-- customer data export/deletion workflow;
-- configurable company/legal details per deployment;
-- review of the exact regulatory requirements of each market/operator.
+### Privacy/legal
 
-### Phase 10 — Open-source productisation
-Goal: make Open Travel Platform easy for third parties to adopt while Kairoseth Travel remains the official commercial implementation.
+- privacy policy;
+- terms and booking conditions;
+- cookie policy/consent where applicable;
+- data-retention/deletion policy;
+- customer data export/deletion workflow;
+- configurable legal/company details per deployment;
+- insurance-distribution/legal review where insurance is commercially sold;
+- review regulatory requirements per operator/market.
+
+## Phase 10 — Open-source productisation
+
+Goal: make Open Travel Platform straightforward for third parties to adopt while Kairoseth Travel remains the official commercial implementation.
 
 - production-ready `.env.example` documentation;
 - clean demo seed/setup workflow;
@@ -198,26 +342,24 @@ Goal: make Open Travel Platform easy for third parties to adopt while Kairoseth 
 - reference adapter examples;
 - clearer extension/plugin contracts;
 - versioned releases and migration notes;
-- contribution templates and issue templates;
-- public API/extension documentation;
+- contribution/issue templates;
+- public API and extension documentation;
 - optional Docker/self-host example;
 - trademark/branding policy distinguishing **Open Travel Platform** from **Kairoseth Travel**;
-- keep proprietary Kairoseth/customer-specific integrations outside the MIT core when appropriate.
+- keep proprietary Kairoseth/customer-specific integrations outside the MIT core where appropriate.
 
 ---
 
-## Suggested delivery order
+# Suggested delivery order
 
 ```text
-5B  Real online payments
+5G  Deposits / installments / payment terms
  ↓
-5C  Deposits / installments
- ↓
-6A  Traveller records
+6A  Advanced traveller requirements / documents
  ↓
 6B  Reservation amendments
  ↓
-6C  Advanced product/pricing
+6C  Accommodation / supplements / package composition
  ↓
 7A  Rich operator workflow
  ↓
@@ -230,11 +372,16 @@ Goal: make Open Travel Platform easy for third parties to adopt while Kairoseth 
 10  Open-source productisation / release
 ```
 
-Some Phase 9 security/testing work should be implemented continuously rather than postponed until the end, especially around payments and sensitive traveller data.
+Credentialed Stripe/Redsys TEST validation should be inserted as soon as the required provider accounts are available; it does not need to block Phase 5G.
 
-## Core non-goals
+Some Phase 9 testing/security work should continue incrementally rather than waiting until the end, especially around payments, traveller data and inventory concurrency.
+
+---
+
+# Core non-goals
 
 Open Travel Platform should **not** become permanently tied to:
+
 - one payment gateway;
 - one CMS;
 - one CRM/ERP;
