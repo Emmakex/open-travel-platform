@@ -1,0 +1,74 @@
+.session-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 38px;
+  max-width: 250px;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--text);
+  line-height: 1;
+}
+
+.session-chip:hover {
+  border-color: rgba(69, 214, 181, 0.45);
+  background: rgba(255, 255, 255, 0.075);
+}
+
+.session-dot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 0 4px rgba(69, 214, 181, 0.12);
+}
+
+.session-name {
+  max-width: 115px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 800;
+}
+
+.session-role {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.session-admin .session-dot {
+  background: var(--accent-2);
+  box-shadow: 0 0 0 4px rgba(92, 141, 255, 0.13);
+}
+
+.session-mobile {
+  display: none;
+}
+
+@media (max-width: 1180px) {
+  .nav-links {
+    gap: 0.75rem;
+  }
+
+  .session-name {
+    max-width: 82px;
+  }
+}
+
+@media (max-width: 620px) {
+  .session-mobile {
+    display: inline-flex;
+    margin-left: auto;
+    max-width: 170px;
+  }
+
+  .session-mobile .session-name {
+    max-width: 75px;
+  }
+}
