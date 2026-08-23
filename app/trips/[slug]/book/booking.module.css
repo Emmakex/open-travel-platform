@@ -163,6 +163,10 @@
   max-width: 100%;
 }
 
+.travellerGrid:has(select[name="availabilityId"]) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .travellerGrid > * {
   min-width: 0;
   max-width: 100%;
