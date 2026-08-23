@@ -10,11 +10,16 @@ import { isEmailDeliveryConfigured } from "@/lib/email";
 
 export const metadata = { title: "Sign in | Kairoseth Travel", description: "Sign in to your Kairoseth Travel customer account." };
 
-export default async function SignInPage({ searchParams }: { searchParams: Promise<{ error?: string; demo?: string; reset?: string }> }) {
+function safeNext(value?: string) {
+  return value && value.startsWith("/") && !value.startsWith("//") && !value.includes("\\") && value.length <= 1000 ? value : "";
+}
+
+export default async function SignInPage({ searchParams }: { searchParams: Promise<{ error?: string; demo?: string; reset?: string; next?: string }> }) {
   const locale = await getLocale();
   const identity = await getIdentityRepository().getCurrentIdentity();
-  const { error, demo, reset } = await searchParams;
-  if (hasCustomerAccess(identity)) redirect("/account");
+  const { error, demo, reset, next: rawNext } = await searchParams;
+  const next = safeNext(rawNext);
+  if (hasCustomerAccess(identity)) redirect(next || "/account");
   if (hasOperationsAccess(identity)) redirect("/operator");
 
   const isEs = locale === "es";
@@ -24,18 +29,20 @@ export default async function SignInPage({ searchParams }: { searchParams: Promi
     "auth-disabled": isEs ? "El acceso de clientes está desactivado temporalmente." : "Customer sign in is temporarily disabled.",
     "registration-disabled": isEs ? "El registro de clientes está desactivado temporalmente." : "Customer registration is temporarily disabled."
   };
+  const nextQuery = next ? `?next=${encodeURIComponent(next)}` : "";
 
   return (
     <main className="section"><div className={`container ${styles.shell}`}><section className={styles.panel}>
       <div className="eyebrow">{isEs ? "Cuenta de cliente" : "Customer account"}</div>
       <h1>{isEs ? "Accede a tus viajes." : "Welcome back."}</h1>
-      <p className={styles.lead}>{isEs ? "Consulta tus reservas, fechas y detalles de viaje desde una cuenta persistente y segura." : "Review your reservations, departures and travel details from your persistent customer account."}</p>
+      <p className={styles.lead}>{next ? (isEs ? "Inicia sesión para continuar con tu reserva del servicio." : "Sign in to continue your service booking.") : (isEs ? "Consulta tus reservas, fechas y detalles de viaje desde una cuenta persistente y segura." : "Review your reservations, departures and travel details from your persistent customer account.")}</p>
       {reset === "success" ? <div className={styles.notice}>{isEs ? "Tu contraseña se ha restablecido. Ya puedes iniciar sesión con la nueva contraseña." : "Your password has been reset. You can now sign in with the new password."}</div> : null}
       {error && errors[error] ? <div className={styles.notice}>{errors[error]}</div> : null}
       {demo === "disabled" ? <div className={styles.notice}>{isEs ? "El acceso temporal está desactivado." : "Temporary customer access is disabled."}</div> : null}
 
       {identityConfig.customerAuthEnabled ? (
         <form action={signInCustomerAction} className={styles.authForm}>
+          <input type="hidden" name="next" value={next} />
           <label className={styles.field}><span>Email</span><input name="email" type="email" autoComplete="email" required /></label>
           <label className={styles.field}><span>{isEs ? "Contraseña" : "Password"}</span><input name="password" type="password" autoComplete="current-password" required /></label>
           <button className="button button-primary" type="submit">{isEs ? "Iniciar sesión" : "Sign in"}</button>
@@ -45,9 +52,9 @@ export default async function SignInPage({ searchParams }: { searchParams: Promi
       ) : <div className={styles.notice}>{isEs ? "El acceso de clientes no está disponible." : "Customer access is unavailable."}</div>}
 
       {recoveryEnabled ? <p><Link className="text-link" href="/account/forgot-password">{isEs ? "¿Has olvidado tu contraseña? →" : "Forgot your password? →"}</Link></p> : null}
-      {identityConfig.customerAuthEnabled ? <div className={styles.authFooter}><span>{isEs ? "¿Aún no tienes cuenta?" : "New to Kairoseth Travel?"}</span>{" "}<Link className="text-link" href="/account/register">{isEs ? "Crear cuenta →" : "Create account →"}</Link></div> : null}
+      {identityConfig.customerAuthEnabled ? <div className={styles.authFooter}><span>{isEs ? "¿Aún no tienes cuenta?" : "New to Kairoseth Travel?"}</span>{" "}<Link className="text-link" href={`/account/register${nextQuery}`}>{isEs ? "Crear cuenta →" : "Create account →"}</Link></div> : null}
       <p><Link className="text-link" href="/operator/sign-in">{isEs ? "Acceso de operador →" : "Operator sign in →"}</Link></p>
-      <Link className="text-link" href="/">{isEs ? "← Volver al catálogo" : "← Back to catalogue"}</Link>
+      <Link className="text-link" href={next || "/"}>{next ? (isEs ? "← Volver al servicio" : "← Back to service") : (isEs ? "← Volver al catálogo" : "← Back to catalogue")}</Link>
     </section></div></main>
   );
 }
