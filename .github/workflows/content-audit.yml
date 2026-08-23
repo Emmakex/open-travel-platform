@@ -3,6 +3,8 @@ name: Content UX Audit
 on:
   push:
     branches: [audit/full-content-ux-review]
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: read
