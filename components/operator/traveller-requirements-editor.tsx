@@ -33,6 +33,15 @@ const fieldLabels: Record<TravellerRequirementField, [string, string]> = {
   minorTravelAuthorization: ["Minor travel authorisation status", "Autorización de viaje del menor"]
 };
 
+const presetLabels: Record<TravellerRequirementPreset, [string, string]> = {
+  none: ["No additional data", "Sin datos adicionales"],
+  "travel-document": ["Travel document", "Documento de viaje"],
+  "international-air": ["International air / border data", "Vuelo internacional / datos fronterizos"],
+  maritime: ["Passenger ship (>20 miles)", "Transporte marítimo (>20 millas)"],
+  "spanish-lodging": ["Spanish lodging registration", "Registro de hospedaje en España"],
+  custom: ["Custom", "Personalizado"]
+};
+
 export function TravellerRequirementsEditor({
   profile,
   locale
@@ -43,6 +52,9 @@ export function TravellerRequirementsEditor({
   const [preset, setPreset] = useState<TravellerRequirementPreset>(profile?.preset ?? "none");
   const [retention, setRetention] = useState(profile?.retentionDaysAfterEnd ?? defaultTravellerRetentionDays(profile?.preset ?? "none"));
   const selected = new Set(profile?.requiredFields ?? travellerRequirementPresetFields(preset));
+  const fieldCount = preset === "custom"
+    ? selected.size
+    : travellerRequirementPresetFields(preset).length;
 
   function changePreset(next: TravellerRequirementPreset) {
     setPreset(next);
@@ -52,19 +64,39 @@ export function TravellerRequirementsEditor({
   return (
     <div className={styles.editorSection}>
       <div>
-        <div className="eyebrow">{tr(locale, "Post-purchase traveller data", "Datos de viajeros después de la compra")}</div>
+        <div className="eyebrow">{tr(locale, "Step 1 · Post-purchase traveller data", "Paso 1 · Datos de viajeros después de la compra")}</div>
+        <h2>{tr(locale, "Does this product need extra traveller information?", "¿Este producto necesita datos adicionales de los viajeros?")}</h2>
         <p className={styles.muted}>
           {tr(
             locale,
-            "Request advanced identity/document fields only after the booking is created and only when the supplier, route or law requires them. Do not request scans or copies of passports/DNI here.",
-            "Solicita datos avanzados de identidad/documentación solo después de crear la reserva y únicamente cuando el proveedor, la ruta o la ley los exijan. No solicites escaneos ni copias de pasaporte/DNI aquí."
+            "Choose a preset only when the supplier, route or law requires extra identity or travel information. The customer will never be asked for these fields during checkout.",
+            "Elige un perfil solo cuando el proveedor, la ruta o la ley exijan información adicional de identidad o viaje. El cliente nunca verá estos campos durante el checkout."
           )}
         </p>
       </div>
 
+      <div className={styles.notice}>
+        <strong>
+          {preset === "none"
+            ? tr(locale, "Current status: not required", "Estado actual: no requerido")
+            : tr(locale, "Current status: active for new reservations", "Estado actual: activo para nuevas reservas")}
+        </strong><br />
+        {preset === "none"
+          ? tr(
+              locale,
+              "Customers will not see a post-purchase traveller-data task for new reservations of this product.",
+              "Los clientes no verán una tarea de datos post-compra en las nuevas reservas de este producto."
+            )
+          : tr(
+              locale,
+              `${presetLabels[preset][0]} · ${fieldCount} field${fieldCount === 1 ? "" : "s"}. Save the product to activate this configuration for new reservations. Existing reservations keep their original snapshot.`,
+              `${presetLabels[preset][1]} · ${fieldCount} campo${fieldCount === 1 ? "" : "s"}. Guarda el producto para activar esta configuración en nuevas reservas. Las reservas existentes mantienen su snapshot original.`
+            )}
+      </div>
+
       <div className={styles.formGrid}>
         <label className={styles.field}>
-          <span>{tr(locale, "Requirement preset", "Perfil de requisitos")}</span>
+          <span>{tr(locale, "Activation profile", "Perfil de activación")}</span>
           <select name="travellerRequirementPreset" value={preset} onChange={(event) => changePreset(event.target.value as TravellerRequirementPreset)}>
             <option value="none">{tr(locale, "No additional data", "Sin datos adicionales")}</option>
             <option value="travel-document">{tr(locale, "Travel document", "Documento de viaje")}</option>
@@ -84,6 +116,17 @@ export function TravellerRequirementsEditor({
         </label>
       </div>
 
+      {preset !== "none" ? (
+        <div className={styles.notice}>
+          <strong>{tr(locale, "What happens after you save", "Qué ocurre después de guardar")}</strong><br />
+          {tr(
+            locale,
+            "1) New reservations receive a snapshot of these requirements. 2) The customer sees a clear task in My account and in the reservation detail. 3) Operator sees Pending/Complete status without exposing encrypted document values in the reservation overview.",
+            "1) Las nuevas reservas reciben un snapshot de estos requisitos. 2) El cliente ve una tarea clara en Mi cuenta y en el detalle de la reserva. 3) Operator ve el estado Pendiente/Completo sin exponer los valores cifrados de documentación en la vista general."
+          )}
+        </div>
+      ) : null}
+
       {preset === "spanish-lodging" ? (
         <div className={styles.notice}>
           {tr(
@@ -96,7 +139,7 @@ export function TravellerRequirementsEditor({
 
       {preset !== "none" ? (
         <div className={styles.editorForm}>
-          <h3>{tr(locale, "Fields requested after booking", "Campos solicitados después de reservar")}</h3>
+          <h3>{tr(locale, "Step 2 · Fields requested after booking", "Paso 2 · Campos solicitados después de reservar")}</h3>
           {travellerRequirementFields.map((field) => {
             const checked = preset === "custom"
               ? selected.has(field)
