@@ -19,6 +19,7 @@ import { getOperationsRepository } from "@/lib/operations-repository";
 import { paymentStatusLabel } from "@/lib/payment-i18n";
 import { getPaymentRepository } from "@/lib/payment-repository";
 import { requireOperationsIdentity } from "@/lib/require-operations-identity";
+import { listReservationAmendments } from "@/lib/reservation-amendments";
 import { getTravelRepository } from "@/lib/travel-repository";
 
 export const metadata = {
@@ -39,6 +40,8 @@ export default async function OperatorReservationDetailPage({
     termsUpdated?: string;
     termsError?: string;
     termsReminder?: string;
+    amendmentUpdated?: string;
+    amendmentError?: string;
   }>;
 }) {
   const locale = await getLocale();
@@ -51,13 +54,16 @@ export default async function OperatorReservationDetailPage({
     paymentError,
     termsUpdated,
     termsError,
-    termsReminder
+    termsReminder,
+    amendmentUpdated,
+    amendmentError
   } = await searchParams;
   const operations = getOperationsRepository();
-  const [reservation, trips, audit] = await Promise.all([
+  const [reservation, trips, audit, amendments] = await Promise.all([
     operations.getReservation(id),
     getTravelRepository().listTrips(),
-    operations.listAuditEvents()
+    operations.listAuditEvents(),
+    listReservationAmendments(id)
   ]);
 
   if (!reservation) notFound();
@@ -74,6 +80,21 @@ export default async function OperatorReservationDetailPage({
     "operations-disabled": tr(locale, "Operational writes are disabled in this deployment.", "Los cambios operativos están desactivados en este despliegue."),
     "invalid-request": tr(locale, "The requested status change is invalid.", "El cambio de estado solicitado no es válido."),
     "invalid-transition": tr(locale, "That reservation status transition is not allowed.", "Ese cambio de estado de la reserva no está permitido.")
+  };
+  const amendmentErrors: Record<string, string> = {
+    "amendments-unavailable": tr(locale, "Persistent reservation amendments require MongoDB operations mode.", "Las modificaciones persistentes de reservas requieren el modo de operaciones MongoDB."),
+    "invalid-request": tr(locale, "Complete all correction fields and provide a reason.", "Completa todos los campos de corrección e indica un motivo."),
+    "reservation-cancelled": tr(locale, "Cancelled reservations cannot be amended.", "Las reservas canceladas no se pueden modificar."),
+    "traveller-not-found": tr(locale, "The traveller could not be found on this reservation.", "No se ha encontrado el viajero en esta reserva."),
+    "not-found": tr(locale, "The reservation could not be found.", "No se ha encontrado la reserva."),
+    "no-changes": tr(locale, "No changes were detected. Edit at least one traveller field.", "No se detectaron cambios. Modifica al menos un campo del viajero."),
+    "update-conflict": tr(locale, "The reservation changed at the same time. Review it and try again.", "La reserva cambió al mismo tiempo. Revísala y vuelve a intentarlo."),
+    "update-failed": tr(locale, "The correction could not be saved.", "No se pudo guardar la corrección.")
+  };
+  const amendmentFieldLabels = {
+    firstName: tr(locale, "First name", "Nombre"),
+    lastName: tr(locale, "Last name", "Apellidos"),
+    nationality: tr(locale, "Nationality", "Nacionalidad")
   };
 
   return (
@@ -95,6 +116,15 @@ export default async function OperatorReservationDetailPage({
               </div>
             ) : null}
             {error && errors[error] ? <div className={styles.notice}>{errors[error]}</div> : null}
+            {amendmentUpdated ? (
+              <div className={styles.notice}>
+                <strong>{tr(locale, "Traveller correction saved.", "Corrección del viajero guardada.")}</strong><br />
+                {tr(locale, "The previous value remains preserved in the amendment history.", "El valor anterior permanece conservado en el historial de modificaciones.")}
+              </div>
+            ) : null}
+            {amendmentError && amendmentErrors[amendmentError] ? (
+              <div className={styles.notice}>{amendmentErrors[amendmentError]}</div>
+            ) : null}
 
             <dl className={styles.definitionList}>
               <div><dt>{tr(locale, "Status", "Estado")}</dt><dd><span className={styles.badge}>{reservationStatusLabel(reservation.status, locale)}</span></dd></div>
@@ -146,6 +176,30 @@ export default async function OperatorReservationDetailPage({
             ) : (
               <p className={styles.muted}>{tr(locale, "No staff status changes recorded for this reservation.", "No hay cambios de estado registrados por el personal para esta reserva.")}</p>
             )}
+
+            <div style={{ marginTop: "1.5rem" }}>
+              <div className="eyebrow">{tr(locale, "Amendments", "Modificaciones")}</div>
+              <h2>{tr(locale, "Change history", "Historial de cambios")}</h2>
+              {amendments.length ? (
+                <div className={styles.auditList}>
+                  {amendments.map((amendment) => (
+                    <div className={styles.auditItem} key={amendment.id}>
+                      <strong>{tr(locale, "Traveller correction", "Corrección de viajero")}</strong><br />
+                      {amendment.changes.map((change) => (
+                        <span key={`${amendment.id}-${change.field}`}>
+                          {amendmentFieldLabels[change.field]}: {change.before} → {change.after}<br />
+                        </span>
+                      ))}
+                      <span><strong>{tr(locale, "Reason", "Motivo")}:</strong> {amendment.reason}</span><br />
+                      <span>{staffRoleLabel(amendment.actorRole, locale)} · {amendment.actorIdentityId}</span><br />
+                      {formatOperatorDate(amendment.occurredAt, locale, true)}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className={styles.muted}>{tr(locale, "No reservation amendments have been recorded yet.", "Todavía no se han registrado modificaciones de esta reserva.")}</p>
+              )}
+            </div>
           </aside>
         </div>
 
