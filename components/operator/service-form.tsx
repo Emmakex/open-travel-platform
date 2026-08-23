@@ -1,9 +1,16 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import { saveTravelServiceAction } from "@/app/operator/catalogue/services/actions";
 import styles from "@/app/operator/operator.module.css";
 import { GalleryEditor, MediaEditorCard } from "@/components/operator/structured-editors";
 import { TravellerPricingEditor } from "@/components/operator/traveller-pricing-editor";
-import type { TravelService, TravelServiceType } from "@/domain/services/types";
+import type {
+  TravelService,
+  TravelServicePricingMode,
+  TravelServiceType
+} from "@/domain/services/types";
 import type { TravelLocale } from "@/domain/travel/types";
 import type { MediaLibraryChoice } from "@/lib/media-library";
 import { publicationStatusLabel, tr } from "@/lib/operator-i18n";
@@ -29,6 +36,8 @@ export function ServiceForm({ service, type, error, mediaLibrary = [], locale }:
   const isEditing = Boolean(service);
   const es = service?.translations?.es;
   const fromPrice = service?.fromPrice ?? 0;
+  const [pricingMode, setPricingMode] = useState<TravelServicePricingMode>(service?.pricingMode ?? "per-person");
+  const [startingPrice, setStartingPrice] = useState(fromPrice);
 
   return (
     <form action={saveTravelServiceAction} className={styles.editorForm}>
@@ -45,10 +54,25 @@ export function ServiceForm({ service, type, error, mediaLibrary = [], locale }:
           <label className={styles.field}><span>{tr(locale, "Title *", "Título (EN) *")}</span><input name="title" defaultValue={service?.title ?? ""} required /></label>
           <label className={styles.field}><span>Slug</span><input name="slug" defaultValue={service?.slug ?? ""} placeholder="auto-generated-from-title" /></label>
           <label className={styles.field}><span>{tr(locale, "Currency", "Moneda")}</span><select name="currency" defaultValue={service?.currency ?? "EUR"}><option value="EUR">EUR</option><option value="USD">USD</option><option value="GBP">GBP</option></select></label>
-          <label className={styles.field}><span>{tr(locale, "Starting price *", "Precio desde *")}</span><input type="number" min="0" step="0.01" name="fromPrice" defaultValue={fromPrice} required /></label>
+          <label className={styles.field}>
+            <span>{tr(locale, "Starting price *", "Precio desde *")}</span>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              name="fromPrice"
+              defaultValue={fromPrice}
+              onChange={(event) => setStartingPrice(Number(event.target.value) || 0)}
+              required
+            />
+          </label>
           <label className={styles.field}>
             <span>{tr(locale, "Pricing model", "Modelo de precio")}</span>
-            <select name="pricingMode" defaultValue={service?.pricingMode ?? "per-person"}>
+            <select
+              name="pricingMode"
+              value={pricingMode}
+              onChange={(event) => setPricingMode(event.target.value as TravelServicePricingMode)}
+            >
               <option value="per-person">{tr(locale, "Per person", "Por persona")}</option>
               <option value="per-booking">{tr(locale, "Per booking", "Por reserva")}</option>
               <option value="per-unit">{tr(locale, "Per unit", "Por unidad")}</option>
@@ -60,6 +84,13 @@ export function ServiceForm({ service, type, error, mediaLibrary = [], locale }:
         <label className={styles.field}><span>{tr(locale, "Summary *", "Resumen (EN) *")}</span><textarea name="summary" defaultValue={service?.summary ?? ""} rows={5} required /></label>
         <label className={styles.checkboxField}><input type="checkbox" name="featured" defaultChecked={service?.featured ?? false} /><span>{tr(locale, "Featured service", "Servicio destacado")}</span></label>
       </div>
+
+      {pricingMode === "per-age-band" ? (
+        <>
+          <div className={styles.notice}>{tr(locale, "Define the price for each traveller age range. These bands are used for adults, minors and infants and will be validated when the service is booked.", "Define el precio para cada rango de edad. Estas bandas se utilizan para adultos, menores y bebés y se validarán al reservar el servicio.")}</div>
+          <TravellerPricingEditor bands={service?.travellerPricing} fromPrice={startingPrice} locale={locale} context="service" />
+        </>
+      ) : null}
 
       {type === "activity" ? (
         <div className={styles.editorSection}>
@@ -103,9 +134,6 @@ export function ServiceForm({ service, type, error, mediaLibrary = [], locale }:
           <label className={styles.field}><span>{tr(locale, "Not included", "No incluido (EN)")}</span><textarea name="notIncluded" defaultValue={(service?.notIncluded ?? []).join("\n")} rows={5} /></label>
         </div>
       </div>
-
-      <div className={styles.notice}>{tr(locale, "Age bands below are used only when the pricing model is “By traveller age”. They will also power minor/adult pricing when this service becomes bookable.", "Las bandas siguientes solo se usan cuando el modelo es «Según edad del viajero». También alimentarán los precios de menores/adultos cuando este servicio sea reservable.")}</div>
-      <TravellerPricingEditor bands={service?.travellerPricing} fromPrice={fromPrice} locale={locale} context="service" />
 
       <div className={styles.editorSection}>
         <div><div className="eyebrow">{tr(locale, "Cover media", "Imagen de portada")}</div></div>
