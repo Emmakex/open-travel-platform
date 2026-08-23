@@ -8,7 +8,7 @@ import { getIdentityRepository } from "@/lib/identity-repository";
 import { requireCustomerIdentity } from "@/lib/require-customer-identity";
 
 export const metadata = {
-  title: "Profile | Kairoseth Travel",
+  title: "Profile",
   description: "Update your Kairoseth Travel customer profile."
 };
 
