@@ -17,6 +17,10 @@ import {
   type TravellerBookingDraft
 } from "@/lib/traveller-pricing";
 
+export type ServiceReservationActionState = {
+  error?: string;
+};
+
 function value(formData: FormData, key: string) {
   const item = formData.get(key) ?? (key.includes(":") ? formData.get(key.replaceAll(":", "__")) : null);
   return typeof item === "string" ? item.trim() : "";
@@ -62,16 +66,30 @@ function insuranceDuration(start: string, end: string) {
   return Math.floor((endMs - startMs) / 86400000) + 1;
 }
 
-export async function createServiceReservationAction(formData: FormData) {
+function pricingErrorCode(error: TravellerPricingError) {
+  return error.code === "LEAD_MUST_BE_ADULT"
+    ? "lead-must-be-adult"
+    : error.code === "MINOR_GUARDIAN_REQUIRED"
+      ? "minor-guardian-required"
+      : error.code === "NO_PRICING_BAND"
+        ? "pricing-unavailable"
+        : "invalid-travellers";
+}
+
+export async function createServiceReservationAction(
+  _previousState: ServiceReservationActionState,
+  formData: FormData
+): Promise<ServiceReservationActionState> {
   const identity = await requireCustomerIdentity();
   const type = serviceType(value(formData, "serviceType"));
   const slug = value(formData, "serviceSlug");
   const drafts = parseTravellers(formData);
-  const back = type && slug ? `/services/book/${type}/${encodeURIComponent(slug)}` : "/services";
-  if (!type || !slug || !drafts) redirect(`${back}?error=invalid-travellers`);
+
+  if (!type || !slug) return { error: "invalid-service" };
+  if (!drafts) return { error: "invalid-travellers" };
 
   const service = await getPublishedTravelService(type, slug);
-  if (!service) redirect("/services");
+  if (!service) return { error: "invalid-service" };
 
   let referenceDate = "";
   let basePrice = service.fromPrice;
@@ -85,25 +103,31 @@ export async function createServiceReservationAction(formData: FormData) {
     const destination = value(formData, "destination");
     const startDate = value(formData, "tripStartDate");
     const endDate = value(formData, "tripEndDate");
-    const duration = insuranceDuration(startDate, endDate);
     const rawInsuredAmount = value(formData, "insuredAmount");
     const insuredAmount = rawInsuredAmount ? Number(rawInsuredAmount) : undefined;
     const today = new Date().toISOString().slice(0, 10);
-    if (
-      !destination || destination.length > 120 ||
-      !validIsoDate(startDate) || !validIsoDate(endDate) || startDate < today ||
-      duration === null ||
-      (service.maxTripDays && duration > service.maxTripDays) ||
-      (insuredAmount !== undefined && (!Number.isFinite(insuredAmount) || insuredAmount < 0))
-    ) {
-      redirect(`${back}?error=insurance-details`);
+
+    if (!destination || destination.length > 120) return { error: "insurance-destination" };
+    if (!validIsoDate(startDate) || !validIsoDate(endDate) || endDate < startDate) {
+      return { error: "insurance-dates" };
     }
+    if (startDate < today) return { error: "insurance-start-past" };
+
+    const duration = insuranceDuration(startDate, endDate);
+    if (duration === null) return { error: "insurance-dates" };
+    if (service.maxTripDays && duration > service.maxTripDays) {
+      return { error: "insurance-duration" };
+    }
+    if (insuredAmount !== undefined && (!Number.isFinite(insuredAmount) || insuredAmount < 0)) {
+      return { error: "insurance-amount" };
+    }
+
     referenceDate = startDate;
     insuranceTrip = { destination, startDate, endDate, insuredAmount };
   } else {
     const requestedSlot = value(formData, "availabilityId");
     const slot = (await listPublishedServiceAvailability(service.id)).find((item) => item.id === requestedSlot);
-    if (!slot) redirect(`${back}?error=invalid-availability`);
+    if (!slot) return { error: "invalid-availability" };
     availabilityId = slot.id;
     serviceDate = slot.date;
     startTime = slot.startTime;
@@ -117,22 +141,16 @@ export async function createServiceReservationAction(formData: FormData) {
     priced = priceServiceComposition({ service, referenceDate, basePrice, drafts });
   } catch (error) {
     if (error instanceof TravellerPricingError) {
-      const code = error.code === "LEAD_MUST_BE_ADULT"
-        ? "lead-must-be-adult"
-        : error.code === "MINOR_GUARDIAN_REQUIRED"
-          ? "minor-guardian-required"
-          : error.code === "NO_PRICING_BAND"
-            ? "pricing-unavailable"
-            : "invalid-travellers";
-      redirect(`${back}?error=${code}`);
+      return { error: pricingErrorCode(error) };
     }
-    throw error;
+    console.error("Service pricing failed", error);
+    return { error: "server-error" };
   }
 
   const relatedReservationId = value(formData, "relatedReservationId") || undefined;
   if (relatedReservationId) {
     const owned = await getBookingRepository().getReservation(identity.id, relatedReservationId);
-    if (!owned) redirect(`${back}?error=invalid-related-reservation`);
+    if (!owned) return { error: "invalid-related-reservation" };
   }
 
   let reservation;
@@ -160,9 +178,10 @@ export async function createServiceReservationAction(formData: FormData) {
     });
   } catch (error) {
     if (error && typeof error === "object" && "code" in error && error.code === "SERVICE_UNAVAILABLE") {
-      redirect(`${back}?error=insufficient-space`);
+      return { error: "insufficient-space" };
     }
-    throw error;
+    console.error("Service reservation creation failed", error);
+    return { error: "server-error" };
   }
 
   redirect(`/account/services/${encodeURIComponent(reservation.id)}?created=1`);
