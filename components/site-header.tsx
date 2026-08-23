@@ -3,10 +3,34 @@ import { setLocaleAction } from "@/app/locale/actions";
 import type { TravelLocale } from "@/domain/travel/types";
 import { appConfig } from "@/lib/config";
 import { getDictionary } from "@/lib/i18n";
+import { getIdentityRepository } from "@/lib/identity-repository";
 
-export function SiteHeader({ locale }: { locale: TravelLocale }) {
+function roleLabel(role: "customer" | "operator" | "admin", locale: TravelLocale) {
+  if (role === "customer") return locale === "es" ? "Cliente" : "Customer";
+  if (role === "admin") return locale === "es" ? "Admin" : "Admin";
+  return locale === "es" ? "Operador" : "Operator";
+}
+
+export async function SiteHeader({ locale }: { locale: TravelLocale }) {
   const brandInitial = appConfig.siteName.trim().charAt(0).toUpperCase() || "K";
   const copy = getDictionary(locale);
+  const identity = await getIdentityRepository().getCurrentIdentity();
+  const isCustomer = identity?.role === "customer";
+  const isStaff = identity?.role === "operator" || identity?.role === "admin";
+  const sessionHref = isCustomer ? "/account" : isStaff ? "/operator" : null;
+  const sessionLabel = identity ? roleLabel(identity.role, locale) : null;
+
+  const sessionChip = identity && sessionHref && sessionLabel ? (
+    <Link
+      className={`session-chip session-${identity.role}`}
+      href={sessionHref}
+      aria-label={`${locale === "es" ? "Sesión activa" : "Active session"}: ${identity.displayName}, ${sessionLabel}`}
+    >
+      <span className="session-dot" aria-hidden="true" />
+      <span className="session-name">{identity.displayName}</span>
+      <span className="session-role">{sessionLabel}</span>
+    </Link>
+  ) : null;
 
   return (
     <header className="site-header">
@@ -22,8 +46,8 @@ export function SiteHeader({ locale }: { locale: TravelLocale }) {
           <Link href="/destinations">{copy.nav.destinations}</Link>
           <Link href="/trips">{copy.nav.trips}</Link>
           <Link href="/services">{locale === "es" ? "Servicios" : "Services"}</Link>
-          <Link href="/account">{copy.nav.account}</Link>
-          <Link className="nav-operator" href="/operator/sign-in">{copy.nav.operator}</Link>
+          {isCustomer ? sessionChip : !identity ? <Link href="/account">{copy.nav.account}</Link> : null}
+          {isStaff ? sessionChip : <Link className="nav-operator" href="/operator/sign-in">{copy.nav.operator}</Link>}
           <form action={setLocaleAction} className="locale-switcher" aria-label={copy.language.label}>
             <button
               type="submit"
@@ -46,6 +70,13 @@ export function SiteHeader({ locale }: { locale: TravelLocale }) {
             </button>
           </form>
         </nav>
+        {identity && sessionHref && sessionLabel ? (
+          <Link className={`session-chip session-mobile session-${identity.role}`} href={sessionHref}>
+            <span className="session-dot" aria-hidden="true" />
+            <span className="session-name">{identity.displayName}</span>
+            <span className="session-role">{sessionLabel}</span>
+          </Link>
+        ) : null}
       </div>
     </header>
   );

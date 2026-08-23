@@ -114,7 +114,7 @@ export async function ServiceDetail({ service, locale }: { service: TravelServic
           <div className="container">
             <div className="section-heading">
               <div><div className="eyebrow">{locale === "es" ? "Disponibilidad" : "Availability"}</div><h2>{locale === "es" ? "Próximas fechas y horarios" : "Upcoming dates and times"}</h2></div>
-              <p>{locale === "es" ? "El cupo mostrado pertenece únicamente a este servicio y es independiente del inventario de los viajes." : "The inventory shown belongs only to this service and is independent from trip inventory."}</p>
+              <p>{locale === "es" ? "Consulta aquí las plazas disponibles para las próximas fechas y horarios." : "Check available spaces for upcoming dates and times."}</p>
             </div>
             {availability.length ? (
               <div className="grid-3">
@@ -145,7 +145,7 @@ export async function ServiceDetail({ service, locale }: { service: TravelServic
                 })}
               </div>
             ) : (
-              <div className="empty-state"><strong>{locale === "es" ? "No hay fechas publicadas todavía." : "No dates are published yet."}</strong><p>{locale === "es" ? "El producto sigue disponible para consulta y el equipo puede publicar nuevos horarios desde Operator." : "The product remains visible for discovery and the team can publish schedules from Operator."}</p></div>
+              <div className="empty-state"><strong>{locale === "es" ? "No hay disponibilidad actualmente." : "There is no availability right now."}</strong><p>{locale === "es" ? "Consulta más adelante o contacta con nosotros para conocer nuevas fechas." : "Check back later or contact us for upcoming dates."}</p></div>
             )}
           </div>
         </section>
