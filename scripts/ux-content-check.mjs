@@ -15,8 +15,8 @@ const forbiddenPublicMarkers = [
     message: "pull-request reference in user-facing source"
   },
   {
-    pattern: /["'`]([^"'`\n]{0,100})\b(?:WIP|TODO|FIXME)\b([^"'`\n]{0,100})["'`]/i,
-    message: "unfinished-work marker in visible copy"
+    pattern: /\b(?:WIP|TODO|FIXME)\b/,
+    message: "unfinished-work marker in user-facing source"
   }
 ];
 
