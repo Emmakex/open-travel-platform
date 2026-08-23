@@ -129,8 +129,8 @@ export function ServiceBookingForm({
     "invalid-travellers": t("Review the details for every traveller.", "Revisa los datos de todos los viajeros."),
     "lead-must-be-adult": t("The lead traveller must be an adult.", "El viajero principal debe ser mayor de edad."),
     "minor-guardian-required": t("Every minor must be linked to a responsible adult on this booking.", "Todos los menores deben estar vinculados a un adulto responsable de esta reserva."),
-    "pricing-unavailable": t("One traveller is outside the configured age bands. Review the traveller date of birth or the activity fares.", "Un viajero queda fuera de las bandas de edad configuradas. Revisa su fecha de nacimiento o las tarifas de la actividad."),
-    "invalid-availability": t("The selected date or time is no longer available. Choose another slot.", "La fecha u horario seleccionado ya no está disponible. Elige otro horario."),
+    "pricing-unavailable": t("We cannot calculate a price for one traveller. Check their date of birth and the available fares.", "No podemos calcular el precio de uno de los viajeros. Revisa su fecha de nacimiento y las tarifas disponibles."),
+    "invalid-availability": t("The selected date or time is no longer available. Choose another time.", "La fecha u horario seleccionado ya no está disponible. Elige otro horario."),
     "insufficient-space": t("There is no longer enough availability for this selection.", "Ya no queda disponibilidad suficiente para esta selección."),
     "insurance-destination": t("Enter a valid destination for the insured trip.", "Introduce un destino válido para el viaje asegurado."),
     "insurance-dates": t("Check the insured trip start and end dates.", "Revisa las fechas de inicio y fin del viaje asegurado."),
@@ -189,7 +189,7 @@ export function ServiceBookingForm({
             <datalist id={`service-dates-${service.id}`}>
               {availableDates.map((date) => <option key={date} value={date}>{dateLabel(date, locale)}</option>)}
             </datalist>
-            <small>{t("Open the calendar and choose a date with published availability.", "Abre el calendario y elige una fecha con disponibilidad publicada.")}</small>
+            <small>{t("Open the calendar and choose a date with available times.", "Abre el calendario y elige una fecha con horarios disponibles.")}</small>
           </label>
           <label className={styles.field}>
             <span>{t("Time *", "Horario *")}</span>
@@ -223,7 +223,7 @@ export function ServiceBookingForm({
         <label className={styles.field}>
           <span>{t("Link to one of my Kairoseth trips (optional)", "Vincular con uno de mis viajes Kairoseth (opcional)")}</span>
           <select name="relatedReservationId" value={relatedReservationId} onChange={(event) => setRelatedReservationId(event.target.value)}>
-            <option value="">{t("No linked trip / externally booked trip", "Sin viaje vinculado / viaje reservado fuera")}</option>
+            <option value="">{t("No linked trip / trip booked elsewhere", "Sin viaje vinculado / viaje reservado fuera")}</option>
             {relatedReservations.map((reservation) => <option key={reservation.id} value={reservation.id}>{reservation.label}</option>)}
           </select>
         </label>
@@ -270,19 +270,19 @@ export function ServiceBookingForm({
 
       {!complete ? <p className={styles.muted}>{t("Complete the required traveller details before confirming.", "Completa los datos obligatorios de los viajeros antes de confirmar.")}</p> : null}
       {!insuranceComplete && service.serviceType === "insurance" ? <div className={styles.error}>{t("Choose valid insured trip dates and destination.", "Elige un destino y unas fechas válidas para el viaje asegurado.")}</div> : null}
-      {service.serviceType !== "insurance" && selectedDate && !slotsForDate.length ? <div className={styles.error}>{t("There are no published times for this date. Choose another date in the calendar.", "No hay horarios publicados para esta fecha. Elige otra fecha en el calendario.")}</div> : null}
+      {service.serviceType !== "insurance" && selectedDate && !slotsForDate.length ? <div className={styles.error}>{t("There are no times available for this date. Choose another date in the calendar.", "No hay horarios disponibles para esta fecha. Elige otra fecha en el calendario.")}</div> : null}
       {inventoryExceeded ? <div className={styles.error}>{t("There is not enough availability for this booking.", "No queda disponibilidad suficiente para esta reserva.")}</div> : null}
 
       <div className={styles.priceSummary}>
         <div><span>{t("Travellers", "Viajeros")}</span><strong>{travellers.length}</strong></div>
-        {service.pricingMode === "per-unit" ? <div><span>{t("Units", "Unidades")}</span><strong>{quantity}</strong></div> : null}
+        {service.pricingMode === "per-unit" ? <div><span>{t("Vehicles / units", "Vehículos / unidades")}</span><strong>{quantity}</strong></div> : null}
         <div className={styles.totalRow}>
           <span>{t("Service total", "Total del servicio")}</span>
           <strong>{agePricingReady ? money(total, service.currency, locale) : t("Enter dates of birth", "Introduce las fechas de nacimiento")}</strong>
         </div>
       </div>
       <button className="button button-primary" type="submit" disabled={pending || inventoryExceeded || submitUnavailable}>
-        {pending ? t("Saving reservation…", "Guardando reserva…") : t("Create service reservation", "Crear reserva del servicio")}
+        {pending ? t("Saving reservation…", "Guardando reserva…") : t("Confirm service reservation", "Confirmar reserva del servicio")}
       </button>
     </form>
   );
