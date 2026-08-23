@@ -115,7 +115,8 @@ export async function createReservationAction(formData: FormData) {
       currency: trip.currency,
       tripTitle: trip.title,
       departureDate: availability.departureDate,
-      returnDate: availability.returnDate
+      returnDate: availability.returnDate,
+      travellerRequirements: trip.travellerRequirements
     });
   } catch (error) {
     if (error && typeof error === "object" && "code" in error && error.code === "DEPARTURE_UNAVAILABLE") {
