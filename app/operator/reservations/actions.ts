@@ -47,8 +47,9 @@ export async function correctReservationTravellerAction(formData: FormData) {
     redirect(`${detailUrl}?amendmentError=invalid-request#travellers`);
   }
 
+  let result;
   try {
-    const result = await correctReservationTraveller({
+    result = await correctReservationTraveller({
       reservationId,
       travellerId,
       actorIdentityId: identity.id,
@@ -58,12 +59,12 @@ export async function correctReservationTravellerAction(formData: FormData) {
       lastName,
       nationality
     });
-
-    if (!result.reservation) {
-      redirect(`${detailUrl}?amendmentError=not-found#travellers`);
-    }
   } catch (error) {
     redirect(`${detailUrl}?amendmentError=${amendmentErrorCode(error)}#travellers`);
+  }
+
+  if (!result.reservation) {
+    redirect(`${detailUrl}?amendmentError=not-found#travellers`);
   }
 
   redirect(`${detailUrl}?amendmentUpdated=1#travellers`);
