@@ -40,6 +40,9 @@ jobs:
       - name: Public safety check
         run: npm run check:safety
 
+      - name: UX and public-copy check
+        run: npm run check:ux
+
       - name: Release consistency check
         run: npm run check:release
 

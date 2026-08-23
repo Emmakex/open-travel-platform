@@ -1,5 +1,6 @@
 import { correctReservationTravellerAction } from "@/app/operator/reservations/actions";
 import styles from "@/app/operator/operator.module.css";
+import ui from "@/components/operator/reservation-travellers.module.css";
 import type { Reservation } from "@/domain/booking/types";
 import type { TravelLocale } from "@/domain/travel/types";
 import { listTravellerCompletionForOperator } from "@/lib/traveller-data";
@@ -46,17 +47,6 @@ export async function ReservationTravellers({
           "La edad corresponde a la fecha de salida. Los menores están vinculados al adulto responsable registrado al crear la reserva."
         )}
       </p>
-
-      {canAmend ? (
-        <div className={styles.notice}>
-          <strong>{tr(locale, "Reservation amendments · Phase 6B", "Modificaciones de reserva · Fase 6B")}</strong><br />
-          {tr(
-            locale,
-            "Authorized staff can correct traveller names and nationality. Every correction requires a reason and is stored as an immutable before → after history entry. Date of birth, fare band and inventory are intentionally locked in this first amendment slice because changing them can affect price or capacity.",
-            "El personal autorizado puede corregir nombres y nacionalidad. Cada corrección exige un motivo y se guarda como un registro histórico inmutable antes → después. La fecha de nacimiento, la tarifa y el inventario permanecen bloqueados en este primer bloque porque modificarlos puede afectar al precio o a la capacidad."
-          )}
-        </div>
-      ) : null}
 
       {requirementsActive ? (
         <div className={styles.notice}>
@@ -115,45 +105,60 @@ export async function ReservationTravellers({
               ) : null}
 
               {canAmend ? (
-                <details style={{ marginTop: "0.9rem" }}>
-                  <summary style={{ cursor: "pointer", fontWeight: 700 }}>
+                <details className={ui.amendmentDetails}>
+                  <summary className={ui.amendmentSummary}>
                     {tr(locale, "Correct traveller details", "Corregir datos del viajero")}
                   </summary>
-                  <form action={correctReservationTravellerAction} style={{ display: "grid", gap: "0.75rem", marginTop: "0.85rem" }}>
-                    <input type="hidden" name="reservationId" value={reservation.id} />
-                    <input type="hidden" name="travellerId" value={traveller.id} />
-                    <label>
-                      <span>{tr(locale, "First name", "Nombre")}</span>
-                      <input name="firstName" defaultValue={traveller.firstName} required maxLength={100} />
-                    </label>
-                    <label>
-                      <span>{tr(locale, "Last name", "Apellidos")}</span>
-                      <input name="lastName" defaultValue={traveller.lastName} required maxLength={140} />
-                    </label>
-                    <label>
-                      <span>{tr(locale, "Nationality", "Nacionalidad")}</span>
-                      <input name="nationality" defaultValue={traveller.nationality} required maxLength={100} />
-                    </label>
-                    <label>
-                      <span>{tr(locale, "Reason for correction", "Motivo de la corrección")}</span>
-                      <textarea
-                        name="reason"
-                        required
-                        maxLength={500}
-                        rows={3}
-                        placeholder={tr(
-                          locale,
-                          "Example: spelling correction requested by customer",
-                          "Ejemplo: corrección ortográfica solicitada por el cliente"
-                        )}
-                      />
-                    </label>
-                    <div>
-                      <button className="button button-primary" type="submit">
-                        {tr(locale, "Save auditable correction", "Guardar corrección con auditoría")}
-                      </button>
-                    </div>
-                  </form>
+                  <div className={ui.amendmentBody}>
+                    <p className={ui.helperText}>
+                      {tr(
+                        locale,
+                        "Update only the details that need correction. The reason is mandatory and the change will remain in the reservation history.",
+                        "Modifica únicamente los datos que deban corregirse. El motivo es obligatorio y el cambio quedará registrado en el historial de la reserva."
+                      )}
+                    </p>
+                    <form action={correctReservationTravellerAction} className={ui.amendmentForm}>
+                      <input type="hidden" name="reservationId" value={reservation.id} />
+                      <input type="hidden" name="travellerId" value={traveller.id} />
+
+                      <div className={styles.formGrid}>
+                        <label className={styles.field}>
+                          <span>{tr(locale, "First name", "Nombre")}</span>
+                          <input name="firstName" defaultValue={traveller.firstName} required maxLength={100} />
+                        </label>
+                        <label className={styles.field}>
+                          <span>{tr(locale, "Last name", "Apellidos")}</span>
+                          <input name="lastName" defaultValue={traveller.lastName} required maxLength={140} />
+                        </label>
+                      </div>
+
+                      <label className={styles.field}>
+                        <span>{tr(locale, "Nationality", "Nacionalidad")}</span>
+                        <input name="nationality" defaultValue={traveller.nationality} required maxLength={100} />
+                      </label>
+
+                      <label className={styles.field}>
+                        <span>{tr(locale, "Reason for correction", "Motivo de la corrección")}</span>
+                        <textarea
+                          name="reason"
+                          required
+                          maxLength={500}
+                          rows={3}
+                          placeholder={tr(
+                            locale,
+                            "Example: spelling correction requested by customer",
+                            "Ejemplo: corrección ortográfica solicitada por el cliente"
+                          )}
+                        />
+                      </label>
+
+                      <div className={ui.formActions}>
+                        <button className="button button-primary" type="submit">
+                          {tr(locale, "Save correction", "Guardar corrección")}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
                 </details>
               ) : null}
             </div>
