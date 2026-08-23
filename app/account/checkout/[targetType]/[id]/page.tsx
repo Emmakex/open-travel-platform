@@ -5,7 +5,7 @@ import styles from "@/app/account/account.module.css";
 import type { PaymentTargetType } from "@/domain/payment/types";
 import { getLocale } from "@/lib/get-locale";
 import {
-  getCheckoutSummaryForTarget,
+  getCheckoutPaymentSchedule,
   resolveCheckoutTargetForCustomer
 } from "@/lib/payment-checkout";
 import { listEnabledPaymentProviders } from "@/lib/payment-provider-config";
@@ -25,6 +25,14 @@ function money(value: number, currency: string, locale: "en" | "es") {
   }).format(value);
 }
 
+function formatDate(value: string, locale: "en" | "es") {
+  return new Intl.DateTimeFormat(locale === "es" ? "es-ES" : "en-GB", {
+    year: "numeric",
+    month: "short",
+    day: "numeric"
+  }).format(new Date(`${value}T00:00:00Z`));
+}
+
 export default async function UnifiedCheckoutPage({
   params,
   searchParams
@@ -42,8 +50,8 @@ export default async function UnifiedCheckoutPage({
   const identity = await requireCustomerIdentity();
   const target = await resolveCheckoutTargetForCustomer(identity.id, targetType, id);
   if (!target) notFound();
-  const [summary, providers] = await Promise.all([
-    getCheckoutSummaryForTarget(target),
+  const [{ summary, schedule }, providers] = await Promise.all([
+    getCheckoutPaymentSchedule(target),
     listEnabledPaymentProviders()
   ]);
   const t = (en: string, es: string) => locale === "es" ? es : en;
@@ -55,6 +63,7 @@ export default async function UnifiedCheckoutPage({
     "cancelled": t("Cancelled reservations cannot be paid.", "Las reservas canceladas no se pueden pagar."),
     "provider-error": t("The payment provider could not start the checkout. Please try again.", "No se ha podido iniciar la pasarela de pago. Inténtalo de nuevo.")
   };
+  const next = schedule.nextInstallment;
 
   return (
     <main className="section">
@@ -70,12 +79,31 @@ export default async function UnifiedCheckoutPage({
           </p>
 
           {query.error && errors[query.error] ? <div className={styles.notice}>{errors[query.error]}</div> : null}
+          {schedule.outdated ? (
+            <div className={styles.notice}>
+              {t(
+                "The configured payment schedule needs staff review, so checkout is temporarily using the full outstanding balance.",
+                "El calendario de pagos configurado necesita revisión del equipo, por lo que temporalmente se utiliza todo el saldo pendiente."
+              )}
+            </div>
+          ) : null}
 
           <dl className={styles.profileList}>
             <div><dt>{t("Payment status", "Estado del pago")}</dt><dd>{paymentStatusLabel(summary.status, locale)}</dd></div>
             <div><dt>{t("Reservation total", "Total de la reserva")}</dt><dd>{money(summary.totalAmount, summary.currency, locale)}</dd></div>
             <div><dt>{t("Already paid", "Ya pagado")}</dt><dd>{money(summary.netPaidAmount, summary.currency, locale)}</dd></div>
-            <div><dt>{t("Amount to pay", "Importe a pagar")}</dt><dd><strong>{money(summary.outstandingAmount, summary.currency, locale)}</strong></dd></div>
+            <div><dt>{t("Total outstanding", "Pendiente total")}</dt><dd>{money(summary.outstandingAmount, summary.currency, locale)}</dd></div>
+            {next ? (
+              <div>
+                <dt>{t("Next payment", "Siguiente pago")}</dt>
+                <dd>
+                  <strong>{money(schedule.nextPaymentAmount, summary.currency, locale)}</strong>
+                  {next.dueDate ? ` · ${t("due", "vence")} ${formatDate(next.dueDate, locale)}` : ""}
+                  <br />
+                  {locale === "es" ? (next.labelEs || next.label) : next.label}
+                </dd>
+              </div>
+            ) : null}
           </dl>
 
           {target.status === "cancelled" ? (
@@ -92,7 +120,7 @@ export default async function UnifiedCheckoutPage({
                   <input type="hidden" name="targetId" value={target.targetId} />
                   <input type="hidden" name="provider" value={provider.provider} />
                   <button className="button button-primary" type="submit">
-                    {t("Pay with", "Pagar con")} {provider.label}
+                    {t("Pay", "Pagar")} {money(schedule.nextPaymentAmount || summary.outstandingAmount, summary.currency, locale)} {t("with", "con")} {provider.label}
                     {provider.activeEnvironment === "test" ? ` · ${t("TEST", "PRUEBAS")}` : ""}
                   </button>
                 </form>
