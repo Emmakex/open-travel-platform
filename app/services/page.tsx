@@ -1,15 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getLocale } from "@/lib/get-locale";
+import { getPublicCopy } from "@/lib/public-copy";
 import { listPublishedTravelServices } from "@/lib/travel-services";
 
-export const metadata: Metadata = {
-  title: "Services | Kairoseth Travel",
-  description: "Explore activities, transport and travel insurance independently from any trip package."
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
+  return locale === "es"
+    ? { title: "Servicios de viaje", description: "Actividades, traslados y otros servicios para completar tu viaje con información clara antes de reservar." }
+    : { title: "Travel services", description: "Activities, transfers and other services to complete your journey with clear information before booking." };
+}
 
 export default async function ServicesPage() {
   const locale = await getLocale();
+  const copy = getPublicCopy(locale).services;
   const [activities, transport, insurance] = await Promise.all([
     listPublishedTravelServices("activity"),
     listPublishedTravelServices("transport"),
@@ -17,24 +21,9 @@ export default async function ServicesPage() {
   ]);
 
   const cards = [
-    {
-      href: "/activities",
-      title: locale === "es" ? "Actividades" : "Activities",
-      copy: locale === "es" ? "Experiencias, excursiones y actividades que puedes contratar con o sin un viaje de Kairoseth." : "Experiences, excursions and activities you can book with or without a Kairoseth trip.",
-      count: activities.length
-    },
-    {
-      href: "/transport",
-      title: locale === "es" ? "Transporte" : "Transport",
-      copy: locale === "es" ? "Transfers y servicios de movilidad vendidos de forma independiente o vinculados a una reserva." : "Transfers and mobility services sold independently or linked to a reservation.",
-      count: transport.length
-    },
-    {
-      href: "/insurance",
-      title: locale === "es" ? "Seguros" : "Insurance",
-      copy: locale === "es" ? "Productos de protección para viajes contratados en Kairoseth o en cualquier otra plataforma." : "Protection products for trips booked with Kairoseth or on any other platform.",
-      count: insurance.length
-    }
+    { href: "/activities", title: copy.activityTitle, copy: copy.activityCopy, count: activities.length },
+    { href: "/transport", title: copy.transportTitle, copy: copy.transportCopy, count: transport.length },
+    { href: "/insurance", title: copy.insuranceTitle, copy: copy.insuranceCopy, count: insurance.length }
   ];
 
   return (
@@ -42,20 +31,20 @@ export default async function ServicesPage() {
       <div className="container">
         <div className="section-heading">
           <div>
-            <div className="eyebrow">Kairoseth Travel</div>
-            <h1>{locale === "es" ? "Servicios para completar cualquier viaje" : "Services for any journey"}</h1>
+            <div className="eyebrow">{copy.eyebrow}</div>
+            <h1>{copy.title}</h1>
           </div>
-          <p>{locale === "es" ? "Explora actividades, transporte y seguros sin necesidad de haber comprado un paquete de viaje con nosotros." : "Explore activities, transport and insurance without needing to have purchased a trip package from us."}</p>
+          <p>{copy.intro}</p>
         </div>
 
         <div className="grid-3">
           {cards.map((card) => (
             <article className="card" key={card.href}>
               <div className="card-body">
-                <div className="card-kicker">{card.count} {locale === "es" ? "publicados" : "published"}</div>
-                <h3><Link href={card.href}>{card.title}</Link></h3>
+                <div className="card-kicker">{card.count} {copy.available}</div>
+                <h2><Link href={card.href}>{card.title}</Link></h2>
                 <p>{card.copy}</p>
-                <Link className="text-link" href={card.href}>{locale === "es" ? "Explorar →" : "Explore →"}</Link>
+                <Link className="text-link" href={card.href}>{copy.explore}</Link>
               </div>
             </article>
           ))}
