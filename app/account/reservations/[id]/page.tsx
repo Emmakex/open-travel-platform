@@ -95,6 +95,11 @@ export default async function ReservationDetailPage({
   const canPayOnline = reservation.status !== "cancelled" &&
     paymentSchedule.nextPaymentAmount > 0 &&
     paymentSummary.pendingPaymentAmount <= 0;
+  const needsTravellerData = Boolean(
+    reservation.travellerRequirements &&
+    reservation.travellerRequirements.preset !== "none" &&
+    reservation.travellers?.length
+  );
 
   return (
     <main className="section">
@@ -126,12 +131,28 @@ export default async function ReservationDetailPage({
             <div><dt>{copy.reference}</dt><dd>{reservation.id}</dd></div>
           </dl>
 
-          {canCustomerCancel ? (
-            <form action={cancelReservationAction}>
-              <input type="hidden" name="reservationId" value={reservation.id} />
-              <button className="button button-secondary" type="submit">{copy.cancel}</button>
-            </form>
+          {needsTravellerData ? (
+            <div className={styles.notice}>
+              <strong>{locale === "es" ? "Falta completar información de viajeros" : "Post-purchase traveller information required"}</strong><br />
+              {locale === "es"
+                ? "Este viaje requiere información adicional después de realizar la reserva."
+                : "This trip requires additional traveller information after booking."}
+            </div>
           ) : null}
+
+          <div className={styles.actions}>
+            {needsTravellerData ? (
+              <Link className="button button-primary" href={`/account/traveller-data/trip/${encodeURIComponent(reservation.id)}`}>
+                {locale === "es" ? "Completar datos de viajeros" : "Complete traveller information"}
+              </Link>
+            ) : null}
+            {canCustomerCancel ? (
+              <form action={cancelReservationAction}>
+                <input type="hidden" name="reservationId" value={reservation.id} />
+                <button className="button button-secondary" type="submit">{copy.cancel}</button>
+              </form>
+            ) : null}
+          </div>
 
           <p><Link className="text-link" href="/account/reservations">{copy.all}</Link></p>
         </section>

@@ -1,3 +1,5 @@
+import type { TravellerRequirementsProfile } from "@/domain/traveller/types";
+
 export type ReservationStatus = "pending" | "confirmed" | "cancelled";
 export type TripDepartureStatus = "open" | "closed" | "sold-out";
 export type GuardianRelationship = "parent" | "legal-guardian" | "other";
@@ -81,6 +83,8 @@ export interface Reservation {
   departureDate?: string;
   returnDate?: string;
   paymentTerms?: ReservationPaymentTerms;
+  /** Snapshot of post-purchase traveller fields required when this reservation was created. */
+  travellerRequirements?: TravellerRequirementsProfile;
 }
 
 export interface CreateReservationInput {
@@ -96,4 +100,5 @@ export interface CreateReservationInput {
   tripTitle?: string;
   departureDate?: string;
   returnDate?: string;
+  travellerRequirements?: TravellerRequirementsProfile;
 }

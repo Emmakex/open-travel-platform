@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { updateServiceReservationStatusAction } from "@/app/operator/service-reservations/actions";
 import styles from "@/app/operator/operator.module.css";
 import { getLocale } from "@/lib/get-locale";
+import { listTravellerCompletionForOperator } from "@/lib/traveller-data";
 import { formatOperatorMoney, tr } from "@/lib/operator-i18n";
 import { requireOperationsIdentity } from "@/lib/require-operations-identity";
 import { getServiceReservationForOperator } from "@/lib/service-reservations";
@@ -23,6 +24,15 @@ export default async function OperatorServiceReservationPage({
   const reservation = await getServiceReservationForOperator(id);
   if (!reservation) notFound();
   const status = reservation.status === "pending" ? tr(locale, "Pending", "Pendiente") : reservation.status === "confirmed" ? tr(locale, "Confirmed", "Confirmada") : tr(locale, "Cancelled", "Cancelada");
+  const completion = reservation.travellerRequirements?.preset !== "none"
+    ? await listTravellerCompletionForOperator({
+        targetType: "service",
+        reservationId: reservation.id,
+        profile: reservation.travellerRequirements,
+        travellers: reservation.travellers
+      }).catch(() => [])
+    : [];
+  const completionByTraveller = new Map(completion.map((item) => [item.travellerId, item]));
 
   return (
     <main className="section"><div className={`container ${styles.shell}`}>
@@ -46,7 +56,19 @@ export default async function OperatorServiceReservationPage({
 
         <div className={styles.editorSection} style={{ marginTop: "1rem" }}>
           <div className="eyebrow">{tr(locale, "Travellers", "Viajeros")}</div>
-          <div className={styles.list}>{reservation.travellers.map((traveller) => <div className={styles.row} key={traveller.id}><strong>{traveller.firstName} {traveller.lastName}{traveller.isLead ? ` · ${tr(locale, "lead", "principal")}` : ""}</strong><span>{traveller.dateOfBirth} · {traveller.nationality}</span><span>{traveller.ageAtDeparture} {tr(locale, "years", "años")} · {locale === "es" ? traveller.pricingLabelEs || traveller.pricingLabel : traveller.pricingLabel}</span><span>{formatOperatorMoney(traveller.unitPrice, reservation.currency, locale)}</span></div>)}</div>
+          {reservation.travellerRequirements?.preset !== "none" ? (
+            <div className={styles.notice}>
+              {tr(
+                locale,
+                "Advanced identity/document values remain encrypted. This view exposes completion status only.",
+                "Los valores avanzados de identidad/documentación permanecen cifrados. Esta vista solo muestra el estado de completitud."
+              )}
+            </div>
+          ) : null}
+          <div className={styles.list}>{reservation.travellers.map((traveller) => {
+            const travellerCompletion = completionByTraveller.get(traveller.id);
+            return <div className={styles.row} key={traveller.id}><strong>{traveller.firstName} {traveller.lastName}{traveller.isLead ? ` · ${tr(locale, "lead", "principal")}` : ""}</strong><span>{traveller.dateOfBirth} · {traveller.nationality}</span><span>{traveller.ageAtDeparture} {tr(locale, "years", "años")} · {locale === "es" ? traveller.pricingLabelEs || traveller.pricingLabel : traveller.pricingLabel}</span><span>{formatOperatorMoney(traveller.unitPrice, reservation.currency, locale)}</span>{travellerCompletion ? <span><strong>{tr(locale, "Post-purchase data", "Datos post-compra")}: {travellerCompletion.complete ? tr(locale, "complete", "completos") : tr(locale, "incomplete", "incompletos")}</strong></span> : null}</div>;
+          })}</div>
         </div>
 
         {reservation.status !== "cancelled" ? <div className={styles.actions} style={{ marginTop: "1rem" }}>

@@ -1,9 +1,10 @@
 import styles from "@/app/operator/operator.module.css";
 import type { Reservation } from "@/domain/booking/types";
 import type { TravelLocale } from "@/domain/travel/types";
+import { listTravellerCompletionForOperator } from "@/lib/traveller-data";
 import { formatOperatorDate, formatOperatorMoney, tr } from "@/lib/operator-i18n";
 
-export function ReservationTravellers({
+export async function ReservationTravellers({
   reservation,
   locale
 }: {
@@ -11,6 +12,16 @@ export function ReservationTravellers({
   locale: TravelLocale;
 }) {
   if (!reservation.travellers?.length) return null;
+
+  const completion = reservation.travellerRequirements?.preset !== "none"
+    ? await listTravellerCompletionForOperator({
+        targetType: "trip",
+        reservationId: reservation.id,
+        profile: reservation.travellerRequirements,
+        travellers: reservation.travellers
+      }).catch(() => [])
+    : [];
+  const completionByTraveller = new Map(completion.map((item) => [item.travellerId, item]));
 
   return (
     <section className={styles.panel} style={{ marginTop: "1rem" }}>
@@ -24,6 +35,16 @@ export function ReservationTravellers({
         )}
       </p>
 
+      {reservation.travellerRequirements?.preset !== "none" ? (
+        <div className={styles.notice}>
+          {tr(
+            locale,
+            "Advanced identity/document values remain encrypted. Operator shows completion status without exposing those values in this overview.",
+            "Los valores avanzados de identidad/documentación permanecen cifrados. Operator muestra el estado de completitud sin exponer esos valores en esta vista."
+          )}
+        </div>
+      ) : null}
+
       <div className={styles.auditList}>
         {reservation.travellers.map((traveller, index) => {
           const guardian = traveller.guardianTravellerId
@@ -32,6 +53,7 @@ export function ReservationTravellers({
           const fareLabel = locale === "es"
             ? (traveller.pricingLabelEs || traveller.pricingLabel)
             : traveller.pricingLabel;
+          const travellerCompletion = completionByTraveller.get(traveller.id);
 
           return (
             <div className={styles.auditItem} key={traveller.id}>
@@ -46,6 +68,9 @@ export function ReservationTravellers({
               {tr(locale, "Inventory", "Inventario")}: {traveller.consumesInventory ? tr(locale, "1 space", "1 plaza") : tr(locale, "does not consume a space", "no consume plaza")}
               {guardian ? (
                 <><br />{tr(locale, "Responsible adult", "Adulto responsable")}: {guardian.firstName} {guardian.lastName}</>
+              ) : null}
+              {travellerCompletion ? (
+                <><br /><strong>{tr(locale, "Post-purchase data", "Datos post-compra")}: {travellerCompletion.complete ? tr(locale, "complete", "completos") : tr(locale, "incomplete", "incompletos")}</strong></>
               ) : null}
             </div>
           );

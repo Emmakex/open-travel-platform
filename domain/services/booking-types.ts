@@ -1,6 +1,7 @@
 import type { ReservationTraveller } from "@/domain/booking/types";
-import type { CurrencyCode } from "@/domain/travel/types";
 import type { TravelServicePricingMode, TravelServiceType } from "@/domain/services/types";
+import type { TravellerRequirementsProfile } from "@/domain/traveller/types";
+import type { CurrencyCode } from "@/domain/travel/types";
 
 export type ServiceReservationStatus = "pending" | "confirmed" | "cancelled";
 
@@ -43,6 +44,8 @@ export type ServiceReservation = {
   insuranceTrip?: InsuranceTripDetails;
   relatedReservationId?: string;
   statusHistory?: ServiceReservationStatusEvent[];
+  /** Snapshot of post-purchase traveller fields required when this reservation was created. */
+  travellerRequirements?: TravellerRequirementsProfile;
   createdAt: string;
   updatedAt?: string;
 };

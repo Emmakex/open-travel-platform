@@ -22,6 +22,7 @@ import {
 } from "@/lib/mongo-travel-admin";
 import { requireOperationsIdentity } from "@/lib/require-operations-identity";
 import { validateTravellerPricingBands } from "@/lib/traveller-pricing";
+import { parseTravellerRequirementsForm } from "@/lib/traveller-requirements-form";
 
 function text(formData: FormData, name: string) {
   const value = formData.get(name) ?? (name.includes(":") ? formData.get(name.replaceAll(":", "__")) : null);
@@ -356,6 +357,7 @@ export async function saveTripAction(formData: FormData) {
   const itineraryEs = parseItinerary(formData, "Es");
   const travellerPricing = parseTravellerPricing(formData);
   const departures = travellerPricing ? parseDepartures(formData, id, travellerPricing) : null;
+  const travellerRequirements = parseTravellerRequirementsForm(formData);
 
   if (
     !title ||
@@ -371,7 +373,8 @@ export async function saveTripAction(formData: FormData) {
     itinerary === null ||
     itineraryEs === null ||
     travellerPricing === null ||
-    departures === null
+    departures === null ||
+    travellerRequirements === null
   ) {
     redirect(`${returnTo}?error=validation`);
   }
@@ -402,6 +405,7 @@ export async function saveTripAction(formData: FormData) {
       fromPrice,
       currency,
       travellerPricing,
+      travellerRequirements: travellerRequirements.preset === "none" ? undefined : travellerRequirements,
       highlights,
       itinerary,
       included,
