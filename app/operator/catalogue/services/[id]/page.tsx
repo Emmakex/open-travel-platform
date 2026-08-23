@@ -7,7 +7,7 @@ import { listMediaLibraryChoices } from "@/lib/media-library";
 import { tr } from "@/lib/operator-i18n";
 import { requireOperationsIdentity } from "@/lib/require-operations-identity";
 import { listServiceAvailabilityForAdmin } from "@/lib/service-availability";
-import { getTravelServiceForAdmin, serviceTypeLabel } from "@/lib/travel-services";
+import { getTravelServiceForAdmin } from "@/lib/travel-services";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -54,7 +54,6 @@ export default async function EditServicePage({ params, searchParams }: PageProp
               <p className={styles.muted}>{tr(locale, "Insurance does not use dated inventory slots. The future booking flow will validate destination, travel dates, traveller ages and the product maximum trip duration before pricing.", "Los seguros no utilizan cupos por fecha. El futuro flujo de contratación validará destino, fechas del viaje, edades de los viajeros y la duración máxima admitida antes de calcular el precio.")}</p>
             </section>
           )}
-          <div className={styles.notice} style={{ marginTop: "1rem" }}>{serviceTypeLabel(service.serviceType, locale)} · /{service.serviceType === "activity" ? "activities" : service.serviceType}/{service.slug}</div>
         </section>
       </div>
     </main>
