@@ -64,6 +64,7 @@ export async function ServiceDetail({ service, locale }: { service: TravelServic
   const availability = item.serviceType === "insurance"
     ? []
     : await listPublishedServiceAvailability(item.id);
+  const bookingPath = `/services/book/${item.serviceType}/${item.slug}`;
 
   return (
     <main>
@@ -89,7 +90,7 @@ export async function ServiceDetail({ service, locale }: { service: TravelServic
           <div className="grid-3" style={{ marginTop: "1.5rem" }}>
             <section className="card"><div className="card-body"><div className="card-kicker">{locale === "es" ? "Información" : "Information"}</div><h3>{locale === "es" ? "Detalles del servicio" : "Service details"}</h3><ul className="highlight-list">{rows.map(([label, value]) => <li key={label}><strong>{label}:</strong> {value}</li>)}</ul></div></section>
             <section className="card"><div className="card-body"><div className="card-kicker">{locale === "es" ? "Precio" : "Pricing"}</div><h3>{locale === "es" ? "Precio desde" : "Starting price"}</h3><p><strong>{price}</strong></p><p>{pricingModeLabel(item, locale)}</p></div></section>
-            <section className="card"><div className="card-body"><div className="card-kicker">Flexible</div><h3>{locale === "es" ? "Producto independiente" : "Independent product"}</h3><p>{locale === "es" ? "Puedes contratar este servicio aunque tu viaje se haya reservado en otra plataforma." : "You can contract this service even when your trip was booked on another platform."}</p></div></section>
+            <section className="card"><div className="card-body"><div className="card-kicker">Flexible</div><h3>{locale === "es" ? "Producto independiente" : "Independent product"}</h3><p>{locale === "es" ? "Puedes contratar este servicio aunque tu viaje se haya reservado en otra plataforma." : "You can contract this service even when your trip was booked on another platform."}</p>{item.serviceType === "insurance" ? <Link className="button button-primary" href={bookingPath}>{locale === "es" ? "Contratar seguro" : "Book insurance"}</Link> : null}</div></section>
           </div>
         </div>
       </section>
@@ -117,6 +118,7 @@ export async function ServiceDetail({ service, locale }: { service: TravelServic
                         <p><strong>{remaining}</strong> {unit} {locale === "es" ? "disponibles" : "available"}</p>
                         {item.serviceType === "transport" && slot.inventoryMode === "units" && item.capacity ? <p>{locale === "es" ? `Hasta ${item.capacity} pasajeros por unidad` : `Up to ${item.capacity} passengers per unit`}</p> : null}
                         {slotPrice ? <p><strong>{slotPrice}</strong> · {locale === "es" ? "precio de esta salida" : "price for this slot"}</p> : null}
+                        <Link className="button button-primary" href={`${bookingPath}?slot=${encodeURIComponent(slot.id)}`}>{locale === "es" ? "Reservar este horario" : "Book this time"}</Link>
                       </div>
                     </article>
                   );
@@ -132,13 +134,14 @@ export async function ServiceDetail({ service, locale }: { service: TravelServic
           <div className="container">
             <div className="section-heading">
               <div><div className="eyebrow">{locale === "es" ? "Cotización" : "Quote basis"}</div><h2>{locale === "es" ? "Seguro adaptado a tu viaje" : "Insurance matched to your trip"}</h2></div>
-              <p>{locale === "es" ? "Este producto no utiliza cupos por fecha. Para contratarlo se validarán los datos reales del viaje." : "This product does not use dated inventory. Real trip details will be validated when it becomes bookable."}</p>
+              <p>{locale === "es" ? "Este producto no utiliza cupos por fecha. Para contratarlo se validarán los datos reales del viaje." : "This product does not use dated inventory. Real trip details are validated before booking."}</p>
             </div>
             <div className="grid-3">
               <article className="card"><div className="card-body"><div className="card-kicker">1</div><h3>{locale === "es" ? "Fechas y destino" : "Dates and destination"}</h3><p>{locale === "es" ? "Inicio, fin y destino real del viaje." : "Actual trip start, end and destination."}</p></div></article>
-              <article className="card"><div className="card-body"><div className="card-kicker">2</div><h3>{locale === "es" ? "Viajeros y edades" : "Travellers and ages"}</h3><p>{locale === "es" ? "La prima podrá variar por composición y edad." : "The premium may vary by party composition and age."}</p></div></article>
+              <article className="card"><div className="card-body"><div className="card-kicker">2</div><h3>{locale === "es" ? "Viajeros y edades" : "Travellers and ages"}</h3><p>{locale === "es" ? "La prima puede variar por composición y edad." : "The premium may vary by party composition and age."}</p></div></article>
               <article className="card"><div className="card-body"><div className="card-kicker">3</div><h3>{locale === "es" ? "Elegibilidad" : "Eligibility"}</h3><p>{item.maxTripDays ? (locale === "es" ? `Este producto admite viajes de hasta ${item.maxTripDays} días.` : `This product supports trips up to ${item.maxTripDays} days.`) : (locale === "es" ? "Se validarán las condiciones del producto antes de contratar." : "Product conditions will be validated before purchase.")}</p></div></article>
             </div>
+            <div style={{ marginTop: "1.5rem" }}><Link className="button button-primary" href={bookingPath}>{locale === "es" ? "Configurar y contratar" : "Configure and book"}</Link></div>
           </div>
         </section>
       )}

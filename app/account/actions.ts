@@ -33,6 +33,15 @@ function validEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email.length <= 254;
 }
 
+function safeNextPath(value: string) {
+  if (!value || !value.startsWith("/") || value.startsWith("//") || value.includes("\\")) return "";
+  return value.length <= 1000 ? value : "";
+}
+
+function authErrorPath(base: string, error: string, next: string) {
+  return `${base}?error=${encodeURIComponent(error)}${next ? `&next=${encodeURIComponent(next)}` : ""}`;
+}
+
 async function setCustomerSessionCookie(token: string, expiresAt: Date) {
   const cookieStore = await cookies();
   const staffToken = cookieStore.get(KTRAVEL_STAFF_SESSION_COOKIE)?.value;
@@ -53,8 +62,9 @@ async function setCustomerSessionCookie(token: string, expiresAt: Date) {
 }
 
 export async function registerCustomerAction(formData: FormData) {
+  const next = safeNextPath(value(formData, "next"));
   if (!identityConfig.customerAuthEnabled) {
-    redirect("/account/sign-in?error=registration-disabled");
+    redirect(authErrorPath("/account/sign-in", "registration-disabled", next));
   }
 
   const firstName = value(formData, "firstName");
@@ -70,7 +80,7 @@ export async function registerCustomerAction(formData: FormData) {
     password.length < 10 || password.length > 128 ||
     country.length > 80
   ) {
-    redirect("/account/register?error=validation");
+    redirect(authErrorPath("/account/register", "validation", next));
   }
 
   try {
@@ -87,34 +97,35 @@ export async function registerCustomerAction(formData: FormData) {
     await setCustomerSessionCookie(session.token, session.expiresAt);
   } catch (error) {
     if (error && typeof error === "object" && "code" in error && error.code === "EMAIL_EXISTS") {
-      redirect("/account/register?error=email-exists");
+      redirect(authErrorPath("/account/register", "email-exists", next));
     }
     throw error;
   }
 
-  redirect("/account?created=1");
+  redirect(next || "/account?created=1");
 }
 
 export async function signInCustomerAction(formData: FormData) {
+  const next = safeNextPath(value(formData, "next"));
   if (!identityConfig.customerAuthEnabled) {
-    redirect("/account/sign-in?error=auth-disabled");
+    redirect(authErrorPath("/account/sign-in", "auth-disabled", next));
   }
 
   const email = value(formData, "email");
   const password = value(formData, "password");
 
   if (!validEmail(email) || !password) {
-    redirect("/account/sign-in?error=invalid-credentials");
+    redirect(authErrorPath("/account/sign-in", "invalid-credentials", next));
   }
 
   const user = await authenticateCustomer(email, password);
   if (!user) {
-    redirect("/account/sign-in?error=invalid-credentials");
+    redirect(authErrorPath("/account/sign-in", "invalid-credentials", next));
   }
 
   const session = await createCustomerSession(user.id);
   await setCustomerSessionCookie(session.token, session.expiresAt);
-  redirect("/account");
+  redirect(next || "/account");
 }
 
 export async function updateCustomerProfileAction(formData: FormData) {
