@@ -19,6 +19,7 @@ export type StripeWebhookEvent = {
   data: { object: StripeCheckoutSession };
 };
 
+const STRIPE_API_ORIGIN = "https://api.stripe.com";
 const ZERO_DECIMAL_CURRENCIES = new Set([
   "bif", "clp", "djf", "gnf", "jpy", "kmf", "krw", "mga", "pyg", "rwf", "ugx", "vnd", "vuv", "xaf", "xof", "xpf"
 ]);
@@ -28,8 +29,12 @@ export function toMinorUnits(amount: number, currency: string) {
   return Math.round(amount * factor);
 }
 
+function stripeApiUrl(path: string) {
+  return new URL(path, STRIPE_API_ORIGIN).toString();
+}
+
 async function stripeRequest<T>(apiKey: string, path: string, init?: RequestInit) {
-  const response = await fetch(`https://api.stripe.com${path}`, {
+  const response = await fetch(stripeApiUrl(path), {
     ...init,
     headers: {
       Authorization: `Bearer ${apiKey}`,
