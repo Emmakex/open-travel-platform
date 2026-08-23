@@ -1,7 +1,10 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
-import { createServiceReservationAction } from "@/app/service-reservations/actions";
+import { useActionState, useMemo, useRef, useState } from "react";
+import {
+  createServiceReservationAction,
+  type ServiceReservationActionState
+} from "@/app/service-reservations/actions";
 import styles from "@/app/trips/[slug]/book/booking.module.css";
 import type { GuardianRelationship } from "@/domain/booking/types";
 import type { ServiceAvailabilitySlot, TravelService } from "@/domain/services/types";
@@ -34,6 +37,14 @@ function dateLabel(value: string, locale: TravelLocale) {
   }).format(new Date(`${value}T00:00:00Z`));
 }
 
+function addDaysIso(value: string, days: number) {
+  if (!value || !Number.isFinite(days)) return undefined;
+  const date = new Date(`${value}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return undefined;
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
 export function ServiceBookingForm({
   service,
   availability,
@@ -48,17 +59,30 @@ export function ServiceBookingForm({
   locale: TravelLocale;
 }) {
   const t = (en: string, es: string) => locale === "es" ? es : en;
-  const nextId = useRef(3);
-  const [selectedAvailabilityId, setSelectedAvailabilityId] = useState(
-    availability.some((slot) => slot.id === initialAvailabilityId) ? initialAvailabilityId! : availability[0]?.id ?? ""
+  const initialSlot = availability.find((slot) => slot.id === initialAvailabilityId) ?? availability[0];
+  const nextId = useRef(2);
+  const [actionState, formAction, pending] = useActionState<ServiceReservationActionState, FormData>(
+    createServiceReservationAction,
+    {}
   );
-  const [travellers, setTravellers] = useState<TravellerRow[]>([blank("traveller-1"), blank("traveller-2")]);
+  const [selectedAvailabilityId, setSelectedAvailabilityId] = useState(initialSlot?.id ?? "");
+  const [selectedDate, setSelectedDate] = useState(initialSlot?.date ?? "");
+  const [travellers, setTravellers] = useState<TravellerRow[]>([blank("traveller-1")]);
   const [destination, setDestination] = useState("");
   const [tripStartDate, setTripStartDate] = useState("");
   const [tripEndDate, setTripEndDate] = useState("");
   const [insuredAmount, setInsuredAmount] = useState("");
+  const [relatedReservationId, setRelatedReservationId] = useState("");
 
-  const selected = availability.find((slot) => slot.id === selectedAvailabilityId) ?? availability[0];
+  const availableDates = useMemo(
+    () => Array.from(new Set(availability.map((slot) => slot.date))).sort(),
+    [availability]
+  );
+  const slotsForDate = useMemo(
+    () => availability.filter((slot) => slot.date === selectedDate),
+    [availability, selectedDate]
+  );
+  const selected = availability.find((slot) => slot.id === selectedAvailabilityId);
   const referenceDate = service.serviceType === "insurance" ? tripStartDate : selected?.date ?? "";
   const basePrice = selected?.priceOverride ?? service.fromPrice;
   const bands = service.travellerPricing?.length ? service.travellerPricing : defaultTravellerPricingBands(service.fromPrice);
@@ -93,47 +117,111 @@ export function ServiceBookingForm({
         : travellers.length;
   const remaining = selected ? Math.max(0, selected.capacity - selected.reserved) : 0;
   const inventoryExceeded = service.serviceType !== "insurance" && Boolean(selected) && inventoryUnits > remaining;
+  const today = new Date().toISOString().slice(0, 10);
+  const insuranceMaxEndDate = service.serviceType === "insurance" && service.maxTripDays && tripStartDate
+    ? addDaysIso(tripStartDate, service.maxTripDays - 1)
+    : undefined;
   const insuranceComplete = service.serviceType !== "insurance" || Boolean(destination.trim() && tripStartDate && tripEndDate && tripEndDate >= tripStartDate);
-  const canSubmit = complete && !leadMinor && !inventoryExceeded && insuranceComplete && (service.serviceType === "insurance" || Boolean(selected));
+  const submitUnavailable = service.serviceType !== "insurance" && !selected;
+  const actionErrors: Record<string, string> = {
+    "invalid-service": t("This service is no longer available.", "Este servicio ya no está disponible."),
+    "invalid-travellers": t("Review the details for every traveller.", "Revisa los datos de todos los viajeros."),
+    "lead-must-be-adult": t("The lead traveller must be an adult.", "El viajero principal debe ser mayor de edad."),
+    "minor-guardian-required": t("Every minor must be linked to a responsible adult on this booking.", "Todos los menores deben estar vinculados a un adulto responsable de esta reserva."),
+    "pricing-unavailable": t("A valid price could not be calculated for one of the travellers.", "No se ha podido calcular una tarifa válida para uno de los viajeros."),
+    "invalid-availability": t("The selected date or time is no longer available. Choose another slot.", "La fecha u horario seleccionado ya no está disponible. Elige otro horario."),
+    "insufficient-space": t("There is no longer enough availability for this selection.", "Ya no queda disponibilidad suficiente para esta selección."),
+    "insurance-destination": t("Enter a valid destination for the insured trip.", "Introduce un destino válido para el viaje asegurado."),
+    "insurance-dates": t("Check the insured trip start and end dates.", "Revisa las fechas de inicio y fin del viaje asegurado."),
+    "insurance-start-past": t("The insurance start date cannot be in the past.", "La fecha de inicio del seguro no puede estar en el pasado."),
+    "insurance-duration": service.serviceType === "insurance" && service.maxTripDays
+      ? t(`This policy accepts trips of up to ${service.maxTripDays} days.`, `Esta póliza admite viajes de hasta ${service.maxTripDays} días.`)
+      : t("The selected trip duration is not eligible for this policy.", "La duración seleccionada no es válida para esta póliza."),
+    "insurance-amount": t("Check the insured trip amount.", "Revisa el importe del viaje asegurado."),
+    "invalid-related-reservation": t("The selected Kairoseth trip could not be linked to this booking.", "No se ha podido vincular el viaje Kairoseth seleccionado."),
+    "server-error": t("We could not save the reservation. Your form data has been kept; please try again.", "No se ha podido guardar la reserva. Tus datos se han conservado; inténtalo de nuevo.")
+  };
 
   function update(id: string, patch: Partial<TravellerRow>) {
     setTravellers((current) => current.map((row) => row.id === id ? { ...row, ...patch } : row));
   }
+
   function addTraveller() {
     if (travellers.length >= 8) return;
     const id = `traveller-${nextId.current++}`;
     setTravellers((current) => [...current, blank(id)]);
   }
+
   function removeTraveller(id: string) {
     if (travellers.length <= 1 || id === travellers[0]?.id) return;
     setTravellers((current) => current.filter((row) => row.id !== id).map((row) => row.guardianTravellerId === id ? { ...row, guardianTravellerId: "", guardianRelationship: "" } : row));
   }
 
+  function changeServiceDate(value: string) {
+    setSelectedDate(value);
+    const firstSlot = availability.find((slot) => slot.date === value);
+    setSelectedAvailabilityId(firstSlot?.id ?? "");
+  }
+
   return (
-    <form action={createServiceReservationAction} className={styles.form}>
+    <form action={formAction} className={styles.form}>
       <input type="hidden" name="serviceType" value={service.serviceType} />
       <input type="hidden" name="serviceSlug" value={service.slug} />
 
+      {actionState.error && actionErrors[actionState.error] ? (
+        <div className={styles.error} role="alert">{actionErrors[actionState.error]}</div>
+      ) : null}
+
       {service.serviceType !== "insurance" ? (
-        <label className={styles.field}>
-          <span>{t("Date and time", "Fecha y horario")}</span>
-          <select name="availabilityId" required value={selectedAvailabilityId} onChange={(event) => setSelectedAvailabilityId(event.target.value)}>
-            {availability.map((slot) => <option value={slot.id} key={slot.id}>{dateLabel(slot.date, locale)} · {slot.startTime}{slot.endTime ? `–${slot.endTime}` : ""} · {Math.max(0, slot.capacity - slot.reserved)} {slot.inventoryMode === "units" ? t("units", "unidades") : t("spaces", "plazas")}</option>)}
-          </select>
-        </label>
+        <div className={styles.travellerGrid}>
+          <label className={styles.field}>
+            <span>{t("Date *", "Fecha *")}</span>
+            <input
+              type="date"
+              value={selectedDate}
+              min={availableDates[0]}
+              max={availableDates[availableDates.length - 1]}
+              list={`service-dates-${service.id}`}
+              onChange={(event) => changeServiceDate(event.target.value)}
+              required
+            />
+            <datalist id={`service-dates-${service.id}`}>
+              {availableDates.map((date) => <option key={date} value={date}>{dateLabel(date, locale)}</option>)}
+            </datalist>
+            <small>{t("Open the calendar and choose a date with published availability.", "Abre el calendario y elige una fecha con disponibilidad publicada.")}</small>
+          </label>
+          <label className={styles.field}>
+            <span>{t("Time *", "Horario *")}</span>
+            <select
+              name="availabilityId"
+              required
+              value={selectedAvailabilityId}
+              onChange={(event) => setSelectedAvailabilityId(event.target.value)}
+              disabled={!slotsForDate.length}
+            >
+              {!slotsForDate.length ? <option value="">{t("No times on this date", "No hay horarios en esta fecha")}</option> : null}
+              {slotsForDate.map((slot) => (
+                <option value={slot.id} key={slot.id}>
+                  {slot.startTime}{slot.endTime ? `–${slot.endTime}` : ""} · {Math.max(0, slot.capacity - slot.reserved)} {slot.inventoryMode === "units" ? t("units", "unidades") : t("spaces", "plazas")}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       ) : (
         <div className={styles.travellerGrid}>
-          <label className={styles.field}><span>{t("Destination *", "Destino *")}</span><input name="destination" value={destination} onChange={(event) => setDestination(event.target.value)} required /></label>
-          <label className={styles.field}><span>{t("Trip start *", "Inicio del viaje *")}</span><input type="date" name="tripStartDate" value={tripStartDate} onChange={(event) => setTripStartDate(event.target.value)} required /></label>
-          <label className={styles.field}><span>{t("Trip end *", "Fin del viaje *")}</span><input type="date" name="tripEndDate" value={tripEndDate} onChange={(event) => setTripEndDate(event.target.value)} required /></label>
+          <label className={styles.field}><span>{t("Destination *", "Destino *")}</span><input name="destination" value={destination} onChange={(event) => setDestination(event.target.value)} maxLength={120} required /></label>
+          <label className={styles.field}><span>{t("Trip start *", "Inicio del viaje *")}</span><input type="date" name="tripStartDate" min={today} value={tripStartDate} onChange={(event) => { setTripStartDate(event.target.value); if (tripEndDate && tripEndDate < event.target.value) setTripEndDate(""); }} required /></label>
+          <label className={styles.field}><span>{t("Trip end *", "Fin del viaje *")}</span><input type="date" name="tripEndDate" min={tripStartDate || today} max={insuranceMaxEndDate} value={tripEndDate} onChange={(event) => setTripEndDate(event.target.value)} required /></label>
           <label className={styles.field}><span>{t("Insured trip amount", "Importe del viaje asegurado")}</span><input type="number" min="0" step="0.01" name="insuredAmount" value={insuredAmount} onChange={(event) => setInsuredAmount(event.target.value)} /></label>
+          {service.maxTripDays ? <small>{t(`Maximum covered trip: ${service.maxTripDays} days.`, `Duración máxima cubierta: ${service.maxTripDays} días.`)}</small> : null}
         </div>
       )}
 
       {relatedReservations.length ? (
         <label className={styles.field}>
           <span>{t("Link to one of my Kairoseth trips (optional)", "Vincular con uno de mis viajes Kairoseth (opcional)")}</span>
-          <select name="relatedReservationId" defaultValue="">
+          <select name="relatedReservationId" value={relatedReservationId} onChange={(event) => setRelatedReservationId(event.target.value)}>
             <option value="">{t("No linked trip / externally booked trip", "Sin viaje vinculado / viaje reservado fuera")}</option>
             {relatedReservations.map((reservation) => <option key={reservation.id} value={reservation.id}>{reservation.label}</option>)}
           </select>
@@ -159,9 +247,9 @@ export function ServiceBookingForm({
                 {index > 0 ? <button type="button" className={styles.removeButton} onClick={() => removeTraveller(traveller.id)}>{t("Remove", "Eliminar")}</button> : null}
               </div>
               <div className={styles.travellerGrid}>
-                <label className={styles.field}><span>{t("First name *", "Nombre *")}</span><input name={`travellerFirstName__${traveller.id}`} value={traveller.firstName} onChange={(event) => update(traveller.id, { firstName: event.target.value })} required /></label>
-                <label className={styles.field}><span>{t("Last name *", "Apellidos *")}</span><input name={`travellerLastName__${traveller.id}`} value={traveller.lastName} onChange={(event) => update(traveller.id, { lastName: event.target.value })} required /></label>
-                <label className={styles.field}><span>{t("Date of birth *", "Fecha de nacimiento *")}</span><input type="date" name={`travellerDateOfBirth__${traveller.id}`} value={traveller.dateOfBirth} onChange={(event) => update(traveller.id, { dateOfBirth: event.target.value, guardianTravellerId: "", guardianRelationship: "" })} required /></label>
+                <label className={styles.field}><span>{t("First name *", "Nombre *")}</span><input name={`travellerFirstName__${traveller.id}`} value={traveller.firstName} onChange={(event) => update(traveller.id, { firstName: event.target.value })} autoComplete="given-name" required /></label>
+                <label className={styles.field}><span>{t("Last name *", "Apellidos *")}</span><input name={`travellerLastName__${traveller.id}`} value={traveller.lastName} onChange={(event) => update(traveller.id, { lastName: event.target.value })} autoComplete="family-name" required /></label>
+                <label className={styles.field}><span>{t("Date of birth *", "Fecha de nacimiento *")}</span><input type="date" name={`travellerDateOfBirth__${traveller.id}`} max={referenceDate || today} value={traveller.dateOfBirth} onChange={(event) => update(traveller.id, { dateOfBirth: event.target.value, guardianTravellerId: "", guardianRelationship: "" })} required /></label>
                 <label className={styles.field}><span>{t("Nationality *", "Nacionalidad *")}</span><input name={`travellerNationality__${traveller.id}`} value={traveller.nationality} onChange={(event) => update(traveller.id, { nationality: event.target.value })} required /></label>
               </div>
               {minor ? (
@@ -179,13 +267,19 @@ export function ServiceBookingForm({
         })}
       </div>
 
+      {!complete ? <p className={styles.muted}>{t("Complete the required traveller details before confirming.", "Completa los datos obligatorios de los viajeros antes de confirmar.")}</p> : null}
+      {!insuranceComplete && service.serviceType === "insurance" ? <div className={styles.error}>{t("Choose valid insured trip dates and destination.", "Elige un destino y unas fechas válidas para el viaje asegurado.")}</div> : null}
+      {service.serviceType !== "insurance" && selectedDate && !slotsForDate.length ? <div className={styles.error}>{t("There are no published times for this date. Choose another date in the calendar.", "No hay horarios publicados para esta fecha. Elige otra fecha en el calendario.")}</div> : null}
       {inventoryExceeded ? <div className={styles.error}>{t("There is not enough availability for this booking.", "No queda disponibilidad suficiente para esta reserva.")}</div> : null}
+
       <div className={styles.priceSummary}>
         <div><span>{t("Travellers", "Viajeros")}</span><strong>{travellers.length}</strong></div>
         {service.pricingMode === "per-unit" ? <div><span>{t("Units", "Unidades")}</span><strong>{quantity}</strong></div> : null}
         <div className={styles.totalRow}><span>{t("Service total", "Total del servicio")}</span><strong>{money(total, service.currency, locale)}</strong></div>
       </div>
-      <button className="button button-primary" type="submit" disabled={!canSubmit}>{t("Create service reservation", "Crear reserva del servicio")}</button>
+      <button className="button button-primary" type="submit" disabled={pending || inventoryExceeded || submitUnavailable}>
+        {pending ? t("Saving reservation…", "Guardando reserva…") : t("Create service reservation", "Crear reserva del servicio")}
+      </button>
     </form>
   );
 }
