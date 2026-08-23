@@ -1,9 +1,10 @@
 import type { Db } from "mongodb";
 import type { Reservation } from "@/domain/booking/types";
-import type { OperationsAuditEvent } from "@/domain/operations/types";
+import type { OperationsAuditEvent, ReservationAmendment } from "@/domain/operations/types";
 
 export const travelReservationCollectionName = "travel_reservations";
 export const travelOperationsAuditCollectionName = "travel_operations_audit";
+export const travelReservationAmendmentCollectionName = "travel_reservation_amendments";
 
 export type StoredReservation = Reservation & {
   createdAt: string;
@@ -11,10 +12,12 @@ export type StoredReservation = Reservation & {
 };
 
 export type StoredOperationsAuditEvent = OperationsAuditEvent;
+export type StoredReservationAmendment = ReservationAmendment;
 
 export async function ensureMongoReservationIndexes(database: Db) {
   const reservations = database.collection<StoredReservation>(travelReservationCollectionName);
   const audit = database.collection<StoredOperationsAuditEvent>(travelOperationsAuditCollectionName);
+  const amendments = database.collection<StoredReservationAmendment>(travelReservationAmendmentCollectionName);
 
   await Promise.all([
     reservations.createIndex({ id: 1 }, { unique: true, name: "travel_reservation_id_unique" }),
@@ -38,6 +41,18 @@ export async function ensureMongoReservationIndexes(database: Db) {
     audit.createIndex(
       { occurredAt: -1 },
       { name: "travel_operations_audit_occurred" }
+    ),
+    amendments.createIndex(
+      { id: 1 },
+      { unique: true, name: "travel_reservation_amendment_id_unique" }
+    ),
+    amendments.createIndex(
+      { reservationId: 1, occurredAt: -1 },
+      { name: "travel_reservation_amendment_reservation" }
+    ),
+    amendments.createIndex(
+      { travellerId: 1, occurredAt: -1 },
+      { name: "travel_reservation_amendment_traveller" }
     )
   ]);
 }
