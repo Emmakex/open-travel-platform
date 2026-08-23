@@ -1,6 +1,27 @@
 export type ReservationStatus = "pending" | "confirmed" | "cancelled";
 export type TripDepartureStatus = "open" | "closed" | "sold-out";
 export type GuardianRelationship = "parent" | "legal-guardian" | "other";
+export type PaymentTermsMode = "full" | "deposit" | "installments";
+export type DepositCalculationType = "fixed" | "percentage";
+
+export interface ReservationPaymentInstallment {
+  id: string;
+  label: string;
+  labelEs?: string;
+  amount: number;
+  dueDate?: string;
+}
+
+export interface ReservationPaymentTerms {
+  mode: PaymentTermsMode;
+  totalAmount: number;
+  currency: string;
+  depositType?: DepositCalculationType;
+  depositValue?: number;
+  installments: ReservationPaymentInstallment[];
+  configuredAt: string;
+  configuredBy?: string;
+}
 
 export interface TripDeparture {
   id: string;
@@ -59,6 +80,7 @@ export interface Reservation {
   tripTitle?: string;
   departureDate?: string;
   returnDate?: string;
+  paymentTerms?: ReservationPaymentTerms;
 }
 
 export interface CreateReservationInput {
