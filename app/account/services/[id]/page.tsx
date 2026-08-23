@@ -12,6 +12,7 @@ import {
 import { getPaymentRepository } from "@/lib/payment-repository";
 import { requireCustomerIdentity } from "@/lib/require-customer-identity";
 import { getServiceReservationForCustomer } from "@/lib/service-reservations";
+import { buildTravellerDataCompletion, listTravellerDataForCustomer } from "@/lib/traveller-data";
 
 function formatDate(value: string, locale: "en" | "es") {
   return new Intl.DateTimeFormat(locale === "es" ? "es-ES" : "en-GB", {
@@ -66,11 +67,31 @@ export default async function AccountServiceReservationPage({
   const canPayOnline = reservation.status !== "cancelled" &&
     paymentSummary.outstandingAmount > 0 &&
     paymentSummary.pendingPaymentAmount <= 0;
-  const needsTravellerData = Boolean(
+  const travellerRequirementsActive = Boolean(
     reservation.travellerRequirements &&
     reservation.travellerRequirements.preset !== "none" &&
     reservation.travellers.length
   );
+  const storedTravellerData = travellerRequirementsActive
+    ? await listTravellerDataForCustomer({
+        identityId: identity.id,
+        targetType: "service",
+        reservationId: reservation.id
+      })
+    : new Map();
+  const travellerDataCompletion = travellerRequirementsActive
+    ? reservation.travellers.map((traveller) =>
+        buildTravellerDataCompletion(
+          reservation.travellerRequirements,
+          traveller,
+          storedTravellerData.get(traveller.id)
+        )
+      )
+    : [];
+  const travellerDataCompletedCount = travellerDataCompletion.filter((item) => item.complete).length;
+  const travellerDataComplete = travellerRequirementsActive &&
+    travellerDataCompletion.length === reservation.travellers.length &&
+    travellerDataCompletedCount === reservation.travellers.length;
 
   return (
     <main className="section">
@@ -95,25 +116,47 @@ export default async function AccountServiceReservationPage({
             {reservation.relatedReservationId ? <div><dt>{t("Linked trip reservation", "Reserva de viaje vinculada")}</dt><dd><Link className="text-link" href={`/account/reservations/${reservation.relatedReservationId}`}>{reservation.relatedReservationId}</Link></dd></div> : null}
           </dl>
 
-          <h2>{t("Travellers", "Viajeros")}</h2>
-          <dl className={styles.profileList}>
-            {reservation.travellers.map((traveller) => <div key={traveller.id}><dt>{traveller.firstName} {traveller.lastName}{traveller.isLead ? ` · ${t("lead", "principal")}` : ""}</dt><dd>{traveller.ageAtDeparture} {t("years", "años")} · {locale === "es" ? traveller.pricingLabelEs || traveller.pricingLabel : traveller.pricingLabel} · {formatCurrency(traveller.unitPrice, reservation.currency, locale)}</dd></div>)}
-          </dl>
-
-          {needsTravellerData ? (
+          {travellerRequirementsActive ? (
             <div className={styles.notice}>
-              <strong>{t("Post-purchase traveller information required", "Falta completar información de viajeros")}</strong><br />
-              {t(
-                "This service requires additional identity or travel information after booking.",
-                "Este servicio requiere datos adicionales de identidad o viaje después de realizar la reserva."
-              )}
+              <strong>
+                {travellerDataComplete
+                  ? t("✓ Traveller information complete", "✓ Datos de viajeros completos")
+                  : t("Action required · traveller information", "Acción pendiente · datos de viajeros")}
+              </strong><br />
+              {travellerDataComplete
+                ? t(
+                    "All required post-purchase traveller information has been completed for this service. You can review it while customer editing remains open.",
+                    "Ya se ha completado la información post-compra necesaria para todos los viajeros de este servicio. Puedes revisarla mientras el plazo de edición siga abierto."
+                  )
+                : t(
+                    `${travellerDataCompletedCount}/${reservation.travellers.length} travellers complete. Finish the pending details required to operate this service.`,
+                    `${travellerDataCompletedCount}/${reservation.travellers.length} viajeros completos. Completa los datos pendientes necesarios para gestionar este servicio.`
+                  )}
             </div>
           ) : null}
 
+          <h2>{t("Travellers", "Viajeros")}</h2>
+          <dl className={styles.profileList}>
+            {reservation.travellers.map((traveller) => {
+              const completion = travellerDataCompletion.find((item) => item.travellerId === traveller.id);
+              return (
+                <div key={traveller.id}>
+                  <dt>{traveller.firstName} {traveller.lastName}{traveller.isLead ? ` · ${t("lead", "principal")}` : ""}</dt>
+                  <dd>
+                    {travellerRequirementsActive ? <><strong>{t("Post-purchase data", "Datos post-compra")}: {completion?.complete ? t("complete", "completos") : t("pending", "pendientes")}</strong><br /></> : null}
+                    {traveller.ageAtDeparture} {t("years", "años")} · {locale === "es" ? traveller.pricingLabelEs || traveller.pricingLabel : traveller.pricingLabel} · {formatCurrency(traveller.unitPrice, reservation.currency, locale)}
+                  </dd>
+                </div>
+              );
+            })}
+          </dl>
+
           <div className={styles.actions}>
-            {needsTravellerData ? (
-              <Link className="button button-primary" href={`/account/traveller-data/service/${encodeURIComponent(reservation.id)}`}>
-                {t("Complete traveller information", "Completar datos de viajeros")}
+            {travellerRequirementsActive ? (
+              <Link className={travellerDataComplete ? "button button-secondary" : "button button-primary"} href={`/account/traveller-data/service/${encodeURIComponent(reservation.id)}`}>
+                {travellerDataComplete
+                  ? t("Review traveller information", "Revisar datos de viajeros")
+                  : t("Complete traveller information", "Completar datos de viajeros")}
               </Link>
             ) : null}
             {canCustomerCancel ? <form action={cancelServiceReservationAction}><input type="hidden" name="reservationId" value={reservation.id} /><button className="button button-secondary" type="submit">{t("Cancel reservation", "Cancelar reserva")}</button></form> : null}
