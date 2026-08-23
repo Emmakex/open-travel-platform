@@ -59,9 +59,9 @@ export default async function ServiceBookingPage({
   };
 
   return (
-    <main className="section">
-      <div className={`container ${styles.grid}`}>
-        <section className={styles.panel}>
+    <main className={`section ${styles.bookingPage}`}>
+      <div className={`container ${styles.grid} ${styles.bookingGrid}`}>
+        <section className={`${styles.panel} ${styles.bookingMainPanel}`}>
           <div className="eyebrow">{serviceTypeLabel(service.serviceType, locale)} · {locale === "es" ? "Reserva" : "Booking"}</div>
           <h1>{item.title}</h1>
           <p className={styles.lead}>{locale === "es" ? "Configura este servicio de forma independiente. Puedes vincularlo a un viaje Kairoseth o contratarlo para un viaje reservado en otra plataforma." : "Book this service independently. Link it to a Kairoseth trip or use it for a trip booked elsewhere."}</p>
@@ -89,7 +89,7 @@ export default async function ServiceBookingPage({
           <p><Link className="text-link" href={`${serviceBasePath(service.serviceType)}/${service.slug}`}>{locale === "es" ? "← Volver al servicio" : "← Back to service"}</Link></p>
         </section>
 
-        <aside className={styles.panel}>
+        <aside className={`${styles.panel} ${styles.bookingSummaryPanel}`}>
           <div className="eyebrow">{locale === "es" ? "Resumen" : "Summary"}</div>
           <h2>{item.title}</h2>
           <p>{item.summary}</p>
