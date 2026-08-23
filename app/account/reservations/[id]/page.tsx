@@ -13,6 +13,7 @@ import {
   paymentTransactionTypeLabel
 } from "@/lib/payment-i18n";
 import { getPaymentRepository } from "@/lib/payment-repository";
+import { deriveReservationPaymentSchedule } from "@/lib/payment-terms";
 import { requireCustomerIdentity } from "@/lib/require-customer-identity";
 import { getTravelRepository } from "@/lib/travel-repository";
 import type { TravelLocale } from "@/domain/travel/types";
@@ -86,12 +87,13 @@ export default async function ReservationDetailPage({
       ? "Esta reserva está almacenada de forma persistente en Kairoseth Travel."
       : "This reservation is stored persistently in Kairoseth Travel."
     : copy.demoNote;
+  const paymentSchedule = deriveReservationPaymentSchedule(reservation, paymentSummary);
   const canCustomerCancel = reservation.status === "pending" &&
     bookingConfig.writesEnabled &&
     paymentSummary.netPaidAmount <= 0 &&
     paymentSummary.pendingPaymentAmount <= 0;
   const canPayOnline = reservation.status !== "cancelled" &&
-    paymentSummary.outstandingAmount > 0 &&
+    paymentSchedule.nextPaymentAmount > 0 &&
     paymentSummary.pendingPaymentAmount <= 0;
 
   return (
@@ -179,8 +181,39 @@ export default async function ReservationDetailPage({
             <div><dt>{locale === "es" ? "Total de la reserva" : "Reservation total"}</dt><dd>{formatMoney(paymentSummary.totalAmount, paymentSummary.currency, locale)}</dd></div>
             <div><dt>{locale === "es" ? "Pagado" : "Paid"}</dt><dd>{formatMoney(paymentSummary.paidAmount, paymentSummary.currency, locale)}</dd></div>
             <div><dt>{locale === "es" ? "Reembolsado" : "Refunded"}</dt><dd>{formatMoney(paymentSummary.refundedAmount, paymentSummary.currency, locale)}</dd></div>
-            <div><dt>{locale === "es" ? "Pendiente" : "Outstanding"}</dt><dd>{formatMoney(paymentSummary.outstandingAmount, paymentSummary.currency, locale)}</dd></div>
+            <div><dt>{locale === "es" ? "Pendiente total" : "Total outstanding"}</dt><dd>{formatMoney(paymentSummary.outstandingAmount, paymentSummary.currency, locale)}</dd></div>
           </dl>
+
+          <h3>{locale === "es" ? "Calendario de pagos" : "Payment schedule"}</h3>
+          {paymentSchedule.outdated ? (
+            <div className={styles.notice}>
+              {locale === "es"
+                ? "Las condiciones de pago necesitan ser revisadas por el equipo. Mientras tanto se muestra el saldo completo pendiente."
+                : "The payment terms need staff review. Until then the full outstanding balance is shown."}
+            </div>
+          ) : null}
+          <div className={styles.profileList}>
+            {paymentSchedule.installments.map((installment) => (
+              <div key={installment.id}>
+                <dt>{locale === "es" ? (installment.labelEs || installment.label) : installment.label}</dt>
+                <dd>
+                  {formatMoney(installment.amount, paymentSummary.currency, locale)}
+                  {installment.dueDate ? ` · ${locale === "es" ? "vence" : "due"} ${formatDate(installment.dueDate, locale)}` : ""}
+                  <br />
+                  {installment.state === "paid"
+                    ? (locale === "es" ? "Pagada" : "Paid")
+                    : installment.state === "partially_paid"
+                      ? (locale === "es" ? "Parcialmente pagada" : "Partially paid")
+                      : installment.state === "overdue"
+                        ? (locale === "es" ? "Vencida" : "Overdue")
+                        : installment.state === "due"
+                          ? (locale === "es" ? "Vence ahora" : "Due now")
+                          : (locale === "es" ? "Próxima" : "Upcoming")}
+                  {installment.outstandingAmount > 0 ? ` · ${locale === "es" ? "pendiente" : "remaining"} ${formatMoney(installment.outstandingAmount, paymentSummary.currency, locale)}` : ""}
+                </dd>
+              </div>
+            ))}
+          </div>
 
           {paymentSummary.pendingPaymentAmount > 0 ? (
             <div className={styles.notice}>
@@ -191,7 +224,9 @@ export default async function ReservationDetailPage({
           ) : canPayOnline ? (
             <div className={styles.actions}>
               <Link className="button button-primary" href={`/account/checkout/trip/${encodeURIComponent(reservation.id)}`}>
-                {locale === "es" ? "Pagar ahora" : "Pay now"}
+                {locale === "es"
+                  ? `Pagar siguiente cuota · ${formatMoney(paymentSchedule.nextPaymentAmount, paymentSummary.currency, locale)}`
+                  : `Pay next installment · ${formatMoney(paymentSchedule.nextPaymentAmount, paymentSummary.currency, locale)}`}
               </Link>
             </div>
           ) : null}
