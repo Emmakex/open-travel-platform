@@ -4,10 +4,12 @@ import { redirect } from "next/navigation";
 import type { GuardianRelationship } from "@/domain/booking/types";
 import type { TravelServiceType } from "@/domain/services/types";
 import { getBookingRepository } from "@/lib/booking-repository";
+import { getPaymentRepository } from "@/lib/payment-repository";
 import { requireCustomerIdentity } from "@/lib/require-customer-identity";
 import {
   cancelServiceReservationForCustomer,
-  createServiceReservation
+  createServiceReservation,
+  getServiceReservationForCustomer
 } from "@/lib/service-reservations";
 import { listPublishedServiceAvailability } from "@/lib/service-availability";
 import { priceServiceComposition } from "@/lib/service-booking-pricing";
@@ -191,6 +193,19 @@ export async function cancelServiceReservationAction(formData: FormData) {
   const identity = await requireCustomerIdentity();
   const reservationId = value(formData, "reservationId");
   if (!reservationId) redirect("/account/services");
+
+  const current = await getServiceReservationForCustomer(identity.id, reservationId);
+  if (!current) redirect("/account/services");
+  const payment = await getPaymentRepository().getTargetSummary({
+    id: current.id,
+    totalPrice: current.totalPrice,
+    currency: current.currency,
+    targetType: "service"
+  });
+  if (payment.netPaidAmount > 0 || payment.pendingPaymentAmount > 0) {
+    redirect(`/account/services/${encodeURIComponent(reservationId)}?error=payment-active`);
+  }
+
   const changed = await cancelServiceReservationForCustomer(identity.id, reservationId);
   if (!changed) redirect(`/account/services/${encodeURIComponent(reservationId)}?error=not-cancellable`);
   redirect(`/account/services/${encodeURIComponent(reservationId)}?updated=cancelled`);
