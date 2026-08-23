@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { updateReservationStatusAction } from "@/app/operator/actions";
 import styles from "@/app/operator/operator.module.css";
+import { PaymentTermsEditor } from "@/components/operator/payment-terms-editor";
 import { ReservationPaymentPanel } from "@/components/operator/reservation-payment-panel";
 import { ReservationTravellers } from "@/components/operator/reservation-travellers";
 import { getLocale } from "@/lib/get-locale";
@@ -35,12 +36,14 @@ export default async function OperatorReservationDetailPage({
     error?: string;
     paymentUpdated?: string;
     paymentError?: string;
+    termsUpdated?: string;
+    termsError?: string;
   }>;
 }) {
   const locale = await getLocale();
   const staff = await requireOperationsIdentity();
   const { id } = await params;
-  const { updated, error, paymentUpdated, paymentError } = await searchParams;
+  const { updated, error, paymentUpdated, paymentError, termsUpdated, termsError } = await searchParams;
   const operations = getOperationsRepository();
   const [reservation, trips, audit] = await Promise.all([
     operations.getReservation(id),
@@ -138,6 +141,14 @@ export default async function OperatorReservationDetailPage({
         </div>
 
         <ReservationTravellers reservation={reservation} locale={locale} />
+
+        <PaymentTermsEditor
+          reservation={reservation}
+          summary={paymentSummary}
+          locale={locale}
+          termsUpdated={termsUpdated}
+          termsError={termsError}
+        />
 
         <ReservationPaymentPanel
           reservation={reservation}
