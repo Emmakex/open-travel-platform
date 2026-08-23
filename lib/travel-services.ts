@@ -35,9 +35,24 @@ async function ensureServiceIndexes(type: TravelServiceType) {
   ]);
 }
 
+function normalizeStoredService(service: TravelService): TravelService {
+  if (!service.travellerPricing?.length) return service;
+
+  return {
+    ...service,
+    travellerPricing: service.travellerPricing.map((band) => ({
+      ...band,
+      // Older BSON documents may contain null for optional fields. The domain
+      // contract uses undefined, so normalize them before pricing/rendering.
+      maxAge: band.maxAge == null ? undefined : band.maxAge,
+      labelEs: band.labelEs ?? undefined
+    }))
+  } as TravelService;
+}
+
 function stripStoredMetadata(document: WithId<StoredTravelService>): TravelService {
   const { _id: _ignored, createdAt: _createdAt, updatedAt: _updatedAt, ...service } = document;
-  return service as TravelService;
+  return normalizeStoredService(service as TravelService);
 }
 
 export function serviceBasePath(type: TravelServiceType) {
