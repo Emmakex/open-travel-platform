@@ -2,29 +2,20 @@ import Link from "next/link";
 import { seedMongoCatalogueAction } from "@/app/operator/catalogue/actions";
 import styles from "@/app/operator/operator.module.css";
 import type { TravelServiceType } from "@/domain/services/types";
+import { destinationPublishingIssues, servicePublishingIssues, tripPublishingIssues } from "@/lib/catalogue-content-quality";
 import { getLocale } from "@/lib/get-locale";
-import {
-  getMongoCatalogueStatus,
-  listMongoDestinationsForAdmin,
-  listMongoTripsForAdmin
-} from "@/lib/mongo-travel-admin";
+import { getMongoCatalogueStatus, listMongoDestinationsForAdmin, listMongoTripsForAdmin } from "@/lib/mongo-travel-admin";
 import { diagnoseMongoConnectionError, isMongoConfigured } from "@/lib/mongodb";
 import { publicationStatusLabel, tr } from "@/lib/operator-i18n";
 import { requireOperationsIdentity } from "@/lib/require-operations-identity";
-import {
-  listTravelServicesForAdmin,
-  servicePublicPath,
-  serviceTypePluralLabel
-} from "@/lib/travel-services";
+import { listTravelServicesForAdmin, servicePublicPath, serviceTypePluralLabel } from "@/lib/travel-services";
 
 export const metadata = {
   title: "Catalogue | Kairoseth Travel",
   description: "Protected Kairoseth Travel catalogue controls."
 };
 
-export default async function OperatorCataloguePage({
-  searchParams
-}: {
+export default async function OperatorCataloguePage({ searchParams }: {
   searchParams: Promise<{ seeded?: string; destinations?: string; trips?: string; error?: string; updated?: string }>;
 }) {
   const locale = await getLocale();
@@ -54,9 +45,13 @@ export default async function OperatorCataloguePage({
   }
 
   const catalogueReady = configured && Boolean(status?.configured) && !storageError;
-  const allItems = [...destinations, ...trips, ...services];
-  const draftItems = allItems.filter((item) => (item.publicationStatus ?? "published") === "draft").length;
+  const contentReviewCount = catalogueReady
+    ? destinations.filter((item) => destinationPublishingIssues(item).length).length
+      + trips.filter((item) => tripPublishingIssues(item).length).length
+      + services.filter((item) => servicePublishingIssues(item).length).length
+    : 0;
   const serviceTypes: TravelServiceType[] = ["activity", "transport", "insurance"];
+  const reviewLabel = tr(locale, "Needs content review", "Revisar contenido");
 
   return (
     <main className="section">
@@ -64,44 +59,19 @@ export default async function OperatorCataloguePage({
         <section className={styles.panel}>
           <div className="eyebrow">{tr(locale, "Catalogue management", "Gestión del catálogo")}</div>
           <h1>{tr(locale, "Travel catalogue", "Catálogo de viajes")}</h1>
-          <p className={styles.lead}>
-            {tr(
-              locale,
-              "Manage destinations, trips and independent services. Draft records remain hidden until they are published.",
-              "Gestiona destinos, viajes y servicios independientes. Los borradores permanecen ocultos hasta que se publican."
-            )}
-          </p>
+          <p className={styles.lead}>{tr(locale, "Manage destinations, trips and services. Items that need editorial work are highlighted before they are published or updated.", "Gestiona destinos, viajes y servicios. Los elementos que necesitan trabajo editorial quedan señalados antes de publicarlos o actualizarlos.")}</p>
 
           <div className={styles.metrics}>
             <div className={styles.metric}><strong>{catalogueReady ? destinations.length : "—"}</strong><span>{tr(locale, "Destinations", "Destinos")}</span></div>
             <div className={styles.metric}><strong>{catalogueReady ? trips.length : "—"}</strong><span>{tr(locale, "Trips", "Viajes")}</span></div>
             <div className={styles.metric}><strong>{catalogueReady ? services.length : "—"}</strong><span>{tr(locale, "Services", "Servicios")}</span></div>
-            <div className={styles.metric}><strong>{catalogueReady ? draftItems : "—"}</strong><span>{tr(locale, "Drafts", "Borradores")}</span></div>
+            <div className={styles.metric}><strong>{catalogueReady ? contentReviewCount : "—"}</strong><span>{tr(locale, "Need review", "Revisar")}</span></div>
           </div>
 
-          {!catalogueReady ? (
-            <div className={styles.notice}>
-              <strong>{tr(locale, "Catalogue temporarily unavailable.", "Catálogo temporalmente no disponible.")}</strong>{" "}
-              {tr(locale, "Please contact an administrator or review the server diagnostics.", "Contacta con un administrador o revisa los diagnósticos del servidor.")}
-            </div>
-          ) : null}
-
-          {params.seeded === "1" ? (
-            <div className={styles.notice}>
-              {tr(locale, "Initial catalogue import completed:", "Importación del catálogo inicial completada:")} {params.destinations ?? "0"} {tr(locale, "destinations and", "destinos y")} {params.trips ?? "0"} {tr(locale, "trips added. Existing records were unchanged.", "viajes añadidos. Los registros existentes no se modificaron.")}
-            </div>
-          ) : null}
-
-          {params.updated ? (
-            <div className={styles.notice}>
-              <strong>{tr(locale, "Saved.", "Guardado.")}</strong>{" "}
-              {tr(locale, "The catalogue record was saved successfully.", "El registro del catálogo se guardó correctamente.")}
-            </div>
-          ) : null}
-
-          {params.error === "mongodb-seed" ? (
-            <div className={styles.notice}>{tr(locale, "The initial catalogue import could not be completed. Review the server logs.", "No se pudo completar la importación inicial del catálogo. Revisa los logs del servidor.")}</div>
-          ) : null}
+          {!catalogueReady ? <div className={styles.notice}><strong>{tr(locale, "Catalogue unavailable.", "Catálogo no disponible.")}</strong>{" "}{tr(locale, "Please contact an administrator and try again later.", "Contacta con un administrador e inténtalo de nuevo más tarde.")}</div> : null}
+          {params.seeded === "1" ? <div className={styles.notice}>{tr(locale, "Initial catalogue import completed:", "Importación del catálogo inicial completada:")} {params.destinations ?? "0"} {tr(locale, "destinations and", "destinos y")} {params.trips ?? "0"} {tr(locale, "trips added. Existing records were unchanged.", "viajes añadidos. Los registros existentes no se modificaron.")}</div> : null}
+          {params.updated ? <div className={styles.notice}><strong>{tr(locale, "Saved.", "Guardado.")}</strong>{" "}{tr(locale, "The catalogue record was saved successfully.", "El registro del catálogo se guardó correctamente.")}</div> : null}
+          {params.error === "mongodb-seed" ? <div className={styles.notice}>{tr(locale, "The initial catalogue import could not be completed. Try again or contact an administrator.", "No se pudo completar la importación inicial del catálogo. Inténtalo de nuevo o contacta con un administrador.")}</div> : null}
 
           {catalogueReady ? (
             <div className={styles.toolbar}>
@@ -109,11 +79,9 @@ export default async function OperatorCataloguePage({
               <Link className="button button-primary" href="/operator/catalogue/trips/new">{tr(locale, "+ New trip", "+ Nuevo viaje")}</Link>
               <Link className="button button-secondary" href="/operator/catalogue/services/new?type=activity">{tr(locale, "+ Activity", "+ Actividad")}</Link>
               <Link className="button button-secondary" href="/operator/catalogue/services/new?type=transport">{tr(locale, "+ Transport", "+ Transporte")}</Link>
-              <Link className="button button-secondary" href="/operator/catalogue/services/new?type=insurance">{tr(locale, "+ Insurance", "+ Seguro")}</Link>
+              <Link className="button button-secondary" href="/operator/catalogue/services/new?type=insurance">{tr(locale, "+ Travel protection", "+ Protección de viaje")}</Link>
               <Link className="button button-secondary" href="/operator/media">{tr(locale, "Media library", "Biblioteca multimedia")}</Link>
-              <form action={seedMongoCatalogueAction}>
-                <button className="button button-secondary" type="submit">{tr(locale, "Import missing starter catalogue", "Importar catálogo inicial faltante")}</button>
-              </form>
+              <form action={seedMongoCatalogueAction}><button className="button button-secondary" type="submit">{tr(locale, "Import missing starter catalogue", "Importar catálogo inicial faltante")}</button></form>
             </div>
           ) : null}
         </section>
@@ -121,35 +89,19 @@ export default async function OperatorCataloguePage({
         {catalogueReady ? (
           <>
             <section className={styles.panel} style={{ marginTop: "1rem" }}>
-              <div className={styles.sectionHeader}>
-                <div><div className="eyebrow">{tr(locale, "Destinations", "Destinos")}</div><h2>{tr(locale, "Manage destinations", "Gestionar destinos")}</h2></div>
-                <Link className="text-link" href="/operator/catalogue/destinations/new">{tr(locale, "Create destination →", "Crear destino →")}</Link>
-              </div>
-              {destinations.length ? <div className={styles.managementList}>{destinations.map((destination) => (
-                <div className={styles.managementRow} key={destination.id}>
-                  <div><strong>{destination.name}</strong><span>{destination.country} · /destinations/{destination.slug}</span></div>
-                  <span className={styles.badge}>{publicationStatusLabel(destination.publicationStatus ?? "published", locale)}</span>
-                  <span>{destination.featured ? tr(locale, "Featured", "Destacado") : tr(locale, "Standard", "Estándar")}</span>
-                  <Link className="button button-secondary" href={`/operator/catalogue/destinations/${destination.id}`}>{tr(locale, "Edit", "Editar")}</Link>
-                </div>
-              ))}</div> : <div className={styles.notice}>{tr(locale, "No destinations have been created yet.", "Todavía no se han creado destinos.")}</div>}
+              <div className={styles.sectionHeader}><div><div className="eyebrow">{tr(locale, "Destinations", "Destinos")}</div><h2>{tr(locale, "Manage destinations", "Gestionar destinos")}</h2></div><Link className="text-link" href="/operator/catalogue/destinations/new">{tr(locale, "Create destination →", "Crear destino →")}</Link></div>
+              {destinations.length ? <div className={styles.managementList}>{destinations.map((destination) => {
+                const needsReview = destinationPublishingIssues(destination).length > 0;
+                return <div className={styles.managementRow} key={destination.id}><div><strong>{destination.name}</strong><span>{destination.country} · /destinations/{destination.slug}</span></div><span className={styles.badge}>{publicationStatusLabel(destination.publicationStatus ?? "published", locale)}</span><span>{needsReview ? reviewLabel : destination.featured ? tr(locale, "Featured", "Destacado") : tr(locale, "Content ready", "Contenido listo")}</span><Link className="button button-secondary" href={`/operator/catalogue/destinations/${destination.id}`}>{tr(locale, "Edit", "Editar")}</Link></div>;
+              })}</div> : <div className={styles.notice}>{tr(locale, "No destinations have been created yet.", "Todavía no se han creado destinos.")}</div>}
             </section>
 
             <section className={styles.panel} style={{ marginTop: "1rem" }}>
-              <div className={styles.sectionHeader}>
-                <div><div className="eyebrow">{tr(locale, "Trips", "Viajes")}</div><h2>{tr(locale, "Manage travel products", "Gestionar productos de viaje")}</h2></div>
-                <Link className="text-link" href="/operator/catalogue/trips/new">{tr(locale, "Create trip →", "Crear viaje →")}</Link>
-              </div>
+              <div className={styles.sectionHeader}><div><div className="eyebrow">{tr(locale, "Trips", "Viajes")}</div><h2>{tr(locale, "Manage travel products", "Gestionar productos de viaje")}</h2></div><Link className="text-link" href="/operator/catalogue/trips/new">{tr(locale, "Create trip →", "Crear viaje →")}</Link></div>
               {trips.length ? <div className={styles.managementList}>{trips.map((trip) => {
                 const destination = destinations.find((item) => item.id === trip.destinationId);
-                return (
-                  <div className={styles.managementRow} key={trip.id}>
-                    <div><strong>{trip.title}</strong><span>{destination?.name ?? trip.destinationId} · {trip.durationDays} {tr(locale, "days", "días")} · {trip.currency} {trip.fromPrice}</span></div>
-                    <span className={styles.badge}>{publicationStatusLabel(trip.publicationStatus ?? "published", locale)}</span>
-                    <span>{trip.featured ? tr(locale, "Featured", "Destacado") : tr(locale, "Standard", "Estándar")}</span>
-                    <Link className="button button-secondary" href={`/operator/catalogue/trips/${trip.id}`}>{tr(locale, "Edit", "Editar")}</Link>
-                  </div>
-                );
+                const needsReview = tripPublishingIssues(trip).length > 0;
+                return <div className={styles.managementRow} key={trip.id}><div><strong>{trip.title}</strong><span>{destination?.name ?? trip.destinationId} · {trip.durationDays} {tr(locale, "days", "días")} · {trip.currency} {trip.fromPrice}</span></div><span className={styles.badge}>{publicationStatusLabel(trip.publicationStatus ?? "published", locale)}</span><span>{needsReview ? reviewLabel : trip.featured ? tr(locale, "Featured", "Destacado") : tr(locale, "Content ready", "Contenido listo")}</span><Link className="button button-secondary" href={`/operator/catalogue/trips/${trip.id}`}>{tr(locale, "Edit", "Editar")}</Link></div>;
               })}</div> : <div className={styles.notice}>{tr(locale, "No trips have been created yet.", "Todavía no se han creado viajes.")}</div>}
             </section>
 
@@ -157,18 +109,11 @@ export default async function OperatorCataloguePage({
               const items = services.filter((service) => service.serviceType === type);
               return (
                 <section className={styles.panel} style={{ marginTop: "1rem" }} key={type}>
-                  <div className={styles.sectionHeader}>
-                    <div><div className="eyebrow">{serviceTypePluralLabel(type, locale)}</div><h2>{tr(locale, "Manage independent services", "Gestionar servicios independientes")}</h2></div>
-                    <Link className="text-link" href={`/operator/catalogue/services/new?type=${type}`}>{tr(locale, "Create service →", "Crear servicio →")}</Link>
-                  </div>
-                  {items.length ? <div className={styles.managementList}>{items.map((service) => (
-                    <div className={styles.managementRow} key={service.id}>
-                      <div><strong>{service.title}</strong><span>{service.currency} {service.fromPrice} · {servicePublicPath(service)}</span></div>
-                      <span className={styles.badge}>{publicationStatusLabel(service.publicationStatus ?? "published", locale)}</span>
-                      <span>{service.featured ? tr(locale, "Featured", "Destacado") : tr(locale, "Standard", "Estándar")}</span>
-                      <Link className="button button-secondary" href={`/operator/catalogue/services/${service.id}`}>{tr(locale, "Edit", "Editar")}</Link>
-                    </div>
-                  ))}</div> : <div className={styles.notice}>{tr(locale, "No services have been created in this category yet.", "Todavía no se han creado servicios en esta categoría.")}</div>}
+                  <div className={styles.sectionHeader}><div><div className="eyebrow">{serviceTypePluralLabel(type, locale)}</div><h2>{tr(locale, "Manage travel services", "Gestionar servicios de viaje")}</h2></div><Link className="text-link" href={`/operator/catalogue/services/new?type=${type}`}>{tr(locale, "Create service →", "Crear servicio →")}</Link></div>
+                  {items.length ? <div className={styles.managementList}>{items.map((service) => {
+                    const needsReview = servicePublishingIssues(service).length > 0;
+                    return <div className={styles.managementRow} key={service.id}><div><strong>{service.title}</strong><span>{service.currency} {service.fromPrice} · {servicePublicPath(service)}</span></div><span className={styles.badge}>{publicationStatusLabel(service.publicationStatus ?? "published", locale)}</span><span>{needsReview ? reviewLabel : service.featured ? tr(locale, "Featured", "Destacado") : tr(locale, "Content ready", "Contenido listo")}</span><Link className="button button-secondary" href={`/operator/catalogue/services/${service.id}`}>{tr(locale, "Edit", "Editar")}</Link></div>;
+                  })}</div> : <div className={styles.notice}>{tr(locale, "No services have been created in this category yet.", "Todavía no se han creado servicios en esta categoría.")}</div>}
                 </section>
               );
             })}

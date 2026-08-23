@@ -8,7 +8,7 @@ import { identityConfig } from "@/lib/identity-config";
 import { getIdentityRepository } from "@/lib/identity-repository";
 import { isEmailDeliveryConfigured } from "@/lib/email";
 
-export const metadata = { title: "Sign in | Kairoseth Travel", description: "Sign in to your Kairoseth Travel customer account." };
+export const metadata = { title: "Sign in", description: "Sign in to your Kairoseth Travel customer account." };
 
 function safeNext(value?: string) {
   return value && value.startsWith("/") && !value.startsWith("//") && !value.includes("\\") && value.length <= 1000 ? value : "";
@@ -35,7 +35,7 @@ export default async function SignInPage({ searchParams }: { searchParams: Promi
     <main className="section"><div className={`container ${styles.shell}`}><section className={styles.panel}>
       <div className="eyebrow">{isEs ? "Cuenta de cliente" : "Customer account"}</div>
       <h1>{isEs ? "Accede a tus viajes." : "Welcome back."}</h1>
-      <p className={styles.lead}>{next ? (isEs ? "Inicia sesión para continuar con tu reserva del servicio." : "Sign in to continue your service booking.") : (isEs ? "Consulta tus reservas, fechas y detalles de viaje desde una cuenta persistente y segura." : "Review your reservations, departures and travel details from your persistent customer account.")}</p>
+      <p className={styles.lead}>{next ? (isEs ? "Inicia sesión para continuar con tu reserva del servicio." : "Sign in to continue your service booking.") : (isEs ? "Consulta tus reservas, fechas y detalles de viaje desde tu cuenta." : "Review your reservations, departure dates and travel details from your account.")}</p>
       {reset === "success" ? <div className={styles.notice}>{isEs ? "Tu contraseña se ha restablecido. Ya puedes iniciar sesión con la nueva contraseña." : "Your password has been reset. You can now sign in with the new password."}</div> : null}
       {error && errors[error] ? <div className={styles.notice}>{errors[error]}</div> : null}
       {demo === "disabled" ? <div className={styles.notice}>{isEs ? "El acceso temporal está desactivado." : "Temporary customer access is disabled."}</div> : null}

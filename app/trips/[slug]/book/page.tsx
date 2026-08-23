@@ -9,10 +9,7 @@ import { getLocale } from "@/lib/get-locale";
 import { formatCurrency, getDictionary, localizeTrip } from "@/lib/i18n";
 import { getIdentityRepository } from "@/lib/identity-repository";
 import { getTravelRepository } from "@/lib/travel-repository";
-import {
-  getTravellerBandPrice,
-  getTravellerPricingBands
-} from "@/lib/traveller-pricing";
+import { getTravellerBandPrice, getTravellerPricingBands } from "@/lib/traveller-pricing";
 import type { TravelLocale } from "@/domain/travel/types";
 
 function formatDate(value: string, locale: TravelLocale) {
@@ -39,13 +36,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   };
 }
 
-export default async function BookTripPage({
-  params,
-  searchParams
-}: {
-  params: Promise<{ slug: string }>;
-  searchParams: Promise<{ error?: string }>;
-}) {
+export default async function BookTripPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ error?: string }> }) {
   const { slug } = await params;
   const { error } = await searchParams;
   const locale = await getLocale();
@@ -62,7 +53,6 @@ export default async function BookTripPage({
   };
   const travelRepository = getTravelRepository();
   const trip = await travelRepository.getTripBySlug(slug);
-
   if (!trip) notFound();
 
   const localizedTrip = localizeTrip(trip, locale);
@@ -72,13 +62,10 @@ export default async function BookTripPage({
   ]);
   const customer = hasCustomerAccess(identity);
   const staff = hasOperationsAccess(identity);
-  const persistentBooking = bookingConfig.mode === "mongodb";
   const pricingBands = getTravellerPricingBands(trip);
-  const availabilityCopy = persistentBooking
-    ? locale === "es"
-      ? "Disponibilidad y tarifas validadas contra el inventario persistente de Kairoseth Travel. La edad se calcula en la fecha de salida."
-      : "Availability and fares are validated against Kairoseth Travel persistent inventory. Age is calculated on the departure date."
-    : copy.booking.departuresCopy;
+  const availabilityCopy = locale === "es"
+    ? "Las plazas y tarifas se comprueban para la salida seleccionada. La edad de cada viajero se calcula en la fecha de salida."
+    : "Spaces and fares are checked for the selected departure. Each traveller's age is calculated on the departure date.";
 
   return (
     <main className="section">
@@ -86,50 +73,17 @@ export default async function BookTripPage({
         <section className={styles.panel}>
           <div className="eyebrow">{copy.booking.eyebrow}</div>
           <h1>{localizedTrip.title}</h1>
-          <p className={styles.lead}>
-            {locale === "es"
-              ? "Elige la salida e introduce los datos de cada viajero. Menores y adultos se tarifan según su edad real el día de salida."
-              : "Choose the departure and enter each traveller. Adults and minors are priced using their actual age on departure."}
-          </p>
+          <p className={styles.lead}>{locale === "es" ? "Elige la salida e introduce los datos de cada viajero. Menores y adultos se tarifan según su edad real el día de salida." : "Choose the departure and enter each traveller. Adults and minors are priced using their actual age on departure."}</p>
 
-          {error && errorMessages[error] ? (
-            <div className={styles.error}>{errorMessages[error]}</div>
-          ) : null}
-
-          {!identity ? (
-            <div className={styles.notice}>
-              <strong>{copy.booking.customerRequired}</strong> {copy.booking.customerRequiredCopy}{" "}
-              <Link className="text-link" href="/account/sign-in">{copy.booking.signIn}</Link>
-            </div>
-          ) : null}
-
-          {staff ? (
-            <div className={styles.notice}>
-              {copy.booking.staffActive}{" "}
-              <Link className="text-link" href="/operator">{copy.booking.openOperator}</Link>
-            </div>
-          ) : null}
+          {error && errorMessages[error] ? <div className={styles.error}>{errorMessages[error]}</div> : null}
+          {!identity ? <div className={styles.notice}><strong>{copy.booking.customerRequired}</strong> {copy.booking.customerRequiredCopy}{" "}<Link className="text-link" href="/account/sign-in">{copy.booking.signIn}</Link></div> : null}
+          {staff ? <div className={styles.notice}>{copy.booking.staffActive}{" "}<Link className="text-link" href="/operator">{copy.booking.openOperator}</Link></div> : null}
 
           {customer && bookingConfig.writesEnabled && availability.length > 0 ? (
-            <TravellerBookingForm
-              tripSlug={trip.slug}
-              fromPrice={trip.fromPrice}
-              currency={trip.currency}
-              pricingBands={pricingBands}
-              hasExplicitPricing={Boolean(trip.travellerPricing?.length)}
-              availability={availability}
-              locale={locale}
-            />
+            <TravellerBookingForm tripSlug={trip.slug} fromPrice={trip.fromPrice} currency={trip.currency} pricingBands={pricingBands} hasExplicitPricing={Boolean(trip.travellerPricing?.length)} availability={availability} locale={locale} />
           ) : null}
-
-          {customer && !bookingConfig.writesEnabled ? (
-            <div className={styles.notice}>{copy.booking.writesDisabled}</div>
-          ) : null}
-
-          {availability.length === 0 ? (
-            <div className={styles.notice}>{copy.booking.noDepartures}</div>
-          ) : null}
-
+          {customer && !bookingConfig.writesEnabled ? <div className={styles.notice}>{copy.booking.writesDisabled}</div> : null}
+          {availability.length === 0 ? <div className={styles.notice}>{copy.booking.noDepartures}</div> : null}
           <p><Link className="text-link" href={`/trips/${trip.slug}`}>{copy.booking.back}</Link></p>
         </section>
 

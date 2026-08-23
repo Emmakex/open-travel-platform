@@ -3,24 +3,11 @@
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import type {
-  TravelService,
-  TravelServicePricingMode,
-  TravelServiceType
-} from "@/domain/services/types";
-import type {
-  CurrencyCode,
-  TravellerPricingBand,
-  TravelMedia,
-  TravelMediaFocalPoint,
-  TravelPublicationStatus
-} from "@/domain/travel/types";
+import type { TravelService, TravelServicePricingMode, TravelServiceType } from "@/domain/services/types";
+import type { CurrencyCode, TravellerPricingBand, TravelMedia, TravelMediaFocalPoint, TravelPublicationStatus } from "@/domain/travel/types";
+import { servicePublishingIssues } from "@/lib/catalogue-content-quality";
 import { requireOperationsIdentity } from "@/lib/require-operations-identity";
-import {
-  getTravelServiceForAdmin,
-  saveTravelService,
-  serviceBasePath
-} from "@/lib/travel-services";
+import { getTravelServiceForAdmin, saveTravelService, serviceBasePath } from "@/lib/travel-services";
 import { validateTravellerPricingBands } from "@/lib/traveller-pricing";
 import { parseTravellerRequirementsForm } from "@/lib/traveller-requirements-form";
 
@@ -38,12 +25,7 @@ function lines(formData: FormData, name: string) {
 }
 
 function normalizeSlug(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
 
 function normalizeCode(value: string) {
@@ -74,13 +56,7 @@ function mediaFromFields(src: string, alt: string, caption: string, credit: stri
 }
 
 function parseCoverImage(formData: FormData) {
-  return mediaFromFields(
-    text(formData, "coverSrc"),
-    text(formData, "coverAlt"),
-    text(formData, "coverCaption"),
-    text(formData, "coverCredit"),
-    text(formData, "coverFocalPoint")
-  );
+  return mediaFromFields(text(formData, "coverSrc"), text(formData, "coverAlt"), text(formData, "coverCaption"), text(formData, "coverCredit"), text(formData, "coverFocalPoint"));
 }
 
 function parseGallery(formData: FormData): TravelMedia[] | null {
@@ -92,13 +68,7 @@ function parseGallery(formData: FormData): TravelMedia[] | null {
   const length = Math.max(sources.length, alts.length, captions.length, credits.length, focalPointsInput.length);
   const gallery: TravelMedia[] = [];
   for (let index = 0; index < length; index += 1) {
-    const media = mediaFromFields(
-      sources[index] ?? "",
-      alts[index] ?? "",
-      captions[index] ?? "",
-      credits[index] ?? "",
-      focalPointsInput[index] ?? "center"
-    );
+    const media = mediaFromFields(sources[index] ?? "", alts[index] ?? "", captions[index] ?? "", credits[index] ?? "", focalPointsInput[index] ?? "center");
     if (media === null) return null;
     if (media) gallery.push(media);
   }
@@ -128,6 +98,15 @@ function publicationStatus(formData: FormData): TravelPublicationStatus {
   return text(formData, "publicationStatus") === "published" ? "published" : "draft";
 }
 
+function validOptionalHttpsUrl(value: string) {
+  if (!value) return true;
+  try {
+    return new URL(value).protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 export async function saveTravelServiceAction(formData: FormData) {
   await requireOperationsIdentity();
 
@@ -147,16 +126,16 @@ export async function saveTravelServiceAction(formData: FormData) {
   const gallery = parseGallery(formData);
   const travellerPricing = pricingMode === "per-age-band" ? parseTravellerPricing(formData) : undefined;
   const travellerRequirements = parseTravellerRequirementsForm(formData);
+  const desiredPublicationStatus = publicationStatus(formData);
   const returnTo = requestedId ? `/operator/catalogue/services/${id}` : `/operator/catalogue/services/new?type=${rawType || "activity"}`;
+  const returnWithError = (code: string) => `${returnTo}${returnTo.includes("?") ? "&" : "?"}error=${code}`;
 
   if (!serviceType || !title || !slug || !summary || !Number.isFinite(fromPrice) || fromPrice < 0 || coverImage === null || gallery === null || travellerPricing === null || travellerRequirements === null) {
-    redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}error=validation`);
+    redirect(returnWithError("validation"));
   }
 
   const existing = requestedId ? await getTravelServiceForAdmin(id) : null;
-  if (existing && existing.serviceType !== serviceType) {
-    redirect(`${returnTo}?error=validation`);
-  }
+  if (existing && existing.serviceType !== serviceType) redirect(returnWithError("validation"));
 
   const common = {
     ...(existing ?? {}),
@@ -174,7 +153,7 @@ export async function saveTravelServiceAction(formData: FormData) {
     included: lines(formData, "included"),
     notIncluded: lines(formData, "notIncluded"),
     featured: formData.get("featured") === "on",
-    publicationStatus: publicationStatus(formData),
+    publicationStatus: desiredPublicationStatus,
     coverImage,
     gallery,
     translations: {
@@ -203,7 +182,7 @@ export async function saveTravelServiceAction(formData: FormData) {
     const location = text(formData, "location");
     const durationLabel = text(formData, "durationLabel");
     const activityCategory = text(formData, "activityCategory");
-    if (!location || !durationLabel || !activityCategory) redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}error=validation`);
+    if (!location || !durationLabel || !activityCategory) redirect(returnWithError("validation"));
     service = { ...common, serviceType, location, durationLabel, activityCategory, meetingPoint: text(formData, "meetingPoint") || undefined } as TravelService;
   } else if (serviceType === "transport") {
     const transportMode = text(formData, "transportMode");
@@ -211,21 +190,38 @@ export async function saveTravelServiceAction(formData: FormData) {
     const destination = text(formData, "destination");
     const rawCapacity = text(formData, "capacity");
     const capacity = rawCapacity ? Number(rawCapacity) : undefined;
-    if (!transportMode || !origin || !destination || (capacity !== undefined && (!Number.isInteger(capacity) || capacity < 1))) redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}error=validation`);
+    if (!transportMode || !origin || !destination || (capacity !== undefined && (!Number.isInteger(capacity) || capacity < 1))) redirect(returnWithError("validation"));
     service = { ...common, serviceType, transportMode, origin, destination, capacity } as TravelService;
   } else {
     const coverageType = text(formData, "coverageType");
     const rawMaxTripDays = text(formData, "maxTripDays");
     const maxTripDays = rawMaxTripDays ? Number(rawMaxTripDays) : undefined;
-    if (!coverageType || (maxTripDays !== undefined && (!Number.isInteger(maxTripDays) || maxTripDays < 1))) redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}error=validation`);
-    service = { ...common, serviceType, coverageType, maxTripDays } as TravelService;
+    const providerName = text(formData, "providerName");
+    const policyReference = text(formData, "policyReference");
+    const termsUrl = text(formData, "termsUrl");
+    if (!coverageType || (maxTripDays !== undefined && (!Number.isInteger(maxTripDays) || maxTripDays < 1)) || !validOptionalHttpsUrl(termsUrl)) {
+      redirect(returnWithError("validation"));
+    }
+    service = {
+      ...common,
+      serviceType,
+      coverageType,
+      maxTripDays,
+      providerName: providerName || undefined,
+      policyReference: policyReference || undefined,
+      termsUrl: termsUrl || undefined
+    } as TravelService;
+  }
+
+  if (desiredPublicationStatus === "published" && servicePublishingIssues(service).length) {
+    redirect(returnWithError("content-quality"));
   }
 
   try {
     await saveTravelService(service);
   } catch (error) {
     console.error("Failed to save travel service", { id, serviceType, error });
-    redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}error=save`);
+    redirect(returnWithError("save"));
   }
 
   revalidatePath("/services");

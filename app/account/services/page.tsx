@@ -5,7 +5,7 @@ import { formatCurrency } from "@/lib/i18n";
 import { requireCustomerIdentity } from "@/lib/require-customer-identity";
 import { listServiceReservationsForCustomer } from "@/lib/service-reservations";
 
-export const metadata = { title: "My services | Kairoseth Travel" };
+export const metadata = { title: "My services" };
 
 export default async function AccountServicesPage() {
   const locale = await getLocale();

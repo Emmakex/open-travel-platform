@@ -5,7 +5,7 @@ import { getLocale } from "@/lib/get-locale";
 import { requireCustomerIdentity } from "@/lib/require-customer-identity";
 
 export const metadata = {
-  title: "Account security | Kairoseth Travel",
+  title: "Account security",
   description: "Manage your Kairoseth Travel account password."
 };
 

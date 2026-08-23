@@ -13,7 +13,7 @@ import { buildTravellerDataCompletion, listTravellerDataForCustomer } from "@/li
 import type { TravelLocale } from "@/domain/travel/types";
 
 export const metadata = {
-  title: "My account | Kairoseth Travel",
+  title: "My account",
   description: "Customer account for Kairoseth Travel reservations and journeys."
 };
 

@@ -85,8 +85,8 @@ export default async function ReservationDetailPage({
     : reservation.status;
   const persistenceNote = bookingConfig.mode === "mongodb"
     ? locale === "es"
-      ? "Esta reserva está almacenada de forma persistente en Kairoseth Travel."
-      : "This reservation is stored persistently in Kairoseth Travel."
+      ? "Consulta aquí el estado actualizado de tu reserva, viajeros, pagos y próximos pasos."
+      : "Review the latest status of your reservation, travellers, payments and next steps here."
     : copy.demoNote;
   const paymentSchedule = deriveReservationPaymentSchedule(reservation, paymentSummary);
   const canCustomerCancel = reservation.status === "pending" &&
@@ -164,8 +164,8 @@ export default async function ReservationDetailPage({
                     ? "Ya has completado la información post-compra necesaria para todos los viajeros de esta reserva. Puedes revisarla mientras el plazo de edición siga abierto."
                     : "You have completed the required post-purchase information for every traveller in this reservation. You can review it while customer editing remains open.")
                 : (locale === "es"
-                    ? `${travellerDataCompletedCount}/${reservation.travellers!.length} viajeros completos. Completa los datos pendientes para que el equipo pueda operar la reserva sin solicitar información durante el checkout.`
-                    : `${travellerDataCompletedCount}/${reservation.travellers!.length} travellers complete. Finish the pending details so the team can operate the reservation without collecting this information during checkout.`)}
+                    ? `${travellerDataCompletedCount}/${reservation.travellers!.length} viajeros completos. Completa los datos pendientes para que el equipo pueda gestionar correctamente la reserva.`
+                    : `${travellerDataCompletedCount}/${reservation.travellers!.length} travellers complete. Finish the pending details so the team can manage the reservation correctly.`)}
             </div>
           ) : null}
 
@@ -194,8 +194,8 @@ export default async function ReservationDetailPage({
             <h2>{locale === "es" ? "Pasajeros de la reserva" : "Reservation travellers"}</h2>
             <p className={styles.lead}>
               {locale === "es"
-                ? "Las edades y tarifas quedan fijadas con referencia a la fecha de salida de esta reserva."
-                : "Traveller ages and fares are snapshotted against this reservation's departure date."}
+                ? "Las edades y tarifas se calculan tomando como referencia la fecha de salida de esta reserva."
+                : "Traveller ages and fares are calculated using this reservation's departure date."}
             </p>
             <dl className={styles.profileList}>
               {reservation.travellers.map((traveller) => {
@@ -210,7 +210,7 @@ export default async function ReservationDetailPage({
                     </dt>
                     <dd>
                       {travellerRequirementsActive ? (
-                        <><strong>{locale === "es" ? "Datos post-compra" : "Post-purchase data"}: {completion?.complete ? (locale === "es" ? "completos" : "complete") : (locale === "es" ? "pendientes" : "pending")}</strong><br /></>
+                        <><strong>{locale === "es" ? "Datos adicionales" : "Additional details"}: {completion?.complete ? (locale === "es" ? "completos" : "complete") : (locale === "es" ? "pendientes" : "pending")}</strong><br /></>
                       ) : null}
                       {traveller.ageAtDeparture} {locale === "es" ? "años" : "years"} · {locale === "es" ? (traveller.pricingLabelEs || traveller.pricingLabel) : traveller.pricingLabel} · {formatCurrency(traveller.unitPrice, reservation.currency, locale)}<br />
                       {formatDate(traveller.dateOfBirth, locale)} · {traveller.nationality}
@@ -228,8 +228,8 @@ export default async function ReservationDetailPage({
           <h2>{locale === "es" ? "Resumen de pago" : "Payment summary"}</h2>
           <p className={styles.lead}>
             {locale === "es"
-              ? "Los pagos manuales y online se registran en la misma capa de pagos para mantener un único saldo de la reserva."
-              : "Manual and online payments use the same payment ledger so the reservation always has one authoritative balance."}
+              ? "Consulta cuánto has pagado, qué importe queda pendiente y los próximos vencimientos de esta reserva."
+              : "See what you have paid, what remains outstanding and any upcoming due dates for this reservation."}
           </p>
 
           <dl className={styles.profileList}>

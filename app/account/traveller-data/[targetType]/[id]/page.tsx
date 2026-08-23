@@ -5,17 +5,10 @@ import styles from "@/app/account/account.module.css";
 import type { PaymentTargetType } from "@/domain/payment/types";
 import type { TravellerPostPurchaseData, TravellerRequirementField } from "@/domain/traveller/types";
 import { getLocale } from "@/lib/get-locale";
-import {
-  buildTravellerDataCompletion,
-  isTravellerDataEncryptionConfigured,
-  listTravellerDataForCustomer
-} from "@/lib/traveller-data";
+import { buildTravellerDataCompletion, isTravellerDataEncryptionConfigured, listTravellerDataForCustomer } from "@/lib/traveller-data";
 import { requireCustomerIdentity } from "@/lib/require-customer-identity";
 import { resolveTravellerReservationContextForCustomer } from "@/lib/traveller-reservation-context";
-import {
-  travellerFieldsForReservationTraveller,
-  travellerRequirementsDeadline
-} from "@/lib/traveller-requirements";
+import { travellerFieldsForReservationTraveller, travellerRequirementsDeadline } from "@/lib/traveller-requirements";
 
 function validTargetType(value: string): PaymentTargetType | null {
   return value === "trip" || value === "service" ? value : null;
@@ -39,84 +32,28 @@ const labels: Record<TravellerRequirementField, [string, string]> = {
   minorTravelAuthorization: ["Minor travel authorisation", "Autorización de viaje del menor"]
 };
 
-function Field({
-  field,
-  value,
-  locale,
-  disabled
-}: {
-  field: TravellerRequirementField;
-  value: string;
-  locale: "en" | "es";
-  disabled: boolean;
-}) {
+function Field({ field, value, locale, disabled }: { field: TravellerRequirementField; value: string; locale: "en" | "es"; disabled: boolean }) {
   const label = labels[field][locale === "es" ? 1 : 0];
   const common = { name: field, defaultValue: value, disabled, required: true };
-
-  if (field === "sex") {
-    return (
-      <label className={styles.field}><span>{label}</span><select {...common}>
-        <option value="">—</option>
-        <option value="female">{locale === "es" ? "Femenino" : "Female"}</option>
-        <option value="male">{locale === "es" ? "Masculino" : "Male"}</option>
-        <option value="x">X</option>
-        <option value="not-stated">{locale === "es" ? "No indicado" : "Not stated"}</option>
-      </select></label>
-    );
-  }
-  if (field === "documentType") {
-    return (
-      <label className={styles.field}><span>{label}</span><select {...common}>
-        <option value="">—</option>
-        <option value="passport">{locale === "es" ? "Pasaporte" : "Passport"}</option>
-        <option value="dni">DNI</option>
-        <option value="tie">TIE</option>
-        <option value="national-id">{locale === "es" ? "Documento nacional de identidad" : "National identity card"}</option>
-        <option value="other">{locale === "es" ? "Otro" : "Other"}</option>
-      </select></label>
-    );
-  }
-  if (field === "minorTravelAuthorization") {
-    return (
-      <label className={styles.field}><span>{label}</span><select {...common}>
-        <option value="">—</option>
-        <option value="pending">{locale === "es" ? "Pendiente" : "Pending"}</option>
-        <option value="confirmed">{locale === "es" ? "Confirmada / disponible" : "Confirmed / available"}</option>
-        <option value="not-required">{locale === "es" ? "No requerida" : "Not required"}</option>
-      </select></label>
-    );
-  }
-  if (field === "documentExpiryDate") {
-    return <label className={styles.field}><span>{label}</span><input {...common} type="date" /></label>;
-  }
-  if (field === "email") {
-    return <label className={styles.field}><span>{label}</span><input {...common} type="email" autoComplete="email" /></label>;
-  }
-  if (field === "phone" || field === "emergencyContactPhone") {
-    return <label className={styles.field}><span>{label}</span><input {...common} type="tel" autoComplete="tel" /></label>;
-  }
-
+  if (field === "sex") return <label className={styles.field}><span>{label}</span><select {...common}><option value="">—</option><option value="female">{locale === "es" ? "Femenino" : "Female"}</option><option value="male">{locale === "es" ? "Masculino" : "Male"}</option><option value="x">X</option><option value="not-stated">{locale === "es" ? "No indicado" : "Not stated"}</option></select></label>;
+  if (field === "documentType") return <label className={styles.field}><span>{label}</span><select {...common}><option value="">—</option><option value="passport">{locale === "es" ? "Pasaporte" : "Passport"}</option><option value="dni">DNI</option><option value="tie">TIE</option><option value="national-id">{locale === "es" ? "Documento nacional de identidad" : "National identity card"}</option><option value="other">{locale === "es" ? "Otro" : "Other"}</option></select></label>;
+  if (field === "minorTravelAuthorization") return <label className={styles.field}><span>{label}</span><select {...common}><option value="">—</option><option value="pending">{locale === "es" ? "Pendiente" : "Pending"}</option><option value="confirmed">{locale === "es" ? "Confirmada / disponible" : "Confirmed / available"}</option><option value="not-required">{locale === "es" ? "No requerida" : "Not required"}</option></select></label>;
+  if (field === "documentExpiryDate") return <label className={styles.field}><span>{label}</span><input {...common} type="date" /></label>;
+  if (field === "email") return <label className={styles.field}><span>{label}</span><input {...common} type="email" autoComplete="email" /></label>;
+  if (field === "phone" || field === "emergencyContactPhone") return <label className={styles.field}><span>{label}</span><input {...common} type="tel" autoComplete="tel" /></label>;
   return <label className={styles.field}><span>{label}</span><input {...common} type="text" autoComplete="off" /></label>;
 }
 
 export const metadata = {
-  title: "Traveller information | Kairoseth Travel",
+  title: "Traveller information",
   description: "Complete traveller details required after booking."
 };
 
-export default async function TravellerDataPage({
-  params,
-  searchParams
-}: {
+export default async function TravellerDataPage({ params, searchParams }: {
   params: Promise<{ targetType: string; id: string }>;
   searchParams: Promise<{ saved?: string; error?: string }>;
 }) {
-  const [{ targetType: rawType, id }, query, locale, identity] = await Promise.all([
-    params,
-    searchParams,
-    getLocale(),
-    requireCustomerIdentity()
-  ]);
+  const [{ targetType: rawType, id }, query, locale, identity] = await Promise.all([params, searchParams, getLocale(), requireCustomerIdentity()]);
   const targetType = validTargetType(rawType);
   if (!targetType) notFound();
   const context = await resolveTravellerReservationContextForCustomer(identity.id, targetType, id);
@@ -124,8 +61,8 @@ export default async function TravellerDataPage({
 
   const t = (en: string, es: string) => locale === "es" ? es : en;
   const profile = context.requirements;
-  const encryptionReady = isTravellerDataEncryptionConfigured();
-  const stored = encryptionReady
+  const storageReady = isTravellerDataEncryptionConfigured();
+  const stored = storageReady
     ? await listTravellerDataForCustomer({ identityId: identity.id, targetType, reservationId: context.reservationId })
     : new Map<string, TravellerPostPurchaseData>();
   const deadline = travellerRequirementsDeadline(profile, context.startDate);
@@ -134,28 +71,19 @@ export default async function TravellerDataPage({
   const errors: Record<string, string> = {
     "invalid-request": t("The request is incomplete.", "La solicitud está incompleta."),
     "invalid-traveller": t("That traveller is not part of this reservation.", "Ese viajero no pertenece a esta reserva."),
-    "validation": t("Review the fields. The travel document must remain valid for the trip/service date.", "Revisa los campos. El documento de viaje debe seguir vigente en la fecha del viaje/servicio."),
-    "editing-closed": t("The customer editing deadline has passed. Contact the travel team if a correction is required.", "Ha finalizado el plazo de edición del cliente. Contacta con el equipo de viaje si necesitas corregir un dato."),
-    "encryption-unavailable": t("Secure traveller-data storage is not configured.", "El almacenamiento seguro de datos de viajeros no está configurado."),
-    "cancelled": t("Traveller data cannot be changed on a cancelled reservation.", "No se pueden modificar los datos de viajeros en una reserva cancelada."),
-    "not-required": t("This reservation does not require additional traveller data.", "Esta reserva no requiere datos adicionales de viajeros."),
-    "save": t("The traveller data could not be saved.", "No se pudieron guardar los datos del viajero.")
+    "validation": t("Review the fields. The travel document must remain valid for the trip or service date.", "Revisa los campos. El documento de viaje debe seguir vigente en la fecha del viaje o servicio."),
+    "editing-closed": t("The editing deadline has passed. Contact the travel team if a correction is required.", "Ha finalizado el plazo de edición. Contacta con el equipo de viaje si necesitas corregir un dato."),
+    "encryption-unavailable": t("Traveller information is unavailable right now. Return to the reservation and try again later.", "La información de viajeros no está disponible en este momento. Vuelve a la reserva e inténtalo más tarde."),
+    "cancelled": t("Traveller information cannot be changed on a cancelled reservation.", "No se puede modificar la información de viajeros de una reserva cancelada."),
+    "not-required": t("This reservation does not require additional traveller information.", "Esta reserva no requiere información adicional de viajeros."),
+    "save": t("The traveller information could not be saved.", "No se pudo guardar la información del viajero.")
   };
 
   if (!profile || profile.preset === "none" || !context.travellers.length) {
-    return (
-      <main className="section"><div className={`container ${styles.shell}`}><section className={styles.panel}>
-        <div className="eyebrow">{t("Traveller information", "Información de viajeros")}</div>
-        <h1>{context.label}</h1>
-        <div className={styles.notice}><strong>{t("Nothing required", "No tienes nada pendiente")}</strong><br />{t("No additional post-purchase traveller information is required for this reservation.", "Esta reserva no requiere información adicional de viajeros después de la compra.")}</div>
-        <p><Link className="button button-secondary" href={context.detailUrl}>{t("Back to reservation", "Volver a la reserva")}</Link></p>
-      </section></div></main>
-    );
+    return <main className="section"><div className={`container ${styles.shell}`}><section className={styles.panel}><div className="eyebrow">{t("Traveller information", "Información de viajeros")}</div><h1>{context.label}</h1><div className={styles.notice}><strong>{t("Nothing else needed", "No necesitas añadir más datos")}</strong><br />{t("This reservation does not require additional traveller information.", "Esta reserva no requiere información adicional de viajeros.")}</div><p><Link className="button button-secondary" href={context.detailUrl}>{t("Back to reservation", "Volver a la reserva")}</Link></p></section></div></main>;
   }
 
-  const completions = context.travellers.map((traveller) =>
-    buildTravellerDataCompletion(profile, traveller, stored.get(traveller.id))
-  );
+  const completions = context.travellers.map((traveller) => buildTravellerDataCompletion(profile, traveller, stored.get(traveller.id)));
   const completedCount = completions.filter((item) => item.complete).length;
   const allComplete = completedCount === context.travellers.length;
 
@@ -163,49 +91,25 @@ export default async function TravellerDataPage({
     <main className="section">
       <div className={`container ${styles.shell}`}>
         <section className={styles.panel}>
-          <div className="eyebrow">{t("After booking · traveller information", "Después de comprar · información de viajeros")}</div>
+          <div className="eyebrow">{t("Traveller information", "Información de viajeros")}</div>
           <h1>{context.label}</h1>
-          <p className={styles.lead}>
-            {t(
-              "Complete only the information required to operate this booking. Kairoseth Travel does not ask you to upload a copy or photo of your passport/DNI in this flow.",
-              "Completa únicamente la información necesaria para gestionar esta reserva. Kairoseth Travel no te pide subir una copia ni una foto del pasaporte/DNI en este proceso."
-            )}
-          </p>
-
+          <p className={styles.lead}>{t("Complete only the information required for this reservation. You will not be asked to upload a copy or photo of your passport or identity document here.", "Completa únicamente la información necesaria para esta reserva. Aquí no te pediremos subir una copia ni una foto del pasaporte o documento de identidad.")}</p>
           <div className={styles.notice}>
-            <strong>
-              {allComplete
-                ? t("✓ Everything is ready", "✓ Todo listo")
-                : t("Action required · finish traveller information", "Acción pendiente · completa los datos de viajeros")}
-            </strong><br />
+            <strong>{allComplete ? t("✓ Everything is ready", "✓ Todo listo") : t("Action required · complete traveller information", "Acción pendiente · completa los datos de viajeros")}</strong><br />
             {allComplete
-              ? t(
-                  `${completedCount}/${context.travellers.length} travellers complete. You have finished the required traveller information for this reservation.`,
-                  `${completedCount}/${context.travellers.length} viajeros completos. Has terminado la información requerida para esta reserva.`
-                )
-              : t(
-                  `${completedCount}/${context.travellers.length} travellers complete. Complete one traveller, save, and continue until everyone is marked Complete.`,
-                  `${completedCount}/${context.travellers.length} viajeros completos. Completa un viajero, guarda y continúa hasta que todos aparezcan como Completos.`
-                )}
+              ? t(`${completedCount}/${context.travellers.length} travellers complete. All required information has been provided.`, `${completedCount}/${context.travellers.length} viajeros completos. Ya has proporcionado toda la información requerida.`)
+              : t(`${completedCount}/${context.travellers.length} travellers complete. Save each traveller before continuing to the next one.`, `${completedCount}/${context.travellers.length} viajeros completos. Guarda cada viajero antes de continuar con el siguiente.`)}
           </div>
-
           <dl className={styles.profileList}>
             <div><dt>{t("Progress", "Progreso")}</dt><dd><strong>{completedCount}/{context.travellers.length}</strong></dd></div>
-            {deadline ? <div><dt>{t("Customer editing deadline", "Fecha límite de edición")}</dt><dd>{deadline}</dd></div> : null}
-            <div><dt>{t("Retention after trip/service", "Conservación tras viaje/servicio")}</dt><dd>{profile.retentionDaysAfterEnd} {t("days", "días")}</dd></div>
+            {deadline ? <div><dt>{t("Editing deadline", "Fecha límite de edición")}</dt><dd>{deadline}</dd></div> : null}
+            <div><dt>{t("Data retention period after the trip/service", "Conservación de datos tras el viaje/servicio")}</dt><dd>{profile.retentionDaysAfterEnd} {t("days", "días")}</dd></div>
           </dl>
-          {!encryptionReady ? <div className={styles.notice}>{errors["encryption-unavailable"]}</div> : null}
+          {!storageReady ? <div className={styles.notice}>{errors["encryption-unavailable"]}</div> : null}
           {!editingOpen ? <div className={styles.notice}>{errors[context.status === "cancelled" ? "cancelled" : "editing-closed"]}</div> : null}
           {query.error && errors[query.error] ? <div className={styles.notice}>{errors[query.error]}</div> : null}
-          <p className={styles.lead}>
-            {t(
-              "Document and residence fields are stored encrypted and are automatically scheduled for deletion according to the configured retention period. Health information is not requested here.",
-              "Los datos de documentación y residencia se almacenan cifrados y quedan programados para eliminación automática según el plazo de conservación configurado. Aquí no se solicitan datos de salud."
-            )}
-          </p>
-          <div className={styles.actions}>
-            <Link className="button button-secondary" href={context.detailUrl}>{t("Back to reservation", "Volver a la reserva")}</Link>
-          </div>
+          <p className={styles.lead}>{t("We protect these details and keep them only for the period needed for the reservation and applicable requirements. Health information is not requested here.", "Protegemos estos datos y los conservamos solo durante el periodo necesario para la reserva y los requisitos aplicables. Aquí no se solicitan datos de salud.")}</p>
+          <div className={styles.actions}><Link className="button button-secondary" href={context.detailUrl}>{t("Back to reservation", "Volver a la reserva")}</Link></div>
         </section>
 
         {context.travellers.map((traveller, index) => {
@@ -215,35 +119,17 @@ export default async function TravellerDataPage({
           const saved = query.saved === traveller.id;
           return (
             <section className={styles.panel} style={{ marginTop: "1rem" }} key={traveller.id}>
-              <div className="eyebrow">{completion.complete ? t("✓ Complete", "✓ Completo") : t("Action required", "Información pendiente")}</div>
+              <div className="eyebrow">{completion.complete ? t("✓ Complete", "✓ Completo") : t("Information needed", "Información pendiente")}</div>
               <h2>{index + 1}. {traveller.firstName} {traveller.lastName}</h2>
-              <p className={styles.lead}>
-                {completion.complete
-                  ? t("This traveller has all required fields. You can review or correct them while editing remains open.", "Este viajero ya tiene todos los datos requeridos. Puedes revisarlos o corregirlos mientras el plazo de edición siga abierto.")
-                  : t("Complete the fields below and save this traveller before continuing with the next one.", "Completa los campos de abajo y guarda este viajero antes de continuar con el siguiente.")}
-              </p>
+              <p className={styles.lead}>{completion.complete ? t("All required fields are complete. You can review or correct them while editing remains open.", "Todos los campos requeridos están completos. Puedes revisarlos o corregirlos mientras el plazo de edición siga abierto.") : t("Complete the fields below and save this traveller before continuing.", "Completa los campos de abajo y guarda este viajero antes de continuar.")}</p>
               <p className={styles.lead}>{traveller.ageAtDeparture} {t("years", "años")} · {traveller.nationality}</p>
-              {saved ? <div className={styles.notice}><strong>{t("Saved", "Guardado")}</strong><br />{t("Traveller information saved securely.", "Información del viajero guardada de forma segura.")}</div> : null}
+              {saved ? <div className={styles.notice}><strong>{t("Saved", "Guardado")}</strong><br />{t("Traveller information updated.", "Información del viajero actualizada.")}</div> : null}
               <form action={savePostPurchaseTravellerDataAction} className={styles.form} autoComplete="off">
                 <input type="hidden" name="targetType" value={targetType} />
                 <input type="hidden" name="reservationId" value={context.reservationId} />
                 <input type="hidden" name="travellerId" value={traveller.id} />
-                <div className={styles.formGrid}>
-                  {fields.map((field) => (
-                    <Field
-                      key={field}
-                      field={field}
-                      value={String(current[field as keyof TravellerPostPurchaseData] ?? "")}
-                      locale={locale}
-                      disabled={!editingOpen || !encryptionReady}
-                    />
-                  ))}
-                </div>
-                {editingOpen && encryptionReady ? (
-                  <button className="button button-primary" type="submit">
-                    {completion.complete ? t("Save changes", "Guardar cambios") : t("Save traveller and continue", "Guardar viajero y continuar")}
-                  </button>
-                ) : null}
+                <div className={styles.formGrid}>{fields.map((field) => <Field key={field} field={field} value={String(current[field as keyof TravellerPostPurchaseData] ?? "")} locale={locale} disabled={!editingOpen || !storageReady} />)}</div>
+                {editingOpen && storageReady ? <button className="button button-primary" type="submit">{completion.complete ? t("Save changes", "Guardar cambios") : t("Save traveller and continue", "Guardar viajero y continuar")}</button> : null}
               </form>
             </section>
           );

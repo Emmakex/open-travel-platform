@@ -100,7 +100,7 @@ export default async function AccountServiceReservationPage({
           <div className="eyebrow">{t("Service reservation", "Reserva de servicio")}</div>
           <h1>{reservation.serviceTitle}</h1>
           {query.created === "1" ? <div className={styles.notice}>{t("Your service reservation has been created.", "Tu reserva del servicio se ha creado correctamente.")}</div> : null}
-          {query.updated === "cancelled" ? <div className={styles.notice}>{t("The reservation was cancelled and its inventory was released.", "La reserva se canceló y su cupo fue liberado.")}</div> : null}
+          {query.updated === "cancelled" ? <div className={styles.notice}>{t("The reservation was cancelled successfully.", "La reserva se canceló correctamente.")}</div> : null}
           {query.error === "not-cancellable" ? <div className={styles.notice}>{t("This reservation can no longer be cancelled from your account.", "Esta reserva ya no puede cancelarse desde tu cuenta.")}</div> : null}
           {query.error === "payment-active" ? <div className={styles.notice}>{t("This reservation has a completed or pending payment. Manage the payment or refund before cancelling it.", "La reserva tiene un pago realizado o pendiente. Gestiona primero el pago o el reembolso antes de cancelarla.")}</div> : null}
 
@@ -125,11 +125,11 @@ export default async function AccountServiceReservationPage({
               </strong><br />
               {travellerDataComplete
                 ? t(
-                    "All required post-purchase traveller information has been completed for this service. You can review it while customer editing remains open.",
-                    "Ya se ha completado la información post-compra necesaria para todos los viajeros de este servicio. Puedes revisarla mientras el plazo de edición siga abierto."
+                    "All required traveller information has been completed for this service. You can review it while customer editing remains open.",
+                    "Ya se ha completado la información necesaria para todos los viajeros de este servicio. Puedes revisarla mientras el plazo de edición siga abierto."
                   )
                 : t(
-                    `${travellerDataCompletedCount}/${reservation.travellers.length} travellers complete. Finish the pending details required to operate this service.`,
+                    `${travellerDataCompletedCount}/${reservation.travellers.length} travellers complete. Finish the pending details required to manage this service.`,
                     `${travellerDataCompletedCount}/${reservation.travellers.length} viajeros completos. Completa los datos pendientes necesarios para gestionar este servicio.`
                   )}
             </div>
@@ -143,7 +143,7 @@ export default async function AccountServiceReservationPage({
                 <div key={traveller.id}>
                   <dt>{traveller.firstName} {traveller.lastName}{traveller.isLead ? ` · ${t("lead", "principal")}` : ""}</dt>
                   <dd>
-                    {travellerRequirementsActive ? <><strong>{t("Post-purchase data", "Datos post-compra")}: {completion?.complete ? t("complete", "completos") : t("pending", "pendientes")}</strong><br /></> : null}
+                    {travellerRequirementsActive ? <><strong>{t("Additional details", "Datos adicionales")}: {completion?.complete ? t("complete", "completos") : t("pending", "pendientes")}</strong><br /></> : null}
                     {traveller.ageAtDeparture} {t("years", "años")} · {locale === "es" ? traveller.pricingLabelEs || traveller.pricingLabel : traveller.pricingLabel} · {formatCurrency(traveller.unitPrice, reservation.currency, locale)}
                   </dd>
                 </div>
@@ -170,8 +170,8 @@ export default async function AccountServiceReservationPage({
           <h2>{t("Payment summary", "Resumen de pago")}</h2>
           <p className={styles.lead}>
             {t(
-              "Manual and online payments use the same payment ledger so this service reservation always has one authoritative balance.",
-              "Los pagos manuales y online utilizan el mismo registro para que esta reserva de servicio mantenga un único saldo fiable."
+              "See what you have paid and what remains outstanding for this service reservation.",
+              "Consulta cuánto has pagado y qué importe queda pendiente en esta reserva de servicio."
             )}
           </p>
 

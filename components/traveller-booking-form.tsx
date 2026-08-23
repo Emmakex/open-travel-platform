@@ -233,7 +233,7 @@ export function TravellerBookingForm({
       </div>
 
       {inventoryExceeded ? (
-        <div className={styles.error}>{t("There are not enough spaces for this traveller composition.", "No quedan suficientes plazas para esta composición de viajeros.")}</div>
+        <div className={styles.error}>{t("There are not enough spaces for this group of travellers.", "No quedan suficientes plazas para este grupo de viajeros.")}</div>
       ) : null}
 
       <div className={styles.priceSummary}>
@@ -242,7 +242,7 @@ export function TravellerBookingForm({
           <strong>{travellers.length}</strong>
         </div>
         <div>
-          <span>{t("Inventory spaces", "Plazas consumidas")}</span>
+          <span>{t("Places required", "Plazas necesarias")}</span>
           <strong>{inventorySpaces}</strong>
         </div>
         <div className={styles.totalRow}>
@@ -252,7 +252,7 @@ export function TravellerBookingForm({
       </div>
 
       <button className="button button-primary" type="submit" disabled={!canSubmit}>
-        {t("Create reservation", "Crear reserva")}
+        {t("Confirm reservation", "Confirmar reserva")}
       </button>
     </form>
   );

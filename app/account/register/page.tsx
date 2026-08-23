@@ -8,7 +8,7 @@ import { identityConfig } from "@/lib/identity-config";
 import { getIdentityRepository } from "@/lib/identity-repository";
 
 export const metadata = {
-  title: "Create account | Kairoseth Travel",
+  title: "Create account",
   description: "Create a Kairoseth Travel customer account."
 };
 
@@ -49,7 +49,7 @@ export default async function RegisterPage({
           <p className={styles.lead}>
             {next
               ? isEs ? "Crea tu cuenta y volverás directamente a la reserva del servicio." : "Create your account and return directly to the service booking."
-              : isEs ? "Crea una cuenta para guardar reservas y consultar tus viajes desde cualquier sesión." : "Create an account to keep reservations and access your trips across sessions."}
+              : isEs ? "Crea una cuenta para guardar reservas y consultar tus viajes desde cualquier sesión." : "Create an account to keep reservations and access your trips whenever you need them."}
           </p>
 
           {error && errors[error] ? <div className={styles.notice}>{errors[error]}</div> : null}
