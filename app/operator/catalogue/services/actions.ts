@@ -22,6 +22,7 @@ import {
   serviceBasePath
 } from "@/lib/travel-services";
 import { validateTravellerPricingBands } from "@/lib/traveller-pricing";
+import { parseTravellerRequirementsForm } from "@/lib/traveller-requirements-form";
 
 function text(formData: FormData, name: string) {
   const value = formData.get(name) ?? (name.includes(":") ? formData.get(name.replaceAll(":", "__")) : null);
@@ -145,9 +146,10 @@ export async function saveTravelServiceAction(formData: FormData) {
   const coverImage = parseCoverImage(formData);
   const gallery = parseGallery(formData);
   const travellerPricing = pricingMode === "per-age-band" ? parseTravellerPricing(formData) : undefined;
+  const travellerRequirements = parseTravellerRequirementsForm(formData);
   const returnTo = requestedId ? `/operator/catalogue/services/${id}` : `/operator/catalogue/services/new?type=${rawType || "activity"}`;
 
-  if (!serviceType || !title || !slug || !summary || !Number.isFinite(fromPrice) || fromPrice < 0 || coverImage === null || gallery === null || travellerPricing === null) {
+  if (!serviceType || !title || !slug || !summary || !Number.isFinite(fromPrice) || fromPrice < 0 || coverImage === null || gallery === null || travellerPricing === null || travellerRequirements === null) {
     redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}error=validation`);
   }
 
@@ -167,6 +169,7 @@ export async function saveTravelServiceAction(formData: FormData) {
     currency,
     pricingMode,
     travellerPricing,
+    travellerRequirements: travellerRequirements.preset === "none" ? undefined : travellerRequirements,
     highlights: lines(formData, "highlights"),
     included: lines(formData, "included"),
     notIncluded: lines(formData, "notIncluded"),
