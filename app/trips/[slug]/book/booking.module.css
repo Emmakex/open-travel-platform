@@ -67,6 +67,7 @@
   gap: 0.4rem;
   min-width: 0;
   max-width: 100%;
+  box-sizing: border-box;
 }
 
 .field span {
@@ -78,6 +79,8 @@
 .field select,
 .field input {
   display: block;
+  box-sizing: border-box;
+  inline-size: 100%;
   width: 100%;
   min-width: 0;
   max-width: 100%;
@@ -87,6 +90,7 @@
   padding: 0.75rem 0.85rem;
   background: var(--surface-2);
   color: var(--text);
+  font: inherit;
 }
 
 .field select {
@@ -162,6 +166,7 @@
 .travellerGrid > * {
   min-width: 0;
   max-width: 100%;
+  box-sizing: border-box;
 }
 
 .minorBox {
