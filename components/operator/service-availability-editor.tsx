@@ -43,9 +43,16 @@ export function ServiceAvailabilityEditor({
   locale: TravelLocale;
 }) {
   const inventoryMode = resolveInventoryMode(service);
+  const usesAgePricing = service.pricingMode === "per-age-band";
   const initial = useMemo(
-    () => slots.map((slot) => ({ ...slot, inventoryMode })),
-    [slots, inventoryMode]
+    () => slots.map((slot) => ({
+      ...slot,
+      inventoryMode,
+      // A single slot-level price cannot represent multiple age bands. Ignore
+      // legacy slot overrides for age-priced services; prices come from bands.
+      priceOverride: usesAgePricing ? undefined : slot.priceOverride
+    })),
+    [slots, inventoryMode, usesAgePricing]
   );
   const [items, setItems] = useState(initial);
 
@@ -93,6 +100,13 @@ export function ServiceAvailabilityEditor({
           {tr(locale, "Inventory mode", "Modo de inventario")}: <strong>{inventoryMode === "units" ? tr(locale, "Units", "Unidades") : tr(locale, "People", "Personas")}</strong>. {service.serviceType === "transport" ? tr(locale, "Per-unit pricing uses units; other transport pricing models use passenger capacity.", "El precio por unidad utiliza unidades; los demás modelos de transporte utilizan capacidad de pasajeros.") : tr(locale, "Activities always manage capacity by participant.", "Las actividades siempre gestionan el cupo por participante.")}
         </div>
 
+        {usesAgePricing ? (
+          <div className={styles.notice}>
+            <strong>{tr(locale, "Age-band pricing", "Precio según edad")}.</strong>{" "}
+            {tr(locale, "Each participant is priced from the configured traveller age bands. A single price override per slot is disabled because it would not represent adult, child and infant prices correctly.", "Cada participante se tarifa con las bandas de edad configuradas. El precio especial único por horario está desactivado porque no representaría correctamente los precios de adulto, menor y bebé.")}
+          </div>
+        ) : null}
+
         {items.length ? (
           <div className={styles.repeatList}>
             {items.map((item, index) => (
@@ -115,7 +129,9 @@ export function ServiceAvailabilityEditor({
                   <label className={styles.field}><span>{tr(locale, "Start time *", "Hora inicio *")}</span><input type="time" name={`slotStartTime__${item.id}`} value={item.startTime} onChange={(event) => update(index, { startTime: event.target.value })} required /></label>
                   <label className={styles.field}><span>{tr(locale, "End time", "Hora fin")}</span><input type="time" name={`slotEndTime__${item.id}`} value={item.endTime ?? ""} onChange={(event) => update(index, { endTime: event.target.value || undefined })} /></label>
                   <label className={styles.field}><span>{tr(locale, "Capacity *", "Capacidad *")} ({unitLabel})</span><input type="number" min={Math.max(1, item.reserved)} step="1" name={`slotCapacity__${item.id}`} value={item.capacity} onChange={(event) => update(index, { capacity: Number(event.target.value) })} required /></label>
-                  <label className={styles.field}><span>{tr(locale, "Price override", "Precio especial")}</span><input type="number" min="0" step="0.01" name={`slotPriceOverride__${item.id}`} value={item.priceOverride ?? ""} onChange={(event) => update(index, { priceOverride: event.target.value === "" ? undefined : Number(event.target.value) })} placeholder={tr(locale, "Use service price", "Usar precio del servicio")} /></label>
+                  {!usesAgePricing ? (
+                    <label className={styles.field}><span>{tr(locale, "Price override", "Precio especial")}</span><input type="number" min="0" step="0.01" name={`slotPriceOverride__${item.id}`} value={item.priceOverride ?? ""} onChange={(event) => update(index, { priceOverride: event.target.value === "" ? undefined : Number(event.target.value) })} placeholder={tr(locale, "Use service price", "Usar precio del servicio")} /></label>
+                  ) : null}
                   <label className={styles.field}><span>{tr(locale, "Status", "Estado")}</span><select name={`slotStatus__${item.id}`} value={item.status} onChange={(event) => update(index, { status: event.target.value === "closed" ? "closed" : "open" })}><option value="open">{tr(locale, "Open", "Abierta")}</option><option value="closed">{tr(locale, "Closed", "Cerrada")}</option></select></label>
                 </div>
               </div>
