@@ -91,6 +91,7 @@ export function ServiceBookingForm({
     const band = age === null ? null : findTravellerPricingBand(bands, age);
     return { traveller, index, age, band };
   }), [travellers, referenceDate, bands]);
+  const agePricingReady = service.pricingMode !== "per-age-band" || calculated.every((item) => item.age !== null && Boolean(item.band));
   const adults = calculated.filter((item) => item.age !== null && item.age >= 18);
   const leadMinor = calculated[0]?.age !== null && calculated[0]?.age !== undefined && calculated[0].age < 18;
   const complete = calculated.every((item) => {
@@ -128,7 +129,7 @@ export function ServiceBookingForm({
     "invalid-travellers": t("Review the details for every traveller.", "Revisa los datos de todos los viajeros."),
     "lead-must-be-adult": t("The lead traveller must be an adult.", "El viajero principal debe ser mayor de edad."),
     "minor-guardian-required": t("Every minor must be linked to a responsible adult on this booking.", "Todos los menores deben estar vinculados a un adulto responsable de esta reserva."),
-    "pricing-unavailable": t("A valid price could not be calculated for one of the travellers.", "No se ha podido calcular una tarifa válida para uno de los viajeros."),
+    "pricing-unavailable": t("One traveller is outside the configured age bands. Review the traveller date of birth or the activity fares.", "Un viajero queda fuera de las bandas de edad configuradas. Revisa su fecha de nacimiento o las tarifas de la actividad."),
     "invalid-availability": t("The selected date or time is no longer available. Choose another slot.", "La fecha u horario seleccionado ya no está disponible. Elige otro horario."),
     "insufficient-space": t("There is no longer enough availability for this selection.", "Ya no queda disponibilidad suficiente para esta selección."),
     "insurance-destination": t("Enter a valid destination for the insured trip.", "Introduce un destino válido para el viaje asegurado."),
@@ -275,7 +276,10 @@ export function ServiceBookingForm({
       <div className={styles.priceSummary}>
         <div><span>{t("Travellers", "Viajeros")}</span><strong>{travellers.length}</strong></div>
         {service.pricingMode === "per-unit" ? <div><span>{t("Units", "Unidades")}</span><strong>{quantity}</strong></div> : null}
-        <div className={styles.totalRow}><span>{t("Service total", "Total del servicio")}</span><strong>{money(total, service.currency, locale)}</strong></div>
+        <div className={styles.totalRow}>
+          <span>{t("Service total", "Total del servicio")}</span>
+          <strong>{agePricingReady ? money(total, service.currency, locale) : t("Enter dates of birth", "Introduce las fechas de nacimiento")}</strong>
+        </div>
       </div>
       <button className="button button-primary" type="submit" disabled={pending || inventoryExceeded || submitUnavailable}>
         {pending ? t("Saving reservation…", "Guardando reserva…") : t("Create service reservation", "Crear reserva del servicio")}

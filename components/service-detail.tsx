@@ -47,6 +47,20 @@ function pricingModeLabel(service: TravelService, locale: TravelLocale) {
   return locale === "es" ? labels[service.pricingMode][1] : labels[service.pricingMode][0];
 }
 
+function displayStartingPrice(service: TravelService) {
+  if (service.pricingMode !== "per-age-band" || !service.travellerPricing?.length) {
+    return service.fromPrice;
+  }
+
+  // A free infant band should not make the public activity look like a free
+  // product. Use the lowest paid age band for the commercial "from" price.
+  const paidPrices = service.travellerPricing
+    .map((band) => band.price)
+    .filter((value) => Number.isFinite(value) && value > 0);
+
+  return paidPrices.length ? Math.min(...paidPrices) : 0;
+}
+
 function formatSlotDate(date: string, locale: TravelLocale) {
   return new Intl.DateTimeFormat(locale === "es" ? "es-ES" : "en-GB", {
     weekday: "short",
@@ -59,7 +73,7 @@ function formatSlotDate(date: string, locale: TravelLocale) {
 
 export async function ServiceDetail({ service, locale }: { service: TravelService; locale: TravelLocale }) {
   const item = localizeTravelService(service, locale);
-  const price = formatCurrency(item.fromPrice, item.currency, locale);
+  const price = formatCurrency(displayStartingPrice(item), item.currency, locale);
   const rows = detailRows(item, locale);
   const availability = item.serviceType === "insurance"
     ? []
@@ -109,7 +123,9 @@ export async function ServiceDetail({ service, locale }: { service: TravelServic
                   const unit = slot.inventoryMode === "units"
                     ? (remaining === 1 ? (locale === "es" ? "unidad" : "unit") : (locale === "es" ? "unidades" : "units"))
                     : (remaining === 1 ? (locale === "es" ? "plaza" : "place") : (locale === "es" ? "plazas" : "places"));
-                  const slotPrice = slot.priceOverride === undefined ? null : formatCurrency(slot.priceOverride, item.currency, locale);
+                  const slotPrice = item.pricingMode === "per-age-band" || slot.priceOverride === undefined
+                    ? null
+                    : formatCurrency(slot.priceOverride, item.currency, locale);
                   return (
                     <article className="card" key={slot.id}>
                       <div className="card-body">
@@ -117,7 +133,11 @@ export async function ServiceDetail({ service, locale }: { service: TravelServic
                         <h3>{slot.startTime}{slot.endTime ? ` – ${slot.endTime}` : ""}</h3>
                         <p><strong>{remaining}</strong> {unit} {locale === "es" ? "disponibles" : "available"}</p>
                         {item.serviceType === "transport" && slot.inventoryMode === "units" && item.capacity ? <p>{locale === "es" ? `Hasta ${item.capacity} pasajeros por unidad` : `Up to ${item.capacity} passengers per unit`}</p> : null}
-                        {slotPrice ? <p><strong>{slotPrice}</strong> · {locale === "es" ? "precio de esta salida" : "price for this slot"}</p> : null}
+                        {item.pricingMode === "per-age-band" ? (
+                          <p><strong>{price}</strong> · {locale === "es" ? "desde · tarifas según edad" : "from · age-based fares"}</p>
+                        ) : slotPrice ? (
+                          <p><strong>{slotPrice}</strong> · {locale === "es" ? "precio de esta salida" : "price for this slot"}</p>
+                        ) : null}
                         <Link className="button button-primary" href={`${bookingPath}?slot=${encodeURIComponent(slot.id)}`}>{locale === "es" ? "Reservar este horario" : "Book this time"}</Link>
                       </div>
                     </article>
