@@ -15,9 +15,11 @@ _Última actualización: 23 de agosto de 2026._
 
 ## Posición actual
 
-El proyecto ya ha superado el MVP inicial de catálogo/reservas. El código actual incluye identidad persistente, RBAC cliente/personal, reservas de viajes y servicios, pricing por edad, actividades/transporte/seguros independientes, correo transaccional, contabilidad de pagos, configuración cifrada de pasarelas desde Admin y adaptadores de checkout online neutrales respecto al proveedor.
+El proyecto ya ha superado el MVP inicial de catálogo/reservas. El código actual incluye identidad persistente, RBAC cliente/personal, reservas de viajes y servicios, pricing por edad, actividades/transporte/seguros independientes, correo transaccional, contabilidad de pagos, configuración cifrada de pasarelas desde Admin, adaptadores de checkout online neutrales respecto al proveedor, depósitos/cuotas y datos post-compra de viajeros cifrados.
 
 La validación end-to-end con credenciales Stripe/Redsys se pospone deliberadamente hasta disponer de cuentas adecuadas. La implementación está presente, pero la capacidad de pago productiva no debe considerarse validada hasta probar los flujos TEST y LIVE con los proveedores.
+
+La **Fase 6A está funcionalmente cerrada**. Antes de iniciar 6B se ha añadido una capa 6A.1 de UX/documentación para que la activación por producto y los estados `No requerido / Pendiente / Completo` sean claros tanto para cliente como para Operator.
 
 ---
 
@@ -85,8 +87,6 @@ La validación end-to-end con credenciales Stripe/Redsys se pospone deliberadame
 - consumo de inventario configurable por banda de edad;
 - snapshots históricos de precio;
 - viajeros visibles para cliente y Operator.
-
-Los requisitos avanzados de documentación de viaje quedan como trabajo futuro y se detallan más abajo.
 
 ## Fase 5C — Catálogo independiente de servicios — COMPLETADO
 
@@ -163,51 +163,60 @@ Los requisitos avanzados de documentación de viaje quedan como trabajo futuro y
 - la recomendación del catálogo solo aparece como fallback cuando no existen viajes futuros;
 - el fallback prioriza un viaje que el cliente no haya reservado anteriormente.
 
+## Fase 5G — Depósitos, cuotas y condiciones de pago — COMPLETADO
+
+Objetivo cumplido: soportar calendarios de pago reales sin romper el ledger neutral respecto al proveedor.
+
+- pago completo frente a depósito;
+- depósitos configurables;
+- cuotas opcionales;
+- fechas de vencimiento;
+- snapshot de condiciones de pago guardado con la reserva;
+- cálculo server-side de saldo pendiente y siguiente pago;
+- calendario de pagos visible para cliente;
+- visibilidad y edición controlada desde Operator;
+- compatibilidad con movimientos manuales y checkout online existente;
+- fallback seguro al saldo completo cuando las condiciones guardadas quedan desactualizadas respecto al total de la reserva.
+
+## Fase 6A — Datos avanzados post-compra de viajeros — COMPLETADO
+
+Objetivo cumplido: recopilar únicamente los datos adicionales exigidos por cada producto/proveedor después de la compra, separándolos del checkout y del registro principal de reserva.
+
+- requisitos configurables por producto mediante presets `none`, `travel-document`, `international-air`, `spanish-lodging`, `maritime` y `custom`;
+- snapshot de requisitos dentro de cada reserva;
+- documento, país emisor, caducidad, residencia y otros campos solo cuando se requieren;
+- edición self-service post-compra hasta una fecha límite configurable;
+- cifrado AES-256-GCM con `TRAVELLER_DATA_KEY`;
+- datos sensibles separados de la colección de reservas;
+- conservación configurable y borrado automático mediante TTL;
+- auditoría de cambios que registra nombres de campos, no valores antiguos/nuevos;
+- vista de completitud para Operator sin exponer datos descifrados;
+- no se solicitan copias/fotos de DNI o pasaporte;
+- datos médicos/sanitarios excluidos deliberadamente del flujo estándar;
+- presets alineados con minimización de datos y revisión de casos regulatorios relevantes.
+
+La exportación documental/operativa de viajeros se mantiene fuera de esta fase y encaja en **Fase 7B — Documentos, exportaciones y reporting**, donde podrá implementarse con permisos y auditoría específicos.
+
+## Fase 6A.1 — UX y documentación de datos de viajeros — COMPLETADO
+
+Objetivo: hacer que la función sea evidente y consistente para Operator y cliente antes de iniciar modificaciones de reserva.
+
+- el editor de producto explica si los datos están `No requeridos` o `Activos para nuevas reservas`;
+- se explica explícitamente que hay que guardar el producto y crear una nueva reserva para probar cambios de requisitos;
+- reservas antiguas conservan su snapshot y no cambian silenciosamente;
+- Operator muestra estado agregado `NO REQUERIDO / PENDIENTE / COMPLETO`;
+- Operator muestra estado individual por viajero sin exponer valores sensibles;
+- Mi cuenta destaca la tarea pendiente en el próximo viaje;
+- detalles de viaje y servicio calculan completitud real en lugar de mostrar siempre “falta completar”;
+- cliente ve `Acción pendiente` mientras faltan datos y `Datos de viajeros completos` al terminar;
+- el CTA cambia de `Completar` a `Revisar` cuando ya está completo;
+- README EN/ES y `docs/TRAVELLER-DATA.md` documentan activación, flujo, seguridad y checklist de prueba.
+
 ---
 
 # Próximas prioridades
 
-## Fase 5G — Depósitos, cuotas y condiciones de pago — SIGUIENTE
-
-Objetivo: soportar calendarios de pago reales de una agencia de viajes y no solamente un saldo único.
-
-- política pago completo vs depósito;
-- depósito fijo o porcentual;
-- fecha de vencimiento del depósito;
-- fecha de vencimiento del saldo final;
-- calendarios opcionales de varias cuotas;
-- importe y fecha por cuota;
-- cálculo automático de `due now` y saldo pendiente;
-- estado de cuota vencida;
-- recordatorios de pago por email;
-- visibilidad para Operator de saldos próximos/vencidos;
-- snapshot de condiciones de pago guardado con la reserva;
-- calendario de pagos visible para el cliente;
-- compatibilidad con pagos manuales y ejecución futura mediante Stripe/Redsys;
-- reglas explícitas de reembolso/cancelación frente a calendarios de cuotas.
-
-Esta fase puede desarrollarse completamente sobre el ledger actual sin esperar a disponer de credenciales Stripe/Redsys.
-
-## Fase 6A — Requisitos avanzados de viajeros y documentos
-
-Objetivo: recopilar solamente los datos de viajero exigidos por cada producto/proveedor.
-
-Ya disponible: viajero principal, fichas individuales, menores/tutores, fecha de nacimiento, nacionalidad y pricing por edad.
-
-Pendiente:
-
-- campos obligatorios configurables por producto;
-- pasaporte / DNI únicamente cuando sea necesario;
-- número de documento, país emisor y caducidad;
-- campos opcionales exigidos por proveedor;
-- estado de completitud de viajeros;
-- edición self-service hasta una fecha límite configurable;
-- vista de completitud para Operator;
-- exportación segura de viajeros;
-- reglas de minimización/retención para datos sensibles;
-- auditoría de cambios en datos de viajeros.
-
-## Fase 6B — Modificaciones de reserva
+## Fase 6B — Modificaciones de reserva — SIGUIENTE
 
 Objetivo: soportar el ciclo normal posterior a la reserva sin destruir el registro original.
 
@@ -222,6 +231,8 @@ Objetivo: soportar el ciclo normal posterior a la reserva sin destruir el regist
 - generar saldo reembolsable cuando disminuye;
 - notificaciones de modificación;
 - deadlines configurables para cambios/cancelaciones.
+
+Principio de implementación: las modificaciones deben añadir historia y ajustes financieros, no reescribir silenciosamente el pasado. Los movimientos del ledger ya realizados permanecen como hechos históricos.
 
 ## Fase 6C — Alojamiento, suplementos y composición de paquetes
 
@@ -263,6 +274,7 @@ Objetivo: soportar documentos e informes habituales de equipos turísticos.
 - listas de viajeros / rooming lists;
 - vouchers;
 - exportaciones de reservas y servicios;
+- exportación segura y auditada de datos de viajeros cuando exista una necesidad operativa legítima;
 - CSV/XLSX de clientes y pagos;
 - export de conciliación financiera;
 - informe de saldos pendientes;
@@ -308,7 +320,7 @@ Objetivo: completar el trabajo necesario antes de posicionar un despliegue para 
 - revisión de cookies/sesiones;
 - escaneo de dependencias y secretos;
 - auditoría de acciones privilegiadas;
-- procedimiento de recuperación/rotación de secretos de pago;
+- procedimiento de recuperación/rotación de secretos de pago y datos de viajeros;
 - pruebas de backup/restore.
 
 ### Observabilidad y operaciones
@@ -324,6 +336,7 @@ Objetivo: completar el trabajo necesario antes de posicionar un despliegue para 
 ### Privacidad/legal
 
 - política de privacidad;
+- información de primera capa y Art. 13 RGPD específica del despliegue en los puntos de recogida de datos;
 - términos y condiciones de reserva;
 - política/consentimiento de cookies cuando aplique;
 - política de retención/eliminación;
@@ -353,10 +366,6 @@ Objetivo: hacer que Open Travel Platform sea fácil de adoptar por terceros mien
 # Orden de entrega sugerido
 
 ```text
-5G  Depósitos / cuotas / condiciones de pago
- ↓
-6A  Requisitos avanzados de viajeros / documentos
- ↓
 6B  Modificaciones de reserva
  ↓
 6C  Alojamiento / suplementos / composición de paquetes
@@ -372,7 +381,7 @@ Objetivo: hacer que Open Travel Platform sea fácil de adoptar por terceros mien
 10  Productización / release open-source
 ```
 
-La validación TEST con credenciales Stripe/Redsys debe insertarse en cuanto existan las cuentas necesarias; no tiene por qué bloquear la Fase 5G.
+La validación TEST con credenciales Stripe/Redsys debe insertarse en cuanto existan las cuentas necesarias; no debe bloquear la Fase 6B.
 
 Parte del trabajo de seguridad/testing de Fase 9 debe seguir realizándose de manera incremental y no esperar hasta el final, especialmente en pagos, datos de viajeros y concurrencia de inventario.
 
