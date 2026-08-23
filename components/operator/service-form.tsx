@@ -6,6 +6,7 @@ import { saveTravelServiceAction } from "@/app/operator/catalogue/services/actio
 import styles from "@/app/operator/operator.module.css";
 import { GalleryEditor, MediaEditorCard } from "@/components/operator/structured-editors";
 import { TravellerPricingEditor } from "@/components/operator/traveller-pricing-editor";
+import { TravellerRequirementsEditor } from "@/components/operator/traveller-requirements-editor";
 import type {
   TravelService,
   TravelServicePricingMode,
@@ -125,6 +126,8 @@ export function ServiceForm({ service, type, error, mediaLibrary = [], locale }:
           </div>
         </div>
       ) : null}
+
+      <TravellerRequirementsEditor profile={service?.travellerRequirements} locale={locale} />
 
       <div className={styles.editorSection}>
         <div><div className="eyebrow">{tr(locale, "Commercial content", "Contenido comercial")}</div><p className={styles.muted}>{tr(locale, "Use one line per highlight or inclusion.", "Usa una línea por cada destacado o elemento incluido.")}</p></div>
