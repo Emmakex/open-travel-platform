@@ -4,9 +4,9 @@
 
 > Reusable open-source travel platform foundation for agencies, tour operators and booking products.
 
-Open Travel Platform is a clean-room Next.js + TypeScript project built around explicit domain and repository boundaries. It can run with bundled fictional data for local evaluation, or use persistent MongoDB-backed catalogue, identity, booking, operations and payment-ledger capabilities.
+Open Travel Platform is a clean-room Next.js + TypeScript platform built around explicit domain, repository and adapter boundaries. It can run with bundled demo data for local evaluation or use persistent MongoDB-backed catalogue, identity, booking, service, operations and payment capabilities.
 
-The public reference deployment is branded as **Kairoseth Travel** and is available at **[travel.kairoseth.com](https://travel.kairoseth.com)**.
+The official commercial/reference implementation is **Kairoseth Travel**, deployed at **[travel.kairoseth.com](https://travel.kairoseth.com)**.
 
 ![Version](https://img.shields.io/badge/version-1.0.0-0d1b2d)
 ![Next.js](https://img.shields.io/badge/Next.js-16.3.1-000000)
@@ -17,29 +17,106 @@ The public reference deployment is branded as **Kairoseth Travel** and is availa
 ![License](https://img.shields.io/badge/license-MIT-45d6b5)
 [![Live reference](https://img.shields.io/badge/live-travel.kairoseth.com-45d6b5)](https://travel.kairoseth.com)
 
+## Project model
+
+This repository is the **MIT-licensed open-source core**. Kairoseth Travel is the official hosted/commercial implementation built on top of it.
+
+That separation is intentional:
+
+- Open Travel Platform remains reusable, provider-neutral and useful to other agencies/developers;
+- Kairoseth Travel can add hosted operations, support, commercial services, private integrations and deployment-specific capabilities;
+- customer data, production credentials and proprietary customer integrations stay outside the public repository.
+
 ## Live reference deployment
 
-**[travel.kairoseth.com](https://travel.kairoseth.com)** is the reference implementation used to validate the platform end to end.
+**[travel.kairoseth.com](https://travel.kairoseth.com)** is used to validate the platform end to end.
 
-The current deployment demonstrates persistent catalogue and media management, customer and staff authentication, booking inventory, reservation operations, transactional email and the provider-neutral payment ledger. Content and payment movements used while developing/testing the reference deployment should still be treated as non-production test data unless the deployment owner explicitly enables a production integration.
+The current reference deployment includes persistent catalogue/media management, customer and staff authentication, reservation operations, traveller records, independent travel services, inventory, transactional email, payment accounting and admin-managed payment-provider configuration.
 
-A live card payment gateway is **not** part of the current open-source core yet. Phase 5A provides the financial ledger and operator workflow required to connect Stripe, Redsys or another PSP without coupling booking records to one provider.
+Stripe and Redsys adapters plus the unified online checkout are already implemented in the codebase, but credentialed end-to-end payment testing is intentionally deferred until suitable provider accounts are available. No payment provider is enabled automatically.
 
 ## Current capabilities
 
-- **Bilingual interface** — English and Spanish across the public catalogue, customer account and operator surfaces.
-- **Catalogue** — destinations, trips, localized content, search/filtering and publication state through `TravelRepository`.
-- **Catalogue backoffice** — create/edit destinations and trips from the protected operator area.
-- **Media library** — persistent uploads, reusable media selection, cover images, metadata and focal-point controls.
-- **Departures & inventory** — persistent departure windows, capacity, reserved spaces and availability validation.
-- **Customer identity** — persistent registration/sign-in and protected customer sessions with MongoDB mode.
-- **Staff identity** — operator/admin authentication, protected sessions, password flows and role checks.
-- **Booking** — persistent reservations with server-authoritative price, inventory and ownership validation.
-- **Operations** — protected reservation queue, confirm/cancel transitions and audit history.
-- **Customers** — operator CRM-style customer list, profile detail and reservation value summary.
-- **Transactional email** — SMTP notifications for reservation receipt and reservation status changes.
-- **Payments foundation (Phase 5A)** — provider-neutral payment/refund ledger, payment summaries, manual payment/refund recording, operator finance dashboard and customer payment history.
-- **Release quality** — source-safety checks, TypeScript, production build, HTTP smoke tests and dependency audit in CI.
+### Public catalogue and commerce
+
+- bilingual EN/ES public experience;
+- destinations and trips with localized content;
+- public trip departures and live availability;
+- public independent **Activities**, **Transport** and **Insurance** catalogues without login;
+- service detail pages with availability and pricing;
+- customer login/registration only when needed for account/reservation flows.
+
+### Catalogue backoffice
+
+- protected Operator/Admin catalogue management;
+- destinations and trips;
+- cover images, galleries, GridFS media library and focal-point controls;
+- structured multilingual itineraries;
+- trip departures, capacities and inventory;
+- independent activity, transport and insurance products;
+- service pricing models: per person, per booking, per unit and age-based;
+- service availability/inventory calendars for activities and transport;
+- draft/published lifecycle.
+
+### Travellers and pricing
+
+- lead traveller and individual traveller records;
+- date of birth and nationality;
+- age calculated against the departure/service date;
+- configurable age bands (for example infant/child/youth/adult);
+- server-authoritative traveller pricing;
+- per-departure traveller-price overrides;
+- guardian relationship required for minors;
+- configurable inventory consumption by age band (for example infants can be free and consume no seat);
+- pricing snapshots stored with reservations so historical bookings do not change when catalogue prices change.
+
+### Reservations and services
+
+- persistent trip reservations with capacity control;
+- persistent independent service reservations for activities, transport and insurance;
+- service reservations can optionally link to a Kairoseth trip or remain completely independent for externally booked travel;
+- inventory reservation/release protected transactionally where applicable;
+- customer reservation/service history;
+- customer account prioritizes the actual next future trip and only falls back to catalogue recommendations when no future trip exists;
+- operator queues for trip reservations and service reservations;
+- confirm/cancel workflows and operational audit history.
+
+### Identity and security
+
+- persistent customer registration and sessions;
+- separate staff operator/admin authentication and RBAC;
+- customer/staff session separation;
+- account lockout after repeated failures;
+- password change and password recovery;
+- SMTP password-reset emails;
+- authentication audit events;
+- active-session role indicator in the frontend;
+- privileged payment-provider configuration restricted to admins.
+
+### Transactional email
+
+- SMTP using a server-side mail transport;
+- reservation received emails;
+- reservation confirmed/cancelled notifications;
+- traveller and pricing breakdowns in customer emails;
+- password recovery email flow.
+
+### Payments and finance
+
+- provider-neutral payment/refund ledger;
+- independent reservation and payment states;
+- unpaid / pending / partially paid / paid / partially refunded / refunded summaries;
+- manual bank-transfer, cash and external-terminal movements;
+- manual refunds and reconciliation protections;
+- service reservations supported by the same payment ledger;
+- unified checkout architecture for trips and services;
+- Stripe Checkout adapter with signed webhook verification and idempotent processing;
+- Redsys redirect adapter with signed server notification validation;
+- browser return URLs are never trusted as payment confirmation;
+- admin-managed TEST/LIVE payment profiles;
+- Stripe/Redsys secrets encrypted at rest with AES-256-GCM;
+- provider credentials are never returned to the browser after saving;
+- adapters are designed so additional PSPs can be introduced without rewriting booking logic.
 
 ## Architecture
 
@@ -48,46 +125,52 @@ A live card payment gateway is **not** part of the current open-source core yet.
                                |
                         TravelRepository
                                |
-                  demo / REST API / MongoDB
-                               |
                     destinations + trips
                                |
                     departures / inventory
                                |
                         BookingRepository
                                |
-                         reservations
-                          /          \
-                         /            \
-                customer area      staff operations
-                    |                    |
-            IdentityRepository   OperationsRepository
-                    |                    |
-          demo / MongoDB auth      audit + workflows
-                         \            /
-                          \          /
-                           reservation
-                               |
-                        PaymentRepository
-                               |
-                  provider-neutral ledger
-                               |
-             manual / Stripe / Redsys / future PSP
+                         trip reservations
+
+       public services ------------------------------+
+          |                                           |
+   activities / transport / insurance                |
+          |                                           |
+   service availability                              |
+          |                                           |
+   service reservations                              |
+          |                                           |
+          +-------------------+-----------------------+
+                              |
+                       PaymentRepository
+                              |
+                    provider-neutral ledger
+                              |
+                    unified checkout layer
+                       /              \
+                  Stripe              Redsys
+                       \              /
+                    signed callbacks
+
+ customer area ---------------- staff/operator/admin
+      |                                  |
+ IdentityRepository              Operations / RBAC
 ```
 
-Provider-specific payloads stay inside adapters. Catalogue, booking, identity, operations and payment accounting remain separate so integrations can be replaced independently.
+Provider-specific payloads stay inside adapters. Catalogue, booking, identity, service reservations, operations and payment accounting remain replaceable capability boundaries.
 
 ## Reservation and payment states are independent
 
-A reservation is a commercial booking record. A payment transaction is a financial movement. The project deliberately does not make one state automatically authoritative for the other.
+A reservation is a commercial booking record. A payment transaction is a financial movement. One does not silently mutate the other.
 
 Examples:
 
 - a reservation can be `confirmed` and still `unpaid`;
 - a reservation can be `pending` and already `paid`;
-- a cancelled reservation can remain paid until an explicit refund is recorded or completed by the PSP.
+- a cancelled reservation can remain paid until an explicit refund is processed.
 
-The payment ledger currently derives:
+Payment summaries currently derive:
 
 ```text
 unpaid
@@ -98,18 +181,7 @@ partially_refunded
 refunded
 ```
 
-See [`docs/PAYMENTS.md`](docs/PAYMENTS.md) for the full model.
-
-## Open-source core vs Kairoseth Travel
-
-This repository is intentionally a **reusable open-source foundation**. Kairoseth Travel is the public reference deployment and product showcase built from that foundation.
-
-That distinction allows the project to evolve in two directions at the same time:
-
-- the **open-source repository** can remain useful to developers, agencies and travel companies;
-- Kairoseth can build commercial hosting, support, private connectors, customer-specific integrations, content and operational services around the same core.
-
-Private credentials, customer data and deployment-specific proprietary services do not belong in the public repository.
+See [`docs/PAYMENTS.md`](docs/PAYMENTS.md).
 
 ## Quick start
 
@@ -125,62 +197,67 @@ npm run dev
 
 Open `http://localhost:3000`.
 
-A fresh clone can use the safe demo/read-only modes documented in `.env.example`. MongoDB, SMTP and persistent write modes are optional integrations.
+A fresh clone can use the safe demo/read-only modes documented in `.env.example`. Persistent MongoDB, SMTP and payment capabilities are optional integrations.
 
 ## Main routes
 
 ```text
-/                                landing page
-/destinations                    destination catalogue
-/destinations/[slug]             destination detail
-/trips                           searchable/filterable trips
-/trips/[slug]                    trip detail
-/trips/[slug]/book               availability + reservation
+/                                      landing page
+/destinations                          destination catalogue
+/destinations/[slug]                   destination detail
+/trips                                 trip catalogue
+/trips/[slug]                          trip detail
+/trips/[slug]/book                     trip booking
+/services                              services hub
+/activities                            public activities
+/activities/[slug]                     activity detail
+/transport                             public transport services
+/transport/[slug]                      transport detail
+/insurance                             public insurance products
+/insurance/[slug]                      insurance detail
+/services/book/[type]/[slug]           independent service booking
 
-/account/sign-in                 customer sign-in
-/account                         protected customer account
-/account/reservations            reservation history
-/account/reservations/[id]       reservation + payment detail
+/account/sign-in                       customer sign-in
+/account                               protected customer account
+/account/reservations                  trip reservations
+/account/reservations/[id]             trip reservation + finance
+/account/services                      service reservations
+/account/services/[id]                 service reservation detail
+/account/checkout/[targetType]/[id]    unified online checkout
+/account/security                      customer security
 
-/operator/sign-in                staff sign-in
-/operator                        operations dashboard
-/operator/reservations           reservation queue
-/operator/reservations/[id]      reservation + audit + payments
-/operator/customers              customer management
-/operator/catalogue              catalogue management
-/operator/media                  media library
-/operator/payments               financial/payment dashboard
-/operator/security               staff security
-/operator/staff                  admin staff management
+/operator/sign-in                      staff sign-in
+/operator                              operations dashboard
+/operator/reservations                 trip reservation queue
+/operator/service-reservations         service reservation queue
+/operator/customers                    customer management
+/operator/catalogue                    catalogue management
+/operator/media                        media library
+/operator/payments                     finance dashboard
+/operator/payments/providers           admin-only PSP configuration
+/operator/security                     staff security
+/operator/staff                        admin staff management
 ```
 
 ## Configuration overview
 
-The complete template lives in [`.env.example`](.env.example). Important capability switches include:
+The complete template lives in [`.env.example`](.env.example).
+
+Important server-side capabilities include:
 
 ```text
-# Public / catalogue
-NEXT_PUBLIC_SITE_NAME=Open Travel Platform
-NEXT_PUBLIC_SITE_TAGLINE=Build travel products without vendor lock-in.
+# Public URL
 KTRAVEL_PUBLIC_URL=https://travel.kairoseth.com
-NEXT_PUBLIC_DATA_MODE=demo
-TRAVEL_DATA_MODE=demo
-NEXT_PUBLIC_TRAVEL_API_URL=
 
 # Persistence
 MONGODB_URI=
 MONGODB_DB_NAME=ktravel
 
-# Identity
+# Identity / booking / operations
 IDENTITY_MODE=demo
 STAFF_AUTH_MODE=demo
-DEMO_IDENTITY_ENABLED=false
-
-# Booking / operations
 BOOKING_MODE=demo
 OPERATIONS_MODE=demo
-DEMO_BOOKING_ENABLED=false
-DEMO_OPERATIONS_ENABLED=false
 
 # SMTP
 SMTP_HOST=smtp.hostinger.com
@@ -191,28 +268,21 @@ SMTP_FROM_EMAIL=
 SMTP_FROM_NAME=Kairoseth Travel
 KTRAVEL_OPERATIONS_EMAILS=
 
-# Optional payment ledger override
-# PAYMENT_LEDGER_MODE=mongodb
+# Encrypts payment-provider secrets stored by Admin
+PAYMENT_SECRETS_KEY=
 ```
 
-`NEXT_PUBLIC_*` variables are browser-visible and must never contain secrets. Database, authentication, SMTP and payment credentials must remain server-side.
+`PAYMENT_SECRETS_KEY` should be a stable high-entropy 32-byte key (for example generated with `openssl rand -base64 32`). Do not rotate it without a migration plan because it protects the PSP credentials stored by the application.
 
-When `PAYMENT_LEDGER_MODE` is omitted, the current payment layer automatically follows MongoDB booking mode when `BOOKING_MODE=mongodb`.
+Stripe/Redsys credentials themselves are managed from the admin UI and are not required as environment variables.
 
-## MongoDB collections
+`NEXT_PUBLIC_*` variables are browser-visible and must never contain secrets.
 
-The persistent adapters currently use collections such as:
+## Persistent data
 
-```text
-travel_reservations
-travel_departures
-travel_payment_transactions
-travel_operations_audit
-travel_staff_users
-travel_staff_sessions
-```
+MongoDB-backed deployments use separate collections for capability boundaries, including reservations, departures, service catalogue/availability/reservations, payment transactions, operations audit, authentication data and payment-provider configuration.
 
-Catalogue, media and customer identity adapters use their own persistent collections as documented in the corresponding implementation/docs.
+Infrastructure-specific collection names and credentials are intentionally not exposed in the Operator UI.
 
 ## Integration and production docs
 
@@ -225,8 +295,8 @@ Catalogue, media and customer identity adapters use their own persistent collect
 - [`docs/DEPARTURES.md`](docs/DEPARTURES.md) — departure inventory model.
 - [`docs/MEDIA.md`](docs/MEDIA.md) — media library and upload model.
 - [`docs/TRANSACTIONAL-EMAILS.md`](docs/TRANSACTIONAL-EMAILS.md) — SMTP notifications.
-- [`docs/PAYMENTS.md`](docs/PAYMENTS.md) — payment ledger and future PSP integration contract.
-- [`docs/ADAPTER-GUIDE.md`](docs/ADAPTER-GUIDE.md) — adding real integrations.
+- [`docs/PAYMENTS.md`](docs/PAYMENTS.md) — payment ledger and PSP integration contract.
+- [`docs/ADAPTER-GUIDE.md`](docs/ADAPTER-GUIDE.md) — adding integrations.
 - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — deployment model.
 - [`docs/PRODUCTION-CHECKLIST.md`](docs/PRODUCTION-CHECKLIST.md) — production review.
 
@@ -240,44 +310,62 @@ npm run build
 npm run verify
 ```
 
-CI resolves the dependency lock, performs a clean install, validates release consistency, type-checks, builds the production application, runs representative HTTP smoke tests and performs a dependency audit.
-
-## Project principles
-
-- Clean-room implementation.
-- Provider-neutral capability interfaces.
-- Server-authorized customer and staff operations.
-- Server-validated pricing, inventory, ownership and state transitions.
-- Persistent adapters without forcing one vendor for every capability.
-- Reservation state separated from payment state.
-- Production-safe defaults and server-only secrets.
-- No mandatory hosting, CMS, auth, CRM, payment or supplier vendor.
-- MIT licensed open-source core.
+CI resolves the dependency lock, performs a clean install, validates release consistency, type-checks, builds the production app, runs representative HTTP smoke tests and performs a dependency audit.
 
 ## Project status
 
 | Area | Status |
 |---|---|
 | Foundation, architecture and CI | Done |
-| Catalogue and discovery | Done |
-| MongoDB catalogue backoffice | Done |
-| Media library | Done |
-| Persistent customer/staff identity | Done |
-| Reservations and departure inventory | Done |
+| Bilingual public catalogue | Done |
+| MongoDB catalogue backoffice and media | Done |
+| Persistent customer/staff identity and security | Done |
+| Trip reservations and departure inventory | Done |
+| Traveller records, minors and age pricing | Done (advanced travel-document requirements remain) |
+| Independent activities / transport / insurance catalogue | Done |
+| Independent service availability and reservations | Done |
 | Operator/admin workflows and audit | Done |
 | Transactional email | Done |
-| Phase 5A — provider-neutral payment ledger | Done |
-| Live PSP/card integration | Next |
+| Provider-neutral payment ledger | Done |
+| Admin TEST/LIVE Stripe and Redsys configuration | Done |
+| Unified Stripe/Redsys checkout adapters | Implemented; credentialed E2E validation pending |
+| Deposits / installments / payment terms | **Next** |
 
-Future work is tracked in [`ROADMAP.md`](ROADMAP.md). For contribution, support and security guidance see [`CONTRIBUTING.md`](CONTRIBUTING.md), [`SUPPORT.md`](SUPPORT.md) and [`SECURITY.md`](SECURITY.md).
+Future work is tracked in **[ROADMAP.md](ROADMAP.md)** · **[ROADMAP.es.md](ROADMAP.es.md)**.
+
+## Next development priority
+
+The next major block is **deposits, installments and payment terms**:
+
+- full payment vs deposit;
+- fixed or percentage deposit;
+- deposit/final-balance due dates;
+- optional installment schedules;
+- outstanding-balance calculations;
+- reminder emails and overdue visibility;
+- payment-term snapshots stored with each reservation.
+
+This work can be completed on top of the current ledger before Stripe/Redsys credentials are available.
+
+## Project principles
+
+- clean-room implementation;
+- provider-neutral capability interfaces;
+- server-authorized customer and staff operations;
+- server-validated pricing, inventory, ownership and state transitions;
+- traveller and financial snapshots preserve historical bookings;
+- reservation state separated from payment state;
+- secrets remain server-side and encrypted when persisted;
+- no mandatory hosting, CMS, auth, CRM, payment or supplier vendor;
+- MIT-licensed open-source core.
 
 ## License and reuse
 
 This repository is released under the **MIT License**.
 
-In practical terms, MIT allows people and companies to use, copy, modify, merge, publish, distribute, sublicense and sell software based on this code, including commercial and closed-source derivative products, provided the required copyright and permission notice is retained.
+MIT permits people and companies to use, copy, modify, merge, publish, distribute, sublicense and sell software based on this code, including commercial and closed-source derivative products, provided the required copyright and permission notice is retained.
 
-There is no requirement for downstream users to publish their modifications. The software is provided without warranty, as stated in [`LICENSE`](LICENSE).
+Downstream users are not required to publish their modifications. The software is provided without warranty, as stated in [`LICENSE`](LICENSE).
 
 This permissive model is intentional for the open-source foundation. Commercial Kairoseth services, private integrations, hosted environments, credentials, customer data and other assets can remain separate from this repository.
 
