@@ -1,0 +1,51 @@
+.amendmentDetails {
+  margin-top: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(7, 18, 32, 0.42);
+  overflow: hidden;
+}
+
+.amendmentSummary {
+  cursor: pointer;
+  padding: 0.85rem 1rem;
+  color: var(--text);
+  font-weight: 700;
+  list-style-position: inside;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.amendmentSummary:hover {
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.amendmentBody {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  border-top: 1px solid var(--line);
+}
+
+.helperText {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.amendmentForm {
+  display: grid;
+  gap: 1rem;
+  max-width: 760px;
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-start;
+}
+
+@media (max-width: 620px) {
+  .formActions :global(.button) {
+    width: 100%;
+    justify-content: center;
+  }
+}
