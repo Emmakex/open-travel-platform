@@ -90,24 +90,12 @@ export function buildTravellerRequirementsProfile(input: {
 
 export function travellerFieldsForReservationTraveller(
   profile: TravellerRequirementsProfile | undefined,
-  traveller: ReservationTraveller
+  _traveller: ReservationTraveller
 ): TravellerRequirementField[] {
-  if (!profile || profile.preset === "none") return [];
-  const fields = [...profile.requiredFields];
-
-  // Spanish minors travelling abroad without a parent/legal guardian may need a travel authorisation.
-  // We only make this a completion item for international-document presets and when the recorded
-  // responsible adult is not marked as a parent/legal guardian.
-  if (
-    traveller.ageAtDeparture < 18 &&
-    traveller.guardianRelationship === "other" &&
-    (profile.preset === "international-air" || profile.preset === "travel-document") &&
-    !fields.includes("minorTravelAuthorization")
-  ) {
-    fields.push("minorTravelAuthorization");
-  }
-
-  return fields;
+  // Do not infer extra identity/document requirements from age or nationality. Requirements
+  // must come from the reservation snapshot because border, supplier and minor-authorisation
+  // rules depend on route, residence, accompaniment and other facts Kairoseth may not know.
+  return profile && profile.preset !== "none" ? [...profile.requiredFields] : [];
 }
 
 export function travellerRequirementsDeadline(
