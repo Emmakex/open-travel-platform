@@ -66,6 +66,7 @@
   display: grid;
   gap: 0.4rem;
   min-width: 0;
+  max-width: 100%;
 }
 
 .field span {
@@ -76,14 +77,22 @@
 
 .field select,
 .field input {
+  display: block;
   width: 100%;
   min-width: 0;
+  max-width: 100%;
   min-height: 48px;
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 0.75rem 0.85rem;
   background: var(--surface-2);
   color: var(--text);
+}
+
+.field select {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .notice,
@@ -144,9 +153,15 @@
 
 .travellerGrid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
   gap: 0.8rem;
   min-width: 0;
+  max-width: 100%;
+}
+
+.travellerGrid > * {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .minorBox {
