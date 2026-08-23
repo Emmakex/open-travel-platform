@@ -69,6 +69,7 @@ export async function startPaymentCheckoutAction(formData: FormData) {
     redirect(`/account/checkout/redsys/${encodeURIComponent(order.id)}`);
   }
 
+  let externalUrl = "";
   try {
     const credentials = await getActivePaymentProviderCredentials("stripe");
     if (!credentials || credentials.provider !== "stripe" || credentials.environment !== order.environment) {
@@ -81,10 +82,12 @@ export async function startPaymentCheckoutAction(formData: FormData) {
     });
     if (!session.id || !session.url) throw new Error("Stripe did not return a hosted Checkout URL.");
     await setCheckoutProviderReference(order.id, session.id);
-    redirect(session.url);
+    externalUrl = session.url;
   } catch (error) {
     await finalizeCheckoutOrder(order.id, "failed").catch(() => undefined);
     console.error("Stripe checkout initialization failed", error);
     redirect(`${checkoutUrl}?error=provider-error`);
   }
+
+  redirect(externalUrl);
 }
