@@ -20,7 +20,7 @@ export const metadata = {
 
 export default async function OperatorPaymentsPage() {
   const locale = await getLocale();
-  await requireOperationsIdentity();
+  const identity = await requireOperationsIdentity();
   const operations = getOperationsRepository();
   const payments = getPaymentRepository();
   const [reservations, trips, recentTransactions] = await Promise.all([
@@ -63,6 +63,11 @@ export default async function OperatorPaymentsPage() {
           <div className={styles.actions}>
             <Link className="button button-secondary" href="/operator">{tr(locale, "← Operator dashboard", "← Panel de operador")}</Link>
             <Link className="button button-secondary" href="/operator/reservations">{tr(locale, "Reservation queue", "Cola de reservas")}</Link>
+            {identity.role === "admin" ? (
+              <Link className="button button-primary" href="/operator/payments/providers">
+                {tr(locale, "Payment providers", "Pasarelas de pago")}
+              </Link>
+            ) : null}
           </div>
         </section>
 
