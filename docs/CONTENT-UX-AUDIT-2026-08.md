@@ -1,6 +1,7 @@
 # Kairoseth Travel — Full content & UX audit
 
 Audit date: 2026-08-23
+Status: **COMPLETE — quality gate before continuing Phase 6B-2**
 
 This review was completed before continuing reservation-amendment development. It covers the public experience, customer flows, catalogue-management UX and the live MongoDB-backed reference catalogue.
 
@@ -9,9 +10,10 @@ This review was completed before continuing reservation-amendment development. I
 - 44 live public pages crawled: 22 English + 22 Spanish.
 - Home, destinations, trips, services hub, activities, transport, travel protection, detail pages and public booking entry points.
 - Static inventory across `app`, `components` and shared copy modules.
-- 3,495 potential user-facing strings inventoried.
-- 133 automated editorial flags reviewed as candidates, not assumed to be defects.
+- 3,495+ potential user-facing strings inventoried during the review.
+- 133 initial automated editorial flags reviewed as candidates, not assumed to be defects.
 - 185 repeated-copy groups identified for manual review.
+- A second localized pass was performed after the main corrections to identify residual customer-facing implementation language.
 
 Automated flags are intentionally broader than the final editorial decision. Terms such as `inventory` can be appropriate in an Operator screen while being poor customer copy. Human review remains the final gate.
 
@@ -31,7 +33,7 @@ Automated flags are intentionally broader than the final editorial decision. Ter
 - Service booking pages had no page-specific metadata.
 - Public navigation exposed an Operator sign-in link to ordinary visitors.
 - Footer and home copy positioned the site as a travel-technology/operations product instead of a travel experience.
-- Customer booking/payment screens exposed implementation language such as `source of truth`, `payment ledger`, `persistent inventory` and verified-server wording.
+- Customer booking/payment screens exposed implementation language such as `source of truth`, `payment ledger`, `persistent inventory`, verified-server wording, deployment terminology and internal inventory terminology.
 - Empty availability states sounded like unfinished development (`check back later while options are added`).
 - Transport copy mixed `transfer`, `transfers`, `Aeroport` and generic `mobility` terminology.
 - Activity duration could be published as a bare number (`2.5`) without a unit.
@@ -55,6 +57,8 @@ Automated flags are intentionally broader than the final editorial decision. Ter
 - Avoid technology claims when the user only needs to know what happens next.
 - Use natural Spanish, not literal technical translations.
 - Empty states explain what the traveller can do now; they do not describe unfinished development.
+- Customer payment screens describe amounts paid, outstanding balances and due dates instead of internal finance/storage architecture.
+- Booking screens use traveller language such as `Places required`, `available times` and `available fares` instead of internal inventory/configuration terminology.
 
 ### Catalogue publishing
 
@@ -77,6 +81,8 @@ Activities must include a duration unit. Travel-protection products additionally
 - HTTPS link to provider/product terms;
 - any actual maximum-trip rule used by the product.
 
+Existing records that do not satisfy the publication-quality rules are surfaced in Operator as content requiring review.
+
 ## Voice of Kairoseth Travel
 
 The preferred voice is:
@@ -94,6 +100,29 @@ Examples:
 - Prefer **“Your payment is being confirmed”** over **“Awaiting verified server notification”**.
 - Prefer **“No online times are available right now”** over **“Check back later while options are added”**.
 - Prefer **“Add it to your plans”** over **“Independent product”**.
+
+## Permanent quality controls
+
+The temporary audit crawler and copy-inventory workflow were used only to complete this review and are removed before merge.
+
+The permanent CI keeps `scripts/ux-content-check.mjs`, which rejects known classes of customer-facing development/implementation copy, including roadmap markers, PR references, unfinished-work markers, duplicated brand metadata and selected architecture/payment/inventory terminology.
+
+Catalogue publication validation is also enforced server-side, so editorial quality is not only a visual convention in the Operator form.
+
+## Validation
+
+Before removing the temporary audit tooling, the complete branch passed:
+
+- public safety check;
+- UX/public-copy quality gate;
+- release consistency check;
+- TypeScript type check;
+- production build;
+- HTTP smoke tests;
+- dependency audit;
+- localized EN/ES live-content crawl.
+
+After removal of the temporary audit files, the standard CI is the final merge gate.
 
 ## Reference deployment follow-up
 
