@@ -21,15 +21,66 @@ A trip or service may select one requirement profile:
 
 The selected requirements are **snapshotted onto the reservation at purchase time**. Later catalogue edits therefore do not silently change historical customer obligations.
 
+## Operator activation workflow
+
+The feature is activated **per product**, never globally for every traveller.
+
+For a trip, open:
+
+```text
+Operator → Catalogue → Trips → Edit trip
+```
+
+For an activity, transport service or insurance product, open the corresponding product editor under:
+
+```text
+Operator → Catalogue → Services
+```
+
+Then use **Post-purchase traveller data / Datos de viajeros después de la compra**:
+
+1. Leave **No additional data / Sin datos adicionales** when the product does not need extra traveller information.
+2. Select the appropriate preset only when a supplier, route or legal obligation genuinely requires it.
+3. Review the customer-editing deadline and retention period.
+4. Save the product.
+5. The configuration becomes active for **new reservations only**. Existing reservations keep the traveller-requirements snapshot captured when they were created.
+
+Operator uses three intentionally simple states:
+
+- **NOT REQUIRED / NO REQUERIDO** — the reservation has no post-purchase traveller-data task;
+- **PENDING / PENDIENTE** — at least one traveller still has required fields missing;
+- **COMPLETE / COMPLETO** — every traveller has completed the required fields.
+
+The operator reservation view shows the aggregate status and a per-traveller status without exposing decrypted identity/document values in the overview.
+
+## Customer UX
+
+The customer should not need to understand presets, legal rules or internal configuration.
+
+When a new reservation contains post-purchase traveller requirements:
+
+- **My account / Mi cuenta** highlights the task for the next upcoming trip;
+- the reservation or service detail shows a prominent **Action required / Acción pendiente** message while information is missing;
+- the primary CTA is **Complete traveller information / Completar datos de viajeros**;
+- once all travellers are complete, the status changes to **Traveller information complete / Datos de viajeros completos**;
+- the CTA becomes a secondary **Review traveller information / Revisar datos de viajeros** action while editing remains open.
+
+The traveller-data form shows progress as `completed travellers / total travellers`, and each traveller is labelled **Complete** or **Action required**.
+
 ## GDPR / RGPD principles
 
 Regulation (EU) 2016/679 applies to the processing of this data. In particular:
 
 - Article 5 requires purpose limitation, data minimisation, storage limitation and appropriate security;
 - Article 6 requires a lawful basis, commonly contract necessity and/or a legal obligation where genuinely applicable;
-- Article 9 gives health data special-category protection.
+- Article 9 gives health data special-category protection;
+- Article 13 requires the deployment to provide the applicable privacy information at the point where personal data is collected;
+- Article 25 requires data protection by design and by default;
+- Article 32 requires appropriate security measures for the risk.
 
 Kairoseth therefore does not include medical/health questions in the standard traveller profiles. If an insurer or supplier genuinely needs health data, that should be implemented as a separate, reviewed workflow with the appropriate Article 9 condition (for example explicit consent where legally appropriate), rather than adding health fields to the generic traveller form.
+
+The generic core cannot hard-code a complete Article 13 notice because controller identity, contact/DPO information, purposes, lawful bases, recipients, international transfers and rights depend on the actual deployment. Production deployments must provide that deployment-specific privacy information in or immediately beside the traveller-data collection flow.
 
 Official text: https://eur-lex.europa.eu/eli/reg/2016/679/oj
 
@@ -104,15 +155,29 @@ Encrypted records store a `retentionUntil` date and MongoDB uses a TTL index to 
 
 Deployments should review these defaults against the actual legal basis and supplier contract. A longer retention period must not be selected merely because it is operationally convenient.
 
-## Customer workflow
+## End-to-end customer workflow
 
 1. Customer purchases/reserves the trip or service using only booking/pricing data.
 2. The reservation snapshots the product's traveller requirements.
-3. The reservation detail displays **Complete traveller information** when post-purchase data is required.
+3. My account and the reservation detail display the real traveller-data state.
 4. `/account/traveller-data/<trip|service>/<reservation-id>` shows only the required fields for that reservation.
 5. The customer may save/update data until the configured pre-start deadline.
-6. Values are encrypted at rest and completion status becomes visible in Operator.
-7. TTL retention removes encrypted data after the configured post-service period.
+6. Progress changes from **Pending** to **Complete** as each traveller satisfies the snapshot requirements.
+7. Values are encrypted at rest and the completion status becomes visible in Operator.
+8. TTL retention removes encrypted data after the configured post-service period.
+
+## Deployment checklist
+
+Before enabling any preset in production:
+
+- configure a stable `TRAVELLER_DATA_KEY`;
+- determine the actual operational/legal reason for requesting the selected fields;
+- confirm the retention period;
+- provide deployment-specific Article 13 privacy information;
+- create a **new** test reservation after saving the product configuration;
+- verify customer state: `Pending → Complete`;
+- verify Operator sees the same completion state without decrypted values;
+- verify old reservations did not change when the product preset was edited.
 
 ## Deliberate non-goals in this phase
 
