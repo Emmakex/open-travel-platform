@@ -66,6 +66,11 @@ export default async function AccountServiceReservationPage({
   const canPayOnline = reservation.status !== "cancelled" &&
     paymentSummary.outstandingAmount > 0 &&
     paymentSummary.pendingPaymentAmount <= 0;
+  const needsTravellerData = Boolean(
+    reservation.travellerRequirements &&
+    reservation.travellerRequirements.preset !== "none" &&
+    reservation.travellers.length
+  );
 
   return (
     <main className="section">
@@ -95,7 +100,22 @@ export default async function AccountServiceReservationPage({
             {reservation.travellers.map((traveller) => <div key={traveller.id}><dt>{traveller.firstName} {traveller.lastName}{traveller.isLead ? ` · ${t("lead", "principal")}` : ""}</dt><dd>{traveller.ageAtDeparture} {t("years", "años")} · {locale === "es" ? traveller.pricingLabelEs || traveller.pricingLabel : traveller.pricingLabel} · {formatCurrency(traveller.unitPrice, reservation.currency, locale)}</dd></div>)}
           </dl>
 
+          {needsTravellerData ? (
+            <div className={styles.notice}>
+              <strong>{t("Post-purchase traveller information required", "Falta completar información de viajeros")}</strong><br />
+              {t(
+                "This service requires additional identity or travel information after booking.",
+                "Este servicio requiere datos adicionales de identidad o viaje después de realizar la reserva."
+              )}
+            </div>
+          ) : null}
+
           <div className={styles.actions}>
+            {needsTravellerData ? (
+              <Link className="button button-primary" href={`/account/traveller-data/service/${encodeURIComponent(reservation.id)}`}>
+                {t("Complete traveller information", "Completar datos de viajeros")}
+              </Link>
+            ) : null}
             {canCustomerCancel ? <form action={cancelServiceReservationAction}><input type="hidden" name="reservationId" value={reservation.id} /><button className="button button-secondary" type="submit">{t("Cancel reservation", "Cancelar reserva")}</button></form> : null}
             <Link className="button button-secondary" href={`/${reservation.serviceType === "activity" ? "activities" : reservation.serviceType}/${reservation.serviceSlug}`}>{t("View service", "Ver servicio")}</Link>
             <Link className="button button-secondary" href="/account/services">{t("All services", "Todos los servicios")}</Link>
