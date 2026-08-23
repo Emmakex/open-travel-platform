@@ -51,14 +51,14 @@ export default async function ReservationDetailPage({
   searchParams
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ updated?: string }>;
+  searchParams: Promise<{ updated?: string; error?: string }>;
 }) {
   const locale = await getLocale();
   const copy = getAccountCopy(locale).reservations;
   const generalCopy = getDictionary(locale);
   const identity = await requireCustomerIdentity();
   const { id } = await params;
-  const { updated } = await searchParams;
+  const { updated, error } = await searchParams;
   const bookingRepository = getBookingRepository();
   const reservation = await bookingRepository.getReservation(identity.id, id);
 
@@ -86,6 +86,13 @@ export default async function ReservationDetailPage({
       ? "Esta reserva está almacenada de forma persistente en Kairoseth Travel."
       : "This reservation is stored persistently in Kairoseth Travel."
     : copy.demoNote;
+  const canCustomerCancel = reservation.status === "pending" &&
+    bookingConfig.writesEnabled &&
+    paymentSummary.netPaidAmount <= 0 &&
+    paymentSummary.pendingPaymentAmount <= 0;
+  const canPayOnline = reservation.status !== "cancelled" &&
+    paymentSummary.outstandingAmount > 0 &&
+    paymentSummary.pendingPaymentAmount <= 0;
 
   return (
     <main className="section">
@@ -97,6 +104,13 @@ export default async function ReservationDetailPage({
 
           {updated === "cancelled" ? (
             <div className={styles.notice}>{copy.cancelled}</div>
+          ) : null}
+          {error === "payment-active" ? (
+            <div className={styles.notice}>
+              {locale === "es"
+                ? "La reserva tiene un pago realizado o pendiente. Gestiona primero el pago o el reembolso antes de cancelarla."
+                : "This reservation has a completed or pending payment. Manage the payment or refund before cancelling it."}
+            </div>
           ) : null}
 
           <dl className={styles.profileList}>
@@ -110,7 +124,7 @@ export default async function ReservationDetailPage({
             <div><dt>{copy.reference}</dt><dd>{reservation.id}</dd></div>
           </dl>
 
-          {reservation.status === "pending" && bookingConfig.writesEnabled ? (
+          {canCustomerCancel ? (
             <form action={cancelReservationAction}>
               <input type="hidden" name="reservationId" value={reservation.id} />
               <button className="button button-secondary" type="submit">{copy.cancel}</button>
@@ -156,8 +170,8 @@ export default async function ReservationDetailPage({
           <h2>{locale === "es" ? "Resumen de pago" : "Payment summary"}</h2>
           <p className={styles.lead}>
             {locale === "es"
-              ? "Consulta los importes registrados para esta reserva. Los pagos online se incorporarán sobre esta misma capa de pagos."
-              : "Review the amounts recorded for this reservation. Online payments will use this same payment layer."}
+              ? "Los pagos manuales y online se registran en la misma capa de pagos para mantener un único saldo de la reserva."
+              : "Manual and online payments use the same payment ledger so the reservation always has one authoritative balance."}
           </p>
 
           <dl className={styles.profileList}>
@@ -168,6 +182,20 @@ export default async function ReservationDetailPage({
             <div><dt>{locale === "es" ? "Pendiente" : "Outstanding"}</dt><dd>{formatMoney(paymentSummary.outstandingAmount, paymentSummary.currency, locale)}</dd></div>
           </dl>
 
+          {paymentSummary.pendingPaymentAmount > 0 ? (
+            <div className={styles.notice}>
+              {locale === "es"
+                ? "Hay un pago online pendiente de confirmación. No repitas el pago hasta que la pasarela confirme o rechace la operación."
+                : "An online payment is awaiting confirmation. Do not repeat the payment until the provider confirms or rejects it."}
+            </div>
+          ) : canPayOnline ? (
+            <div className={styles.actions}>
+              <Link className="button button-primary" href={`/account/checkout/trip/${encodeURIComponent(reservation.id)}`}>
+                {locale === "es" ? "Pagar ahora" : "Pay now"}
+              </Link>
+            </div>
+          ) : null}
+
           <h3>{locale === "es" ? "Movimientos" : "Transactions"}</h3>
           {paymentTransactions.length ? (
             <div className={styles.profileList}>
@@ -177,7 +205,7 @@ export default async function ReservationDetailPage({
                     {paymentTransactionTypeLabel(transaction.type, locale)} · {formatDateTime(transaction.createdAt, locale)}
                   </dt>
                   <dd>
-                    {formatMoney(transaction.amount, transaction.currency, locale)} · {paymentMethodLabel(transaction.method, locale)}
+                    {formatMoney(transaction.amount, transaction.currency, locale)} · {paymentMethodLabel(transaction.method, locale)} · {transaction.provider}
                   </dd>
                 </div>
               ))}
