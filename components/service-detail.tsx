@@ -167,7 +167,7 @@ export async function ServiceDetail({ service, locale }: { service: TravelServic
       )}
 
       {item.highlights.length ? (
-        <section className="section"><div className="container"><div className="section-heading"><div><div className="eyebrow">{locale === "es" ? "Experiencia" : "Experience"}</div><h2>{locale === "es" ? "Lo más importante" : "Highlights"}</h2></div></div><div className="grid-3">{item.highlights.map((highlight) => <article className="card" key={highlight}><div className="card-body"><p>{highlight}</p></article>)}</div></div></section>
+        <section className="section"><div className="container"><div className="section-heading"><div><div className="eyebrow">{locale === "es" ? "Experiencia" : "Experience"}</div><h2>{locale === "es" ? "Lo más importante" : "Highlights"}</h2></div></div><div className="grid-3">{item.highlights.map((highlight) => <article className="card" key={highlight}><div className="card-body"><p>{highlight}</p></div></article>)}</div></div></section>
       ) : null}
 
       {item.included?.length || item.notIncluded?.length ? (
