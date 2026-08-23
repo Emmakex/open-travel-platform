@@ -1,3 +1,4 @@
+import type { TravellerRequirementsProfile } from "@/domain/traveller/types";
 import type {
   CurrencyCode,
   TravellerPricingBand,
@@ -51,6 +52,8 @@ type TravelServiceBase = {
   currency: CurrencyCode;
   pricingMode: TravelServicePricingMode;
   travellerPricing?: TravellerPricingBand[];
+  /** Advanced data requested after booking, snapshotted onto each service reservation. */
+  travellerRequirements?: TravellerRequirementsProfile;
   highlights: string[];
   included?: string[];
   notIncluded?: string[];
