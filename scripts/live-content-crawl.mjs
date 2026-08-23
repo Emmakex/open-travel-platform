@@ -1,11 +1,10 @@
 import { mkdir, writeFile } from "node:fs/promises";
 
 const base = new URL(process.env.AUDIT_BASE_URL || "https://travel.kairoseth.com");
-const startPaths = ["/", "/destinations", "/trips", "/activities", "/transport", "/insurance"];
-const allowedPrefixes = ["/destinations", "/trips", "/activities", "/transport", "/insurance", "/services/book"];
-const maxPages = 100;
-const queue = [...startPaths];
-const visited = new Set();
+const startPaths = ["/", "/destinations", "/trips", "/services", "/activities", "/transport", "/insurance"];
+const allowedPrefixes = ["/destinations", "/trips", "/services", "/activities", "/transport", "/insurance", "/services/book"];
+const locales = ["en", "es"];
+const maxPagesPerLocale = 120;
 const pages = [];
 
 function decode(value) {
@@ -52,28 +51,34 @@ function links(html) {
 function editorialFlags(text) {
   const checks = [
     ["development", /\b(?:Phase|Fase)\s+\d+|\bPR\s*#?\d+|\bWIP\b|\bTODO\b|\bFIXME\b/i],
-    ["technical", /\b(?:source of truth|fuente de verdad|provider-neutral|adapter|ledger|server notification|notificación verificada al servidor|deployment|despliegue)\b/i],
+    ["technical", /\b(?:source of truth|fuente de verdad|provider-neutral|adapter|ledger|server notification|notificación verificada al servidor|deployment|despliegue|persistent inventory|inventario persistente)\b/i],
     ["implementation security", /\b(?:AES-256|encryption key|clave de cifrado|storage is not configured|almacenamiento.*no está configurado)\b/i],
     ["unfinished", /\b(?:check back later|consulta más adelante|while new options are added|mientras incorporamos nuevas opciones)\b/i]
   ];
   return checks.filter(([, regex]) => regex.test(text)).map(([name]) => name);
 }
 
-while (queue.length && visited.size < maxPages) {
-  const path = queue.shift();
-  if (visited.has(path)) continue;
-  visited.add(path);
-  const url = new URL(path, base);
-  try {
-    const response = await fetch(url, { redirect: "follow", headers: { "user-agent": "Kairoseth-Content-Audit/1.0" } });
-    const html = await response.text();
-    const text = visibleText(html);
-    const foundLinks = links(html);
-    for (const found of foundLinks) if (!visited.has(found) && !queue.includes(found)) queue.push(found);
-    pages.push({ path, url: url.href, status: response.status, title: title(html), text, characters: text.length, flags: editorialFlags(text), links: foundLinks });
-    console.log(`${response.status} ${path} (${text.length} chars)`);
-  } catch (error) {
-    pages.push({ path, url: url.href, status: 0, title: "", text: "", characters: 0, flags: ["fetch-error"], error: error instanceof Error ? error.message : String(error), links: [] });
+for (const locale of locales) {
+  const queue = [...startPaths];
+  const visited = new Set();
+  while (queue.length && visited.size < maxPagesPerLocale) {
+    const path = queue.shift();
+    if (visited.has(path)) continue;
+    visited.add(path);
+    const url = new URL(path, base);
+    try {
+      const headers = { "user-agent": "Kairoseth-Content-Audit/1.0" };
+      if (locale === "es") headers.cookie = "kairoseth_travel_locale=es";
+      const response = await fetch(url, { redirect: "follow", headers });
+      const html = await response.text();
+      const text = visibleText(html);
+      const foundLinks = links(html);
+      for (const found of foundLinks) if (!visited.has(found) && !queue.includes(found)) queue.push(found);
+      pages.push({ locale, path, url: url.href, status: response.status, title: title(html), text, characters: text.length, flags: editorialFlags(text), links: foundLinks });
+      console.log(`${locale} ${response.status} ${path} (${text.length} chars)`);
+    } catch (error) {
+      pages.push({ locale, path, url: url.href, status: 0, title: "", text: "", characters: 0, flags: ["fetch-error"], error: error instanceof Error ? error.message : String(error), links: [] });
+    }
   }
 }
 
@@ -87,7 +92,7 @@ const markdown = [
   `Pages crawled: **${pages.length}**`,
   "",
   ...pages.map((page) => [
-    `## ${page.path}`,
+    `## [${page.locale.toUpperCase()}] ${page.path}`,
     "",
     `- status: ${page.status}`,
     `- title: ${page.title || "—"}`,
@@ -99,4 +104,4 @@ const markdown = [
   ].join("\n"))
 ].join("\n");
 await writeFile("audit-output/live-pages.md", markdown);
-console.log(`Live content crawl complete: ${pages.length} pages.`);
+console.log(`Live content crawl complete: ${pages.length} localized pages.`);
