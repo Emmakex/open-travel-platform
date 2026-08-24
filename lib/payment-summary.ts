@@ -30,7 +30,10 @@ export function buildPaymentSummary(
   const refundedAmount = money(succeededRefunds);
   const netPaidAmount = money(Math.max(0, paidAmount - refundedAmount));
   const outstandingAmount = money(Math.max(0, totalAmount - netPaidAmount));
+  const overpaidAmount = money(Math.max(0, netPaidAmount - totalAmount));
   const refundableAmount = netPaidAmount;
+  const pendingPaymentAmount = money(pendingPayments);
+  const pendingRefundAmount = money(pendingRefunds);
 
   let status: PaymentSummary["status"] = "unpaid";
   if (refundedAmount > 0 && netPaidAmount <= 0) {
@@ -41,8 +44,17 @@ export function buildPaymentSummary(
     status = "paid";
   } else if (netPaidAmount > 0) {
     status = "partially_paid";
-  } else if (pendingPayments > 0 || pendingRefunds > 0) {
+  } else if (pendingPaymentAmount > 0 || pendingRefundAmount > 0) {
     status = "pending";
+  }
+
+  let settlementStatus: PaymentSummary["settlementStatus"] = "settled";
+  if (pendingPaymentAmount > 0 || pendingRefundAmount > 0) {
+    settlementStatus = "pending";
+  } else if (overpaidAmount > 0) {
+    settlementStatus = "refund_review";
+  } else if (outstandingAmount > 0) {
+    settlementStatus = "payment_due";
   }
 
   return {
@@ -50,14 +62,17 @@ export function buildPaymentSummary(
     targetId: target.id,
     targetType: target.targetType,
     status,
+    settlementStatus,
     currency: target.currency,
     totalAmount,
     paidAmount,
     refundedAmount,
     netPaidAmount,
     outstandingAmount,
+    overpaidAmount,
+    settlementAmount: overpaidAmount > 0 ? overpaidAmount : outstandingAmount,
     refundableAmount,
-    pendingPaymentAmount: money(pendingPayments),
-    pendingRefundAmount: money(pendingRefunds)
+    pendingPaymentAmount,
+    pendingRefundAmount
   };
 }
