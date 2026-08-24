@@ -26,13 +26,7 @@ Los tipos de habitación pueden definir:
 - régimen;
 - tarifa base de referencia por habitación/noche.
 
-Los componentes de alojamiento del viaje referencian:
-
-- ID del alojamiento;
-- ID del tipo de habitación;
-- día de entrada dentro del viaje;
-- número de noches;
-- si la estancia está incluida o es opcional.
+Los componentes de alojamiento del viaje referencian alojamiento, habitación, día de entrada, noches y si la estancia está incluida o es opcional.
 
 El servidor comprueba que la habitación pertenece al alojamiento seleccionado y que la estancia cabe dentro de la duración del viaje.
 
@@ -40,112 +34,127 @@ El servidor comprueba que la habitación pertenece al alojamiento seleccionado y
 
 ### Galería general y galerías por habitación
 
-El alojamiento dispone ahora de dos niveles multimedia reutilizables:
+El alojamiento dispone de dos niveles multimedia reutilizables:
 
 - una galería general para exterior, zonas comunes y experiencia global del alojamiento;
 - una galería independiente para cada tipo de habitación.
 
 Ambos niveles usan la biblioteca multimedia compartida y la subida directa. Las fotografías de una habitación acompañan a ese tipo de habitación cuando se reutiliza en varios viajes.
 
-La ficha pública del alojamiento muestra la galería general y las fotografías de cada habitación. En la ficha del viaje se utiliza preferentemente la primera foto de la habitación vinculada y, si no existe, la portada del alojamiento.
+### Pricing por temporada y ocupación
 
-### Pricing por temporada
+El alojamiento puede definir suplementos/descuentos por fechas y reglas reutilizables para suplemento individual, descuento por triple, niño compartiendo y escenarios personalizados.
 
-El alojamiento puede definir reglas de precio por fechas. Cada regla incluye:
+Las temporadas se evalúan noche a noche y las reglas de ocupación pueden limitarse por tipo de habitación, número de adultos/niños y rango de edad del niño. Las reglas compatibles pueden acumularse.
 
-- nombre;
-- fecha inicial/final;
-- todas las habitaciones o un tipo concreto;
-- suplemento o descuento;
-- importe fijo por habitación/noche o porcentaje sobre la tarifa de habitación.
+Operator puede revisar una previsión por cada salida del viaje antes de vender el producto.
 
-Las reglas se evalúan noche a noche, por lo que una estancia que cruza dos temporadas se calcula correctamente.
+## Fase 6C-4
 
-### Pricing por ocupación
+### Distribución real de habitaciones en la reserva
 
-Las reglas reutilizables de ocupación permiten configurar:
+El booking utiliza ahora los viajeros reales en lugar de la ocupación de referencia.
 
-- suplemento individual;
-- descuento por ocupación triple;
-- descuento de niño compartiendo habitación;
-- reglas personalizadas.
+Para cada estancia incluida o alojamiento opcional seleccionado, el servidor:
 
-Pueden limitarse por:
+1. calcula la edad de cada viajero en la fecha de entrada al hotel;
+2. clasifica la ocupación de adulto/niño según la edad máxima de niño configurada en la habitación;
+3. busca el número mínimo válido de habitaciones;
+4. distribuye los viajeros entre esas habitaciones;
+5. valida adultos, niños y ocupación máxima;
+6. calcula cada habitación usando el mismo motor de temporada/ocupación de 6C-3;
+7. comprueba que exista inventario de habitación para todas las noches.
 
-- tipo de habitación;
-- adultos mínimos/máximos;
-- niños mínimos/máximos;
-- rango de edad del niño.
+El navegador muestra la distribución prevista antes de confirmar, pero el servidor vuelve a calcularla con los viajeros enviados. No se confían al cliente ni el precio ni la distribución de habitaciones.
 
-Los ajustes pueden calcularse como:
+### Alojamiento incluido frente a opcional
 
-- importe fijo por habitación/noche;
-- porcentaje sobre la estancia de habitación;
-- importe fijo por niño válido/noche;
-- porcentaje sobre la parte proporcional del niño en la habitación.
+`included` significa que la estancia ya forma parte de la tarifa del viaje/paquete. Su valor actual se calcula y se guarda como snapshot para operaciones, pero **no se vuelve a sumar al precio del viaje**.
 
-Las reglas compatibles pueden acumularse. Por ejemplo, una temporada alta y un descuento de niño compartiendo pueden aplicarse a la misma estancia.
+`optional` requiere selección del cliente. Cuando se selecciona, su precio calculado sí se añade al total de la reserva.
 
-### Previsión real de precio del paquete
+Así evitamos cobrar dos veces un hotel ya incluido y, al mismo tiempo, conservamos el valor real del alojamiento dentro del histórico de la reserva.
 
-Cada estancia vinculada a un viaje guarda una **ocupación de referencia** para la planificación del paquete:
+### Snapshot de alojamiento
 
-- número de adultos;
-- edades de niños opcionales.
+Las nuevas reservas pueden guardar:
 
-Operator calcula el valor del alojamiento para cada salida utilizando:
+- referencia y nombre del alojamiento/habitación;
+- entrada, salida, noches y régimen;
+- número exacto de habitaciones;
+- IDs de viajeros asignados a cada habitación;
+- adultos y edades de niños de hotel por habitación;
+- base, ajuste de temporada y ajuste de ocupación por habitación;
+- valor total calculado del alojamiento;
+- importe realmente añadido al total de la reserva;
+- periodos de inventario y cantidad de habitaciones consumidas.
 
-1. tarifa base de la habitación;
-2. fecha real de entrada derivada de salida del viaje + día de entrada;
-3. reglas de temporada aplicables;
-4. reglas de ocupación aplicables;
-5. número de noches.
+Las reservas antiguas no se rellenan ni se modifican retroactivamente.
 
-La previsión muestra base, ajuste de temporada, ajuste de ocupación y total final de alojamiento por salida.
+### Inventario transaccional
 
-El cálculo es compatible con servidor y está cubierto por el test permanente de invariantes de alojamiento.
+Las plazas de la salida y las habitaciones del alojamiento se reservan dentro de la misma transacción MongoDB que crea la reserva.
 
-## Límite del pricing
+Si falla la capacidad de la salida o cualquiera de las habitaciones necesarias, se revierte toda la operación.
 
-6C-3 incorpora el motor reutilizable de pricing de alojamiento y la previsión sensible a fecha/ocupación para paquetes.
+Las cancelaciones desde cliente y Operator liberan plazas y habitaciones en la misma transacción. Si la liberación no es segura, también se revierte la cancelación.
 
-No modifica silenciosamente `fromPrice`, tarifas históricas por viajero ni snapshots de reservas existentes.
+### Cambio de salida
 
-La asignación de habitaciones durante el booking reutilizará más adelante este mismo motor con la distribución real de viajeros antes de consumir inventario.
+Cuando una reserva ya contiene un snapshot de alojamiento y Operator cambia de salida, el alojamiento se mueve también.
 
-## Límite del inventario
+La transacción:
 
-El inventario permanece en `travel_accommodation_inventory` y nunca se copia dentro del viaje.
+1. recalcula viajeros para la nueva salida;
+2. asegura la capacidad de la nueva salida;
+3. recalcula distribución y precio del hotel para las nuevas fechas;
+4. reserva cualquier incremento necesario de inventario de habitación;
+5. libera las habitaciones que ya no se necesitan;
+6. libera la capacidad de la salida anterior;
+7. actualiza reserva e historial de modificaciones.
 
-6C-3 todavía no consume ni libera habitaciones al crear/cancelar una reserva de viaje. Esa operación debe ser transaccional y pertenece al siguiente bloque de booking de alojamiento.
+Los movimientos de habitación se calculan por delta neto. Si la estancia antigua y la nueva pertenecen al mismo periodo de inventario, no se exige capacidad duplicada artificialmente.
+
+El historial conserva los snapshots de alojamiento anteriores y posteriores al cambio.
+
+## Límite de moneda
+
+6C-4 no incorpora todavía un motor de cambio de divisas. El alojamiento vinculado debe utilizar la misma moneda que el viaje para venderse dentro de su booking.
+
+Si las monedas no coinciden, la reserva se bloquea en lugar de aplicar una conversión sin tipo de cambio definido.
+
+## Propiedad del inventario
+
+`travel_accommodation_inventory` continúa siendo la fuente real del inventario de habitaciones. El inventario nunca se copia en la ficha del viaje.
+
+La reserva guarda una asignación histórica para poder liberar o mover las habitaciones de forma segura.
 
 ## Flujo de Operator
 
 1. Crear alojamiento y habitaciones.
-2. Guardar.
+2. Configurar ocupación e inventario.
 3. Configurar tipo comercial, régimen y tarifa base por noche.
-4. Añadir reglas de temporada y ocupación.
+4. Añadir temporadas y reglas de ocupación.
 5. Añadir galería general y galerías por habitación.
-6. Abrir un viaje.
-7. En **Alojamiento del viaje**, añadir una estancia.
-8. Seleccionar alojamiento y habitación.
-9. Definir día de entrada y noches.
-10. Elegir Incluido u Opcional.
-11. Definir adultos de referencia y edades de niños si corresponde.
-12. Revisar la previsión real por cada salida.
-13. Guardar el alojamiento del viaje.
+6. Vincular alojamiento/habitación a un viaje.
+7. Elegir Incluido u Opcional, día de entrada y noches.
+8. Crear inventario que cubra las fechas de las salidas.
+9. Crear una reserva nueva con viajeros reales.
+10. Revisar la distribución generada tanto en Mi cuenta como en Operator.
+11. Cancelar o cambiar de salida para comprobar la liberación/reasignación transaccional.
 
 ## Checklist de validación
 
-- solo se pueden seleccionar habitaciones reales del alojamiento elegido;
-- el día de entrada es como mínimo el día 1;
-- las noches son como mínimo 1;
-- día de entrada + noches no puede superar la duración del viaje;
-- la ocupación de referencia debe ser válida para la habitación;
-- las edades de niños deben respetar el límite de la habitación;
-- los rangos de temporada deben ser válidos;
-- los porcentajes de ajuste permanecen dentro de límites seguros;
-- el alojamiento sigue siendo reutilizable en otros viajes;
-- cambiar el vínculo no duplica inventario;
-- editar los datos básicos del alojamiento no elimina tarifas ni galerías;
-- las páginas públicas no exponen IDs internos ni detalles de implementación del pricing.
+- la distribución usa las fechas de nacimiento reales;
+- cada viajero aparece exactamente en una habitación por estancia seleccionada;
+- se cumplen las reglas de ocupación;
+- la edad de niño de hotel se calcula en la entrada;
+- el alojamiento incluido no se cobra dos veces;
+- el alojamiento opcional seleccionado se añade al total;
+- un opcional no seleccionado no consume habitación;
+- todas las noches tienen inventario abierto;
+- falta de habitaciones bloquea la reserva completa;
+- cancelar libera salida y habitaciones;
+- cambiar de salida asegura primero la nueva asignación;
+- el historial conserva los snapshots anterior/posterior;
+- reservas antiguas sin snapshot de alojamiento continúan funcionando sin cambios.
