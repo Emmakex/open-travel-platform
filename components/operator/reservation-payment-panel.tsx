@@ -21,6 +21,7 @@ const errorKeys = {
   "reference-conflict": ["That payment reference is already in use.", "Esa referencia de pago ya está en uso."],
   "exceeds-balance": ["The payment exceeds the outstanding balance.", "El pago supera el saldo pendiente."],
   "exceeds-refundable": ["The refund exceeds the refundable balance.", "El reembolso supera el importe reembolsable."],
+  "exceeds-adjustment": ["For an active reservation, the refund cannot exceed the amount paid above the current total.", "En una reserva activa, el reembolso no puede superar el importe pagado por encima del total actual."],
   "payment-error": ["The payment could not be updated.", "No se pudo actualizar el pago."]
 } as const;
 
