@@ -65,6 +65,13 @@ function seasonalRuleMatches(rule: AccommodationSeasonalPricingRule, roomTypeId:
     (!rule.roomTypeIds?.length || rule.roomTypeIds.includes(roomTypeId));
 }
 
+function qualifyingChildren(rule: AccommodationOccupancyPricingRule, childAges: number[]) {
+  return childAges.filter((age) =>
+    (rule.minChildAge === undefined || age >= rule.minChildAge) &&
+    (rule.maxChildAge === undefined || age <= rule.maxChildAge)
+  ).length;
+}
+
 function occupancyRuleMatches(
   rule: AccommodationOccupancyPricingRule,
   roomTypeId: string,
@@ -76,8 +83,7 @@ function occupancyRuleMatches(
   if (rule.maxAdults !== undefined && adults > rule.maxAdults) return false;
   if (rule.minChildren !== undefined && childAges.length < rule.minChildren) return false;
   if (rule.maxChildren !== undefined && childAges.length > rule.maxChildren) return false;
-  if (rule.minChildAge !== undefined && !childAges.some((age) => age >= rule.minChildAge!)) return false;
-  if (rule.maxChildAge !== undefined && !childAges.some((age) => age <= rule.maxChildAge!)) return false;
+  if ((rule.minChildAge !== undefined || rule.maxChildAge !== undefined) && qualifyingChildren(rule, childAges) === 0) return false;
   return true;
 }
 
@@ -86,21 +92,14 @@ function adjustmentAmount(
   value: number,
   roomSubtotal: number,
   nights: number,
-  qualifyingChildren: number,
+  qualifyingChildrenCount: number,
   room: AccommodationRoomType
 ) {
   if (mode === "fixed-per-room-night") return value * nights;
   if (mode === "percent-of-room") return roomSubtotal * (value / 100);
-  if (mode === "fixed-per-child-night") return value * nights * qualifyingChildren;
+  if (mode === "fixed-per-child-night") return value * nights * qualifyingChildrenCount;
   const proportionalShare = roomSubtotal / Math.max(1, room.occupancy.maxOccupancy);
-  return proportionalShare * (value / 100) * qualifyingChildren;
-}
-
-function qualifyingChildren(rule: AccommodationOccupancyPricingRule, childAges: number[]) {
-  return childAges.filter((age) =>
-    (rule.minChildAge === undefined || age >= rule.minChildAge) &&
-    (rule.maxChildAge === undefined || age <= rule.maxChildAge)
-  ).length;
+  return proportionalShare * (value / 100) * qualifyingChildrenCount;
 }
 
 export function calculateAccommodationStayPrice(request: AccommodationPricingRequest): AccommodationPricingResult | null {
