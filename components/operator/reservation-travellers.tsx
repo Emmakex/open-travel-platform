@@ -3,6 +3,7 @@ import styles from "@/app/operator/operator.module.css";
 import ui from "@/components/operator/reservation-travellers.module.css";
 import type { Reservation } from "@/domain/booking/types";
 import type { TravelLocale } from "@/domain/travel/types";
+import { evaluateTripReservationPolicy } from "@/lib/change-policy";
 import { listTravellerCompletionForOperator } from "@/lib/traveller-data";
 import { formatOperatorDate, formatOperatorMoney, tr } from "@/lib/operator-i18n";
 import { operationsConfig } from "@/lib/operations-config";
@@ -31,10 +32,12 @@ export async function ReservationTravellers({
   const completionByTraveller = new Map(completion.map((item) => [item.travellerId, item]));
   const completedCount = completion.filter((item) => item.complete).length;
   const allComplete = requirementsActive && completion.length === reservation.travellers.length && completedCount === reservation.travellers.length;
+  const policy = evaluateTripReservationPolicy(reservation);
   const canAmend =
     operationsConfig.mode === "mongodb" &&
     operationsConfig.writesEnabled &&
-    reservation.status !== "cancelled";
+    reservation.status !== "cancelled" &&
+    policy.staffModificationAllowed;
 
   return (
     <section className={styles.panel} style={{ marginTop: "1rem" }} id="travellers">
@@ -57,8 +60,8 @@ export async function ReservationTravellers({
           </strong><br />
           {tr(
             locale,
-            `${completedCount}/${reservation.travellers.length} travellers complete. The customer manages this task from My account → Reservation → Traveller information. Sensitive identity/document values remain encrypted and are not exposed in this overview.`,
-            `${completedCount}/${reservation.travellers.length} viajeros completos. El cliente gestiona esta tarea desde Mi cuenta → Reserva → Datos de viajeros. Los valores sensibles de identidad/documentación permanecen cifrados y no se exponen en esta vista.`
+            `${completedCount}/${reservation.travellers.length} travellers complete. The customer manages this task from My account → Reservation → Traveller information.`,
+            `${completedCount}/${reservation.travellers.length} viajeros completos. El cliente gestiona esta tarea desde Mi cuenta → Reserva → Datos de viajeros.`
           )}
         </div>
       ) : (
@@ -99,7 +102,7 @@ export async function ReservationTravellers({
               {tr(locale, "Date of birth", "Fecha de nacimiento")}: {formatOperatorDate(`${traveller.dateOfBirth}T00:00:00Z`, locale)}<br />
               {tr(locale, "Nationality", "Nacionalidad")}: {traveller.nationality}<br />
               {tr(locale, "Fare", "Tarifa")}: {formatOperatorMoney(traveller.unitPrice, reservation.currency, locale, 2)}<br />
-              {tr(locale, "Inventory", "Inventario")}: {traveller.consumesInventory ? tr(locale, "1 space", "1 plaza") : tr(locale, "does not consume a space", "no consume plaza")}
+              {tr(locale, "Reserved space", "Plaza reservada")}: {traveller.consumesInventory ? tr(locale, "1 space", "1 plaza") : tr(locale, "not required", "no requerida")}
               {guardian ? (
                 <><br />{tr(locale, "Responsible adult", "Adulto responsable")}: {guardian.firstName} {guardian.lastName}</>
               ) : null}
