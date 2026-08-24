@@ -20,24 +20,42 @@ export interface OperationsAuditEvent {
   occurredAt: string;
 }
 
-export type ReservationAmendmentType = "traveller-correction";
+export type ReservationAmendmentType = "traveller-correction" | "departure-change";
 export type TravellerCorrectionField = "firstName" | "lastName" | "nationality";
+export type DepartureChangeField =
+  | "availabilityId"
+  | "departureDate"
+  | "returnDate"
+  | "unitPrice"
+  | "totalPrice"
+  | "inventorySpaces";
+export type ReservationAmendmentField = TravellerCorrectionField | DepartureChangeField;
 
 export interface ReservationAmendmentChange {
-  field: TravellerCorrectionField;
+  field: ReservationAmendmentField;
   before: string;
   after: string;
+}
+
+export interface ReservationInventoryMovement {
+  fromAvailabilityId: string;
+  toAvailabilityId: string;
+  releasedSpaces: number;
+  reservedSpaces: number;
 }
 
 export interface ReservationAmendment {
   id: string;
   reservationId: string;
   type: ReservationAmendmentType;
-  travellerId: string;
+  travellerId?: string;
   actorIdentityId: string;
   actorRole: StaffRole;
   reason: string;
   changes: ReservationAmendmentChange[];
+  priceDelta?: number;
+  currency?: string;
+  inventoryMovement?: ReservationInventoryMovement;
   occurredAt: string;
 }
 
@@ -50,6 +68,14 @@ export interface TravellerCorrectionInput {
   firstName: string;
   lastName: string;
   nationality: string;
+}
+
+export interface DepartureChangeInput {
+  reservationId: string;
+  newAvailabilityId: string;
+  actorIdentityId: string;
+  actorRole: StaffRole;
+  reason: string;
 }
 
 export interface OperationsSummary {
