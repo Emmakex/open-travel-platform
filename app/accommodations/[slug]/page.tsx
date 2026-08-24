@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { TravelImage } from "@/components/travel-image";
+import { TravelMediaGallery } from "@/components/travel-media-gallery";
 import type { AccommodationMealPlan, AccommodationRoomKind } from "@/domain/accommodation/types";
 import { getLocale } from "@/lib/get-locale";
 import {
@@ -65,6 +67,25 @@ export default async function AccommodationDetailPage({ params }: { params: Prom
           <p>{localized.summary}</p>
         </div>
 
+        {accommodation.coverImage ? (
+          <section className="detail-cover">
+            <TravelImage
+              media={accommodation.coverImage}
+              fallbackAlt={localized.name}
+              priority
+              sizes="(max-width: 880px) 100vw, 80vw"
+              quality={88}
+            />
+          </section>
+        ) : null}
+
+        {accommodation.gallery?.length ? (
+          <section className="media-gallery-section">
+            <div className="card-kicker">{t("Accommodation gallery", "Galería del alojamiento")}</div>
+            <TravelMediaGallery items={accommodation.gallery} title={localized.name} />
+          </section>
+        ) : null}
+
         <section className="card">
           <div className="card-body">
             <div className="card-kicker">{t("Room types", "Tipos de habitación")}</div>
@@ -75,6 +96,16 @@ export default async function AccommodationDetailPage({ params }: { params: Prom
                 const mealPlan = mealPlanLabel(room.mealPlan, locale);
                 return (
                   <article className="card" key={room.id}>
+                    {room.gallery?.[0] ? (
+                      <div className="detail-cover">
+                        <TravelImage
+                          media={room.gallery[0]}
+                          fallbackAlt={room.name}
+                          sizes="(max-width: 880px) 100vw, 30vw"
+                          quality={84}
+                        />
+                      </div>
+                    ) : null}
                     <div className="card-body">
                       <h2>{room.name}</h2>
                       {kind || mealPlan ? <p>{[kind, mealPlan].filter(Boolean).join(" · ")}</p> : null}
@@ -89,6 +120,12 @@ export default async function AccommodationDetailPage({ params }: { params: Prom
                         {room.occupancy.childMaxAge !== undefined ? ` · ≤ ${room.occupancy.childMaxAge} ${t("years", "años")}` : ""}
                       </p>
                       <p><strong>{t("Maximum guests", "Huéspedes máximos")}:</strong> {room.occupancy.maxOccupancy}</p>
+                      {room.gallery && room.gallery.length > 1 ? (
+                        <div>
+                          <div className="card-kicker">{t("Room gallery", "Galería de la habitación")}</div>
+                          <TravelMediaGallery items={room.gallery} title={room.name} />
+                        </div>
+                      ) : null}
                       {roomInventory.length ? (
                         <div>
                           <strong>{t("Upcoming availability", "Próxima disponibilidad")}</strong>
