@@ -1,3 +1,4 @@
+import type { ReservationChangePolicy } from "@/domain/operations/change-policy";
 import type { TravellerRequirementsProfile } from "@/domain/traveller/types";
 
 export type CurrencyCode = "EUR" | "USD" | "GBP";
@@ -74,6 +75,8 @@ export type Trip = {
   travellerPricing?: TravellerPricingBand[];
   /** Advanced data requested after booking, snapshotted onto each reservation. */
   travellerRequirements?: TravellerRequirementsProfile;
+  /** Amendment/cancellation rules snapshotted onto new reservations. */
+  changePolicy?: ReservationChangePolicy;
   highlights: string[];
   itinerary?: TripDay[];
   included?: string[];
