@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { buildPaymentSummary } from "../lib/payment-summary.ts";
 import { priceTravellerComposition } from "../lib/traveller-pricing.ts";
 
 const trip = {
@@ -66,4 +67,76 @@ assert.equal(afterBirthday.travellers[1].guardianTravellerId, undefined);
 assert.equal(afterBirthday.totalPrice, 2000);
 assert.equal(afterBirthday.inventorySpaces, 2);
 
-console.log("Reservation departure repricing invariant check passed.");
+const successfulPayment = {
+  id: "payment-1",
+  reservationId: "reservation-1",
+  targetType: "trip",
+  type: "payment",
+  status: "succeeded",
+  amount: 1500,
+  currency: "EUR",
+  provider: "manual",
+  createdAt: "2026-08-24T00:00:00.000Z"
+};
+
+const increasedTotal = buildPaymentSummary(
+  { id: "reservation-1", totalPrice: 2000, currency: "EUR", targetType: "trip" },
+  [successfulPayment]
+);
+assert.equal(increasedTotal.outstandingAmount, 500);
+assert.equal(increasedTotal.overpaidAmount, 0);
+assert.equal(increasedTotal.settlementStatus, "payment_due");
+assert.equal(increasedTotal.settlementAmount, 500);
+
+const reducedTotal = buildPaymentSummary(
+  { id: "reservation-1", totalPrice: 1200, currency: "EUR", targetType: "trip" },
+  [successfulPayment]
+);
+assert.equal(reducedTotal.outstandingAmount, 0);
+assert.equal(reducedTotal.overpaidAmount, 300);
+assert.equal(reducedTotal.settlementStatus, "refund_review");
+assert.equal(reducedTotal.settlementAmount, 300);
+
+const pendingRefund = buildPaymentSummary(
+  { id: "reservation-1", totalPrice: 1200, currency: "EUR", targetType: "trip" },
+  [
+    successfulPayment,
+    {
+      id: "refund-pending",
+      reservationId: "reservation-1",
+      targetType: "trip",
+      type: "refund",
+      status: "pending",
+      amount: 300,
+      currency: "EUR",
+      provider: "manual",
+      createdAt: "2026-08-24T01:00:00.000Z"
+    }
+  ]
+);
+assert.equal(pendingRefund.settlementStatus, "pending");
+assert.equal(pendingRefund.pendingRefundAmount, 300);
+
+const settledRefund = buildPaymentSummary(
+  { id: "reservation-1", totalPrice: 1200, currency: "EUR", targetType: "trip" },
+  [
+    successfulPayment,
+    {
+      id: "refund-1",
+      reservationId: "reservation-1",
+      targetType: "trip",
+      type: "refund",
+      status: "succeeded",
+      amount: 300,
+      currency: "EUR",
+      provider: "manual",
+      createdAt: "2026-08-24T02:00:00.000Z"
+    }
+  ]
+);
+assert.equal(settledRefund.netPaidAmount, 1200);
+assert.equal(settledRefund.overpaidAmount, 0);
+assert.equal(settledRefund.outstandingAmount, 0);
+assert.equal(settledRefund.settlementStatus, "settled");
+
+console.log("Reservation amendment and financial adjustment invariant checks passed.");
