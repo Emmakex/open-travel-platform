@@ -24,6 +24,48 @@ export type AccommodationMealPlan =
   | "full-board"
   | "all-inclusive";
 
+export type AccommodationAdjustmentDirection = "surcharge" | "discount";
+export type AccommodationAdjustmentMode =
+  | "fixed-per-room-night"
+  | "percent-of-room"
+  | "fixed-per-child-night"
+  | "percent-per-child";
+
+export type AccommodationSeasonalPricingRule = {
+  id: string;
+  label: string;
+  startDate: string;
+  endDate: string;
+  direction: AccommodationAdjustmentDirection;
+  mode: "fixed-per-room-night" | "percent-of-room";
+  value: number;
+  /** Empty means every room type in the property. */
+  roomTypeIds?: string[];
+};
+
+export type AccommodationOccupancyPricingKind =
+  | "single-supplement"
+  | "triple-discount"
+  | "child-sharing-discount"
+  | "custom";
+
+export type AccommodationOccupancyPricingRule = {
+  id: string;
+  label: string;
+  kind: AccommodationOccupancyPricingKind;
+  /** Empty means every room type in the property. */
+  roomTypeId?: string;
+  direction: AccommodationAdjustmentDirection;
+  mode: AccommodationAdjustmentMode;
+  value: number;
+  minAdults?: number;
+  maxAdults?: number;
+  minChildren?: number;
+  maxChildren?: number;
+  minChildAge?: number;
+  maxChildAge?: number;
+};
+
 export type AccommodationRoomType = {
   id: string;
   code: string;
@@ -31,9 +73,11 @@ export type AccommodationRoomType = {
   description?: string;
   kind?: AccommodationRoomKind;
   occupancy: AccommodationOccupancyRule;
-  /** Base public/reference price per room and night. Seasonal pricing is added later. */
+  /** Base public/reference price per room and night. */
   baseNightlyRate?: number;
   mealPlan?: AccommodationMealPlan;
+  /** Reusable room-level media, independent from the property gallery. */
+  gallery?: TravelMedia[];
 };
 
 export type AccommodationRoomTranslation = {
@@ -60,6 +104,10 @@ export type Accommodation = {
   featured: boolean;
   roomTypes: AccommodationRoomType[];
   coverImage?: TravelMedia;
+  /** Property-level gallery. Room galleries remain on each room type. */
+  gallery?: TravelMedia[];
+  seasonalPricing?: AccommodationSeasonalPricingRule[];
+  occupancyPricing?: AccommodationOccupancyPricingRule[];
   translations?: Partial<Record<TravelLocale, AccommodationTranslation>>;
 };
 
