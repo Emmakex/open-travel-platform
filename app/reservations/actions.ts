@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import type { GuardianRelationship } from "@/domain/booking/types";
 import { bookingConfig } from "@/lib/booking-config";
 import { getBookingRepository } from "@/lib/booking-repository";
+import { evaluateTripReservationPolicy } from "@/lib/change-policy";
 import { getPaymentRepository } from "@/lib/payment-repository";
 import { notifyReservationEvent } from "@/lib/reservation-emails";
 import { requireCustomerIdentity } from "@/lib/require-customer-identity";
@@ -116,7 +117,8 @@ export async function createReservationAction(formData: FormData) {
       tripTitle: trip.title,
       departureDate: availability.departureDate,
       returnDate: availability.returnDate,
-      travellerRequirements: trip.travellerRequirements
+      travellerRequirements: trip.travellerRequirements,
+      changePolicy: trip.changePolicy
     });
   } catch (error) {
     if (error && typeof error === "object" && "code" in error && error.code === "DEPARTURE_UNAVAILABLE") {
@@ -140,6 +142,11 @@ export async function cancelReservationAction(formData: FormData) {
   const bookingRepository = getBookingRepository();
   const current = await bookingRepository.getReservation(identity.id, reservationId);
   if (!current) redirect("/account/reservations");
+
+  const policy = evaluateTripReservationPolicy(current);
+  if (!policy.customerCancellationAllowed) {
+    redirect(`/account/reservations/${encodeURIComponent(reservationId)}?error=cancellation-policy`);
+  }
 
   const payment = await getPaymentRepository().getSummary(current);
   if (payment.netPaidAmount > 0 || payment.pendingPaymentAmount > 0) {
