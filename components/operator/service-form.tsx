@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { saveTravelServiceAction } from "@/app/operator/catalogue/services/actions";
 import styles from "@/app/operator/operator.module.css";
+import { ChangePolicyEditor } from "@/components/operator/change-policy-editor";
 import { GalleryEditor, MediaEditorCard } from "@/components/operator/structured-editors";
 import { TravellerPricingEditor } from "@/components/operator/traveller-pricing-editor";
 import { TravellerRequirementsEditor } from "@/components/operator/traveller-requirements-editor";
@@ -134,6 +135,7 @@ export function ServiceForm({ service, type, error, mediaLibrary = [], locale }:
       ) : null}
 
       <TravellerRequirementsEditor profile={service?.travellerRequirements} locale={locale} />
+      <ChangePolicyEditor policy={service?.changePolicy} locale={locale} />
 
       <div className={styles.editorSection}>
         <div>
