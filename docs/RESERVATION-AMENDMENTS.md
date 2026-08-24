@@ -1,189 +1,149 @@
 # Reservation amendments
 
-Phase 6B adds controlled post-booking changes without deleting or rewriting operational history.
+Phase 6B implements controlled post-booking changes without deleting or rewriting operational history.
 
-## Core rule
+## Core rules
 
-A reservation document represents the **current operational state**. Every material post-booking change is also written to a separate immutable amendment timeline so staff can see what changed, who changed it, why it changed and when it changed.
+- The reservation document represents the current operational state.
+- Material trip changes are stored in `travel_reservation_amendments` as immutable before/after history.
+- Historical payment transactions remain authoritative for real money movements and are never rewritten by amendments.
+- Activities, transport and travel protection remain independent service reservations and can be linked to a trip with `relatedReservationId`.
+- Product change/cancellation rules are snapshotted onto each new reservation. Editing a product later does not alter bookings that already exist.
+- Legacy reservations without a saved change policy retain the previous permissive behaviour.
 
-MongoDB collection:
+## 6B-1 — traveller corrections
 
-```text
-travel_reservation_amendments
-```
+Operator/Admin may correct first name, last name and nationality without repricing or inventory movement. A reason is mandatory and the previous value remains in amendment history.
 
-Historical payment transactions remain authoritative for actual money movements and are never rewritten by reservation amendments.
+Date of birth and other fields that can affect age, pricing or capacity are not edited through this simple correction flow.
 
-## Phase 6B-1 — traveller corrections
+## 6B-2 — departure changes
 
-Operator/Admin may correct first name, last name and nationality without changing pricing or inventory. Every correction requires a reason and stores changed fields as `before → after`, actor identity/role and timestamp.
+A non-cancelled trip reservation can move to another future departure when the target has enough capacity and the saved modification policy still allows it.
 
-The reservation update and amendment-history insert execute inside the same MongoDB transaction. Cancelled reservations cannot be amended. Advanced encrypted post-purchase traveller data remains separate and is never copied into amendment history.
-
-## Phase 6B-2 — departure changes
-
-Operator/Admin may move a non-cancelled trip reservation to another future departure when the complete traveller composition fits.
-
-Changing departure can change a traveller's age at departure. The server therefore recalculates:
+The server recalculates against the new departure date:
 
 - age at departure;
-- traveller pricing band/code;
-- traveller fare;
+- pricing band and traveller fare;
+- guardian/minor relationships where applicable;
 - inventory consumption;
-- reservation unit/lead price;
 - reservation total.
 
-Existing traveller IDs are preserved so post-purchase traveller data remains attached to the same people.
+MongoDB applies the move atomically: reserve target capacity, release previous capacity, update the reservation and write amendment history. Any failure rolls back the complete change.
 
-### Atomic inventory rule
+## 6B-3 — financial result
 
-The MongoDB transaction performs the complete change as one unit:
+After an amendment, the current reservation total is compared with net successfully paid funds.
 
-1. Load the reservation, target departure and current trip pricing.
-2. Recalculate the traveller composition against the target departure date.
-3. Reserve the required capacity on the target departure.
-4. Release capacity from the previous departure.
-5. Update the reservation dates/pricing/inventory snapshot.
-6. Store one immutable amendment with before/after values, price delta and inventory movement metadata.
+- **payment due**: current total is higher than net paid;
+- **refund review**: net paid is higher than the current total;
+- **pending**: a payment/refund is awaiting confirmation;
+- **settled**: net paid matches the current total.
 
-If any write fails, the transaction is rolled back and the original reservation and both departure inventories remain unchanged.
+No automatic refund is generated. Active reservations can only record a refund up to the real overpayment. Cancelled reservations may use the broader remaining refundable balance. Existing payments/refunds are never edited or deleted.
 
-If the target date makes the traveller composition invalid — for example the lead traveller would be under 18, a minor lacks a valid responsible adult, or no pricing band covers an age — the move is rejected before inventory is changed.
+If saved deposit/installment terms no longer match the amended total, they are marked for staff review.
+
+## 6B-4 — linked services, notifications and deadlines
 
 ### Linked services
 
-Independent activity, transport and travel-protection reservations are not automatically moved when the trip departure changes. Operator is reminded to review them separately until linked-service amendment rules are implemented.
+A service reservation may reference its parent trip reservation through `relatedReservationId`.
 
-## Phase 6B-3 — financial adjustments
+The trip detail now surfaces linked activities, transport and travel protection for both Operator and customer. Each linked item remains independent, with its own:
 
-A reservation modification may increase or reduce the current reservation total. Payment history is not edited to make the numbers match. Instead, the current reservation total is compared with the net amount successfully paid.
+- status;
+- service date/time or protection dates;
+- price and payment history;
+- traveller-data requirements;
+- cancellation policy;
+- inventory movement.
 
-The payment summary now derives four operational states:
+Cancelling a linked service does **not** mutate the trip reservation. When an inventory-backed service is cancelled, its capacity is released in the same MongoDB transaction as the status change. If capacity cannot be released safely, the cancellation rolls back.
 
-- **payment due** — the current total is above net paid and money remains to collect;
-- **refund review** — net paid is above the current total and the excess must be reviewed for a possible refund;
-- **pending** — a payment or refund is waiting for confirmation;
-- **settled** — net paid matches the current total and there is no pending movement.
+### Change-policy snapshot
 
-Derived values:
+Trips and services can configure:
 
-- `outstandingAmount = max(current total - net paid, 0)`;
-- `overpaidAmount = max(net paid - current total, 0)`;
-- `settlementAmount` is the amount that currently needs follow-up;
-- `refundableAmount` remains the maximum net amount that can be refunded safely by the payment layer.
+- customer self-service cancellation enabled/disabled;
+- customer cancellation cutoff in hours before start;
+- staff modification cutoff in hours before start;
+- staff cancellation cutoff in hours before start;
+- customer email after staff-driven changes enabled/disabled.
 
-No automatic refund is created when the total decreases. Operator sees a **Refund review required** state and must confirm the applicable booking/cancellation conditions before recording a refund.
+A blank cutoff means no time limit. No arbitrary business deadline is imposed by the platform.
 
-For active reservations, the normal refund form is surfaced only when there is an actual overpayment. Cancelled reservations may still expose the broader refundable balance because cancellation settlement can require returning all remaining paid funds.
+For trips without a start time, the departure date boundary is used. Timed activities/transports use their service date and start time. Travel protection uses its trip start date.
 
-When the current total changes, saved deposit/installment terms may no longer add up to the reservation total. The payment-schedule layer marks those terms as outdated and safely falls back to the current outstanding balance until staff saves revised terms.
+The policy is copied onto the reservation when it is created. Existing reservations therefore preserve the conditions they were booked under.
 
-Customer-facing copy avoids implementation terminology. The customer sees either the amount still to pay or a clear message that an excess payment is being reviewed by the team.
+### Enforcement
+
+Policy enforcement happens server-side as well as in the UI:
+
+- customer trip/service cancellation is rejected outside the saved customer window;
+- staff trip traveller corrections and departure changes are rejected outside the staff modification window;
+- staff trip/service cancellation is rejected outside the staff cancellation window;
+- unavailable actions are hidden from the relevant UI and replaced with a clear explanation.
+
+### Notifications
+
+When enabled by the reservation snapshot:
+
+- staff trip amendments send the customer an updated-reservation email;
+- staff trip confirmation/cancellation uses the normal reservation email flow;
+- staff service confirmation/cancellation sends a service-specific email.
+
+Customer emails contain the current customer-facing reservation details and link back to My account. Internal amendment reasons are not included.
 
 ## Operator workflow
 
-```text
-Operator → Reservations → Reservation detail
-```
+### Correct traveller
 
-### Correct traveller details
+`Operator → Reservations → Reservation → Travellers → Correct traveller details`
 
-1. Open **Correct traveller details**.
-2. Correct first name, last name and/or nationality.
-3. Enter a mandatory reason.
-4. Save.
-5. The current reservation is updated and **Change history** preserves the original value.
+Enter the corrected values and a mandatory reason. The history retains before/after values.
 
 ### Change departure
 
-1. Open the reservation detail.
-2. Review **Change departure**.
-3. Choose one of the alternative departures with enough capacity.
-4. Review dates, required/available spaces, recalculated total and price difference shown in the selector.
-5. Enter a mandatory reason.
-6. Save.
-7. Review the new dates, traveller fares, payment summary and **Change history**.
+`Operator → Reservations → Reservation → Change departure`
+
+Choose an eligible future departure, review recalculated dates/pricing/capacity, provide a reason and save.
+
+### Review linked services
+
+`Operator → Reservations → Reservation → Linked services`
+
+Open each independent service reservation to confirm or cancel it according to its own saved policy.
 
 ### Review financial result
 
-1. Open **Payments & balance** after a modification that changed the total.
-2. If the total increased, review **Amount still to collect** and collect/record the remaining balance.
-3. If the total decreased below net paid, review **Refund review required**.
-4. Confirm the applicable booking conditions before recording a refund.
-5. If payment terms are marked outdated, save new terms for the current total.
-6. Confirm the transaction history still contains all original payments/refunds unchanged.
-
-## Delivery plan
-
-### 6B-1 — complete
-
-- amendment data model and MongoDB indexes;
-- transactionally safe amendment writes;
-- Operator traveller name/nationality corrections;
-- before/after history UI.
-
-### 6B-2 — complete
-
-- future departure alternatives filtered by capacity;
-- server-side age/fare/inventory recalculation for the target date;
-- reserve new capacity before releasing old capacity;
-- atomic rollback on any failure;
-- reservation date/pricing snapshot update;
-- price delta and inventory movement stored in amendment history;
-- Operator UX with recalculated totals and mandatory reason.
-
-### 6B-3 — current delivery
-
-- explicit outstanding/additional-balance indicator after amendments;
-- explicit overpaid/refund-review indicator when amended total is below net paid amount;
-- customer-facing outstanding/refund-review state;
-- controlled refund UX without automatic refunds;
-- existing payment transactions remain unchanged;
-- stale payment terms remain detectable after total changes.
-
-### 6B-4
-
-- linked service additions/removals and review workflow;
-- amendment notifications;
-- configurable amendment/cancellation deadlines;
-- broader amendment policy controls.
+After any price-changing amendment, review **Payments & balance** and resolve either the additional amount due or the refund-review amount without rewriting historical transactions.
 
 ## Production checks
 
-### Traveller correction
-
-1. Open a non-cancelled trip reservation in Operator.
-2. Correct one traveller field and enter a reason.
-3. Confirm the new value appears and persists after reload.
-4. Confirm **Change history** shows previous/new value, reason, actor and time.
-5. Submit unchanged values and confirm the request is rejected.
-
-### Departure change
-
-1. Use a reservation whose trip has at least two future departures.
-2. Confirm only alternatives with enough capacity appear.
-3. Choose an alternative and enter a reason.
-4. Confirm the reservation dates update.
-5. Confirm traveller age/fare changes when the new date crosses a pricing boundary.
-6. Confirm target departure capacity increases and previous departure capacity decreases by the correct amounts.
-7. Confirm **Change history** records old/new departure, dates, any price change and reason.
-8. Confirm existing payment transactions are unchanged.
-9. Confirm a cancelled reservation cannot be moved.
-10. Simulate/verify insufficient target capacity and confirm no partial change is applied.
-
-### Financial adjustment
-
-1. Start with a reservation that has at least one successful payment.
-2. Move it to a departure that increases the total and confirm Operator shows the exact amount still to collect.
-3. Confirm the customer's reservation shows the same outstanding amount and offers the existing checkout flow when appropriate.
-4. Move/test a reservation whose amended total becomes lower than net paid.
-5. Confirm Operator shows **Refund review required** for the excess only.
-6. Confirm no refund transaction is created automatically.
-7. Confirm the customer's reservation explains that the excess is under review and does not ask for another payment.
-8. Record a refund for the reviewed amount and confirm the financial state becomes settled when net paid equals the current total.
-9. Confirm original payment transactions were not edited or deleted.
-10. Confirm stale deposit/installment terms are marked for staff review after the total changes.
+1. Configure a trip with customer/staff cutoffs and save it.
+2. Create a new trip reservation and confirm the policy is snapshotted.
+3. Change the product policy and confirm the existing reservation keeps its original rules.
+4. Create a linked activity/transport reservation and confirm it appears in the parent trip for customer and Operator.
+5. Cancel an eligible linked service and confirm inventory is released once.
+6. Confirm an out-of-window service cancellation is rejected and inventory remains unchanged.
+7. Confirm an out-of-window trip departure change/traveller correction is rejected.
+8. Confirm unavailable actions disappear from the UI and the user sees a clear deadline message.
+9. Perform a staff trip amendment while notifications are enabled and confirm the customer receives an updated-reservation email without internal reason text.
+10. Confirm staff service confirmation/cancellation sends the service-specific email when enabled.
+11. Disable staff-change email on a new product, create a new reservation and confirm staff changes no longer send that notification.
+12. Confirm legacy reservations without a change-policy snapshot continue to operate under the prior behaviour.
+13. Re-test 6B-2 inventory rollback and 6B-3 payment/refund states after the policy layer is enabled.
 
 ## Automated invariant check
 
-`scripts/reservation-amendment-check.mjs` verifies both departure repricing and financial settlement invariants. It covers a traveller crossing an age boundary and the resulting payment states when the amended total is higher than, lower than, or equal to net paid. Standard CI runs this check before TypeScript/build validation.
+`scripts/reservation-amendment-check.mjs` covers:
+
+- traveller age-band repricing across a departure change;
+- additional-balance/refund-review settlement states;
+- customer/staff policy cutoff transitions;
+- legacy no-policy behaviour;
+- notification-policy default behaviour.
+
+Standard CI runs this invariant check before TypeScript/build validation.
