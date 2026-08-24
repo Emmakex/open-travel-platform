@@ -40,112 +40,128 @@ The server verifies that the room belongs to the selected accommodation and that
 
 ### Property and room galleries
 
-Accommodation now has two reusable media levels:
+Accommodation has two reusable media levels:
 
 - one property-level gallery for exterior, common areas and the overall stay;
 - one independent gallery for every room type.
 
 Both levels use the shared media library and direct upload flow. Room photography follows the room when that room is reused by multiple trips.
 
-The public accommodation page displays the property gallery and room photography. Linked trip cards prefer the selected room image and fall back to the accommodation cover.
+### Seasonal and occupancy pricing
 
-### Seasonal pricing
+Accommodation can define date-based surcharge/discount rules and reusable occupancy rules for single supplements, triple discounts, child sharing and custom scenarios.
 
-Accommodation can define date-based pricing rules. Each rule contains:
+Matching seasonal rules are evaluated night by night. Occupancy rules can constrain room type, adult/child counts and child ages, and matching rules may stack.
 
-- label;
-- start/end date;
-- all room types or one room type;
-- surcharge or discount;
-- fixed amount per room/night or percentage of the room rate.
+Operator can preview the accommodation value for each trip departure with a reference occupancy before the product is sold.
 
-Matching seasonal rules are evaluated night by night, so a stay can cross two pricing periods correctly.
+## Phase 6C-4
 
-### Occupancy pricing
+### Booking-time room allocation
 
-Reusable occupancy rules support:
+Trip booking now uses the actual travellers rather than the reference occupancy.
 
-- single supplement;
-- triple occupancy discount;
-- child-sharing discount;
-- custom rules.
+For every included or selected optional accommodation component the server:
 
-Rules can be constrained by:
+1. calculates each traveller's age on the accommodation check-in date;
+2. classifies hotel child/adult occupancy using the room's configured child-age rule;
+3. finds the minimum valid number of rooms;
+4. distributes the reservation travellers across those rooms;
+5. validates adult, child and maximum occupancy limits;
+6. prices every allocated room with the same seasonal/occupancy engine from Phase 6C-3;
+7. checks that room inventory covers every night of the stay.
 
-- room type;
-- minimum/maximum adults;
-- minimum/maximum children;
-- child age range.
+The browser shows the proposed room distribution before confirmation, but the server recalculates it from the submitted travellers. Client totals and room assignments are never trusted as booking inputs.
 
-Adjustments can be calculated as:
+### Included versus optional accommodation
 
-- fixed amount per room/night;
-- percentage of the room stay;
-- fixed amount per qualifying child/night;
-- percentage of the child's proportional room share.
+`included` means the stay is already part of the trip/package fare. Its current accommodation value is calculated and snapshotted for operations, but it is **not added to the trip fare a second time**.
 
-Matching rules can stack. A seasonal surcharge and an occupancy discount can therefore apply to the same stay.
+`optional` means the customer must select the stay. Its calculated value is added to the reservation total when selected.
 
-### Package pricing preview
+This separation avoids accidental double charging while preserving the real accommodation cost/value in the reservation snapshot.
 
-Every trip stay stores a **reference occupancy** used for package planning:
+### Reservation snapshot
 
-- number of adults;
-- optional child ages.
+New reservations can store:
 
-Operator calculates the accommodation value for each departure using:
+- property and room references/names;
+- check-in and check-out dates;
+- nights and meal plan;
+- exact room count;
+- traveller IDs allocated to every room;
+- hotel adult count and child ages per room;
+- base, seasonal and occupancy pricing breakdown per room;
+- calculated accommodation total;
+- amount actually added to the reservation total;
+- room-inventory period IDs and room quantities consumed.
 
-1. the selected room base nightly rate;
-2. real check-in date derived from the trip departure + check-in day;
-3. every matching seasonal rule;
-4. every matching occupancy rule;
-5. number of nights.
+Existing reservations are not backfilled or silently changed.
 
-The preview exposes base value, seasonal adjustment, occupancy adjustment and final accommodation total per departure.
+### Transactional inventory
 
-This calculation is server-compatible and covered by the permanent accommodation invariant tests.
+Departure capacity and accommodation room inventory are reserved inside the same MongoDB transaction as the reservation insert.
 
-## Pricing boundary
+If either the departure or any required room block becomes unavailable, the whole booking rolls back.
 
-Phase 6C-3 provides the reusable accommodation pricing engine and date/occupancy-aware package preview.
+Customer and Operator cancellations release departure and room inventory in the same transaction. A release failure also rolls the cancellation back instead of leaving inventory inconsistent.
 
-It does **not** silently rewrite historical trip `fromPrice`, traveller pricing or existing reservation snapshots.
+### Departure changes
 
-Booking-time room allocation will later call the same pricing engine with the travellers' real room distribution before room inventory is consumed.
+Reservations that already contain accommodation snapshots also move their accommodation when Operator changes the trip departure.
 
-## Inventory boundary
+The transaction:
 
-Room inventory remains in `travel_accommodation_inventory` and is never copied onto the trip.
+1. reprices travellers for the new departure;
+2. reserves the new departure capacity;
+3. recalculates room allocation and accommodation pricing for the new dates;
+4. reserves any positive room-inventory delta;
+5. releases room inventory no longer needed;
+6. releases the previous departure capacity;
+7. updates the reservation snapshot and amendment history.
 
-Phase 6C-3 still does not consume or release room inventory when a trip reservation is created/cancelled. That operation must be transactional and belongs to the next accommodation-booking slice.
+Room movements are netted by inventory period. If the old and new stay use the same period, the reservation does not need artificial duplicate capacity.
+
+The amendment preserves the accommodation snapshot before and after the change.
+
+## Currency boundary
+
+Phase 6C-4 does not introduce an FX engine. A linked accommodation must use the same currency as the trip before it can be sold through the trip booking flow.
+
+A mismatch blocks the reservation rather than silently converting an amount with an undefined exchange rate.
+
+## Inventory ownership
+
+Room inventory remains authoritative in `travel_accommodation_inventory` and is never copied into the trip catalogue record.
+
+The reservation stores a historical allocation snapshot so room inventory can later be released or moved safely.
 
 ## Operator workflow
 
 1. Create the accommodation and room types.
-2. Save it.
+2. Configure occupancy and room inventory.
 3. Configure room kind, meal plan and base nightly rate.
 4. Add seasonal and occupancy pricing rules.
 5. Add the property gallery and each room gallery.
-6. Open a trip.
-7. In **Trip accommodation**, add a stay.
-8. Select accommodation and room.
-9. Set check-in day and nights.
-10. Choose Included or Optional.
-11. Set the reference adults and optional child ages.
-12. Review the real pricing preview for each departure.
-13. Save the trip accommodation.
+6. Link the accommodation/room to a trip.
+7. Choose Included or Optional, check-in day and nights.
+8. Create room inventory that covers the trip departure dates.
+9. Make a new reservation with real travellers.
+10. Review the generated room allocation in Customer account and Operator.
+11. Cancel or change departure to validate transactional room release/reallocation.
 
 ## Validation checklist
 
-- a room can only be selected from its real accommodation;
-- check-in day is at least day 1;
-- nights are at least 1;
-- check-in day + nights cannot exceed trip duration;
-- reference occupancy must be valid for the selected room;
-- child ages must respect the room child-age limit;
-- seasonal date ranges are valid;
-- percentage discounts/surcharges remain within safe bounds;
-- the accommodation remains reusable in another trip;
-- changing a link does not duplicate room inventory;
-- editing core accommodation data does not delete room rates or galleries;
-- public pages never expose internal IDs or pricing implementation details.
+- room assignment uses real traveller dates of birth;
+- every traveller appears in exactly one allocated room per selected stay;
+- room occupancy rules are satisfied;
+- hotel child ages are evaluated at check-in;
+- included accommodation is not charged twice;
+- selected optional accommodation is added to the reservation total;
+- unselected optional accommodation consumes no room inventory;
+- every stay night is covered by open room inventory;
+- insufficient room inventory blocks the entire reservation;
+- cancellation releases both departure and room inventory;
+- departure change reserves the replacement before releasing obsolete inventory;
+- old/new accommodation snapshots are retained in amendment history;
+- old reservations without accommodation snapshots continue to work unchanged.
