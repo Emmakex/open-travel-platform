@@ -1,7 +1,9 @@
 import type {
   AccommodationInventoryPeriod,
-  AccommodationOccupancyRule
+  AccommodationOccupancyRule,
+  AccommodationRoomType
 } from "@/domain/accommodation/types";
+import type { TripAccommodationComponent } from "@/domain/travel/types";
 
 export function isValidAccommodationOccupancy(rule: AccommodationOccupancyRule) {
   return Number.isInteger(rule.minAdults) && rule.minAdults >= 1 &&
@@ -30,4 +32,23 @@ export function accommodationInventoryOverlaps(periods: AccommodationInventoryPe
 
 export function remainingRoomInventory(period: Pick<AccommodationInventoryPeriod, "capacity" | "reserved">) {
   return Math.max(0, period.capacity - period.reserved);
+}
+
+export function isValidTripAccommodationPlacement(
+  component: Pick<TripAccommodationComponent, "checkInDay" | "nights">,
+  tripDurationDays: number
+) {
+  return Number.isInteger(tripDurationDays) && tripDurationDays >= 1 &&
+    Number.isInteger(component.checkInDay) && component.checkInDay >= 1 &&
+    Number.isInteger(component.nights) && component.nights >= 1 &&
+    component.checkInDay + component.nights <= tripDurationDays;
+}
+
+export function accommodationReferenceValue(
+  room: Pick<AccommodationRoomType, "baseNightlyRate">,
+  nights: number
+) {
+  if (room.baseNightlyRate === undefined || !Number.isFinite(room.baseNightlyRate) || room.baseNightlyRate < 0) return undefined;
+  if (!Number.isInteger(nights) || nights < 1) return undefined;
+  return Math.round((room.baseNightlyRate * nights + Number.EPSILON) * 100) / 100;
 }
