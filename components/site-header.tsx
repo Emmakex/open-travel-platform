@@ -22,6 +22,7 @@ export async function SiteHeader({ locale }: { locale: TravelLocale }) {
   const sessionHref = isCustomer ? "/account" : isStaff ? "/operator" : null;
   const sessionLabel = identity ? roleLabel(identity.role, locale) : null;
   const operatorEntryLabel = locale === "es" ? "Operador" : "Operator";
+  const accommodationLabel = locale === "es" ? "Alojamiento" : "Accommodation";
 
   function renderSessionChip(extraClass = "") {
     if (!identity || !sessionHref || !sessionLabel) return null;
@@ -53,6 +54,7 @@ export async function SiteHeader({ locale }: { locale: TravelLocale }) {
         <nav className="nav-links nav-desktop" aria-label={locale === "es" ? "Navegación principal" : "Primary navigation"}>
           <Link href="/destinations">{copy.nav.destinations}</Link>
           <Link href="/trips">{copy.nav.trips}</Link>
+          <Link href="/accommodations">{accommodationLabel}</Link>
           <Link href="/services">{locale === "es" ? "Servicios" : "Services"}</Link>
           {isCustomer ? renderSessionChip() : !identity ? <Link href="/account">{copy.nav.account}</Link> : null}
           {!identity ? <Link className="nav-operator" href="/operator/sign-in">{operatorEntryLabel}</Link> : null}
@@ -81,6 +83,7 @@ export async function SiteHeader({ locale }: { locale: TravelLocale }) {
             <nav className="mobile-nav-links" aria-label={locale === "es" ? "Navegación móvil" : "Mobile navigation"}>
               <Link href="/destinations">{copy.nav.destinations}</Link>
               <Link href="/trips">{copy.nav.trips}</Link>
+              <Link href="/accommodations">{accommodationLabel}</Link>
               <Link href="/services">{locale === "es" ? "Servicios" : "Services"}</Link>
               {!identity ? <Link href="/account">{copy.nav.account}</Link> : null}
               {!identity ? <Link href="/operator/sign-in">{operatorEntryLabel}</Link> : null}

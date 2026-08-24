@@ -49,6 +49,9 @@ jobs:
       - name: Reservation amendment invariant check
         run: npm run check:amendments
 
+      - name: Accommodation invariant check
+        run: npm run check:accommodation
+
       - name: Type check
         run: npm run typecheck
 
