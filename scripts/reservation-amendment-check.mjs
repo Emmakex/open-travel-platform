@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { evaluateChangePolicy } from "../lib/change-policy.ts";
 import { buildPaymentSummary } from "../lib/payment-summary.ts";
 import { priceTravellerComposition } from "../lib/traveller-pricing.ts";
 
@@ -139,4 +140,51 @@ assert.equal(settledRefund.overpaidAmount, 0);
 assert.equal(settledRefund.outstandingAmount, 0);
 assert.equal(settledRefund.settlementStatus, "settled");
 
-console.log("Reservation amendment and financial adjustment invariant checks passed.");
+const policy = {
+  customerCancellationAllowed: true,
+  customerCancellationCutoffHours: 72,
+  staffModificationCutoffHours: 48,
+  staffCancellationCutoffHours: 24,
+  notifyCustomerOnStaffChange: false
+};
+const policyStart = Date.parse("2026-09-10T00:00:00Z");
+
+const allOpen = evaluateChangePolicy({
+  policy,
+  startTimestamp: policyStart,
+  now: new Date("2026-09-06T12:00:00Z")
+});
+assert.equal(allOpen.customerCancellationAllowed, true);
+assert.equal(allOpen.staffModificationAllowed, true);
+assert.equal(allOpen.staffCancellationAllowed, true);
+assert.equal(allOpen.notifyCustomerOnStaffChange, false);
+assert.equal(allOpen.customerCancellationCutoffAt, "2026-09-07T00:00:00.000Z");
+
+const customerClosed = evaluateChangePolicy({
+  policy,
+  startTimestamp: policyStart,
+  now: new Date("2026-09-07T12:00:00Z")
+});
+assert.equal(customerClosed.customerCancellationAllowed, false);
+assert.equal(customerClosed.staffModificationAllowed, true);
+assert.equal(customerClosed.staffCancellationAllowed, true);
+
+const allClosed = evaluateChangePolicy({
+  policy,
+  startTimestamp: policyStart,
+  now: new Date("2026-09-09T12:00:00Z")
+});
+assert.equal(allClosed.customerCancellationAllowed, false);
+assert.equal(allClosed.staffModificationAllowed, false);
+assert.equal(allClosed.staffCancellationAllowed, false);
+
+const legacyPolicy = evaluateChangePolicy({
+  startTimestamp: policyStart,
+  now: new Date("2026-09-09T23:00:00Z")
+});
+assert.equal(legacyPolicy.customerCancellationAllowed, true);
+assert.equal(legacyPolicy.staffModificationAllowed, true);
+assert.equal(legacyPolicy.staffCancellationAllowed, true);
+assert.equal(legacyPolicy.notifyCustomerOnStaffChange, true);
+
+console.log("Reservation amendment, financial adjustment and change-policy invariant checks passed.");
