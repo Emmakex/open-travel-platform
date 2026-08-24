@@ -1,6 +1,6 @@
 # Reservation amendments
 
-Phase 6B adds controlled post-booking changes without deleting or rewriting the original operational history.
+Phase 6B adds controlled post-booking changes without deleting or rewriting operational history.
 
 ## Core rule
 
@@ -12,98 +12,131 @@ MongoDB collection:
 travel_reservation_amendments
 ```
 
-The payment ledger remains authoritative for money movements and is not rewritten by reservation amendments.
+The payment ledger remains authoritative for money movements and is never rewritten by reservation amendments.
 
 ## Phase 6B-1 — traveller corrections
 
-The first slice deliberately supports only corrections that do not require repricing or inventory movement:
+Operator/Admin may correct first name, last name and nationality without changing pricing or inventory. Every correction requires a reason and stores changed fields as `before → after`, actor identity/role and timestamp.
 
-- first name;
-- last name;
-- nationality.
+The reservation update and amendment-history insert execute inside the same MongoDB transaction. Cancelled reservations cannot be amended. Advanced encrypted post-purchase traveller data remains separate and is never copied into amendment history.
 
-Each correction requires an Operator/Admin reason and stores:
+## Phase 6B-2 — departure changes
 
-- reservation ID;
-- traveller ID;
-- amendment type;
-- actor identity and role;
-- changed fields only;
-- previous value;
-- new value;
-- reason;
-- timestamp.
+Operator/Admin may move a non-cancelled trip reservation to another future departure when the complete traveller composition fits.
 
-The reservation update and amendment-history insert execute inside the same MongoDB transaction. A partial write must not be possible.
+Changing departure can change a traveller's age at departure. The server therefore recalculates:
 
-Cancelled reservations cannot be amended.
-
-### Intentionally locked in 6B-1
-
-These fields are read-only for now:
-
-- date of birth;
 - age at departure;
-- pricing band/code;
+- traveller pricing band/code;
 - traveller fare;
 - inventory consumption;
-- guardian relationship;
-- departure.
+- reservation unit/lead price;
+- reservation total.
 
-Changing any of those can affect pricing, minors logic or capacity. They are handled in later 6B slices with server-side recalculation and inventory protection.
+Existing traveller IDs are preserved so post-purchase traveller data remains attached to the same people.
 
-Advanced post-purchase traveller identity/document data is not exposed or copied into this amendment history. It remains in the encrypted traveller-data store.
+### Atomic inventory rule
+
+The MongoDB transaction performs the complete change as one unit:
+
+1. Load the reservation, target departure and current trip pricing.
+2. Recalculate the traveller composition against the target departure date.
+3. Reserve the required capacity on the target departure.
+4. Release capacity from the previous departure.
+5. Update the reservation dates/pricing/inventory snapshot.
+6. Store one immutable amendment with before/after values, price delta and inventory movement metadata.
+
+If any write fails, the transaction is rolled back and the original reservation and both departure inventories remain unchanged.
+
+If the target date makes the traveller composition invalid — for example the lead traveller would be under 18, a minor lacks a valid responsible adult, or no pricing band covers an age — the move is rejected before inventory is changed.
+
+### Financial rule
+
+A departure change may change the reservation total. Historical payment transactions remain unchanged. Existing payment terms can become stale when their saved total differs from the amended reservation total; the payment-term layer detects that mismatch and falls back safely. Explicit additional-balance/refundable-balance UX is handled in the next financial amendment block.
+
+### Linked services
+
+Independent activity, transport and travel-protection reservations are not automatically moved when the trip departure changes. Operator is reminded to review them separately until linked-service amendment rules are implemented.
 
 ## Operator workflow
 
 ```text
-Operator → Reservations → Reservation detail → Travellers
-→ Correct traveller details
+Operator → Reservations → Reservation detail
 ```
 
-1. Open the traveller correction control.
-2. Correct name and/or nationality.
+### Correct traveller details
+
+1. Open **Correct traveller details**.
+2. Correct first name, last name and/or nationality.
 3. Enter a mandatory reason.
 4. Save.
-5. The reservation immediately shows the current corrected value.
-6. The side panel **Change history** keeps the original value as `before → after` together with actor, reason and timestamp.
+5. The current reservation is updated and **Change history** preserves the original value.
+
+### Change departure
+
+1. Open the reservation detail.
+2. Review **Change departure**.
+3. Choose one of the alternative departures with enough capacity.
+4. Review dates, required/available spaces, recalculated total and price difference shown in the selector.
+5. Enter a mandatory reason.
+6. Save.
+7. Review the new dates, traveller fares, payment summary and **Change history**.
 
 ## Delivery plan
 
-### 6B-1
+### 6B-1 — complete
 
 - amendment data model and MongoDB indexes;
 - transactionally safe amendment writes;
 - Operator traveller name/nationality corrections;
 - before/after history UI.
 
-### 6B-2
+### 6B-2 — current delivery
 
-- departure changes;
+- future departure alternatives filtered by capacity;
+- server-side age/fare/inventory recalculation for the target date;
 - reserve new capacity before releasing old capacity;
-- atomic inventory movement and rollback.
+- atomic rollback on any failure;
+- reservation date/pricing snapshot update;
+- price delta and inventory movement stored in amendment history;
+- Operator UX with recalculated totals and mandatory reason.
 
 ### 6B-3
 
-- traveller changes that affect age/fare;
-- server-authoritative repricing;
-- price delta, outstanding balance and refundable balance indicators;
-- historical payment transactions remain untouched.
+- explicit outstanding/additional-balance indicator after amendments;
+- explicit refundable-balance indicator when amended total is below net paid amount;
+- controlled follow-up actions without rewriting historical payment transactions.
 
 ### 6B-4
 
-- linked service additions/removals;
+- linked service additions/removals and review workflow;
 - amendment notifications;
 - configurable amendment/cancellation deadlines;
 - broader amendment policy controls.
 
-## Production checks for 6B-1
+## Production checks
+
+### Traveller correction
 
 1. Open a non-cancelled trip reservation in Operator.
 2. Correct one traveller field and enter a reason.
-3. Confirm the new value appears on the reservation.
-4. Confirm **Change history** shows the previous and new value.
-5. Reload the page and confirm both current state and history persist.
-6. Try submitting the same values and confirm it is rejected as `No changes`.
-7. Confirm a cancelled reservation has no correction controls.
-8. Confirm advanced encrypted document/residence values are not shown in amendment history.
+3. Confirm the new value appears and persists after reload.
+4. Confirm **Change history** shows previous/new value, reason, actor and time.
+5. Submit unchanged values and confirm the request is rejected.
+
+### Departure change
+
+1. Use a reservation whose trip has at least two future departures.
+2. Confirm only alternatives with enough capacity appear.
+3. Choose an alternative and enter a reason.
+4. Confirm the reservation dates update.
+5. Confirm traveller age/fare changes when the new date crosses a pricing boundary.
+6. Confirm target departure capacity increases and previous departure capacity decreases by the correct amounts.
+7. Confirm **Change history** records old/new departure, dates, any price change and reason.
+8. Confirm existing payment transactions are unchanged.
+9. Confirm a cancelled reservation cannot be moved.
+10. Simulate/verify insufficient target capacity and confirm no partial change is applied.
+
+## Automated invariant check
+
+`scripts/reservation-amendment-check.mjs` verifies that moving the same traveller composition across an age-boundary date recalculates age band, fare, guardian cleanup and inventory consumption correctly. Standard CI runs this check before TypeScript/build validation.
