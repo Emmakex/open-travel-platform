@@ -12,7 +12,7 @@ MongoDB collection:
 travel_reservation_amendments
 ```
 
-The payment ledger remains authoritative for money movements and is never rewritten by reservation amendments.
+Historical payment transactions remain authoritative for actual money movements and are never rewritten by reservation amendments.
 
 ## Phase 6B-1 — traveller corrections
 
@@ -50,13 +50,35 @@ If any write fails, the transaction is rolled back and the original reservation 
 
 If the target date makes the traveller composition invalid — for example the lead traveller would be under 18, a minor lacks a valid responsible adult, or no pricing band covers an age — the move is rejected before inventory is changed.
 
-### Financial rule
-
-A departure change may change the reservation total. Historical payment transactions remain unchanged. Existing payment terms can become stale when their saved total differs from the amended reservation total; the payment-term layer detects that mismatch and falls back safely. Explicit additional-balance/refundable-balance UX is handled in the next financial amendment block.
-
 ### Linked services
 
 Independent activity, transport and travel-protection reservations are not automatically moved when the trip departure changes. Operator is reminded to review them separately until linked-service amendment rules are implemented.
+
+## Phase 6B-3 — financial adjustments
+
+A reservation modification may increase or reduce the current reservation total. Payment history is not edited to make the numbers match. Instead, the current reservation total is compared with the net amount successfully paid.
+
+The payment summary now derives four operational states:
+
+- **payment due** — the current total is above net paid and money remains to collect;
+- **refund review** — net paid is above the current total and the excess must be reviewed for a possible refund;
+- **pending** — a payment or refund is waiting for confirmation;
+- **settled** — net paid matches the current total and there is no pending movement.
+
+Derived values:
+
+- `outstandingAmount = max(current total - net paid, 0)`;
+- `overpaidAmount = max(net paid - current total, 0)`;
+- `settlementAmount` is the amount that currently needs follow-up;
+- `refundableAmount` remains the maximum net amount that can be refunded safely by the payment layer.
+
+No automatic refund is created when the total decreases. Operator sees a **Refund review required** state and must confirm the applicable booking/cancellation conditions before recording a refund.
+
+For active reservations, the normal refund form is surfaced only when there is an actual overpayment. Cancelled reservations may still expose the broader refundable balance because cancellation settlement can require returning all remaining paid funds.
+
+When the current total changes, saved deposit/installment terms may no longer add up to the reservation total. The payment-schedule layer marks those terms as outdated and safely falls back to the current outstanding balance until staff saves revised terms.
+
+Customer-facing copy avoids implementation terminology. The customer sees either the amount still to pay or a clear message that an excess payment is being reviewed by the team.
 
 ## Operator workflow
 
@@ -82,6 +104,15 @@ Operator → Reservations → Reservation detail
 6. Save.
 7. Review the new dates, traveller fares, payment summary and **Change history**.
 
+### Review financial result
+
+1. Open **Payments & balance** after a modification that changed the total.
+2. If the total increased, review **Amount still to collect** and collect/record the remaining balance.
+3. If the total decreased below net paid, review **Refund review required**.
+4. Confirm the applicable booking conditions before recording a refund.
+5. If payment terms are marked outdated, save new terms for the current total.
+6. Confirm the transaction history still contains all original payments/refunds unchanged.
+
 ## Delivery plan
 
 ### 6B-1 — complete
@@ -91,7 +122,7 @@ Operator → Reservations → Reservation detail
 - Operator traveller name/nationality corrections;
 - before/after history UI.
 
-### 6B-2 — current delivery
+### 6B-2 — complete
 
 - future departure alternatives filtered by capacity;
 - server-side age/fare/inventory recalculation for the target date;
@@ -101,11 +132,14 @@ Operator → Reservations → Reservation detail
 - price delta and inventory movement stored in amendment history;
 - Operator UX with recalculated totals and mandatory reason.
 
-### 6B-3
+### 6B-3 — current delivery
 
 - explicit outstanding/additional-balance indicator after amendments;
-- explicit refundable-balance indicator when amended total is below net paid amount;
-- controlled follow-up actions without rewriting historical payment transactions.
+- explicit overpaid/refund-review indicator when amended total is below net paid amount;
+- customer-facing outstanding/refund-review state;
+- controlled refund UX without automatic refunds;
+- existing payment transactions remain unchanged;
+- stale payment terms remain detectable after total changes.
 
 ### 6B-4
 
@@ -137,6 +171,19 @@ Operator → Reservations → Reservation detail
 9. Confirm a cancelled reservation cannot be moved.
 10. Simulate/verify insufficient target capacity and confirm no partial change is applied.
 
+### Financial adjustment
+
+1. Start with a reservation that has at least one successful payment.
+2. Move it to a departure that increases the total and confirm Operator shows the exact amount still to collect.
+3. Confirm the customer's reservation shows the same outstanding amount and offers the existing checkout flow when appropriate.
+4. Move/test a reservation whose amended total becomes lower than net paid.
+5. Confirm Operator shows **Refund review required** for the excess only.
+6. Confirm no refund transaction is created automatically.
+7. Confirm the customer's reservation explains that the excess is under review and does not ask for another payment.
+8. Record a refund for the reviewed amount and confirm the financial state becomes settled when net paid equals the current total.
+9. Confirm original payment transactions were not edited or deleted.
+10. Confirm stale deposit/installment terms are marked for staff review after the total changes.
+
 ## Automated invariant check
 
-`scripts/reservation-amendment-check.mjs` verifies that moving the same traveller composition across an age-boundary date recalculates age band, fare, guardian cleanup and inventory consumption correctly. Standard CI runs this check before TypeScript/build validation.
+`scripts/reservation-amendment-check.mjs` verifies both departure repricing and financial settlement invariants. It covers a traveller crossing an age boundary and the resulting payment states when the amended total is higher than, lower than, or equal to net paid. Standard CI runs this check before TypeScript/build validation.
