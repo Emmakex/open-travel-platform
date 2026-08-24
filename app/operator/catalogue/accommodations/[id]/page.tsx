@@ -4,6 +4,7 @@ import styles from "@/app/operator/operator.module.css";
 import { AccommodationForm } from "@/components/operator/accommodation-form";
 import { getAccommodationForAdmin, listAccommodationInventory } from "@/lib/accommodations";
 import { getLocale } from "@/lib/get-locale";
+import { listMediaLibraryChoices } from "@/lib/media-library";
 import { tr } from "@/lib/operator-i18n";
 import { requireOperationsIdentity } from "@/lib/require-operations-identity";
 
@@ -21,9 +22,10 @@ export default async function EditAccommodationPage({
 }) {
   const [{ id }, query, locale] = await Promise.all([params, searchParams, getLocale()]);
   await requireOperationsIdentity();
-  const [accommodation, inventory] = await Promise.all([
+  const [accommodation, inventory, mediaLibrary] = await Promise.all([
     getAccommodationForAdmin(id),
-    listAccommodationInventory(id)
+    listAccommodationInventory(id),
+    listMediaLibraryChoices(100)
   ]);
   if (!accommodation) notFound();
 
@@ -36,7 +38,7 @@ export default async function EditAccommodationPage({
           <p className={styles.lead}>{tr(locale, "Manage room definitions and inventory without changing reservations that may exist later.", "Gestiona definiciones e inventario de habitaciones sin alterar reservas que puedan existir más adelante.")}</p>
           <p><Link className="text-link" href="/operator/catalogue">{tr(locale, "← Catalogue", "← Catálogo")}</Link></p>
         </section>
-        <AccommodationForm accommodation={accommodation} inventory={inventory} locale={locale} error={query.error} />
+        <AccommodationForm accommodation={accommodation} inventory={inventory} mediaLibrary={mediaLibrary} locale={locale} error={query.error} />
       </div>
     </main>
   );

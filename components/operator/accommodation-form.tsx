@@ -4,12 +4,14 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { saveAccommodationAction } from "@/app/operator/catalogue/accommodations/actions";
 import styles from "@/app/operator/operator.module.css";
+import { MediaEditorCard } from "@/components/operator/structured-editors";
 import type {
   Accommodation,
   AccommodationInventoryPeriod,
   AccommodationRoomType
 } from "@/domain/accommodation/types";
 import type { TravelLocale } from "@/domain/travel/types";
+import type { MediaLibraryChoice } from "@/lib/media-library";
 import { publicationStatusLabel, tr } from "@/lib/operator-i18n";
 
 function newId(prefix: string) {
@@ -24,11 +26,13 @@ type RoomEditorRow = AccommodationRoomType & {
 export function AccommodationForm({
   accommodation,
   inventory = [],
+  mediaLibrary = [],
   locale,
   error
 }: {
   accommodation?: Accommodation | null;
   inventory?: AccommodationInventoryPeriod[];
+  mediaLibrary?: MediaLibraryChoice[];
   locale: TravelLocale;
   error?: string;
 }) {
@@ -137,6 +141,20 @@ export function AccommodationForm({
       </div>
 
       <div className={styles.editorSection}>
+        <div>
+          <div className="eyebrow">{tr(locale, "Accommodation media", "Imágenes del alojamiento")}</div>
+          <p className={styles.muted}>{tr(locale, "Upload a new cover image or reuse one from the media library. Direct image URLs remain available only as an advanced option.", "Sube una portada nueva o reutiliza una imagen de la biblioteca multimedia. Las URL directas quedan disponibles solo como opción avanzada.")}</p>
+        </div>
+        <MediaEditorCard
+          title={tr(locale, "Accommodation cover", "Portada del alojamiento")}
+          media={accommodation?.coverImage}
+          choices={mediaLibrary}
+          locale={locale}
+          names={{ src: "coverSrc", alt: "coverAlt", caption: "coverCaption", credit: "coverCredit", focalPoint: "coverFocalPoint" }}
+        />
+      </div>
+
+      <div className={styles.editorSection}>
         <div className={styles.sectionHeader}>
           <div>
             <div className="eyebrow">{tr(locale, "Room types", "Tipos de habitación")}</div>
@@ -196,14 +214,6 @@ export function AccommodationForm({
             </div>
           );
         })}</div> : <div className={styles.notice}>{tr(locale, "No room inventory periods yet. You can save the accommodation first and add inventory afterwards.", "Todavía no hay periodos de inventario. Puedes guardar primero el alojamiento y añadir inventario después.")}</div>}
-      </div>
-
-      <div className={styles.editorSection}>
-        <div className="eyebrow">{tr(locale, "Optional cover", "Portada opcional")}</div>
-        <div className={styles.formGrid}>
-          <label className={styles.field}><span>{tr(locale, "Image URL", "URL de imagen")}</span><input name="coverSrc" defaultValue={accommodation?.coverImage?.src ?? ""} placeholder="https://… or /media/…" /></label>
-          <label className={styles.field}><span>{tr(locale, "Alternative text", "Texto alternativo")}</span><input name="coverAlt" defaultValue={accommodation?.coverImage?.alt ?? ""} /></label>
-        </div>
       </div>
 
       <div className={styles.stickySaveBar}>
