@@ -16,7 +16,8 @@
     "check:safety": "node scripts/public-safety-check.mjs",
     "check:ux": "node scripts/ux-content-check.mjs",
     "check:release": "node scripts/release-check.mjs",
-    "verify": "npm run check:safety && npm run check:ux && npm run check:release && npm run typecheck && npm run build",
+    "check:amendments": "node scripts/reservation-amendment-check.mjs",
+    "verify": "npm run check:safety && npm run check:ux && npm run check:release && npm run check:amendments && npm run typecheck && npm run build",
     "check": "npm run verify"
   },
   "dependencies": {
@@ -28,7 +29,7 @@
   "devDependencies": {
     "@types/node": "24.13.3",
     "@types/react": "19.2.18",
-    "@types/react-dom": "19.2.4",
+    "@types/react-dom": "19.2.8",
     "typescript": "6.0.3"
   }
 }
