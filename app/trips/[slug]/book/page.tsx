@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import styles from "@/app/trips/[slug]/book/booking.module.css";
 import { TravellerBookingForm } from "@/components/traveller-booking-form";
 import { hasCustomerAccess, hasOperationsAccess } from "@/lib/access-control";
+import { listPublishedAccommodations } from "@/lib/accommodations";
 import { bookingConfig } from "@/lib/booking-config";
 import { getBookingRepository } from "@/lib/booking-repository";
 import { getLocale } from "@/lib/get-locale";
@@ -49,23 +50,31 @@ export default async function BookTripPage({ params, searchParams }: { params: P
     "invalid-travellers": locale === "es" ? "Revisa los datos de todos los viajeros." : "Review the details for every traveller.",
     "lead-must-be-adult": locale === "es" ? "El viajero principal debe tener al menos 18 años en la fecha de salida." : "The lead traveller must be at least 18 on the departure date.",
     "minor-guardian-required": locale === "es" ? "Todos los menores deben tener asociado un adulto responsable de la misma reserva." : "Every minor must be linked to a responsible adult on the same booking.",
-    "pricing-unavailable": locale === "es" ? "No se ha podido calcular una tarifa válida para uno de los viajeros." : "A valid fare could not be calculated for one of the travellers."
+    "pricing-unavailable": locale === "es" ? "No se ha podido calcular una tarifa válida para uno de los viajeros." : "A valid fare could not be calculated for one of the travellers.",
+    "accommodation-configuration": locale === "es" ? "El alojamiento incluido en este viaje necesita revisión antes de poder reservarlo." : "The accommodation included with this trip needs review before it can be booked.",
+    "accommodation-occupancy": locale === "es" ? "La composición de viajeros no encaja en las reglas de ocupación de la habitación seleccionada." : "The traveller group does not fit the selected room occupancy rules.",
+    "accommodation-pricing": locale === "es" ? "No se ha podido calcular correctamente el precio del alojamiento." : "The accommodation price could not be calculated correctly.",
+    "accommodation-inventory": locale === "es" ? "Ya no quedan suficientes habitaciones para todas las noches de esta estancia. Prueba otra salida o contacta con el equipo." : "There are no longer enough rooms for every night of this stay. Try another departure or contact the team.",
+    "accommodation-currency": locale === "es" ? "La moneda del alojamiento no coincide con la del viaje. El equipo debe corregir la configuración antes de reservar." : "The accommodation currency does not match the trip currency. The configuration must be corrected before booking."
   };
   const travelRepository = getTravelRepository();
   const trip = await travelRepository.getTripBySlug(slug);
   if (!trip) notFound();
 
   const localizedTrip = localizeTrip(trip, locale);
-  const [availability, identity] = await Promise.all([
+  const [availability, identity, publishedAccommodations] = await Promise.all([
     getBookingRepository().listAvailability(trip.id),
-    getIdentityRepository().getCurrentIdentity()
+    getIdentityRepository().getCurrentIdentity(),
+    trip.accommodations?.length ? listPublishedAccommodations() : Promise.resolve([])
   ]);
+  const linkedAccommodationIds = new Set((trip.accommodations ?? []).map((item) => item.accommodationId));
+  const bookingAccommodations = publishedAccommodations.filter((item) => linkedAccommodationIds.has(item.id));
   const customer = hasCustomerAccess(identity);
   const staff = hasOperationsAccess(identity);
   const pricingBands = getTravellerPricingBands(trip);
   const availabilityCopy = locale === "es"
-    ? "Las plazas y tarifas se comprueban para la salida seleccionada. La edad de cada viajero se calcula en la fecha de salida."
-    : "Spaces and fares are checked for the selected departure. Each traveller's age is calculated on the departure date.";
+    ? "Las plazas, habitaciones y tarifas se comprueban para la salida seleccionada. La edad de cada viajero se calcula en la fecha correspondiente."
+    : "Spaces, rooms and fares are checked for the selected departure. Each traveller's age is calculated for the relevant date.";
 
   return (
     <main className="section">
@@ -73,14 +82,24 @@ export default async function BookTripPage({ params, searchParams }: { params: P
         <section className={styles.panel}>
           <div className="eyebrow">{copy.booking.eyebrow}</div>
           <h1>{localizedTrip.title}</h1>
-          <p className={styles.lead}>{locale === "es" ? "Elige la salida e introduce los datos de cada viajero. Menores y adultos se tarifan según su edad real el día de salida." : "Choose the departure and enter each traveller. Adults and minors are priced using their actual age on departure."}</p>
+          <p className={styles.lead}>{locale === "es" ? "Elige la salida e introduce los datos de cada viajero. Si el viaje incluye alojamiento, verás también la distribución de habitaciones antes de confirmar." : "Choose the departure and enter each traveller. If the trip includes accommodation, you will also see the room distribution before confirming."}</p>
 
           {error && errorMessages[error] ? <div className={styles.error}>{errorMessages[error]}</div> : null}
           {!identity ? <div className={styles.notice}><strong>{copy.booking.customerRequired}</strong> {copy.booking.customerRequiredCopy}{" "}<Link className="text-link" href="/account/sign-in">{copy.booking.signIn}</Link></div> : null}
           {staff ? <div className={styles.notice}>{copy.booking.staffActive}{" "}<Link className="text-link" href="/operator">{copy.booking.openOperator}</Link></div> : null}
 
           {customer && bookingConfig.writesEnabled && availability.length > 0 ? (
-            <TravellerBookingForm tripSlug={trip.slug} fromPrice={trip.fromPrice} currency={trip.currency} pricingBands={pricingBands} hasExplicitPricing={Boolean(trip.travellerPricing?.length)} availability={availability} locale={locale} />
+            <TravellerBookingForm
+              tripSlug={trip.slug}
+              fromPrice={trip.fromPrice}
+              currency={trip.currency}
+              pricingBands={pricingBands}
+              hasExplicitPricing={Boolean(trip.travellerPricing?.length)}
+              availability={availability}
+              locale={locale}
+              accommodationComponents={trip.accommodations ?? []}
+              accommodations={bookingAccommodations}
+            />
           ) : null}
           {customer && !bookingConfig.writesEnabled ? <div className={styles.notice}>{copy.booking.writesDisabled}</div> : null}
           {availability.length === 0 ? <div className={styles.notice}>{copy.booking.noDepartures}</div> : null}
