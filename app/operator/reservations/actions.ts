@@ -26,6 +26,9 @@ function amendmentErrorCode(error: unknown) {
   if (code === "TRIP_NOT_FOUND") return "trip-not-found";
   if (code === "PRICING_UNAVAILABLE") return "pricing-unavailable";
   if (code === "INVENTORY_RELEASE_FAILED") return "inventory-release-failed";
+  if (code === "ACCOMMODATION_UNAVAILABLE") return "accommodation-unavailable";
+  if (code === "ACCOMMODATION_REPRICE_FAILED") return "accommodation-reprice-failed";
+  if (code === "ACCOMMODATION_INVENTORY_RELEASE_FAILED") return "accommodation-release-failed";
   if (code === "NO_CHANGES") return "no-changes";
   if (code === "UPDATE_CONFLICT") return "update-conflict";
   return "update-failed";

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cancelReservationAction } from "@/app/reservations/actions";
 import styles from "@/app/account/account.module.css";
+import { ReservationAccommodationSummary } from "@/components/reservation-accommodation-summary";
 import { getAccountCopy } from "@/lib/account-i18n";
 import { bookingConfig } from "@/lib/booking-config";
 import { getBookingRepository } from "@/lib/booking-repository";
@@ -243,6 +244,8 @@ export default async function ReservationDetailPage({
             </dl>
           </section>
         ) : null}
+
+        <ReservationAccommodationSummary reservation={reservation} locale={locale} />
 
         <section className={styles.panel} style={{ marginTop: "1rem" }}>
           <div className="eyebrow">{locale === "es" ? "Servicios adicionales" : "Extras"}</div>

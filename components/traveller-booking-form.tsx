@@ -3,8 +3,14 @@
 import { useMemo, useRef, useState } from "react";
 import { createReservationAction } from "@/app/reservations/actions";
 import styles from "@/app/trips/[slug]/book/booking.module.css";
+import type { Accommodation } from "@/domain/accommodation/types";
 import type { AvailabilityWindow, GuardianRelationship } from "@/domain/booking/types";
-import type { TravellerPricingBand, TravelLocale } from "@/domain/travel/types";
+import type { TravellerPricingBand, TravelLocale, TripAccommodationComponent } from "@/domain/travel/types";
+import {
+  AccommodationBookingError,
+  accommodationBookingTotals,
+  buildAccommodationBookingPlan
+} from "@/lib/accommodation-booking";
 import {
   calculateAgeOnDate,
   findTravellerPricingBand,
@@ -55,7 +61,9 @@ export function TravellerBookingForm({
   pricingBands,
   hasExplicitPricing,
   availability,
-  locale
+  locale,
+  accommodationComponents = [],
+  accommodations = []
 }: {
   tripSlug: string;
   fromPrice: number;
@@ -64,10 +72,13 @@ export function TravellerBookingForm({
   hasExplicitPricing: boolean;
   availability: AvailabilityWindow[];
   locale: TravelLocale;
+  accommodationComponents?: TripAccommodationComponent[];
+  accommodations?: Accommodation[];
 }) {
   const t = (en: string, es: string) => locale === "es" ? es : en;
   const nextId = useRef(3);
   const [selectedAvailabilityId, setSelectedAvailabilityId] = useState(availability[0]?.id ?? "");
+  const [selectedOptionalAccommodationIds, setSelectedOptionalAccommodationIds] = useState<string[]>([]);
   const [travellers, setTravellers] = useState<TravellerRow[]>([
     blankTraveller("traveller-1"),
     blankTraveller("traveller-2")
@@ -92,7 +103,7 @@ export function TravellerBookingForm({
   }), [travellers, selectedAvailability, pricingBands, fromPrice, hasExplicitPricing]);
 
   const adultChoices = calculated.filter((item) => item.age !== null && item.age >= 18);
-  const total = calculated.reduce((sum, item) => sum + (item.unitPrice ?? 0), 0);
+  const travellerTotal = calculated.reduce((sum, item) => sum + (item.unitPrice ?? 0), 0);
   const inventorySpaces = calculated.reduce(
     (sum, item) => sum + (item.band?.consumesInventory ? 1 : 0),
     0
@@ -108,7 +119,80 @@ export function TravellerBookingForm({
     }
     return true;
   });
-  const canSubmit = Boolean(selectedAvailability && complete && !leadIsMinor && !inventoryExceeded);
+
+  const accommodationReadyForPreview = Boolean(
+    selectedAvailability &&
+    travellers.length > 0 &&
+    travellers.every((traveller) => traveller.dateOfBirth)
+  );
+
+  const accommodationPreview = useMemo(() => {
+    if (!accommodationReadyForPreview || !selectedAvailability || !accommodationComponents.length) {
+      return { bookings: [], error: null as AccommodationBookingError | null };
+    }
+    try {
+      const bookings = buildAccommodationBookingPlan({
+        components: accommodationComponents,
+        accommodations,
+        departureDate: selectedAvailability.departureDate,
+        travellers,
+        selectedOptionalComponentIds: selectedOptionalAccommodationIds,
+        reservationCurrency: currency
+      });
+      return { bookings, error: null as AccommodationBookingError | null };
+    } catch (error) {
+      return {
+        bookings: [],
+        error: error instanceof AccommodationBookingError ? error : new AccommodationBookingError(
+          "ACCOMMODATION_CONFIGURATION_INVALID",
+          "Accommodation preview is unavailable."
+        )
+      };
+    }
+  }, [
+    accommodationReadyForPreview,
+    selectedAvailability,
+    accommodationComponents,
+    accommodations,
+    travellers,
+    selectedOptionalAccommodationIds,
+    currency
+  ]);
+
+  const componentPreviews = useMemo(() => {
+    const map = new Map<string, { booking?: ReturnType<typeof buildAccommodationBookingPlan>[number]; error?: AccommodationBookingError }>();
+    if (!accommodationReadyForPreview || !selectedAvailability) return map;
+    for (const component of accommodationComponents) {
+      try {
+        const bookings = buildAccommodationBookingPlan({
+          components: [component],
+          accommodations,
+          departureDate: selectedAvailability.departureDate,
+          travellers,
+          selectedOptionalComponentIds: component.mode === "optional" ? [component.id] : [],
+          reservationCurrency: currency
+        });
+        map.set(component.id, { booking: bookings[0] });
+      } catch (error) {
+        map.set(component.id, {
+          error: error instanceof AccommodationBookingError ? error : new AccommodationBookingError(
+            "ACCOMMODATION_CONFIGURATION_INVALID",
+            "Accommodation preview is unavailable."
+          )
+        });
+      }
+    }
+    return map;
+  }, [accommodationReadyForPreview, selectedAvailability, accommodationComponents, accommodations, travellers, currency]);
+
+  const accommodationTotals = accommodationBookingTotals(accommodationPreview.bookings);
+  const total = Number((travellerTotal + accommodationTotals.accommodationAdditionalTotal).toFixed(2));
+  const requiredAccommodationInvalid = accommodationComponents.some((component) =>
+    component.mode === "included" && componentPreviews.get(component.id)?.error
+  );
+  const selectedOptionalInvalid = selectedOptionalAccommodationIds.some((id) => componentPreviews.get(id)?.error);
+  const accommodationInvalid = Boolean(accommodationPreview.error || requiredAccommodationInvalid || selectedOptionalInvalid);
+  const canSubmit = Boolean(selectedAvailability && complete && !leadIsMinor && !inventoryExceeded && !accommodationInvalid);
 
   function update(id: string, patch: Partial<TravellerRow>) {
     setTravellers((current) => current.map((item) => item.id === id ? { ...item, ...patch } : item));
@@ -126,6 +210,20 @@ export function TravellerBookingForm({
     setTravellers((current) => current
       .filter((item) => item.id !== id)
       .map((item) => item.guardianTravellerId === id ? { ...item, guardianTravellerId: "", guardianRelationship: "" } : item));
+  }
+
+  function toggleOptionalAccommodation(id: string, checked: boolean) {
+    setSelectedOptionalAccommodationIds((current) => checked
+      ? [...new Set([...current, id])]
+      : current.filter((item) => item !== id));
+  }
+
+  function travellerNames(ids: string[]) {
+    return ids.map((id) => {
+      const traveller = travellers.find((item) => item.id === id);
+      if (!traveller) return t("Traveller", "Viajero");
+      return `${traveller.firstName || t("Traveller", "Viajero")} ${traveller.lastName}`.trim();
+    }).join(", ");
   }
 
   return (
@@ -236,6 +334,86 @@ export function TravellerBookingForm({
         <div className={styles.error}>{t("There are not enough spaces for this group of travellers.", "No quedan suficientes plazas para este grupo de viajeros.")}</div>
       ) : null}
 
+      {accommodationComponents.length ? (
+        <section className={styles.travellerCard}>
+          <div className={styles.bookingSectionHeader}>
+            <div>
+              <strong>{t("Accommodation", "Alojamiento")}</strong>
+              <span>{t("Room allocation is calculated from the travellers and checked again when you confirm.", "La distribución de habitaciones se calcula con los viajeros y se vuelve a comprobar al confirmar.")}</span>
+            </div>
+          </div>
+
+          {!accommodationReadyForPreview ? (
+            <div className={styles.notice}>{t("Enter every traveller's date of birth to preview the room distribution and accommodation price.", "Introduce la fecha de nacimiento de todos los viajeros para ver la distribución de habitaciones y el precio del alojamiento.")}</div>
+          ) : null}
+
+          <div className={styles.travellerList}>
+            {accommodationComponents.map((component) => {
+              const accommodation = accommodations.find((item) => item.id === component.accommodationId);
+              const room = accommodation?.roomTypes.find((item) => item.id === component.roomTypeId);
+              const preview = componentPreviews.get(component.id);
+              const booking = preview?.booking;
+              const isOptional = component.mode === "optional";
+              const selected = !isOptional || selectedOptionalAccommodationIds.includes(component.id);
+              return (
+                <div className={styles.minorBox} key={component.id}>
+                  <div className={styles.travellerHeader}>
+                    <div>
+                      <strong>{accommodation?.name ?? t("Accommodation unavailable", "Alojamiento no disponible")}</strong>
+                      <span>{room?.name ?? t("Room unavailable", "Habitación no disponible")} · {component.nights} {component.nights === 1 ? t("night", "noche") : t("nights", "noches")}</span>
+                    </div>
+                    <strong>{isOptional ? t("Optional", "Opcional") : t("Included", "Incluido")}</strong>
+                  </div>
+
+                  {isOptional ? (
+                    <label className={styles.field}>
+                      <span>{t("Add this accommodation option", "Añadir esta opción de alojamiento")}</span>
+                      <input
+                        type="checkbox"
+                        name="optionalAccommodationComponentId"
+                        value={component.id}
+                        checked={selectedOptionalAccommodationIds.includes(component.id)}
+                        disabled={Boolean(preview?.error)}
+                        onChange={(event) => toggleOptionalAccommodation(component.id, event.target.checked)}
+                      />
+                    </label>
+                  ) : (
+                    <p>{t("This stay is already included in the trip price and will not be charged a second time.", "Esta estancia ya está incluida en el precio del viaje y no se cobrará una segunda vez.")}</p>
+                  )}
+
+                  {preview?.error ? (
+                    <div className={styles.error}>{t("This room cannot currently be allocated to this traveller group.", "Esta habitación no puede asignarse actualmente a este grupo de viajeros.")}</div>
+                  ) : booking ? (
+                    <>
+                      <p>
+                        <strong>{booking.rooms.length} {booking.rooms.length === 1 ? t("room", "habitación") : t("rooms", "habitaciones")}</strong>
+                        {isOptional ? ` · +${money(booking.totalPrice, currency, locale)}` : ` · ${t("included", "incluido")}`}
+                      </p>
+                      <div className={styles.fareBands}>
+                        {booking.rooms.map((allocation, index) => (
+                          <div key={allocation.id}>
+                            <span>{t("Room", "Habitación")} {index + 1}: {travellerNames(allocation.travellerIds)}</span>
+                            <strong>{money(allocation.totalPrice, currency, locale)}</strong>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ) : null}
+
+                  {isOptional && !selected ? (
+                    <p>{t("This option is not included in the current reservation total.", "Esta opción no está incluida en el total actual de la reserva.")}</p>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
+
+      {accommodationInvalid && accommodationReadyForPreview ? (
+        <div className={styles.error}>{t("Review the accommodation options before confirming the reservation.", "Revisa las opciones de alojamiento antes de confirmar la reserva.")}</div>
+      ) : null}
+
       <div className={styles.priceSummary}>
         <div>
           <span>{t("Travellers", "Viajeros")}</span>
@@ -245,6 +423,12 @@ export function TravellerBookingForm({
           <span>{t("Places required", "Plazas necesarias")}</span>
           <strong>{inventorySpaces}</strong>
         </div>
+        {accommodationTotals.accommodationAdditionalTotal > 0 ? (
+          <div>
+            <span>{t("Optional accommodation", "Alojamiento opcional")}</span>
+            <strong>+{money(accommodationTotals.accommodationAdditionalTotal, currency, locale)}</strong>
+          </div>
+        ) : null}
         <div className={styles.totalRow}>
           <span>{t("Reservation total", "Total de la reserva")}</span>
           <strong>{money(total, currency, locale)}</strong>

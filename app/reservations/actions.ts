@@ -2,6 +2,13 @@
 
 import { redirect } from "next/navigation";
 import type { GuardianRelationship } from "@/domain/booking/types";
+import {
+  AccommodationBookingError,
+  accommodationBookingTotals,
+  attachAccommodationInventory,
+  buildAccommodationBookingPlan
+} from "@/lib/accommodation-booking";
+import { listAccommodationInventory, listPublishedAccommodations } from "@/lib/accommodations";
 import { bookingConfig } from "@/lib/booking-config";
 import { getBookingRepository } from "@/lib/booking-repository";
 import { evaluateTripReservationPolicy } from "@/lib/change-policy";
@@ -46,11 +53,20 @@ function parseTravellers(formData: FormData): TravellerBookingDraft[] | null {
   });
 }
 
+function accommodationBookingQuery(error: AccommodationBookingError) {
+  if (error.code === "ACCOMMODATION_OCCUPANCY_UNAVAILABLE") return "accommodation-occupancy";
+  if (error.code === "ACCOMMODATION_PRICING_UNAVAILABLE") return "accommodation-pricing";
+  if (error.code === "ACCOMMODATION_INVENTORY_UNAVAILABLE") return "accommodation-inventory";
+  if (error.code === "ACCOMMODATION_CURRENCY_MISMATCH") return "accommodation-currency";
+  return "accommodation-configuration";
+}
+
 export async function createReservationAction(formData: FormData) {
   const identity = await requireCustomerIdentity();
   const tripSlug = value(formData, "tripSlug");
   const availabilityId = value(formData, "availabilityId");
   const travellerDrafts = parseTravellers(formData);
+  const selectedOptionalAccommodationIds = values(formData, "optionalAccommodationComponentId").filter(Boolean);
   const backToBooking = tripSlug ? `/trips/${encodeURIComponent(tripSlug)}/book` : "/trips";
 
   if (!bookingConfig.writesEnabled) {
@@ -102,6 +118,48 @@ export async function createReservationAction(formData: FormData) {
     redirect(`${backToBooking}?error=insufficient-space`);
   }
 
+  let accommodationBookings = [] as NonNullable<Parameters<typeof attachAccommodationInventory>[0]>;
+  let accommodationTotal = 0;
+  let accommodationAdditionalTotal = 0;
+  try {
+    if (trip.accommodations?.length) {
+      const validOptionalIds = new Set(
+        trip.accommodations.filter((component) => component.mode === "optional").map((component) => component.id)
+      );
+      if (selectedOptionalAccommodationIds.some((id) => !validOptionalIds.has(id))) {
+        throw new AccommodationBookingError(
+          "ACCOMMODATION_CONFIGURATION_INVALID",
+          "The selected optional accommodation is not part of this trip."
+        );
+      }
+
+      const publishedAccommodations = await listPublishedAccommodations();
+      const pricingPlan = buildAccommodationBookingPlan({
+        components: trip.accommodations,
+        accommodations: publishedAccommodations,
+        departureDate: availability.departureDate,
+        travellers: priced.travellers,
+        selectedOptionalComponentIds: selectedOptionalAccommodationIds,
+        reservationCurrency: trip.currency
+      });
+      const uniqueAccommodationIds = [...new Set(pricingPlan.map((item) => item.accommodationId))];
+      const inventoryLists = await Promise.all(
+        uniqueAccommodationIds.map(async (accommodationId) => [
+          accommodationId,
+          await listAccommodationInventory(accommodationId)
+        ] as const)
+      );
+      accommodationBookings = attachAccommodationInventory(pricingPlan, new Map(inventoryLists));
+      ({ accommodationTotal, accommodationAdditionalTotal } = accommodationBookingTotals(accommodationBookings));
+    }
+  } catch (error) {
+    if (error instanceof AccommodationBookingError) {
+      redirect(`${backToBooking}?error=${accommodationBookingQuery(error)}`);
+    }
+    throw error;
+  }
+
+  const totalPrice = Number((priced.totalPrice + accommodationAdditionalTotal).toFixed(2));
   let reservation;
   try {
     reservation = await bookingRepository.createReservation({
@@ -112,7 +170,11 @@ export async function createReservationAction(formData: FormData) {
       inventorySpaces: priced.inventorySpaces,
       travellers: priced.travellers,
       unitPrice: priced.leadUnitPrice,
-      totalPrice: priced.totalPrice,
+      tripPriceTotal: priced.totalPrice,
+      accommodationTotal,
+      accommodationAdditionalTotal,
+      accommodationBookings,
+      totalPrice,
       currency: trip.currency,
       tripTitle: trip.title,
       departureDate: availability.departureDate,
@@ -121,8 +183,13 @@ export async function createReservationAction(formData: FormData) {
       changePolicy: trip.changePolicy
     });
   } catch (error) {
-    if (error && typeof error === "object" && "code" in error && error.code === "DEPARTURE_UNAVAILABLE") {
-      redirect(`${backToBooking}?error=insufficient-space`);
+    if (error && typeof error === "object" && "code" in error) {
+      if (error.code === "DEPARTURE_UNAVAILABLE") {
+        redirect(`${backToBooking}?error=insufficient-space`);
+      }
+      if (error.code === "ACCOMMODATION_INVENTORY_UNAVAILABLE") {
+        redirect(`${backToBooking}?error=accommodation-inventory`);
+      }
     }
     throw error;
   }

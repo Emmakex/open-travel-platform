@@ -8,6 +8,8 @@ import type {
   TravellerCorrectionInput
 } from "@/domain/operations/types";
 import type { Trip } from "@/domain/travel/types";
+import { AccommodationBookingError } from "@/lib/accommodation-booking";
+import { reallocateReservationAccommodation } from "@/lib/accommodation-amendments";
 import { travelDepartureCollectionName } from "@/lib/mongo-departures";
 import {
   ensureMongoReservationIndexes,
@@ -214,9 +216,13 @@ export async function changeReservationDeparture(input: DepartureChangeInput) {
       }
 
       let travellers = current.travellers;
-      let totalPrice = current.totalPrice;
       let inventorySpaces = current.inventorySpaces ?? current.partySize;
       let unitPrice = current.unitPrice;
+      let tripPriceTotal = current.tripPriceTotal ?? Number((current.totalPrice - (current.accommodationAdditionalTotal ?? 0)).toFixed(2));
+      let accommodationBookings = current.accommodationBookings;
+      let accommodationTotal = current.accommodationTotal ?? 0;
+      let accommodationAdditionalTotal = current.accommodationAdditionalTotal ?? 0;
+      let totalPrice = current.totalPrice;
 
       if (current.travellers?.length) {
         const availability: AvailabilityWindow = {
@@ -244,7 +250,7 @@ export async function changeReservationDeparture(input: DepartureChangeInput) {
             }))
           });
           travellers = pricing.travellers;
-          totalPrice = pricing.totalPrice;
+          tripPriceTotal = pricing.totalPrice;
           inventorySpaces = pricing.inventorySpaces;
           unitPrice = pricing.leadUnitPrice;
         } catch (error) {
@@ -282,6 +288,52 @@ export async function changeReservationDeparture(input: DepartureChangeInput) {
           throw amendmentError("DEPARTURE_UNAVAILABLE", "The selected departure no longer has enough space.");
         }
       }
+
+      if (current.accommodationBookings?.length) {
+        if (!travellers?.length) {
+          throw amendmentError(
+            "ACCOMMODATION_REPRICE_FAILED",
+            "Accommodation cannot be reallocated without reservation travellers."
+          );
+        }
+        try {
+          const reallocated = await reallocateReservationAccommodation({
+            database,
+            session,
+            reservation: current,
+            newDepartureDate: newDeparture.departureDate,
+            travellers
+          });
+          if (!reallocated) {
+            throw amendmentError("ACCOMMODATION_REPRICE_FAILED", "Accommodation could not be recalculated.");
+          }
+          accommodationBookings = reallocated.bookings;
+          accommodationTotal = reallocated.accommodationTotal;
+          accommodationAdditionalTotal = reallocated.accommodationAdditionalTotal;
+        } catch (error) {
+          if (error instanceof AccommodationBookingError) {
+            if (error.code === "ACCOMMODATION_INVENTORY_UNAVAILABLE") {
+              throw amendmentError(
+                "ACCOMMODATION_UNAVAILABLE",
+                "The selected departure does not have enough accommodation inventory."
+              );
+            }
+            throw amendmentError(
+              "ACCOMMODATION_REPRICE_FAILED",
+              "The accommodation cannot be repriced for the selected departure."
+            );
+          }
+          if (error && typeof error === "object" && "code" in error && error.code === "ACCOMMODATION_INVENTORY_RELEASE_FAILED") {
+            throw amendmentError(
+              "ACCOMMODATION_INVENTORY_RELEASE_FAILED",
+              "The previous accommodation inventory could not be released safely."
+            );
+          }
+          throw error;
+        }
+      }
+
+      totalPrice = Number((tripPriceTotal + accommodationAdditionalTotal).toFixed(2));
 
       const previousInventorySpaces = current.inventorySpaces ?? current.partySize;
       if (previousInventorySpaces > 0) {
@@ -332,11 +384,17 @@ export async function changeReservationDeparture(input: DepartureChangeInput) {
         departureDate: newDeparture.departureDate,
         returnDate: newDeparture.returnDate,
         unitPrice,
+        tripPriceTotal,
         totalPrice,
         inventorySpaces,
         updatedAt: occurredAt
       };
       if (travellers) reservationSet.travellers = travellers;
+      if (current.accommodationBookings?.length) {
+        reservationSet.accommodationBookings = accommodationBookings;
+        reservationSet.accommodationTotal = accommodationTotal;
+        reservationSet.accommodationAdditionalTotal = accommodationAdditionalTotal;
+      }
 
       const update = await reservations.updateOne(
         { id: current.id, availabilityId: current.availabilityId, status: { $ne: "cancelled" } },
@@ -358,6 +416,20 @@ export async function changeReservationDeparture(input: DepartureChangeInput) {
       if (current.totalPrice !== totalPrice) {
         changes.push({ field: "totalPrice", before: moneySnapshot(current.totalPrice), after: moneySnapshot(totalPrice) });
       }
+      if ((current.accommodationTotal ?? 0) !== accommodationTotal) {
+        changes.push({
+          field: "accommodationTotal",
+          before: moneySnapshot(current.accommodationTotal ?? 0),
+          after: moneySnapshot(accommodationTotal)
+        });
+      }
+      if ((current.accommodationAdditionalTotal ?? 0) !== accommodationAdditionalTotal) {
+        changes.push({
+          field: "accommodationAdditionalTotal",
+          before: moneySnapshot(current.accommodationAdditionalTotal ?? 0),
+          after: moneySnapshot(accommodationAdditionalTotal)
+        });
+      }
       if (previousInventorySpaces !== inventorySpaces) {
         changes.push({ field: "inventorySpaces", before: String(previousInventorySpaces), after: String(inventorySpaces) });
       }
@@ -378,6 +450,10 @@ export async function changeReservationDeparture(input: DepartureChangeInput) {
           releasedSpaces: previousInventorySpaces,
           reservedSpaces: inventorySpaces
         },
+        ...(current.accommodationBookings?.length ? {
+          accommodationBefore: current.accommodationBookings,
+          accommodationAfter: accommodationBookings
+        } : {}),
         occurredAt
       };
       await amendments.insertOne(amendment, { session });
@@ -388,9 +464,15 @@ export async function changeReservationDeparture(input: DepartureChangeInput) {
         departureDate: newDeparture.departureDate,
         returnDate: newDeparture.returnDate,
         unitPrice,
+        tripPriceTotal,
         totalPrice,
         inventorySpaces,
         ...(travellers ? { travellers } : {}),
+        ...(current.accommodationBookings?.length ? {
+          accommodationBookings,
+          accommodationTotal,
+          accommodationAdditionalTotal
+        } : {}),
         updatedAt: occurredAt
       };
       storedAmendment = amendment;

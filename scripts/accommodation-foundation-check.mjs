@@ -10,6 +10,14 @@ import {
   calculateAccommodationStayPrice,
   isAccommodationOccupancyAllowed
 } from "../lib/accommodation-pricing.ts";
+import {
+  AccommodationBookingError,
+  accommodationBookingTotals,
+  accommodationInventoryMovements,
+  allocateTravellersToRooms,
+  attachAccommodationInventory,
+  buildAccommodationBookingPlan
+} from "../lib/accommodation-booking.ts";
 
 assert.equal(isValidAccommodationOccupancy({
   minAdults: 1,
@@ -89,6 +97,7 @@ const accommodation = {
   location: "Barcelona",
   country: "Spain",
   currency: "EUR",
+  publicationStatus: "published",
   featured: false,
   roomTypes: [room],
   seasonalPricing: [{
@@ -174,4 +183,81 @@ assert.equal(childSharing.seasonalAdjustment, 40);
 assert.equal(childSharing.occupancyAdjustment, -40);
 assert.equal(childSharing.total, 200);
 
-console.log("Accommodation occupancy, inventory, package and pricing invariant checks passed.");
+const familyTravellers = [
+  { id: "adult-1", firstName: "A", lastName: "One", dateOfBirth: "1985-01-01" },
+  { id: "adult-2", firstName: "B", lastName: "Two", dateOfBirth: "1988-01-01" },
+  { id: "child-1", firstName: "C", lastName: "Three", dateOfBirth: "2018-01-01" }
+];
+const familyAllocation = allocateTravellersToRooms(room, familyTravellers, "2026-07-01");
+assert.equal(familyAllocation.length, 1);
+assert.equal(familyAllocation[0].adults, 2);
+assert.deepEqual(familyAllocation[0].childAges, [8]);
+assert.deepEqual(new Set(familyAllocation[0].travellerIds), new Set(["adult-1", "adult-2", "child-1"]));
+
+const twoRoomTravellers = [
+  ...familyTravellers,
+  { id: "adult-3", firstName: "D", lastName: "Four", dateOfBirth: "1987-01-01" },
+  { id: "adult-4", firstName: "E", lastName: "Five", dateOfBirth: "1990-01-01" },
+  { id: "child-2", firstName: "F", lastName: "Six", dateOfBirth: "2019-01-01" }
+];
+const twoRoomAllocation = allocateTravellersToRooms(room, twoRoomTravellers, "2026-07-01");
+assert.equal(twoRoomAllocation.length, 2);
+assert.equal(twoRoomAllocation.reduce((sum, item) => sum + item.travellerIds.length, 0), 6);
+assert.ok(twoRoomAllocation.every((item) => item.adults === 2 && item.childAges.length === 1));
+
+const components = [
+  {
+    id: "included-stay",
+    accommodationId: accommodation.id,
+    roomTypeId: room.id,
+    checkInDay: 1,
+    nights: 2,
+    mode: "included"
+  },
+  {
+    id: "optional-stay",
+    accommodationId: accommodation.id,
+    roomTypeId: room.id,
+    checkInDay: 1,
+    nights: 2,
+    mode: "optional"
+  }
+];
+const plan = buildAccommodationBookingPlan({
+  components,
+  accommodations: [accommodation],
+  departureDate: "2026-07-01",
+  travellers: familyTravellers,
+  selectedOptionalComponentIds: ["optional-stay"],
+  reservationCurrency: "EUR"
+});
+assert.equal(plan.length, 2);
+assert.equal(plan[0].mode, "included");
+assert.equal(plan[0].amountAddedToReservation, 0);
+assert.equal(plan[1].mode, "optional");
+assert.equal(plan[1].amountAddedToReservation, 200);
+assert.deepEqual(accommodationBookingTotals(plan), {
+  accommodationTotal: 400,
+  accommodationAdditionalTotal: 200
+});
+
+const inventory = [{
+  id: "summer-double",
+  accommodationId: accommodation.id,
+  roomTypeId: room.id,
+  startDate: "2026-07-01",
+  endDate: "2026-07-31",
+  capacity: 3,
+  reserved: 0,
+  status: "open"
+}];
+const planWithInventory = attachAccommodationInventory(plan, new Map([[accommodation.id, inventory]]));
+assert.ok(planWithInventory.every((booking) => booking.inventory.length === 1));
+assert.equal(accommodationInventoryMovements(planWithInventory).get("summer-double"), 2);
+
+assert.throws(
+  () => attachAccommodationInventory([plan[0]], new Map([[accommodation.id, [{ ...inventory[0], capacity: 1, reserved: 1 }]]])),
+  (error) => error instanceof AccommodationBookingError && error.code === "ACCOMMODATION_INVENTORY_UNAVAILABLE"
+);
+
+console.log("Accommodation occupancy, inventory, package, pricing and booking invariant checks passed.");
