@@ -115,8 +115,18 @@ export async function recordManualPaymentAction(formData: FormData) {
   const reservation = await getOperationsRepository().getReservation(reservationId);
   if (!reservation) redirect("/operator/reservations?error=not-found");
 
+  const paymentRepository = getPaymentRepository();
+  const currentSummary = await paymentRepository.getSummary(reservation);
+  if (
+    type === "refund" &&
+    reservation.status !== "cancelled" &&
+    amount > currentSummary.overpaidAmount
+  ) {
+    redirect(`${detailUrl}?paymentError=exceeds-adjustment`);
+  }
+
   try {
-    await getPaymentRepository().createTransaction({
+    await paymentRepository.createTransaction({
       reservationId,
       type,
       amount,

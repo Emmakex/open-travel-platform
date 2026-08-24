@@ -13,7 +13,7 @@ import {
 } from "@/lib/payment-i18n";
 
 const errorKeys = {
-  "payments-disabled": ["Payment ledger writes are disabled.", "Los cambios en el registro de pagos están desactivados."],
+  "payments-disabled": ["Payment changes are disabled.", "Los cambios de pago están desactivados."],
   "invalid-request": ["Check the payment amount and try again.", "Revisa el importe del pago e inténtalo de nuevo."],
   "reservation-not-found": ["The reservation no longer exists.", "La reserva ya no existe."],
   "amount-invalid": ["Enter a positive amount with no more than two decimals.", "Introduce un importe positivo con un máximo de dos decimales."],
@@ -21,18 +21,21 @@ const errorKeys = {
   "reference-conflict": ["That payment reference is already in use.", "Esa referencia de pago ya está en uso."],
   "exceeds-balance": ["The payment exceeds the outstanding balance.", "El pago supera el saldo pendiente."],
   "exceeds-refundable": ["The refund exceeds the refundable balance.", "El reembolso supera el importe reembolsable."],
-  "payment-error": ["The payment ledger could not be updated.", "No se pudo actualizar el registro de pagos."]
+  "exceeds-adjustment": ["For an active reservation, the refund cannot exceed the amount paid above the current total.", "En una reserva activa, el reembolso no puede superar el importe pagado por encima del total actual."],
+  "payment-error": ["The payment could not be updated.", "No se pudo actualizar el pago."]
 } as const;
 
 function ManualMovementForm({
   reservationId,
   type,
   maxAmount,
+  currency,
   locale
 }: {
   reservationId: string;
   type: "payment" | "refund";
   maxAmount: number;
+  currency: string;
   locale: TravelLocale;
 }) {
   const refund = type === "refund";
@@ -41,6 +44,15 @@ function ManualMovementForm({
       <input type="hidden" name="reservationId" value={reservationId} />
       <input type="hidden" name="type" value={type} />
       <h3>{refund ? tr(locale, "Record refund", "Registrar reembolso") : tr(locale, "Record payment", "Registrar pago")}</h3>
+      {refund ? (
+        <p className={styles.muted}>
+          {tr(
+            locale,
+            `Maximum amount to review: ${formatOperatorMoney(maxAmount, currency, locale, 2)}. Confirm the applicable conditions before recording a refund.`,
+            `Importe máximo a revisar: ${formatOperatorMoney(maxAmount, currency, locale, 2)}. Confirma las condiciones aplicables antes de registrar un reembolso.`
+          )}
+        </p>
+      ) : null}
       <label className={styles.field}>
         <span>{tr(locale, "Amount", "Importe")}</span>
         <input name="amount" type="number" min="0.01" max={maxAmount} step="0.01" required />
@@ -87,16 +99,19 @@ export function ReservationPaymentPanel({
   const errorCopy = paymentError && paymentError in errorKeys
     ? errorKeys[paymentError as keyof typeof errorKeys]
     : null;
+  const refundReviewAmount = reservation.status === "cancelled"
+    ? summary.refundableAmount
+    : summary.overpaidAmount;
 
   return (
     <section className={styles.panel} style={{ marginTop: "1rem" }}>
       <div className="eyebrow">{tr(locale, "Payments", "Pagos")}</div>
-      <h2>{tr(locale, "Payment ledger", "Registro de pagos")}</h2>
+      <h2>{tr(locale, "Payments & balance", "Pagos y saldo")}</h2>
       <p className={styles.lead}>
         {tr(
           locale,
-          "Provider-neutral payment accounting for this reservation. Manual entries record funds received outside the platform; they do not initiate a card charge.",
-          "Contabilidad de pagos independiente del proveedor para esta reserva. Los apuntes manuales registran fondos recibidos fuera de la plataforma; no realizan ningún cargo en tarjeta."
+          "Review the current reservation total, funds received, amount still due and any refund that needs staff review.",
+          "Revisa el total actual de la reserva, los importes recibidos, el saldo pendiente y cualquier reembolso que deba revisar el equipo."
         )}
       </p>
 
@@ -108,6 +123,39 @@ export function ReservationPaymentPanel({
         </div>
       ) : null}
       {errorCopy ? <div className={styles.notice}>{tr(locale, errorCopy[0], errorCopy[1])}</div> : null}
+
+      {summary.settlementStatus === "refund_review" ? (
+        <div className={styles.notice}>
+          <strong>{tr(locale, "Refund review required", "Revisión de reembolso necesaria")}</strong><br />
+          {tr(
+            locale,
+            `Payments exceed the current reservation total by ${formatOperatorMoney(summary.overpaidAmount, summary.currency, locale, 2)}. Review the booking conditions before recording any refund.`,
+            `Los pagos superan el total actual de la reserva en ${formatOperatorMoney(summary.overpaidAmount, summary.currency, locale, 2)}. Revisa las condiciones de la reserva antes de registrar cualquier reembolso.`
+          )}
+        </div>
+      ) : summary.settlementStatus === "payment_due" ? (
+        <div className={styles.notice}>
+          <strong>{tr(locale, "Amount still to collect", "Importe pendiente de cobro")}</strong><br />
+          {tr(
+            locale,
+            `The current balance is ${formatOperatorMoney(summary.outstandingAmount, summary.currency, locale, 2)}.`,
+            `El saldo actual pendiente es ${formatOperatorMoney(summary.outstandingAmount, summary.currency, locale, 2)}.`
+          )}
+        </div>
+      ) : summary.settlementStatus === "pending" ? (
+        <div className={styles.notice}>
+          {tr(
+            locale,
+            "A payment or refund is awaiting confirmation. Review the pending movement before recording another adjustment.",
+            "Hay un pago o reembolso pendiente de confirmación. Revisa el movimiento pendiente antes de registrar otro ajuste."
+          )}
+        </div>
+      ) : summary.netPaidAmount > 0 ? (
+        <div className={styles.notice}>
+          {tr(locale, "Payments match the current reservation total.", "Los pagos coinciden con el total actual de la reserva.")}
+        </div>
+      ) : null}
+
       {reservation.status === "cancelled" && summary.refundableAmount > 0 ? (
         <div className={styles.notice}>
           {tr(locale, "This cancelled reservation still has funds that may need to be refunded.", "Esta reserva cancelada todavía tiene fondos que pueden requerir reembolso.")}
@@ -116,18 +164,21 @@ export function ReservationPaymentPanel({
 
       <div className={styles.metrics}>
         <div className={styles.metric}><strong>{paymentStatusLabel(summary.status, locale)}</strong><span>{tr(locale, "Payment status", "Estado del pago")}</span></div>
-        <div className={styles.metric}><strong>{formatOperatorMoney(summary.paidAmount, summary.currency, locale, 2)}</strong><span>{tr(locale, "Paid", "Pagado")}</span></div>
-        <div className={styles.metric}><strong>{formatOperatorMoney(summary.refundedAmount, summary.currency, locale, 2)}</strong><span>{tr(locale, "Refunded", "Reembolsado")}</span></div>
-        <div className={styles.metric}><strong>{formatOperatorMoney(summary.outstandingAmount, summary.currency, locale, 2)}</strong><span>{tr(locale, "Outstanding", "Pendiente")}</span></div>
+        <div className={styles.metric}><strong>{formatOperatorMoney(summary.totalAmount, summary.currency, locale, 2)}</strong><span>{tr(locale, "Current total", "Total actual")}</span></div>
+        <div className={styles.metric}><strong>{formatOperatorMoney(summary.netPaidAmount, summary.currency, locale, 2)}</strong><span>{tr(locale, "Net paid", "Pagado neto")}</span></div>
+        <div className={styles.metric}>
+          <strong>{formatOperatorMoney(summary.settlementAmount, summary.currency, locale, 2)}</strong>
+          <span>{summary.overpaidAmount > 0 ? tr(locale, "Refund review", "Revisar reembolso") : tr(locale, "Outstanding", "Pendiente")}</span>
+        </div>
       </div>
 
       {paymentConfig.writesEnabled ? (
         <div className={styles.formGrid}>
-          {summary.outstandingAmount > 0 ? (
-            <ManualMovementForm reservationId={reservation.id} type="payment" maxAmount={summary.outstandingAmount} locale={locale} />
+          {summary.outstandingAmount > 0 && summary.pendingPaymentAmount <= 0 ? (
+            <ManualMovementForm reservationId={reservation.id} type="payment" maxAmount={summary.outstandingAmount} currency={summary.currency} locale={locale} />
           ) : null}
-          {summary.refundableAmount > 0 ? (
-            <ManualMovementForm reservationId={reservation.id} type="refund" maxAmount={summary.refundableAmount} locale={locale} />
+          {refundReviewAmount > 0 && summary.pendingRefundAmount <= 0 ? (
+            <ManualMovementForm reservationId={reservation.id} type="refund" maxAmount={refundReviewAmount} currency={summary.currency} locale={locale} />
           ) : null}
         </div>
       ) : null}

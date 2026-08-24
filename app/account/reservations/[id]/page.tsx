@@ -232,20 +232,39 @@ export default async function ReservationDetailPage({
               : "See what you have paid, what remains outstanding and any upcoming due dates for this reservation."}
           </p>
 
+          {paymentSummary.settlementStatus === "refund_review" ? (
+            <div className={styles.notice}>
+              <strong>{locale === "es" ? "Importe pendiente de revisión" : "Amount pending review"}</strong><br />
+              {locale === "es"
+                ? `Has pagado ${formatMoney(paymentSummary.overpaidAmount, paymentSummary.currency, locale)} por encima del total actual de la reserva. Nuestro equipo revisará el importe que corresponda devolver según las condiciones aplicables.`
+                : `You have paid ${formatMoney(paymentSummary.overpaidAmount, paymentSummary.currency, locale)} above the current reservation total. Our team will review any refund due under the applicable booking conditions.`}
+            </div>
+          ) : paymentSummary.settlementStatus === "payment_due" ? (
+            <div className={styles.notice}>
+              <strong>{locale === "es" ? "Saldo pendiente" : "Outstanding balance"}</strong><br />
+              {locale === "es"
+                ? `Quedan ${formatMoney(paymentSummary.outstandingAmount, paymentSummary.currency, locale)} por pagar en esta reserva.`
+                : `${formatMoney(paymentSummary.outstandingAmount, paymentSummary.currency, locale)} remains to be paid on this reservation.`}
+            </div>
+          ) : null}
+
           <dl className={styles.profileList}>
             <div><dt>{locale === "es" ? "Estado" : "Status"}</dt><dd>{paymentStatusLabel(paymentSummary.status, locale)}</dd></div>
             <div><dt>{locale === "es" ? "Total de la reserva" : "Reservation total"}</dt><dd>{formatMoney(paymentSummary.totalAmount, paymentSummary.currency, locale)}</dd></div>
             <div><dt>{locale === "es" ? "Pagado" : "Paid"}</dt><dd>{formatMoney(paymentSummary.paidAmount, paymentSummary.currency, locale)}</dd></div>
             <div><dt>{locale === "es" ? "Reembolsado" : "Refunded"}</dt><dd>{formatMoney(paymentSummary.refundedAmount, paymentSummary.currency, locale)}</dd></div>
             <div><dt>{locale === "es" ? "Pendiente total" : "Total outstanding"}</dt><dd>{formatMoney(paymentSummary.outstandingAmount, paymentSummary.currency, locale)}</dd></div>
+            {paymentSummary.overpaidAmount > 0 ? (
+              <div><dt>{locale === "es" ? "A revisar para devolución" : "To review for refund"}</dt><dd>{formatMoney(paymentSummary.overpaidAmount, paymentSummary.currency, locale)}</dd></div>
+            ) : null}
           </dl>
 
           <h3>{locale === "es" ? "Calendario de pagos" : "Payment schedule"}</h3>
           {paymentSchedule.outdated ? (
             <div className={styles.notice}>
               {locale === "es"
-                ? "Las condiciones de pago necesitan ser revisadas por el equipo. Mientras tanto se muestra el saldo completo pendiente."
-                : "The payment terms need staff review. Until then the full outstanding balance is shown."}
+                ? "Las condiciones de pago necesitan ser revisadas por el equipo porque el total actual de la reserva ha cambiado."
+                : "The payment terms need staff review because the current reservation total has changed."}
             </div>
           ) : null}
           <div className={styles.profileList}>
@@ -276,6 +295,12 @@ export default async function ReservationDetailPage({
               {locale === "es"
                 ? "Hay un pago online pendiente de confirmación. No repitas el pago hasta que la pasarela confirme o rechace la operación."
                 : "An online payment is awaiting confirmation. Do not repeat the payment until the provider confirms or rejects it."}
+            </div>
+          ) : paymentSummary.pendingRefundAmount > 0 ? (
+            <div className={styles.notice}>
+              {locale === "es"
+                ? "Hay un reembolso pendiente de confirmación. El estado se actualizará cuando la operación quede confirmada."
+                : "A refund is awaiting confirmation. The status will update once the refund is confirmed."}
             </div>
           ) : canPayOnline ? (
             <div className={styles.actions}>
