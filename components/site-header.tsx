@@ -21,6 +21,7 @@ export async function SiteHeader({ locale }: { locale: TravelLocale }) {
   const isStaff = identity?.role === "operator" || identity?.role === "admin";
   const sessionHref = isCustomer ? "/account" : isStaff ? "/operator" : null;
   const sessionLabel = identity ? roleLabel(identity.role, locale) : null;
+  const operatorEntryLabel = locale === "es" ? "Operador" : "Operator";
 
   function renderSessionChip(extraClass = "") {
     if (!identity || !sessionHref || !sessionLabel) return null;
@@ -54,6 +55,7 @@ export async function SiteHeader({ locale }: { locale: TravelLocale }) {
           <Link href="/trips">{copy.nav.trips}</Link>
           <Link href="/services">{locale === "es" ? "Servicios" : "Services"}</Link>
           {isCustomer ? renderSessionChip() : !identity ? <Link href="/account">{copy.nav.account}</Link> : null}
+          {!identity ? <Link className="nav-operator" href="/operator/sign-in">{operatorEntryLabel}</Link> : null}
           {isStaff ? renderSessionChip() : null}
           <form action={setLocaleAction} className="locale-switcher" aria-label={copy.language.label}>
             <button type="submit" name="locale" value="en" className={locale === "en" ? "locale-option is-active" : "locale-option"} aria-pressed={locale === "en"}>
@@ -81,6 +83,7 @@ export async function SiteHeader({ locale }: { locale: TravelLocale }) {
               <Link href="/trips">{copy.nav.trips}</Link>
               <Link href="/services">{locale === "es" ? "Servicios" : "Services"}</Link>
               {!identity ? <Link href="/account">{copy.nav.account}</Link> : null}
+              {!identity ? <Link href="/operator/sign-in">{operatorEntryLabel}</Link> : null}
             </nav>
 
             {identity ? <div className="mobile-session">{renderSessionChip("mobile-session-chip")}</div> : null}
