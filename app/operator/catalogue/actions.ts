@@ -12,6 +12,7 @@ import type {
   TravelPublicationStatus,
   TripDay
 } from "@/domain/travel/types";
+import { parseChangePolicyForm } from "@/lib/change-policy";
 import { replaceMongoTripDepartures } from "@/lib/mongo-departures";
 import {
   getMongoDestinationForAdmin,
@@ -358,6 +359,7 @@ export async function saveTripAction(formData: FormData) {
   const travellerPricing = parseTravellerPricing(formData);
   const departures = travellerPricing ? parseDepartures(formData, id, travellerPricing) : null;
   const travellerRequirements = parseTravellerRequirementsForm(formData);
+  const changePolicy = parseChangePolicyForm(formData);
 
   if (
     !title ||
@@ -374,7 +376,8 @@ export async function saveTripAction(formData: FormData) {
     itineraryEs === null ||
     travellerPricing === null ||
     departures === null ||
-    travellerRequirements === null
+    travellerRequirements === null ||
+    changePolicy === null
   ) {
     redirect(`${returnTo}?error=validation`);
   }
@@ -406,6 +409,7 @@ export async function saveTripAction(formData: FormData) {
       currency,
       travellerPricing,
       travellerRequirements: travellerRequirements.preset === "none" ? undefined : travellerRequirements,
+      changePolicy,
       highlights,
       itinerary,
       included,
