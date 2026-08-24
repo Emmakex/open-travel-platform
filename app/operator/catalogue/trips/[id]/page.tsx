@@ -41,6 +41,7 @@ export default async function EditTripPage({ params, searchParams }: PageProps) 
         <TripAccommodationEditor
           trip={trip}
           accommodations={accommodations}
+          departures={departures}
           locale={locale}
           updated={query.accommodationsUpdated === "1"}
           error={query.accommodationError}

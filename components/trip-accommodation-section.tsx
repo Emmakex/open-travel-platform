@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { TravelImage } from "@/components/travel-image";
 import type { TravelLocale, Trip } from "@/domain/travel/types";
 import { listPublishedAccommodations, localizeAccommodation } from "@/lib/accommodations";
 
@@ -26,6 +27,15 @@ export async function TripAccommodationSection({ trip, locale }: { trip: Trip; l
       <div className="grid-3">
         {stays.map(({ component, accommodation, localized, room }) => (
           <article className="card" key={component.id}>
+            {room.gallery?.[0] ? (
+              <div className="detail-cover">
+                <TravelImage media={room.gallery[0]} fallbackAlt={room.name} sizes="(max-width: 880px) 100vw, 30vw" quality={84} />
+              </div>
+            ) : accommodation.coverImage ? (
+              <div className="detail-cover">
+                <TravelImage media={accommodation.coverImage} fallbackAlt={localized.name} sizes="(max-width: 880px) 100vw, 30vw" quality={84} />
+              </div>
+            ) : null}
             <div className="card-body">
               <div className="card-kicker">{component.mode === "optional" ? t("Optional", "Opcional") : t("Included", "Incluido")}</div>
               <h3>{localized.name}</h3>

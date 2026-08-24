@@ -9,7 +9,12 @@ import type {
   AccommodationInventoryStatus,
   AccommodationRoomType
 } from "@/domain/accommodation/types";
-import type { CurrencyCode, TravelMedia, TravelPublicationStatus } from "@/domain/travel/types";
+import type {
+  CurrencyCode,
+  TravelMedia,
+  TravelMediaFocalPoint,
+  TravelPublicationStatus
+} from "@/domain/travel/types";
 import {
   getAccommodationForAdmin,
   saveAccommodationWithInventory
@@ -48,7 +53,7 @@ function parseOptionalNonNegativeInteger(value: string) {
   return Number.isInteger(parsed) && parsed >= 0 ? parsed : null;
 }
 
-function parseRoomTypes(formData: FormData): AccommodationRoomType[] | null {
+function parseRoomTypes(formData: FormData, existing?: Accommodation | null): AccommodationRoomType[] | null {
   const ids = texts(formData, "roomId").filter(Boolean);
   if (!ids.length || new Set(ids).size !== ids.length) return null;
 
@@ -79,8 +84,10 @@ function parseRoomTypes(formData: FormData): AccommodationRoomType[] | null {
       return null;
     }
 
+    const previous = existing?.roomTypes.find((room) => room.id === id);
     codes.add(code);
     rooms.push({
+      ...(previous ?? {}),
       id,
       code,
       name,
@@ -152,6 +159,8 @@ function parseInventory(
   return periods.sort((a, b) => a.startDate.localeCompare(b.startDate));
 }
 
+const focalPoints = new Set<TravelMediaFocalPoint>(["center", "top", "bottom", "left", "right"]);
+
 function parseCoverImage(formData: FormData): TravelMedia | null | undefined {
   const src = text(formData, "coverSrc");
   if (!src) return undefined;
@@ -162,9 +171,13 @@ function parseCoverImage(formData: FormData): TravelMedia | null | undefined {
       return null;
     }
   }
+  const rawFocalPoint = text(formData, "coverFocalPoint") as TravelMediaFocalPoint;
   return {
     src,
-    alt: text(formData, "coverAlt") || undefined
+    alt: text(formData, "coverAlt") || undefined,
+    caption: text(formData, "coverCaption") || undefined,
+    credit: text(formData, "coverCredit") || undefined,
+    focalPoint: focalPoints.has(rawFocalPoint) ? rawFocalPoint : "center"
   };
 }
 
@@ -173,6 +186,7 @@ export async function saveAccommodationAction(formData: FormData) {
 
   const requestedId = text(formData, "id");
   const id = requestedId || randomUUID();
+  const existing = requestedId ? await getAccommodationForAdmin(id) : null;
   const name = text(formData, "name");
   const slug = normalizeSlug(text(formData, "slug") || name);
   const summary = text(formData, "summary");
@@ -180,7 +194,7 @@ export async function saveAccommodationAction(formData: FormData) {
   const country = text(formData, "country");
   const rawCurrency = text(formData, "currency");
   const currency: CurrencyCode = rawCurrency === "USD" || rawCurrency === "GBP" ? rawCurrency : "EUR";
-  const roomTypes = parseRoomTypes(formData);
+  const roomTypes = parseRoomTypes(formData, existing);
   const inventory = roomTypes ? parseInventory(formData, id, roomTypes) : null;
   const coverImage = parseCoverImage(formData);
   const returnTo = requestedId
@@ -191,7 +205,6 @@ export async function saveAccommodationAction(formData: FormData) {
     redirect(`${returnTo}?error=validation`);
   }
 
-  const existing = requestedId ? await getAccommodationForAdmin(id) : null;
   const roomTranslations = Object.fromEntries(roomTypes.map((room) => [
     room.id,
     {

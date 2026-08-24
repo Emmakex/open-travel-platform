@@ -42,6 +42,9 @@ export type TripAccommodationComponent = {
   checkInDay: number;
   nights: number;
   mode: TripAccommodationMode;
+  /** Reference occupancy used to preview package accommodation pricing by departure. */
+  pricingAdults?: number;
+  pricingChildAges?: number[];
 };
 
 export type DestinationTranslation = {
