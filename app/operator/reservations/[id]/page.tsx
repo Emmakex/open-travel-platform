@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { updateReservationStatusAction } from "@/app/operator/actions";
 import styles from "@/app/operator/operator.module.css";
 import { PaymentTermsEditor } from "@/components/operator/payment-terms-editor";
+import { ReservationAccommodation } from "@/components/operator/reservation-accommodation";
 import { ReservationDepartureChange } from "@/components/operator/reservation-departure-change";
 import { ReservationPaymentPanel } from "@/components/operator/reservation-payment-panel";
 import { ReservationTravellers } from "@/components/operator/reservation-travellers";
@@ -37,7 +38,12 @@ function amendmentValue(
   currency: string,
   locale: TravelLocale
 ) {
-  if (field === "unitPrice" || field === "totalPrice") {
+  if (
+    field === "unitPrice" ||
+    field === "totalPrice" ||
+    field === "accommodationTotal" ||
+    field === "accommodationAdditionalTotal"
+  ) {
     const number = Number(value);
     return Number.isFinite(number) ? formatOperatorMoney(number, currency, locale, 2) : value;
   }
@@ -113,6 +119,9 @@ export default async function OperatorReservationDetailPage({
     "trip-not-found": tr(locale, "The trip linked to this reservation could not be found.", "No se ha encontrado el viaje vinculado a esta reserva."),
     "pricing-unavailable": tr(locale, "The traveller composition is not valid for the selected departure. Review traveller ages and responsible-adult relationships.", "La composición de viajeros no es válida para la salida seleccionada. Revisa las edades y las relaciones con adultos responsables."),
     "inventory-release-failed": tr(locale, "The previous departure could not be released safely, so no changes were applied.", "No se pudo liberar la salida anterior de forma segura, por lo que no se aplicó ningún cambio."),
+    "accommodation-unavailable": tr(locale, "The new departure does not have enough room inventory for the accommodation saved with this reservation.", "La nueva salida no tiene suficientes habitaciones para el alojamiento guardado con esta reserva."),
+    "accommodation-reprice-failed": tr(locale, "The saved accommodation cannot be repriced or allocated for the selected departure. Review room, occupancy and pricing configuration.", "El alojamiento guardado no puede recalcularse o distribuirse para la salida seleccionada. Revisa habitación, ocupación y tarifas."),
+    "accommodation-release-failed": tr(locale, "The previous room inventory could not be released safely, so the departure change was rolled back.", "No se pudo liberar de forma segura el inventario anterior de habitaciones, por lo que se revirtió el cambio de salida."),
     "not-found": tr(locale, "The reservation could not be found.", "No se ha encontrado la reserva."),
     "no-changes": tr(locale, "No changes were detected. Choose a different value.", "No se detectaron cambios. Selecciona un valor diferente."),
     "update-conflict": tr(locale, "The reservation changed at the same time. Review it and try again.", "La reserva cambió al mismo tiempo. Revísala y vuelve a intentarlo."),
@@ -127,7 +136,9 @@ export default async function OperatorReservationDetailPage({
     returnDate: tr(locale, "Return", "Regreso"),
     unitPrice: tr(locale, "Lead fare", "Tarifa principal"),
     totalPrice: tr(locale, "Reservation total", "Total de la reserva"),
-    inventorySpaces: tr(locale, "Reserved spaces", "Plazas reservadas")
+    inventorySpaces: tr(locale, "Reserved spaces", "Plazas reservadas"),
+    accommodationTotal: tr(locale, "Accommodation value", "Valor del alojamiento"),
+    accommodationAdditionalTotal: tr(locale, "Accommodation added to total", "Alojamiento añadido al total")
   };
 
   return (
@@ -158,7 +169,7 @@ export default async function OperatorReservationDetailPage({
             {amendmentUpdated === "departure" ? (
               <div className={styles.notice}>
                 <strong>{tr(locale, "Departure changed successfully.", "Salida cambiada correctamente.")}</strong><br />
-                {tr(locale, "Review the new dates, traveller fares and payment summary below.", "Revisa las nuevas fechas, las tarifas de viajeros y el resumen de pagos a continuación.")}
+                {tr(locale, "Review the new dates, traveller fares, accommodation and payment summary below.", "Revisa las nuevas fechas, las tarifas de viajeros, el alojamiento y el resumen de pagos a continuación.")}
               </div>
             ) : null}
             {amendmentError && amendmentErrors[amendmentError] ? (
@@ -255,6 +266,9 @@ export default async function OperatorReservationDetailPage({
                             : `${amendment.priceDelta > 0 ? "+" : "−"}${formatOperatorMoney(Math.abs(amendment.priceDelta), amendment.currency ?? reservation.currency, locale, 2)}`}
                         </span><br /></>
                       ) : null}
+                      {amendment.accommodationBefore?.length || amendment.accommodationAfter?.length ? (
+                        <><span><strong>{tr(locale, "Accommodation snapshot", "Snapshot de alojamiento")}:</strong> {amendment.accommodationBefore?.reduce((sum, item) => sum + item.rooms.length, 0) ?? 0} → {amendment.accommodationAfter?.reduce((sum, item) => sum + item.rooms.length, 0) ?? 0} {tr(locale, "room(s)", "habitación(es)")}</span><br /></>
+                      ) : null}
                       <span><strong>{tr(locale, "Reason", "Motivo")}:</strong> {amendment.reason}</span><br />
                       <span>{staffRoleLabel(amendment.actorRole, locale)} · {amendment.actorIdentityId}</span><br />
                       {formatOperatorDate(amendment.occurredAt, locale, true)}
@@ -273,6 +287,7 @@ export default async function OperatorReservationDetailPage({
         ) : null}
 
         <ReservationTravellers reservation={reservation} locale={locale} />
+        <ReservationAccommodation reservation={reservation} locale={locale} />
 
         <PaymentTermsEditor
           reservation={reservation}
