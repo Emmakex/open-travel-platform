@@ -1,4 +1,4 @@
-import type { ReservationStatus } from "@/domain/booking/types";
+import type { ReservationAccommodationBooking, ReservationStatus } from "@/domain/booking/types";
 import type { UserRole } from "@/domain/identity/types";
 
 export type StaffRole = Extract<UserRole, "operator" | "admin">;
@@ -28,7 +28,9 @@ export type DepartureChangeField =
   | "returnDate"
   | "unitPrice"
   | "totalPrice"
-  | "inventorySpaces";
+  | "inventorySpaces"
+  | "accommodationTotal"
+  | "accommodationAdditionalTotal";
 export type ReservationAmendmentField = TravellerCorrectionField | DepartureChangeField;
 
 export interface ReservationAmendmentChange {
@@ -56,6 +58,9 @@ export interface ReservationAmendment {
   priceDelta?: number;
   currency?: string;
   inventoryMovement?: ReservationInventoryMovement;
+  /** Exact accommodation snapshots preserve the room allocation before and after a departure change. */
+  accommodationBefore?: ReservationAccommodationBooking[];
+  accommodationAfter?: ReservationAccommodationBooking[];
   occurredAt: string;
 }
 
