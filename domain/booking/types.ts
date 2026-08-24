@@ -1,5 +1,7 @@
 import type { ReservationChangePolicy } from "@/domain/operations/change-policy";
 import type { TravellerRequirementsProfile } from "@/domain/traveller/types";
+import type { AccommodationMealPlan } from "@/domain/accommodation/types";
+import type { TripAccommodationMode } from "@/domain/travel/types";
 
 export type ReservationStatus = "pending" | "confirmed" | "cancelled";
 export type TripDepartureStatus = "open" | "closed" | "sold-out";
@@ -66,6 +68,43 @@ export interface ReservationTraveller {
   consumesInventory: boolean;
 }
 
+export interface ReservationAccommodationInventoryAllocation {
+  periodId: string;
+  rooms: number;
+}
+
+export interface ReservationAccommodationRoomAllocation {
+  id: string;
+  travellerIds: string[];
+  adults: number;
+  childAges: number[];
+  basePrice: number;
+  seasonalAdjustment: number;
+  occupancyAdjustment: number;
+  totalPrice: number;
+}
+
+export interface ReservationAccommodationBooking {
+  componentId: string;
+  accommodationId: string;
+  accommodationSlug?: string;
+  accommodationName: string;
+  roomTypeId: string;
+  roomTypeName: string;
+  mealPlan?: AccommodationMealPlan;
+  mode: TripAccommodationMode;
+  checkInDay: number;
+  nights: number;
+  checkInDate: string;
+  checkOutDate: string;
+  currency: string;
+  rooms: ReservationAccommodationRoomAllocation[];
+  totalPrice: number;
+  /** Included stays are priced/snapshotted but not added again to the trip fare. */
+  amountAddedToReservation: number;
+  inventory: ReservationAccommodationInventoryAllocation[];
+}
+
 export interface Reservation {
   id: string;
   identityId: string;
@@ -75,6 +114,13 @@ export interface Reservation {
   inventorySpaces?: number;
   travellers?: ReservationTraveller[];
   unitPrice: number;
+  /** Traveller/package fare before optional accommodation additions. */
+  tripPriceTotal?: number;
+  /** Sum of all selected accommodation values, including included stays. */
+  accommodationTotal?: number;
+  /** Only optional accommodation amounts added on top of the trip fare. */
+  accommodationAdditionalTotal?: number;
+  accommodationBookings?: ReservationAccommodationBooking[];
   totalPrice: number;
   currency: string;
   status: ReservationStatus;
@@ -98,6 +144,10 @@ export interface CreateReservationInput {
   inventorySpaces?: number;
   travellers?: ReservationTraveller[];
   unitPrice: number;
+  tripPriceTotal?: number;
+  accommodationTotal?: number;
+  accommodationAdditionalTotal?: number;
+  accommodationBookings?: ReservationAccommodationBooking[];
   totalPrice: number;
   currency: string;
   tripTitle?: string;
