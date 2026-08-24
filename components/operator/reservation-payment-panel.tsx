@@ -28,11 +28,13 @@ function ManualMovementForm({
   reservationId,
   type,
   maxAmount,
+  currency,
   locale
 }: {
   reservationId: string;
   type: "payment" | "refund";
   maxAmount: number;
+  currency: string;
   locale: TravelLocale;
 }) {
   const refund = type === "refund";
@@ -45,8 +47,8 @@ function ManualMovementForm({
         <p className={styles.muted}>
           {tr(
             locale,
-            `Maximum amount to review: ${formatOperatorMoney(maxAmount, "EUR", locale, 2)}. Confirm the applicable conditions before recording a refund.`,
-            `Importe máximo a revisar: ${formatOperatorMoney(maxAmount, "EUR", locale, 2)}. Confirma las condiciones aplicables antes de registrar un reembolso.`
+            `Maximum amount to review: ${formatOperatorMoney(maxAmount, currency, locale, 2)}. Confirm the applicable conditions before recording a refund.`,
+            `Importe máximo a revisar: ${formatOperatorMoney(maxAmount, currency, locale, 2)}. Confirma las condiciones aplicables antes de registrar un reembolso.`
           )}
         </p>
       ) : null}
@@ -172,10 +174,10 @@ export function ReservationPaymentPanel({
       {paymentConfig.writesEnabled ? (
         <div className={styles.formGrid}>
           {summary.outstandingAmount > 0 && summary.pendingPaymentAmount <= 0 ? (
-            <ManualMovementForm reservationId={reservation.id} type="payment" maxAmount={summary.outstandingAmount} locale={locale} />
+            <ManualMovementForm reservationId={reservation.id} type="payment" maxAmount={summary.outstandingAmount} currency={summary.currency} locale={locale} />
           ) : null}
           {refundReviewAmount > 0 && summary.pendingRefundAmount <= 0 ? (
-            <ManualMovementForm reservationId={reservation.id} type="refund" maxAmount={refundReviewAmount} locale={locale} />
+            <ManualMovementForm reservationId={reservation.id} type="refund" maxAmount={refundReviewAmount} currency={summary.currency} locale={locale} />
           ) : null}
         </div>
       ) : null}
