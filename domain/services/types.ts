@@ -1,3 +1,4 @@
+import type { ReservationChangePolicy } from "@/domain/operations/change-policy";
 import type { TravellerRequirementsProfile } from "@/domain/traveller/types";
 import type {
   CurrencyCode,
@@ -54,6 +55,8 @@ type TravelServiceBase = {
   travellerPricing?: TravellerPricingBand[];
   /** Advanced data requested after booking, snapshotted onto each service reservation. */
   travellerRequirements?: TravellerRequirementsProfile;
+  /** Amendment/cancellation rules snapshotted onto new service reservations. */
+  changePolicy?: ReservationChangePolicy;
   highlights: string[];
   included?: string[];
   notIncluded?: string[];
