@@ -8,6 +8,12 @@ export type PaymentStatus =
   | "partially_refunded"
   | "refunded";
 
+export type PaymentSettlementStatus =
+  | "payment_due"
+  | "refund_review"
+  | "settled"
+  | "pending";
+
 export type PaymentTargetType = "trip" | "service";
 export type PaymentTransactionType = "payment" | "refund";
 export type PaymentTransactionStatus = "pending" | "succeeded" | "failed";
@@ -47,12 +53,15 @@ export interface PaymentSummary {
   targetId: string;
   targetType?: PaymentTargetType;
   status: PaymentStatus;
+  settlementStatus: PaymentSettlementStatus;
   currency: string;
   totalAmount: number;
   paidAmount: number;
   refundedAmount: number;
   netPaidAmount: number;
   outstandingAmount: number;
+  overpaidAmount: number;
+  settlementAmount: number;
   refundableAmount: number;
   pendingPaymentAmount: number;
   pendingRefundAmount: number;
