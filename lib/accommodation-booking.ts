@@ -20,8 +20,11 @@ export type AccommodationBookingErrorCode =
   | "ACCOMMODATION_CURRENCY_MISMATCH";
 
 export class AccommodationBookingError extends Error {
-  constructor(public code: AccommodationBookingErrorCode, message: string) {
+  code: AccommodationBookingErrorCode;
+
+  constructor(code: AccommodationBookingErrorCode, message: string) {
     super(message);
+    this.code = code;
     this.name = "AccommodationBookingError";
   }
 }
