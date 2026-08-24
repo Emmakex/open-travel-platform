@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { TravelImage } from "@/components/travel-image";
 import { TravelMediaGallery } from "@/components/travel-media-gallery";
+import { TripAccommodationSection } from "@/components/trip-accommodation-section";
 import { getLocale } from "@/lib/get-locale";
 import {
   formatCurrency,
@@ -128,6 +129,8 @@ export default async function TripDetailPage({ params }: PageProps) {
                 </ol>
               </section>
             ) : null}
+
+            <TripAccommodationSection trip={trip} locale={locale} />
 
             {localizedTrip.included?.length || localizedTrip.notIncluded?.length ? (
               <section className="trip-section">
