@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import type { GuardianRelationship } from "@/domain/booking/types";
 import type { TravelServiceType } from "@/domain/services/types";
 import { getBookingRepository } from "@/lib/booking-repository";
+import { evaluateServiceReservationPolicy } from "@/lib/change-policy";
 import { getPaymentRepository } from "@/lib/payment-repository";
 import { requireCustomerIdentity } from "@/lib/require-customer-identity";
 import {
@@ -177,7 +178,8 @@ export async function createServiceReservationAction(
       travellers: priced.travellers,
       insuranceTrip,
       relatedReservationId,
-      travellerRequirements: service.travellerRequirements
+      travellerRequirements: service.travellerRequirements,
+      changePolicy: service.changePolicy
     });
   } catch (error) {
     if (error && typeof error === "object" && "code" in error && error.code === "SERVICE_UNAVAILABLE") {
@@ -197,6 +199,12 @@ export async function cancelServiceReservationAction(formData: FormData) {
 
   const current = await getServiceReservationForCustomer(identity.id, reservationId);
   if (!current) redirect("/account/services");
+
+  const policy = evaluateServiceReservationPolicy(current);
+  if (!policy.customerCancellationAllowed) {
+    redirect(`/account/services/${encodeURIComponent(reservationId)}?error=cancellation-policy`);
+  }
+
   const payment = await getPaymentRepository().getTargetSummary({
     id: current.id,
     totalPrice: current.totalPrice,
