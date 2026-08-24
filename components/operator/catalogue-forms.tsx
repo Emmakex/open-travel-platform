@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { saveDestinationAction, saveTripAction } from "@/app/operator/catalogue/actions";
 import styles from "@/app/operator/operator.module.css";
+import { ChangePolicyEditor } from "@/components/operator/change-policy-editor";
 import { DepartureEditor } from "@/components/operator/departure-editor";
 import { GalleryEditor, ItineraryEditor, MediaEditorCard } from "@/components/operator/structured-editors";
 import { TravellerPricingEditor } from "@/components/operator/traveller-pricing-editor";
@@ -16,7 +17,7 @@ function ErrorNotice({ error, locale }: { error?: string; locale: TravelLocale }
   return (
     <div className={styles.notice}>
       {error === "validation"
-        ? tr(locale, "Complete all required fields with valid values. Check age pricing, media URLs, itinerary rows and departure capacity/dates.", "Completa todos los campos obligatorios con valores válidos. Revisa precios por edad, URL de imágenes, itinerario y fechas/cupos de las salidas.")
+        ? tr(locale, "Complete all required fields with valid values. Check age pricing, media URLs, itinerary rows, departure capacity/dates and change-policy deadlines.", "Completa todos los campos obligatorios con valores válidos. Revisa precios por edad, URL de imágenes, itinerario, fechas/cupos de las salidas y plazos de cambios.")
         : tr(locale, "The record could not be saved. Check for a duplicate slug and review the runtime log.", "No se pudo guardar el registro. Comprueba si el slug está duplicado y revisa los logs de ejecución.")}
     </div>
   );
@@ -144,6 +145,7 @@ export function TripForm({ trip, destinations, departures = [], error, mediaLibr
 
       <DepartureEditor departures={departures} pricingBands={pricingBands} legacySinglePrice={!trip?.travellerPricing?.length} locale={locale} />
       <TravellerRequirementsEditor profile={trip?.travellerRequirements} locale={locale} />
+      <ChangePolicyEditor policy={trip?.changePolicy} locale={locale} />
 
       <div className={styles.editorSection}>
         <div><div className="eyebrow">{tr(locale, "Cover media", "Imagen de portada")}</div><p className={styles.muted}>{tr(locale, "Upload or reuse the hero image for this travel product.", "Sube o reutiliza la imagen principal de este producto de viaje.")}</p></div>
