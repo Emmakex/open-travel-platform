@@ -9,8 +9,8 @@ import type {
   AccommodationRoomType
 } from "@/domain/accommodation/types";
 import type { TripAccommodationComponent } from "@/domain/travel/types";
-import { addIsoDays, calculateAccommodationStayPrice } from "@/lib/accommodation-pricing";
-import { calculateAgeOnDate } from "@/lib/traveller-pricing";
+import { addIsoDays, calculateAccommodationStayPrice } from "./accommodation-pricing.ts";
+import { calculateAgeOnDate } from "./traveller-pricing.ts";
 
 export type AccommodationBookingErrorCode =
   | "ACCOMMODATION_CONFIGURATION_INVALID"
