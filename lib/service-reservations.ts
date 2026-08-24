@@ -5,6 +5,7 @@ import type {
   ServiceReservation,
   ServiceReservationStatus
 } from "@/domain/services/booking-types";
+import { evaluateServiceReservationPolicy } from "@/lib/change-policy";
 import { serviceAvailabilityCollectionName } from "@/lib/service-availability";
 import { getMongoClient, getMongoDatabaseName } from "@/lib/mongodb";
 
@@ -23,10 +24,14 @@ export async function ensureServiceReservationIndexes(database: Db) {
   ]);
 }
 
-function inventoryError() {
-  const error = new Error("Service inventory is no longer available.");
-  Object.assign(error, { code: "SERVICE_UNAVAILABLE" });
+function serviceError(code: string, message: string) {
+  const error = new Error(message);
+  Object.assign(error, { code });
   return error;
+}
+
+function inventoryError() {
+  return serviceError("SERVICE_UNAVAILABLE", "Service inventory is no longer available.");
 }
 
 export async function listServiceReservationsForCustomer(identityId: string) {
@@ -47,6 +52,31 @@ export async function getServiceReservationForCustomer(identityId: string, id: s
   return database
     .collection<StoredServiceReservation>(serviceReservationCollectionName)
     .findOne({ id, identityId });
+}
+
+export async function listServiceReservationsForRelatedTrip(relatedReservationId: string) {
+  const client = await getMongoClient();
+  const database = client.db(getMongoDatabaseName());
+  await ensureServiceReservationIndexes(database);
+  return database
+    .collection<StoredServiceReservation>(serviceReservationCollectionName)
+    .find({ relatedReservationId })
+    .sort({ serviceDate: 1, createdAt: 1 })
+    .toArray();
+}
+
+export async function listServiceReservationsForRelatedTripForCustomer(
+  identityId: string,
+  relatedReservationId: string
+) {
+  const client = await getMongoClient();
+  const database = client.db(getMongoDatabaseName());
+  await ensureServiceReservationIndexes(database);
+  return database
+    .collection<StoredServiceReservation>(serviceReservationCollectionName)
+    .find({ identityId, relatedReservationId })
+    .sort({ serviceDate: 1, createdAt: 1 })
+    .toArray();
 }
 
 export async function listServiceReservationsForOperator() {
@@ -148,6 +178,16 @@ async function changeStatus(input: {
       if (current.status === "cancelled") return;
       if (input.customerPendingOnly && current.status !== "pending") return;
 
+      if (input.toStatus === "cancelled") {
+        const policy = evaluateServiceReservationPolicy(current);
+        if (input.actorType === "customer" && !policy.customerCancellationAllowed) {
+          throw serviceError("SERVICE_CANCELLATION_DEADLINE", "Customer cancellation is outside the allowed policy window.");
+        }
+        if (input.actorType === "staff" && !policy.staffCancellationAllowed) {
+          throw serviceError("SERVICE_CANCELLATION_DEADLINE", "Staff cancellation is outside the allowed policy window.");
+        }
+      }
+
       const updatedAt = new Date().toISOString();
       const event = {
         id: `evt-${randomUUID()}`,
@@ -169,7 +209,7 @@ async function changeStatus(input: {
       if (update.modifiedCount !== 1) return;
 
       if (input.toStatus === "cancelled" && current.availabilityId && current.inventoryUnits > 0) {
-        await availability.updateOne(
+        const release = await availability.updateOne(
           {
             id: current.availabilityId,
             serviceId: current.serviceId,
@@ -181,6 +221,9 @@ async function changeStatus(input: {
           },
           { session }
         );
+        if (release.modifiedCount !== 1) {
+          throw serviceError("SERVICE_INVENTORY_RELEASE_FAILED", "Service inventory could not be released safely.");
+        }
       }
 
       changed = {
