@@ -1,11 +1,38 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import type { AccommodationMealPlan, AccommodationRoomKind } from "@/domain/accommodation/types";
 import { getLocale } from "@/lib/get-locale";
 import {
   getPublishedAccommodation,
   listAccommodationInventory,
   localizeAccommodation
 } from "@/lib/accommodations";
+
+function roomKindLabel(kind: AccommodationRoomKind | undefined, locale: "en" | "es") {
+  const labels: Record<AccommodationRoomKind, [string, string]> = {
+    single: ["Single", "Individual"],
+    double: ["Double", "Doble"],
+    twin: ["Twin", "Twin"],
+    triple: ["Triple", "Triple"],
+    family: ["Family", "Familiar"],
+    suite: ["Suite", "Suite"],
+    other: ["Other", "Otro"]
+  };
+  if (!kind) return null;
+  return locale === "es" ? labels[kind][1] : labels[kind][0];
+}
+
+function mealPlanLabel(plan: AccommodationMealPlan | undefined, locale: "en" | "es") {
+  const labels: Record<AccommodationMealPlan, [string, string]> = {
+    "room-only": ["Room only", "Solo alojamiento"],
+    breakfast: ["Breakfast", "Desayuno"],
+    "half-board": ["Half board", "Media pensión"],
+    "full-board": ["Full board", "Pensión completa"],
+    "all-inclusive": ["All inclusive", "Todo incluido"]
+  };
+  if (!plan) return null;
+  return locale === "es" ? labels[plan][1] : labels[plan][0];
+}
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
@@ -25,6 +52,7 @@ export default async function AccommodationDetailPage({ params }: { params: Prom
   const today = new Date().toISOString().slice(0, 10);
   const openInventory = inventory.filter((period) => period.status === "open" && period.endDate >= today && period.capacity > period.reserved);
   const t = (en: string, es: string) => locale === "es" ? es : en;
+  const formatter = new Intl.NumberFormat(locale === "es" ? "es-ES" : "en-GB", { style: "currency", currency: accommodation.currency });
 
   return (
     <main className="section">
@@ -43,11 +71,17 @@ export default async function AccommodationDetailPage({ params }: { params: Prom
             <div className="grid-3">
               {localized.roomTypes.map((room) => {
                 const roomInventory = openInventory.filter((period) => period.roomTypeId === room.id);
+                const kind = roomKindLabel(room.kind, locale);
+                const mealPlan = mealPlanLabel(room.mealPlan, locale);
                 return (
                   <article className="card" key={room.id}>
                     <div className="card-body">
                       <h2>{room.name}</h2>
+                      {kind || mealPlan ? <p>{[kind, mealPlan].filter(Boolean).join(" · ")}</p> : null}
                       {room.description ? <p>{room.description}</p> : null}
+                      {room.baseNightlyRate !== undefined ? (
+                        <p><strong>{t("From", "Desde")} {formatter.format(room.baseNightlyRate)}</strong> {t("per room/night", "por habitación/noche")}</p>
+                      ) : null}
                       <p>
                         <strong>{t("Occupancy", "Ocupación")}:</strong>{" "}
                         {room.occupancy.minAdults}–{room.occupancy.maxAdults} {t("adults", "adultos")}
@@ -57,14 +91,14 @@ export default async function AccommodationDetailPage({ params }: { params: Prom
                       <p><strong>{t("Maximum guests", "Huéspedes máximos")}:</strong> {room.occupancy.maxOccupancy}</p>
                       {roomInventory.length ? (
                         <div>
-                          <strong>{t("Upcoming inventory", "Inventario próximo")}</strong>
+                          <strong>{t("Upcoming availability", "Próxima disponibilidad")}</strong>
                           <ul>
                             {roomInventory.slice(0, 5).map((period) => (
                               <li key={period.id}>{period.startDate} → {period.endDate} · {period.capacity - period.reserved} {t("rooms available", "habitaciones disponibles")}</li>
                             ))}
                           </ul>
                         </div>
-                      ) : <p>{t("No open inventory periods are currently published for this room type.", "Actualmente no hay periodos de inventario abiertos para este tipo de habitación.")}</p>}
+                      ) : <p>{t("No open availability periods are currently published for this room type.", "Actualmente no hay periodos de disponibilidad abiertos para este tipo de habitación.")}</p>}
                     </div>
                   </article>
                 );

@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { TripForm } from "@/components/operator/catalogue-forms";
+import { TripAccommodationEditor } from "@/components/operator/trip-accommodation-editor";
 import styles from "@/app/operator/operator.module.css";
+import { listAccommodationsForAdmin } from "@/lib/accommodations";
 import { getLocale } from "@/lib/get-locale";
 import { listMediaLibraryChoices } from "@/lib/media-library";
 import { listMongoTripDepartures } from "@/lib/mongo-departures";
@@ -8,18 +10,22 @@ import { getMongoTripForAdmin, listMongoDestinationsForAdmin } from "@/lib/mongo
 import { tr } from "@/lib/operator-i18n";
 import { requireOperationsIdentity } from "@/lib/require-operations-identity";
 
-type PageProps = { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string }> };
+type PageProps = {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ error?: string; accommodationsUpdated?: string; accommodationError?: string }>;
+};
 export const metadata = { title: "Trip | Kairoseth Travel" };
 
 export default async function EditTripPage({ params, searchParams }: PageProps) {
   const locale = await getLocale();
   await requireOperationsIdentity();
   const [{ id }, query] = await Promise.all([params, searchParams]);
-  const [trip, destinations, mediaLibrary, departures] = await Promise.all([
+  const [trip, destinations, mediaLibrary, departures, accommodations] = await Promise.all([
     getMongoTripForAdmin(id),
     listMongoDestinationsForAdmin(),
     listMediaLibraryChoices(100),
-    listMongoTripDepartures(id)
+    listMongoTripDepartures(id),
+    listAccommodationsForAdmin()
   ]);
   if (!trip) notFound();
 
@@ -29,9 +35,16 @@ export default async function EditTripPage({ params, searchParams }: PageProps) 
         <section className={styles.panel}>
           <div className="eyebrow">{tr(locale, "Catalogue · Trips", "Catálogo · Viajes")}</div>
           <h1>{tr(locale, "Edit", "Editar")} {trip.title}</h1>
-          <p className={styles.lead}>{tr(locale, "Manage product content, departures, inventory, itinerary, media, publication and translations for this trip.", "Gestiona contenido, salidas, inventario, itinerario, multimedia, publicación y traducciones de este viaje.")}</p>
+          <p className={styles.lead}>{tr(locale, "Manage product content, departures, accommodation, inventory, itinerary, media, publication and translations for this trip.", "Gestiona contenido, salidas, alojamiento, inventario, itinerario, multimedia, publicación y traducciones de este viaje.")}</p>
           <TripForm trip={trip} destinations={destinations} departures={departures} error={query.error} mediaLibrary={mediaLibrary} locale={locale} />
         </section>
+        <TripAccommodationEditor
+          trip={trip}
+          accommodations={accommodations}
+          locale={locale}
+          updated={query.accommodationsUpdated === "1"}
+          error={query.accommodationError}
+        />
       </div>
     </main>
   );

@@ -33,6 +33,17 @@ export type TravellerPricingBand = {
   consumesInventory: boolean;
 };
 
+export type TripAccommodationMode = "included" | "optional";
+
+export type TripAccommodationComponent = {
+  id: string;
+  accommodationId: string;
+  roomTypeId: string;
+  checkInDay: number;
+  nights: number;
+  mode: TripAccommodationMode;
+};
+
 export type DestinationTranslation = {
   name?: string;
   country?: string;
@@ -73,6 +84,8 @@ export type Trip = {
   fromPrice: number;
   currency: CurrencyCode;
   travellerPricing?: TravellerPricingBand[];
+  /** Reusable accommodation components linked by reference. */
+  accommodations?: TripAccommodationComponent[];
   /** Advanced data requested after booking, snapshotted onto each reservation. */
   travellerRequirements?: TravellerRequirementsProfile;
   /** Amendment/cancellation rules snapshotted onto new reservations. */
