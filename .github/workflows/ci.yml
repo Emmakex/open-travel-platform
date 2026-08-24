@@ -46,6 +46,9 @@ jobs:
       - name: Release consistency check
         run: npm run check:release
 
+      - name: Reservation amendment invariant check
+        run: npm run check:amendments
+
       - name: Type check
         run: npm run typecheck
 
