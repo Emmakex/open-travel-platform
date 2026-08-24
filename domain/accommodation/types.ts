@@ -8,12 +8,32 @@ export type AccommodationOccupancyRule = {
   childMaxAge?: number;
 };
 
+export type AccommodationRoomKind =
+  | "single"
+  | "double"
+  | "twin"
+  | "triple"
+  | "family"
+  | "suite"
+  | "other";
+
+export type AccommodationMealPlan =
+  | "room-only"
+  | "breakfast"
+  | "half-board"
+  | "full-board"
+  | "all-inclusive";
+
 export type AccommodationRoomType = {
   id: string;
   code: string;
   name: string;
   description?: string;
+  kind?: AccommodationRoomKind;
   occupancy: AccommodationOccupancyRule;
+  /** Base public/reference price per room and night. Seasonal pricing is added later. */
+  baseNightlyRate?: number;
+  mealPlan?: AccommodationMealPlan;
 };
 
 export type AccommodationRoomTranslation = {
