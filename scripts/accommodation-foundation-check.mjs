@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import {
   accommodationInventoryOverlaps,
+  accommodationReferenceValue,
   isValidAccommodationOccupancy,
+  isValidTripAccommodationPlacement,
   remainingRoomInventory
 } from "../lib/accommodation-rules.ts";
 
@@ -53,4 +55,12 @@ assert.equal(accommodationInventoryOverlaps([
 assert.equal(remainingRoomInventory({ capacity: 10, reserved: 4 }), 6);
 assert.equal(remainingRoomInventory({ capacity: 3, reserved: 5 }), 0);
 
-console.log("Accommodation occupancy and inventory invariant checks passed.");
+assert.equal(isValidTripAccommodationPlacement({ checkInDay: 1, nights: 6 }, 7), true);
+assert.equal(isValidTripAccommodationPlacement({ checkInDay: 2, nights: 6 }, 7), false);
+assert.equal(isValidTripAccommodationPlacement({ checkInDay: 1, nights: 0 }, 7), false);
+
+assert.equal(accommodationReferenceValue({ baseNightlyRate: 125.5 }, 3), 376.5);
+assert.equal(accommodationReferenceValue({ baseNightlyRate: undefined }, 3), undefined);
+assert.equal(accommodationReferenceValue({ baseNightlyRate: 125.5 }, 0), undefined);
+
+console.log("Accommodation occupancy, inventory and trip-package invariant checks passed.");
