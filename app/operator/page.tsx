@@ -54,10 +54,12 @@ export default async function OperatorPage() {
             <Link className="button button-secondary" href="/operator/customers">{tr(locale, "Customers", "Clientes")}</Link>
             <Link className="button button-secondary" href="/operator/payments">{tr(locale, "Payments", "Pagos")}</Link>
             <Link className="button button-secondary" href="/operator/catalogue">{tr(locale, "Catalogue", "Catálogo")}</Link>
+            <Link className="button button-secondary" href="/operator/catalogue/accommodations">{tr(locale, "Accommodation", "Alojamiento")}</Link>
             <Link className="button button-secondary" href="/operator/media">{tr(locale, "Media", "Multimedia")}</Link>
             <Link className="button button-secondary" href="/operator/security">{tr(locale, "Security", "Seguridad")}</Link>
             {identity.role === "admin" ? <Link className="button button-secondary" href="/operator/payments/providers">{tr(locale, "Payment providers", "Pasarelas de pago")}</Link> : null}
             {identity.role === "admin" ? <Link className="button button-secondary" href="/operator/staff">{tr(locale, "Staff access", "Acceso del personal")}</Link> : null}
+            <Link className="button button-secondary" href="/accommodations">{tr(locale, "Public accommodation", "Alojamiento público")}</Link>
             <Link className="button button-secondary" href="/services">{tr(locale, "Public services", "Servicios públicos")}</Link>
             <form action={endStaffSession}><button className="button button-secondary" type="submit">{tr(locale, "Sign out", "Cerrar sesión")}</button></form>
           </div>
