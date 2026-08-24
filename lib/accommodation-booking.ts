@@ -40,6 +40,8 @@ export type AccommodationBookingPlanInput = {
   travellers: BookingTraveller[];
   selectedOptionalComponentIds?: string[];
   reservationCurrency: string;
+  /** New customer bookings require published products. Existing reservation amendments can reuse their contracted product. */
+  requirePublished?: boolean;
 };
 
 function classifyTravellers(room: AccommodationRoomType, travellers: BookingTraveller[], checkInDate: string) {
@@ -157,11 +159,12 @@ export function buildAccommodationBookingPlan(input: AccommodationBookingPlanInp
     component.mode === "included" || selectedOptional.has(component.id)
   );
   const bookings: ReservationAccommodationBooking[] = [];
+  const requirePublished = input.requirePublished ?? true;
 
   for (const component of selectedComponents) {
     const accommodation = accommodationById.get(component.accommodationId);
     const room = accommodation?.roomTypes.find((item) => item.id === component.roomTypeId);
-    if (!accommodation || !room || accommodation.publicationStatus !== "published") {
+    if (!accommodation || !room || (requirePublished && accommodation.publicationStatus !== "published")) {
       throw new AccommodationBookingError(
         "ACCOMMODATION_CONFIGURATION_INVALID",
         "A selected trip accommodation is no longer available for booking."
