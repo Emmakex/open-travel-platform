@@ -67,3 +67,67 @@ export async function releaseAccommodationBookingInventory(
     }
   }
 }
+
+export async function reallocateAccommodationBookingInventory(
+  database: Db,
+  session: ClientSession,
+  before: ReservationAccommodationBooking[] | undefined,
+  after: ReservationAccommodationBooking[] | undefined
+) {
+  const previous = accommodationInventoryMovements(before ?? []);
+  const next = accommodationInventoryMovements(after ?? []);
+  const periodIds = new Set([...previous.keys(), ...next.keys()]);
+  const inventory = database.collection(accommodationInventoryCollectionName);
+  const now = new Date();
+
+  // Reserve every positive delta first. If any new capacity is unavailable, the
+  // transaction aborts before old room inventory is released.
+  for (const periodId of periodIds) {
+    const delta = (next.get(periodId) ?? 0) - (previous.get(periodId) ?? 0);
+    if (delta <= 0) continue;
+    const result = await inventory.updateOne(
+      {
+        id: periodId,
+        status: "open",
+        $expr: {
+          $gte: [
+            { $subtract: ["$capacity", "$reserved"] },
+            delta
+          ]
+        }
+      },
+      {
+        $inc: { reserved: delta },
+        $set: { updatedAt: now }
+      },
+      { session }
+    );
+    if (result.modifiedCount !== 1) {
+      throw new AccommodationBookingError(
+        "ACCOMMODATION_INVENTORY_UNAVAILABLE",
+        "The new departure no longer has enough accommodation inventory."
+      );
+    }
+  }
+
+  // Only after positive deltas are secured do we release inventory that the
+  // amended reservation no longer needs.
+  for (const periodId of periodIds) {
+    const delta = (next.get(periodId) ?? 0) - (previous.get(periodId) ?? 0);
+    if (delta >= 0) continue;
+    const roomsToRelease = Math.abs(delta);
+    const result = await inventory.updateOne(
+      { id: periodId, reserved: { $gte: roomsToRelease } },
+      {
+        $inc: { reserved: -roomsToRelease },
+        $set: { updatedAt: now }
+      },
+      { session }
+    );
+    if (result.modifiedCount !== 1) {
+      const error = new Error("Previous accommodation inventory could not be released safely.");
+      Object.assign(error, { code: "ACCOMMODATION_INVENTORY_RELEASE_FAILED" });
+      throw error;
+    }
+  }
+}
