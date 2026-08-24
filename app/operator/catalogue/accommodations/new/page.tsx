@@ -2,6 +2,7 @@ import Link from "next/link";
 import styles from "@/app/operator/operator.module.css";
 import { AccommodationForm } from "@/components/operator/accommodation-form";
 import { getLocale } from "@/lib/get-locale";
+import { listMediaLibraryChoices } from "@/lib/media-library";
 import { tr } from "@/lib/operator-i18n";
 import { requireOperationsIdentity } from "@/lib/require-operations-identity";
 
@@ -17,6 +18,7 @@ export default async function NewAccommodationPage({
 }) {
   const [locale, query] = await Promise.all([getLocale(), searchParams]);
   await requireOperationsIdentity();
+  const mediaLibrary = await listMediaLibraryChoices(100);
 
   return (
     <main className="section">
@@ -27,7 +29,7 @@ export default async function NewAccommodationPage({
           <p className={styles.lead}>{tr(locale, "Define the property, its room types, occupancy limits and room inventory periods.", "Define el alojamiento, sus tipos de habitación, límites de ocupación y periodos de inventario.")}</p>
           <p><Link className="text-link" href="/operator/catalogue">{tr(locale, "← Catalogue", "← Catálogo")}</Link></p>
         </section>
-        <AccommodationForm locale={locale} error={query.error} />
+        <AccommodationForm locale={locale} error={query.error} mediaLibrary={mediaLibrary} />
       </div>
     </main>
   );
