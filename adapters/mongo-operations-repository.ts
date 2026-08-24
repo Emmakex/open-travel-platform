@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Reservation, ReservationStatus } from "@/domain/booking/types";
 import type { ReservationStatusUpdate } from "@/domain/operations/types";
+import { releaseAccommodationBookingInventory } from "@/lib/accommodation-booking-inventory";
 import { travelDepartureCollectionName } from "@/lib/mongo-departures";
 import {
   ensureMongoReservationIndexes,
@@ -107,18 +108,25 @@ export class MongoOperationsRepository implements OperationsRepository {
 
         if (input.status === "cancelled") {
           const inventorySpaces = current.inventorySpaces ?? current.partySize;
-          await departures.updateOne(
-            {
-              id: current.availabilityId,
-              tripId: current.tripId,
-              reservedSpaces: { $gte: inventorySpaces }
-            },
-            {
-              $inc: { reservedSpaces: -inventorySpaces },
-              $set: { updatedAt: new Date() }
-            },
-            { session }
-          );
+          if (inventorySpaces > 0) {
+            const release = await departures.updateOne(
+              {
+                id: current.availabilityId,
+                tripId: current.tripId,
+                reservedSpaces: { $gte: inventorySpaces }
+              },
+              {
+                $inc: { reservedSpaces: -inventorySpaces },
+                $set: { updatedAt: new Date() }
+              },
+              { session }
+            );
+            if (release.modifiedCount !== 1) {
+              throw new Error("Reservation departure inventory could not be released.");
+            }
+          }
+
+          await releaseAccommodationBookingInventory(database, session, current.accommodationBookings);
 
           await departures.updateOne(
             {
