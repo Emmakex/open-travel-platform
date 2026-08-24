@@ -17,7 +17,8 @@
     "check:ux": "node scripts/ux-content-check.mjs",
     "check:release": "node scripts/release-check.mjs",
     "check:amendments": "node scripts/reservation-amendment-check.mjs",
-    "verify": "npm run check:safety && npm run check:ux && npm run check:release && npm run check:amendments && npm run typecheck && npm run build",
+    "check:accommodation": "node scripts/accommodation-foundation-check.mjs",
+    "verify": "npm run check:safety && npm run check:ux && npm run check:release && npm run check:amendments && npm run check:accommodation && npm run typecheck && npm run build",
     "check": "npm run verify"
   },
   "dependencies": {
