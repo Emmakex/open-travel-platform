@@ -1,5 +1,9 @@
 import { randomUUID } from "node:crypto";
 import type { CreateReservationInput, Reservation } from "@/domain/booking/types";
+import {
+  releaseAccommodationBookingInventory,
+  reserveAccommodationBookingInventory
+} from "@/lib/accommodation-booking-inventory";
 import { travelDepartureCollectionName, listPublicMongoAvailability } from "@/lib/mongo-departures";
 import {
   ensureMongoReservationIndexes,
@@ -12,6 +16,12 @@ import type { BookingRepository } from "@/repositories/booking-repository";
 function inventoryError() {
   const error = new Error("Departure inventory is no longer available.");
   Object.assign(error, { code: "DEPARTURE_UNAVAILABLE" });
+  return error;
+}
+
+function releaseError() {
+  const error = new Error("Departure inventory could not be released.");
+  Object.assign(error, { code: "DEPARTURE_INVENTORY_RELEASE_FAILED" });
   return error;
 }
 
@@ -86,6 +96,7 @@ export class MongoBookingRepository implements BookingRepository {
           throw inventoryError();
         }
 
+        await reserveAccommodationBookingInventory(database, session, input.accommodationBookings ?? []);
         await reservations.insertOne(reservation, { session });
       });
 
@@ -124,18 +135,23 @@ export class MongoBookingRepository implements BookingRepository {
         if (update.modifiedCount !== 1) return;
 
         const inventorySpaces = current.inventorySpaces ?? current.partySize;
-        await departures.updateOne(
-          {
-            id: current.availabilityId,
-            tripId: current.tripId,
-            reservedSpaces: { $gte: inventorySpaces }
-          },
-          {
-            $inc: { reservedSpaces: -inventorySpaces },
-            $set: { updatedAt: new Date() }
-          },
-          { session }
-        );
+        if (inventorySpaces > 0) {
+          const release = await departures.updateOne(
+            {
+              id: current.availabilityId,
+              tripId: current.tripId,
+              reservedSpaces: { $gte: inventorySpaces }
+            },
+            {
+              $inc: { reservedSpaces: -inventorySpaces },
+              $set: { updatedAt: new Date() }
+            },
+            { session }
+          );
+          if (release.modifiedCount !== 1) throw releaseError();
+        }
+
+        await releaseAccommodationBookingInventory(database, session, current.accommodationBookings);
 
         await departures.updateOne(
           {
