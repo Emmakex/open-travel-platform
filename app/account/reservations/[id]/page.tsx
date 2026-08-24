@@ -5,6 +5,7 @@ import styles from "@/app/account/account.module.css";
 import { getAccountCopy } from "@/lib/account-i18n";
 import { bookingConfig } from "@/lib/booking-config";
 import { getBookingRepository } from "@/lib/booking-repository";
+import { evaluateTripReservationPolicy } from "@/lib/change-policy";
 import { getLocale } from "@/lib/get-locale";
 import { formatCurrency, getDictionary, localizeTrip } from "@/lib/i18n";
 import {
@@ -15,6 +16,7 @@ import {
 import { getPaymentRepository } from "@/lib/payment-repository";
 import { deriveReservationPaymentSchedule } from "@/lib/payment-terms";
 import { requireCustomerIdentity } from "@/lib/require-customer-identity";
+import { listServiceReservationsForRelatedTripForCustomer } from "@/lib/service-reservations";
 import { getTravelRepository } from "@/lib/travel-repository";
 import { buildTravellerDataCompletion, listTravellerDataForCustomer } from "@/lib/traveller-data";
 import type { TravelLocale } from "@/domain/travel/types";
@@ -68,11 +70,12 @@ export default async function ReservationDetailPage({
 
   const travelRepository = getTravelRepository();
   const paymentRepository = getPaymentRepository();
-  const [trips, availability, paymentSummary, paymentTransactions] = await Promise.all([
+  const [trips, availability, paymentSummary, paymentTransactions, linkedServices] = await Promise.all([
     travelRepository.listTrips(),
     bookingRepository.listAvailability(reservation.tripId),
     paymentRepository.getSummary(reservation),
-    paymentRepository.listTransactions(reservation.id)
+    paymentRepository.listTransactions(reservation.id),
+    listServiceReservationsForRelatedTripForCustomer(identity.id, reservation.id)
   ]);
 
   const trip = trips.find((item) => item.id === reservation.tripId);
@@ -89,8 +92,10 @@ export default async function ReservationDetailPage({
       : "Review the latest status of your reservation, travellers, payments and next steps here."
     : copy.demoNote;
   const paymentSchedule = deriveReservationPaymentSchedule(reservation, paymentSummary);
+  const changePolicy = evaluateTripReservationPolicy(reservation);
   const canCustomerCancel = reservation.status === "pending" &&
     bookingConfig.writesEnabled &&
+    changePolicy.customerCancellationAllowed &&
     paymentSummary.netPaidAmount <= 0 &&
     paymentSummary.pendingPaymentAmount <= 0;
   const canPayOnline = reservation.status !== "cancelled" &&
@@ -140,6 +145,13 @@ export default async function ReservationDetailPage({
                 : "This reservation has a completed or pending payment. Manage the payment or refund before cancelling it."}
             </div>
           ) : null}
+          {error === "cancellation-policy" ? (
+            <div className={styles.notice}>
+              {locale === "es"
+                ? "El plazo de cancelación directa de esta reserva ha finalizado. Contacta con el equipo de viajes si necesitas ayuda."
+                : "The self-service cancellation period for this reservation has ended. Contact the travel team if you need help."}
+            </div>
+          ) : null}
 
           <dl className={styles.profileList}>
             <div><dt>{copy.status}</dt><dd>{status}</dd></div>
@@ -151,6 +163,15 @@ export default async function ReservationDetailPage({
             <div><dt>{copy.return}</dt><dd>{returnDate ? formatDate(returnDate, locale) : copy.unavailable}</dd></div>
             <div><dt>{copy.reference}</dt><dd>{reservation.id}</dd></div>
           </dl>
+
+          {reservation.status === "pending" && !changePolicy.customerCancellationAllowed ? (
+            <div className={styles.notice}>
+              <strong>{locale === "es" ? "Cancelación directa cerrada" : "Self-service cancellation closed"}</strong><br />
+              {locale === "es"
+                ? "Las condiciones guardadas con esta reserva ya no permiten cancelarla directamente desde Mi cuenta. Contacta con el equipo si necesitas solicitar un cambio."
+                : "The conditions saved with this reservation no longer allow cancellation directly from My account. Contact the team if you need to request a change."}
+            </div>
+          ) : null}
 
           {travellerRequirementsActive ? (
             <div className={styles.notice}>
@@ -222,6 +243,41 @@ export default async function ReservationDetailPage({
             </dl>
           </section>
         ) : null}
+
+        <section className={styles.panel} style={{ marginTop: "1rem" }}>
+          <div className="eyebrow">{locale === "es" ? "Servicios adicionales" : "Extras"}</div>
+          <h2>{locale === "es" ? "Servicios vinculados" : "Linked services"}</h2>
+          <p className={styles.lead}>
+            {locale === "es"
+              ? "Aquí aparecen las actividades, transportes y protecciones de viaje que has reservado vinculadas a este viaje. Cada servicio conserva sus propias fechas, pagos y condiciones."
+              : "Activities, transport and travel protection booked for this trip appear here. Each service keeps its own dates, payments and conditions."}
+          </p>
+          {linkedServices.length ? (
+            <div className={styles.profileList}>
+              {linkedServices.map((service) => {
+                const serviceDate = service.serviceDate || service.insuranceTrip?.startDate;
+                const type = service.serviceType === "activity"
+                  ? (locale === "es" ? "Actividad" : "Activity")
+                  : service.serviceType === "transport"
+                    ? (locale === "es" ? "Transporte" : "Transport")
+                    : (locale === "es" ? "Protección de viaje" : "Travel protection");
+                return (
+                  <div key={service.id}>
+                    <dt><Link className="text-link" href={`/account/services/${encodeURIComponent(service.id)}`}>{service.serviceTitle}</Link></dt>
+                    <dd>
+                      {type} · {service.status === "confirmed" ? (locale === "es" ? "Confirmado" : "Confirmed") : service.status === "cancelled" ? (locale === "es" ? "Cancelado" : "Cancelled") : (locale === "es" ? "Pendiente" : "Pending")}
+                      {serviceDate ? ` · ${formatDate(serviceDate, locale)}` : ""}<br />
+                      {formatMoney(service.totalPrice, service.currency, locale)}
+                    </dd>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className={styles.notice}>{locale === "es" ? "Todavía no tienes servicios vinculados a este viaje." : "You do not have any services linked to this trip yet."}</div>
+          )}
+          <p><Link className="text-link" href="/services">{locale === "es" ? "Explorar servicios" : "Explore services"}</Link></p>
+        </section>
 
         <section className={styles.panel} style={{ marginTop: "1rem" }}>
           <div className="eyebrow">{locale === "es" ? "Pagos" : "Payments"}</div>

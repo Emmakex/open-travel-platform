@@ -8,6 +8,7 @@ import { ReservationPaymentPanel } from "@/components/operator/reservation-payme
 import { ReservationTravellers } from "@/components/operator/reservation-travellers";
 import type { ReservationAmendmentField } from "@/domain/operations/types";
 import type { TravelLocale } from "@/domain/travel/types";
+import { evaluateTripReservationPolicy } from "@/lib/change-policy";
 import { getLocale } from "@/lib/get-locale";
 import { localizeTrip } from "@/lib/i18n";
 import {
@@ -95,13 +96,16 @@ export default async function OperatorReservationDetailPage({
   const trip = trips.find((item) => item.id === reservation.tripId);
   const localizedTrip = trip ? localizeTrip(trip, locale) : null;
   const reservationAudit = audit.filter((event) => event.reservationId === reservation.id);
+  const changePolicy = evaluateTripReservationPolicy(reservation);
   const errors: Record<string, string> = {
     "operations-disabled": tr(locale, "Reservation changes are unavailable.", "Los cambios de reserva no están disponibles."),
     "invalid-request": tr(locale, "The requested status change is invalid.", "El cambio de estado solicitado no es válido."),
-    "invalid-transition": tr(locale, "That reservation status transition is not allowed.", "Ese cambio de estado de la reserva no está permitido.")
+    "invalid-transition": tr(locale, "That reservation status transition is not allowed.", "Ese cambio de estado de la reserva no está permitido."),
+    "change-deadline": tr(locale, "The configured cancellation deadline has passed for this reservation.", "El plazo de cancelación configurado para esta reserva ya ha finalizado.")
   };
   const amendmentErrors: Record<string, string> = {
     "amendments-unavailable": tr(locale, "Reservation changes are unavailable.", "Las modificaciones de reserva no están disponibles."),
+    "amendment-deadline": tr(locale, "The configured modification deadline has passed for this reservation.", "El plazo de modificación configurado para esta reserva ya ha finalizado."),
     "invalid-request": tr(locale, "Complete the required fields and provide a reason.", "Completa los campos obligatorios e indica un motivo."),
     "reservation-cancelled": tr(locale, "Cancelled reservations cannot be amended.", "Las reservas canceladas no se pueden modificar."),
     "traveller-not-found": tr(locale, "The traveller could not be found on this reservation.", "No se ha encontrado el viajero en esta reserva."),
@@ -161,6 +165,18 @@ export default async function OperatorReservationDetailPage({
               <div className={styles.notice}>{amendmentErrors[amendmentError]}</div>
             ) : null}
 
+            {!changePolicy.staffModificationAllowed && reservation.status !== "cancelled" ? (
+              <div className={styles.notice}>
+                <strong>{tr(locale, "Modification deadline reached", "Plazo de modificación finalizado")}</strong><br />
+                {tr(locale, "Traveller corrections and departure changes are closed under the conditions saved with this reservation.", "Las correcciones de viajeros y los cambios de salida están cerrados según las condiciones guardadas con esta reserva.")}
+              </div>
+            ) : null}
+            {!changePolicy.staffCancellationAllowed && reservation.status !== "cancelled" ? (
+              <div className={styles.notice}>
+                {tr(locale, "The configured staff cancellation period has ended for this reservation.", "El plazo configurado de cancelación por personal ha finalizado para esta reserva.")}
+              </div>
+            ) : null}
+
             <dl className={styles.definitionList}>
               <div><dt>{tr(locale, "Status", "Estado")}</dt><dd><span className={styles.badge}>{reservationStatusLabel(reservation.status, locale)}</span></dd></div>
               <div><dt>{tr(locale, "Payment", "Pago")}</dt><dd><span className={styles.badge}>{paymentStatusLabel(paymentSummary.status, locale)}</span></dd></div>
@@ -184,11 +200,13 @@ export default async function OperatorReservationDetailPage({
                     <button className="button button-primary" type="submit">{tr(locale, "Confirm reservation", "Confirmar reserva")}</button>
                   </form>
                 ) : null}
-                <form action={updateReservationStatusAction}>
-                  <input type="hidden" name="reservationId" value={reservation.id} />
-                  <input type="hidden" name="status" value="cancelled" />
-                  <button className="button button-secondary" type="submit">{tr(locale, "Cancel reservation", "Cancelar reserva")}</button>
-                </form>
+                {changePolicy.staffCancellationAllowed ? (
+                  <form action={updateReservationStatusAction}>
+                    <input type="hidden" name="reservationId" value={reservation.id} />
+                    <input type="hidden" name="status" value="cancelled" />
+                    <button className="button button-secondary" type="submit">{tr(locale, "Cancel reservation", "Cancelar reserva")}</button>
+                  </form>
+                ) : null}
               </div>
             ) : null}
 
@@ -250,7 +268,9 @@ export default async function OperatorReservationDetailPage({
           </aside>
         </div>
 
-        <ReservationDepartureChange reservation={reservation} trip={trip ?? null} locale={locale} />
+        {changePolicy.staffModificationAllowed ? (
+          <ReservationDepartureChange reservation={reservation} trip={trip ?? null} locale={locale} />
+        ) : null}
 
         <ReservationTravellers reservation={reservation} locale={locale} />
 

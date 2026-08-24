@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cancelServiceReservationAction } from "@/app/service-reservations/actions";
 import styles from "@/app/account/account.module.css";
+import { evaluateServiceReservationPolicy } from "@/lib/change-policy";
 import { getLocale } from "@/lib/get-locale";
 import { formatCurrency } from "@/lib/i18n";
 import {
@@ -51,6 +52,7 @@ export default async function AccountServiceReservationPage({
   const reservation = await getServiceReservationForCustomer(identity.id, id);
   if (!reservation) notFound();
   const t = (en: string, es: string) => locale === "es" ? es : en;
+  const policy = evaluateServiceReservationPolicy(reservation);
   const paymentRepository = getPaymentRepository();
   const [paymentSummary, paymentTransactions] = await Promise.all([
     paymentRepository.getTargetSummary({
@@ -62,6 +64,7 @@ export default async function AccountServiceReservationPage({
     paymentRepository.listTransactions(reservation.id)
   ]);
   const canCustomerCancel = reservation.status === "pending" &&
+    policy.customerCancellationAllowed &&
     paymentSummary.netPaidAmount <= 0 &&
     paymentSummary.pendingPaymentAmount <= 0;
   const canPayOnline = reservation.status !== "cancelled" &&
@@ -102,19 +105,27 @@ export default async function AccountServiceReservationPage({
           {query.created === "1" ? <div className={styles.notice}>{t("Your service reservation has been created.", "Tu reserva del servicio se ha creado correctamente.")}</div> : null}
           {query.updated === "cancelled" ? <div className={styles.notice}>{t("The reservation was cancelled successfully.", "La reserva se canceló correctamente.")}</div> : null}
           {query.error === "not-cancellable" ? <div className={styles.notice}>{t("This reservation can no longer be cancelled from your account.", "Esta reserva ya no puede cancelarse desde tu cuenta.")}</div> : null}
+          {query.error === "cancellation-policy" ? <div className={styles.notice}>{t("The self-service cancellation period for this reservation has ended. Contact the travel team if you need help.", "El plazo de cancelación directa de esta reserva ha finalizado. Contacta con el equipo de viajes si necesitas ayuda.")}</div> : null}
           {query.error === "payment-active" ? <div className={styles.notice}>{t("This reservation has a completed or pending payment. Manage the payment or refund before cancelling it.", "La reserva tiene un pago realizado o pendiente. Gestiona primero el pago o el reembolso antes de cancelarla.")}</div> : null}
 
           <dl className={styles.profileList}>
             <div><dt>{t("Status", "Estado")}</dt><dd>{reservation.status === "pending" ? t("Pending", "Pendiente") : reservation.status === "confirmed" ? t("Confirmed", "Confirmada") : t("Cancelled", "Cancelada")}</dd></div>
             <div><dt>{t("Payment status", "Estado del pago")}</dt><dd>{paymentStatusLabel(paymentSummary.status, locale)}</dd></div>
-            <div><dt>{t("Type", "Tipo")}</dt><dd>{reservation.serviceType === "activity" ? t("Activity", "Actividad") : reservation.serviceType === "transport" ? t("Transport", "Transporte") : t("Insurance", "Seguro")}</dd></div>
+            <div><dt>{t("Type", "Tipo")}</dt><dd>{reservation.serviceType === "activity" ? t("Activity", "Actividad") : reservation.serviceType === "transport" ? t("Transport", "Transporte") : t("Travel protection", "Protección de viaje")}</dd></div>
             {reservation.serviceDate ? <div><dt>{t("Date", "Fecha")}</dt><dd>{formatDate(reservation.serviceDate, locale)} · {reservation.startTime}{reservation.endTime ? `–${reservation.endTime}` : ""}</dd></div> : null}
             {reservation.insuranceTrip ? <><div><dt>{t("Destination", "Destino")}</dt><dd>{reservation.insuranceTrip.destination}</dd></div><div><dt>{t("Trip dates", "Fechas del viaje")}</dt><dd>{formatDate(reservation.insuranceTrip.startDate, locale)} → {formatDate(reservation.insuranceTrip.endDate, locale)}</dd></div></> : null}
             <div><dt>{t("Travellers", "Viajeros")}</dt><dd>{reservation.partySize}</dd></div>
             <div><dt>Total</dt><dd>{formatCurrency(reservation.totalPrice, reservation.currency, locale)}</dd></div>
             <div><dt>{t("Reference", "Referencia")}</dt><dd>{reservation.id}</dd></div>
-            {reservation.relatedReservationId ? <div><dt>{t("Linked trip reservation", "Reserva de viaje vinculada")}</dt><dd><Link className="text-link" href={`/account/reservations/${reservation.relatedReservationId}`}>{reservation.relatedReservationId}</Link></dd></div> : null}
+            {reservation.relatedReservationId ? <div><dt>{t("Linked trip", "Viaje vinculado")}</dt><dd><Link className="text-link" href={`/account/reservations/${reservation.relatedReservationId}`}>{reservation.relatedReservationId}</Link></dd></div> : null}
           </dl>
+
+          {reservation.status === "pending" && !policy.customerCancellationAllowed ? (
+            <div className={styles.notice}>
+              <strong>{t("Self-service cancellation closed", "Cancelación directa cerrada")}</strong><br />
+              {t("The cancellation period saved with this reservation has ended. Contact the travel team if you need to request a change.", "El plazo de cancelación guardado con esta reserva ha finalizado. Contacta con el equipo de viajes si necesitas solicitar un cambio.")}
+            </div>
+          ) : null}
 
           {travellerRequirementsActive ? (
             <div className={styles.notice}>

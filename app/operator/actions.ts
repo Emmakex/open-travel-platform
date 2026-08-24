@@ -6,6 +6,7 @@ import { demoIdentities } from "@/data/demo-identities";
 import type { Reservation, ReservationStatus } from "@/domain/booking/types";
 import { hasOperationsAccess } from "@/lib/access-control";
 import { recordAuthAudit } from "@/lib/auth-security";
+import { evaluateTripReservationPolicy } from "@/lib/change-policy";
 import { revokeCustomerSession } from "@/lib/customer-auth";
 import {
   DEMO_SESSION_COOKIE,
@@ -185,6 +186,12 @@ export async function updateReservationStatusAction(formData: FormData) {
   let reservation: Reservation | null = null;
   const operationsRepository = getOperationsRepository();
   const previous = await operationsRepository.getReservation(reservationId);
+  if (!previous) redirect("/operator/reservations?error=not-found");
+
+  const policy = evaluateTripReservationPolicy(previous);
+  if (targetStatus === "cancelled" && !policy.staffCancellationAllowed) {
+    redirect(`${detailUrl}?error=change-deadline`);
+  }
 
   try {
     reservation = await operationsRepository.updateReservationStatus({
@@ -201,7 +208,7 @@ export async function updateReservationStatusAction(formData: FormData) {
     redirect("/operator/reservations?error=not-found");
   }
 
-  if (previous && previous.status !== reservation.status) {
+  if (previous.status !== reservation.status && policy.notifyCustomerOnStaffChange) {
     await notifyReservationEvent(
       reservation,
       reservation.status === "confirmed" ? "confirmed" : "cancelled"

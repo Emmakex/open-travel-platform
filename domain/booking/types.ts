@@ -1,3 +1,4 @@
+import type { ReservationChangePolicy } from "@/domain/operations/change-policy";
 import type { TravellerRequirementsProfile } from "@/domain/traveller/types";
 
 export type ReservationStatus = "pending" | "confirmed" | "cancelled";
@@ -85,6 +86,8 @@ export interface Reservation {
   paymentTerms?: ReservationPaymentTerms;
   /** Snapshot of post-purchase traveller fields required when this reservation was created. */
   travellerRequirements?: TravellerRequirementsProfile;
+  /** Snapshot of amendment/cancellation rules that applied when this reservation was created. */
+  changePolicy?: ReservationChangePolicy;
 }
 
 export interface CreateReservationInput {
@@ -101,4 +104,5 @@ export interface CreateReservationInput {
   departureDate?: string;
   returnDate?: string;
   travellerRequirements?: TravellerRequirementsProfile;
+  changePolicy?: ReservationChangePolicy;
 }
