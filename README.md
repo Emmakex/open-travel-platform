@@ -4,7 +4,7 @@
 
 > Reusable open-source travel platform foundation for agencies, tour operators and booking products.
 
-Open Travel Platform is a clean-room Next.js + TypeScript platform built around explicit domain, repository and adapter boundaries. It can run with bundled demo data for local evaluation or use persistent MongoDB-backed catalogue, identity, booking, service, operations and payment capabilities.
+Open Travel Platform is a clean-room **Next.js + TypeScript + MongoDB** platform built around explicit domain, repository and adapter boundaries. It can run with bundled demo data for local evaluation or with persistent catalogue, identity, booking, accommodation, services, operations and payment capabilities.
 
 The official commercial/reference implementation is **Kairoseth Travel**, deployed at **[travel.kairoseth.com](https://travel.kairoseth.com)**.
 
@@ -27,13 +27,27 @@ That separation is intentional:
 - Kairoseth Travel can add hosted operations, support, commercial services, private integrations and deployment-specific capabilities;
 - customer data, production credentials and proprietary customer integrations stay outside the public repository.
 
-## Live reference deployment
+## Current position
 
-**[travel.kairoseth.com](https://travel.kairoseth.com)** is used to validate the platform end to end.
+The project is now beyond a basic catalogue/booking MVP. The current implementation includes:
 
-The current reference deployment includes persistent catalogue/media management, customer and staff authentication, reservation operations, traveller records, independent travel services, inventory, transactional email, payment accounting, payment terms, post-purchase traveller data and admin-managed payment-provider configuration.
+- bilingual public catalogue and Operator backoffice;
+- MongoDB persistence;
+- customer and staff authentication with RBAC;
+- trip departures and transactional inventory;
+- traveller records, minors and age-based pricing;
+- independent activities, transport and travel-protection products;
+- independent service availability and reservations;
+- payment ledger, payment terms, deposits and installments;
+- Stripe and Redsys adapters behind a provider-neutral checkout layer;
+- encrypted post-purchase traveller data;
+- reservation amendments with audit history and safe inventory reallocation;
+- reusable accommodation with room types, occupancy, pricing, media galleries and inventory;
+- accommodation linked to trips and reserved transactionally with trip bookings;
+- seasonal/occupancy accommodation pricing;
+- optional package supplements priced and snapshotted inside trip reservations.
 
-Stripe and Redsys adapters plus the unified online checkout are already implemented in the codebase, but credentialed end-to-end payment testing is intentionally deferred until suitable provider accounts are available. No payment provider is enabled automatically.
+Stripe and Redsys credentialed end-to-end validation is intentionally deferred until suitable provider accounts are available. The adapters and checkout architecture are implemented, but production payment capability must not be considered validated until provider TEST/LIVE flows have been exercised.
 
 ## Current capabilities
 
@@ -42,50 +56,105 @@ Stripe and Redsys adapters plus the unified online checkout are already implemen
 - bilingual EN/ES public experience;
 - destinations and trips with localized content;
 - public trip departures and live availability;
-- public independent **Activities**, **Transport** and **Insurance** catalogues without login;
+- public accommodation catalogue and detail pages;
+- property galleries and room-specific galleries;
+- public independent **Activities**, **Transport** and **Travel protection** catalogues;
 - service detail pages with availability and pricing;
-- customer login/registration only when needed for account/reservation flows.
+- trip booking with traveller composition, accommodation and optional package extras;
+- customer authentication only when required for account/reservation flows.
 
 ### Catalogue backoffice
 
 - protected Operator/Admin catalogue management;
 - destinations and trips;
+- accommodations and room types;
 - cover images, galleries, GridFS media library and focal-point controls;
+- property and room galleries;
 - structured multilingual itineraries;
 - trip departures, capacities and inventory;
-- independent activity, transport and insurance products;
+- room inventory periods;
+- room occupancy rules;
+- room base rates and meal plans;
+- seasonal and occupancy pricing rules;
+- trip ↔ accommodation links;
+- optional package supplements;
+- independent activity, transport and travel-protection products;
 - service pricing models: per person, per booking, per unit and age-based;
 - service availability/inventory calendars for activities and transport;
 - draft/published lifecycle;
-- per-product activation of post-purchase traveller requirements.
+- per-product post-purchase traveller-data requirements.
 
 ### Travellers and pricing
 
 - lead traveller and individual traveller records;
 - date of birth and nationality;
-- age calculated against the departure/service date;
-- configurable age bands (for example infant/child/youth/adult);
+- age calculated against the relevant departure/service/check-in date;
+- configurable age bands;
 - server-authoritative traveller pricing;
 - per-departure traveller-price overrides;
 - guardian relationship required for minors;
-- configurable inventory consumption by age band (for example infants can be free and consume no seat);
-- pricing snapshots stored with reservations so historical bookings do not change when catalogue prices change;
-- optional post-purchase identity/document/residence data requested only when a product snapshot requires it;
-- AES-256-GCM encryption for advanced traveller data;
-- retention deadlines and MongoDB TTL deletion;
-- Operator completion visibility without exposing decrypted document values in reservation overviews.
+- configurable inventory consumption by age band;
+- historical pricing snapshots;
+- optional encrypted post-purchase identity/document/residence data;
+- retention deadlines and MongoDB TTL deletion.
 
-### Reservations and services
+### Accommodation and package composition
+
+Accommodation is a reusable domain, not embedded inside one trip.
+
+- one accommodation can be used by multiple trips;
+- one trip can contain multiple linked stays;
+- room types support single/double/twin/triple/family/suite/other classification;
+- meal plans and base nightly rates;
+- adult/child occupancy limits;
+- room inventory by period;
+- property gallery plus independent room galleries;
+- seasonal fixed/percentage adjustments;
+- occupancy rules including single supplements and child-sharing adjustments;
+- package reference pricing by departure;
+- automatic room allocation from real travellers during booking;
+- minimum valid room count selection;
+- transactional room inventory reservation/release together with trip inventory;
+- included accommodation is snapshotted without being charged twice;
+- optional accommodation is added to the reservation total;
+- departure amendments reprice and reallocate accommodation safely;
+- accommodation snapshots remain stable even if later catalogue values change.
+
+### Optional package supplements
+
+Trips can contain lightweight commercial extras that do **not** need their own dated inventory.
+
+Examples: luggage upgrade, private upgrade, special dinner or other non-capacity supplement.
+
+- bilingual EN/ES titles/descriptions;
+- charge once per booking or per selected traveller;
+- enable/disable customer availability;
+- server-authoritative selection and pricing;
+- disabled, unknown or manipulated selections are rejected;
+- customer booking shows supplements separately from accommodation;
+- reservation snapshots store title, pricing mode, unit price, quantity, traveller IDs and total;
+- later catalogue price changes do not alter existing bookings;
+- departure changes preserve the contracted supplement snapshot.
+
+Capacity-based activities, dated transport and other inventory-controlled services remain independent service reservations rather than package supplements.
+
+### Reservations and amendments
 
 - persistent trip reservations with capacity control;
-- persistent independent service reservations for activities, transport and insurance;
-- service reservations can optionally link to a Kairoseth trip or remain completely independent for externally booked travel;
+- persistent independent service reservations;
+- service reservations may link to a Kairoseth trip or remain independent;
 - inventory reservation/release protected transactionally where applicable;
 - customer reservation/service history;
-- customer account prioritizes the actual next future trip and only falls back to catalogue recommendations when no future trip exists;
-- customer account highlights pending post-purchase traveller-data tasks for the upcoming trip;
-- operator queues for trip reservations and service reservations;
-- confirm/cancel workflows and operational audit history.
+- Operator trip/service queues;
+- confirm/cancel workflows and audit history;
+- traveller corrections recorded as amendments;
+- departure changes reserve new capacity before releasing old capacity;
+- accommodation inventory moves inside the same amendment transaction;
+- financial delta derives from the new reservation total without rewriting historical ledger movements;
+- overpayment creates a controlled refund-review state rather than automatic refunds;
+- configurable modification/cancellation deadlines;
+- customer notifications for configured material changes;
+- linked services remain independent reservation records with their own conditions.
 
 ### Identity and security
 
@@ -96,144 +165,84 @@ Stripe and Redsys adapters plus the unified online checkout are already implemen
 - password change and password recovery;
 - SMTP password-reset emails;
 - authentication audit events;
-- active-session role indicator in the frontend;
 - privileged payment-provider configuration restricted to admins;
-- sensitive traveller data stored separately from the booking record and encrypted with a server-only key.
+- payment-provider secrets encrypted with AES-256-GCM;
+- advanced traveller data stored separately and encrypted with AES-256-GCM.
 
 ### Transactional email
 
 - SMTP using a server-side mail transport;
 - reservation received emails;
 - reservation confirmed/cancelled notifications;
-- traveller and pricing breakdowns in customer emails;
+- traveller and pricing breakdowns;
+- configured amendment notifications;
+- service reservation notifications;
 - password recovery email flow.
 
 ### Payments and finance
 
 - provider-neutral payment/refund ledger;
-- independent reservation and payment states;
+- reservation state and payment state remain independent;
 - unpaid / pending / partially paid / paid / partially refunded / refunded summaries;
 - manual bank-transfer, cash and external-terminal movements;
-- manual refunds and reconciliation protections;
-- service reservations supported by the same payment ledger;
-- unified checkout architecture for trips and services;
-- Stripe Checkout adapter with signed webhook verification and idempotent processing;
-- Redsys redirect adapter with signed server notification validation;
-- browser return URLs are never trusted as payment confirmation;
-- admin-managed TEST/LIVE payment profiles;
-- Stripe/Redsys secrets encrypted at rest with AES-256-GCM;
-- provider credentials are never returned to the browser after saving;
-- full-payment, deposit and installment payment-term snapshots stored with reservations;
+- controlled refunds and reconciliation protections;
+- same ledger for trip and service reservations;
+- unified checkout architecture;
+- Stripe Checkout adapter with signed webhook verification and idempotency;
+- Redsys redirect adapter with signed server-notification validation;
+- browser returns are never trusted as payment confirmation;
+- admin-managed TEST/LIVE provider profiles;
+- full-payment, deposit and installment snapshots;
 - server-derived outstanding balances and next-payment schedules;
-- adapters are designed so additional PSPs can be introduced without rewriting booking logic.
-
-## Post-purchase traveller data: how it works
-
-The default is **no additional traveller data**. The feature is activated by an Operator **per trip or service product**, not globally.
-
-### Operator
-
-For a trip:
-
-```text
-Operator → Catalogue → Trips → Edit trip
-→ Post-purchase traveller data
-```
-
-For an activity, transport service or insurance product, use the corresponding service editor under `Operator → Catalogue → Services`.
-
-The operator then:
-
-1. leaves **No additional data** when nothing extra is required, or selects the correct preset only when a supplier, route or legal obligation genuinely requires it;
-2. reviews the customer-editing deadline and retention period;
-3. saves the product;
-4. understands that the configuration applies to **new reservations only** because traveller requirements are snapshotted into each reservation.
-
-Operator sees a simple reservation state:
-
-```text
-NOT REQUIRED → PENDING → COMPLETE
-```
-
-When active, Operator sees `completed travellers / total travellers` and per-traveller completion status without decrypted document/residence values in the reservation overview.
-
-### Customer
-
-Advanced traveller fields are **not collected during checkout**. After purchase:
-
-1. **My account** highlights the task for the next upcoming trip when information is pending.
-2. The trip/service reservation detail shows **Action required · traveller information**.
-3. The customer opens **Complete traveller information**.
-4. `/account/traveller-data/<trip|service>/<reservation-id>` shows only the fields required by that reservation snapshot.
-5. Progress is shown per traveller.
-6. When every traveller is complete, the reservation changes to **Traveller information complete** and the CTA becomes **Review traveller information** while editing remains open.
-
-Existing reservations do not inherit later catalogue changes. To test a newly activated preset, save the product and create a **new reservation**.
-
-The standard flow intentionally does **not** request passport/DNI scans and does **not** include health/medical questions. See [`docs/TRAVELLER-DATA.md`](docs/TRAVELLER-DATA.md) for requirement presets, security, retention, GDPR/RGPD considerations and the production checklist.
+- reservation amendments can create additional balance or refund-review amounts without rewriting old transactions.
 
 ## Architecture
 
 ```text
-                         Public catalogue
-                               |
-                        TravelRepository
-                               |
-                    destinations + trips
-                               |
-                    departures / inventory
-                               |
-                        BookingRepository
-                               |
-                         trip reservations
-
-       public services ------------------------------+
-          |                                           |
-   activities / transport / insurance                |
-          |                                           |
-   service availability                              |
-          |                                           |
-   service reservations                              |
-          |                                           |
-          +-------------------+-----------------------+
-                              |
-                       PaymentRepository
-                              |
+Public catalogue
+      |
+TravelRepository
+      |
+destinations + trips + accommodation + services
+      |
+      +---------------- trip departures / inventory
+      |                         |
+      |                  BookingRepository
+      |                         |
+      |                 trip reservations
+      |                         |
+      |                 accommodation booking
+      |                         |
+      |                  room inventory
+      |
+      +---------------- independent services
+                                |
+                    service availability/reservations
+                                |
+                         PaymentRepository
+                                |
                     provider-neutral ledger
-                              |
-                    unified checkout layer
-                       /              \
-                  Stripe              Redsys
-                       \              /
-                    signed callbacks
+                          /             \
+                     Stripe             Redsys
 
- customer area ---------------- staff/operator/admin
-      |                                  |
- IdentityRepository              Operations / RBAC
+customer area ---------------------- staff/operator/admin
+     |                                      |
+IdentityRepository                 Operations / RBAC / audit
 ```
 
-Provider-specific payloads stay inside adapters. Catalogue, booking, identity, service reservations, operations and payment accounting remain replaceable capability boundaries.
+Provider-specific payloads stay inside adapters. Catalogue, booking, accommodation, identity, service reservations, operations and payment accounting remain replaceable capability boundaries.
 
 ## Reservation and payment states are independent
 
-A reservation is a commercial booking record. A payment transaction is a financial movement. One does not silently mutate the other.
+A reservation is a commercial booking record. A payment transaction is a financial movement. One does not silently rewrite the other.
 
 Examples:
 
 - a reservation can be `confirmed` and still `unpaid`;
 - a reservation can be `pending` and already `paid`;
-- a cancelled reservation can remain paid until an explicit refund is processed.
-
-Payment summaries currently derive:
-
-```text
-unpaid
-pending
-partially_paid
-paid
-partially_refunded
-refunded
-```
+- a cancelled reservation can remain paid until an explicit refund is processed;
+- an amendment can increase the reservation total and create an outstanding balance;
+- an amendment can decrease the total below net paid and create a refund-review amount.
 
 See [`docs/PAYMENTS.md`](docs/PAYMENTS.md).
 
@@ -262,19 +271,21 @@ A fresh clone can use the safe demo/read-only modes documented in `.env.example`
 /trips                                 trip catalogue
 /trips/[slug]                          trip detail
 /trips/[slug]/book                     trip booking
+/accommodations                        accommodation catalogue
+/accommodations/[slug]                 accommodation detail
 /services                              services hub
 /activities                            public activities
 /activities/[slug]                     activity detail
 /transport                             public transport services
 /transport/[slug]                      transport detail
-/insurance                             public insurance products
-/insurance/[slug]                      insurance detail
+/insurance                             public travel-protection products
+/insurance/[slug]                      protection detail
 /services/book/[type]/[slug]           independent service booking
 
 /account/sign-in                       customer sign-in
 /account                               protected customer account
 /account/reservations                  trip reservations
-/account/reservations/[id]             trip reservation + finance
+/account/reservations/[id]             reservation + travellers + accommodation + extras + finance
 /account/services                      service reservations
 /account/services/[id]                 service reservation detail
 /account/traveller-data/[targetType]/[id] post-purchase traveller data
@@ -287,6 +298,7 @@ A fresh clone can use the safe demo/read-only modes documented in `.env.example`
 /operator/service-reservations         service reservation queue
 /operator/customers                    customer management
 /operator/catalogue                    catalogue management
+/operator/catalogue/accommodations     accommodation management
 /operator/media                        media library
 /operator/payments                     finance dashboard
 /operator/payments/providers           admin-only PSP configuration
@@ -296,25 +308,21 @@ A fresh clone can use the safe demo/read-only modes documented in `.env.example`
 
 ## Configuration overview
 
-The complete template lives in [`.env.example`](.env.example).
+The full template lives in [`.env.example`](.env.example).
 
 Important server-side capabilities include:
 
 ```text
-# Public URL
 KTRAVEL_PUBLIC_URL=https://travel.kairoseth.com
 
-# Persistence
 MONGODB_URI=
 MONGODB_DB_NAME=ktravel
 
-# Identity / booking / operations
 IDENTITY_MODE=demo
 STAFF_AUTH_MODE=demo
 BOOKING_MODE=demo
 OPERATIONS_MODE=demo
 
-# SMTP
 SMTP_HOST=smtp.hostinger.com
 SMTP_PORT=465
 SMTP_USER=
@@ -323,38 +331,35 @@ SMTP_FROM_EMAIL=
 SMTP_FROM_NAME=Kairoseth Travel
 KTRAVEL_OPERATIONS_EMAILS=
 
-# Encrypts payment-provider secrets stored by Admin
 PAYMENT_SECRETS_KEY=
-
-# Encrypts post-purchase traveller identity/document data
 TRAVELLER_DATA_KEY=
 ```
 
-`PAYMENT_SECRETS_KEY` and `TRAVELLER_DATA_KEY` should be stable high-entropy 32-byte keys (for example generated separately with `openssl rand -base64 32`). Do not rotate either key without a migration plan because they protect persisted encrypted records.
+`PAYMENT_SECRETS_KEY` and `TRAVELLER_DATA_KEY` should be stable high-entropy 32-byte keys. Do not rotate them without a migration plan because they protect persisted encrypted records.
 
-Stripe/Redsys credentials themselves are managed from the admin UI and are not required as environment variables.
+Stripe/Redsys credentials are managed from the Admin UI and are not required as environment variables.
 
 `NEXT_PUBLIC_*` variables are browser-visible and must never contain secrets.
 
 ## Persistent data
 
-MongoDB-backed deployments use separate collections for capability boundaries, including reservations, departures, service catalogue/availability/reservations, payment transactions, operations audit, authentication data, payment-provider configuration and encrypted post-purchase traveller data.
+MongoDB-backed deployments keep capability boundaries in separate collections, including catalogue, departures, trip reservations, accommodation/inventory, service catalogue/availability/reservations, payment transactions, audit history, identity/authentication, provider configuration and encrypted traveller data.
 
-Infrastructure-specific collection names and credentials are intentionally not exposed in the Operator UI.
+Infrastructure credentials and sensitive implementation details are intentionally kept out of the public/Operator UI.
 
-## Integration and production docs
+## Documentation
 
+- [`ROADMAP.md`](ROADMAP.md) — current delivery status and next priorities.
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — capability and trust boundaries.
-- [`docs/API-CONTRACT.md`](docs/API-CONTRACT.md) — generic catalogue REST contract.
-- [`docs/IDENTITY.md`](docs/IDENTITY.md) — identity modes and replacement rules.
 - [`docs/BOOKING.md`](docs/BOOKING.md) — booking integrity and adapter rules.
 - [`docs/OPERATIONS.md`](docs/OPERATIONS.md) — staff authorization and workflows.
 - [`docs/CATALOGUE-BACKOFFICE.md`](docs/CATALOGUE-BACKOFFICE.md) — persistent catalogue management.
-- [`docs/DEPARTURES.md`](docs/DEPARTURES.md) — departure inventory model.
-- [`docs/MEDIA.md`](docs/MEDIA.md) — media library and upload model.
-- [`docs/TRANSACTIONAL-EMAILS.md`](docs/TRANSACTIONAL-EMAILS.md) — SMTP notifications.
-- [`docs/PAYMENTS.md`](docs/PAYMENTS.md) — payment ledger and PSP integration contract.
-- [`docs/TRAVELLER-DATA.md`](docs/TRAVELLER-DATA.md) — post-purchase traveller requirements, UX, security and retention.
+- [`docs/DEPARTURES.md`](docs/DEPARTURES.md) — departure inventory.
+- [`docs/MEDIA.md`](docs/MEDIA.md) — media library.
+- [`docs/PAYMENTS.md`](docs/PAYMENTS.md) — payment ledger and PSP contract.
+- [`docs/TRAVELLER-DATA.md`](docs/TRAVELLER-DATA.md) — post-purchase traveller data.
+- [`docs/ACCOMMODATION.md`](docs/ACCOMMODATION.md) — accommodation, occupancy, pricing and room inventory.
+- [`docs/PACKAGE-SUPPLEMENTS.md`](docs/PACKAGE-SUPPLEMENTS.md) — optional package extras and reservation snapshots.
 - [`docs/ADAPTER-GUIDE.md`](docs/ADAPTER-GUIDE.md) — adding integrations.
 - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — deployment model.
 - [`docs/PRODUCTION-CHECKLIST.md`](docs/PRODUCTION-CHECKLIST.md) — production review.
@@ -363,13 +368,17 @@ Infrastructure-specific collection names and credentials are intentionally not e
 
 ```bash
 npm run check:safety
+npm run check:ux
 npm run check:release
+npm run check:amendments
+npm run check:accommodation
+npm run check:supplements
 npm run typecheck
 npm run build
 npm run verify
 ```
 
-CI resolves the dependency lock, performs a clean install, validates release consistency, type-checks, builds the production app, runs representative HTTP smoke tests and performs a dependency audit.
+CI resolves the dependency lock, performs a clean install, runs public-safety/UX/release checks, validates reservation-amendment, accommodation and package-supplement invariants, type-checks, builds the production app, runs HTTP smoke tests and performs a dependency audit.
 
 ## Project status
 
@@ -381,38 +390,42 @@ CI resolves the dependency lock, performs a clean install, validates release con
 | Persistent customer/staff identity and security | Done |
 | Trip reservations and departure inventory | Done |
 | Traveller records, minors and age pricing | Done |
-| Independent activities / transport / insurance catalogue | Done |
+| Independent activities / transport / travel protection | Done |
 | Independent service availability and reservations | Done |
-| Operator/admin workflows and audit | Done |
+| Operator/admin workflows and audit foundation | Done |
 | Transactional email | Done |
 | Provider-neutral payment ledger | Done |
 | Admin TEST/LIVE Stripe and Redsys configuration | Done |
 | Unified Stripe/Redsys checkout adapters | Implemented; credentialed E2E validation pending |
-| Deposits / installments / payment terms (Phase 5G) | Done |
-| Secure post-purchase traveller data (Phase 6A) | Done |
-| Traveller-data Operator/customer UX and documentation (Phase 6A.1) | In progress in this branch |
-| Reservation amendments (Phase 6B) | **Next** |
+| Deposits / installments / payment terms | Done |
+| Secure post-purchase traveller data | Done |
+| Reservation amendments, financial delta and deadlines | Done |
+| Accommodation catalogue, rooms, galleries and inventory | Done |
+| Seasonal / occupancy accommodation pricing | Done |
+| Transactional accommodation inside trip booking | Done |
+| Optional package supplements | Done |
+| Rich day-to-day Operator workflow | **Next** |
 
 Future work is tracked in **[ROADMAP.md](ROADMAP.md)** · **[ROADMAP.es.md](ROADMAP.es.md)**.
 
 ## Next development priority
 
-The next major block is **Phase 6B — reservation amendments**.
+The next major block is **Phase 7A — Rich operations workflow**.
 
-The goal is to support normal post-booking changes without destroying the original booking record:
+The goal is to turn Operator from a strong reservation-management backoffice into a complete daily operations workspace:
 
-- add/remove/update travellers under controlled rules;
-- change departure when inventory allows;
-- add/remove linked activities, transport and insurance;
-- recalculate affected totals server-side;
-- preserve before/after snapshots and an amendment timeline;
-- move inventory safely between old/new allocations;
-- collect an additional balance when the new total increases;
-- expose a refundable balance for controlled refund processing when the new total decreases;
-- notify the customer of material amendments;
-- support configurable amendment/cancellation deadlines.
+- assign an owner/operator to each reservation;
+- internal notes that are never exposed to customers;
+- tasks and follow-ups with due dates;
+- reservation priority and tags;
+- richer operational timeline;
+- supplier/fulfilment status tracking;
+- customer contact history;
+- stronger reservation search, filters and pagination;
+- safe bulk actions;
+- more granular permissions beyond the current operator/admin split.
 
-Phase 6B should preserve the payment ledger and original reservation history rather than rewriting past financial movements.
+A small package-amendment extension — adding/removing package supplements after booking with the existing financial-delta engine — can be implemented at the start of Phase 7A because it is primarily an Operator workflow on top of the completed reservation/pricing foundations.
 
 ## Project principles
 
@@ -420,22 +433,13 @@ Phase 6B should preserve the payment ledger and original reservation history rat
 - provider-neutral capability interfaces;
 - server-authorized customer and staff operations;
 - server-validated pricing, inventory, ownership and state transitions;
-- traveller, requirement and financial snapshots preserve historical bookings;
-- reservation state separated from payment state;
+- historical snapshots preserve contracted traveller, accommodation, package and financial values;
+- reservation state remains separate from payment state;
 - advanced traveller data is collected only after purchase when required;
-- sensitive traveller values remain encrypted and are not exposed in general Operator overviews;
-- secrets remain server-side and encrypted when persisted;
-- no mandatory hosting, CMS, auth, CRM, payment or supplier vendor;
-- MIT-licensed open-source core.
+- inventory-controlled services remain independent from lightweight package supplements;
+- public UX is bilingual, responsive and free of internal development terminology;
+- proprietary Kairoseth/customer-specific integrations stay outside the MIT core when appropriate.
 
-## License and reuse
+## License
 
-This repository is released under the **MIT License**.
-
-MIT permits people and companies to use, copy, modify, merge, publish, distribute, sublicense and sell software based on this code, including commercial and closed-source derivative products, provided the required copyright and permission notice is retained.
-
-Downstream users are not required to publish their modifications. The software is provided without warranty, as stated in [`LICENSE`](LICENSE).
-
-This permissive model is intentional for the open-source foundation. Commercial Kairoseth services, private integrations, hosted environments, credentials, customer data and other assets can remain separate from this repository.
-
-MIT © 2026 Eduardo Yauri. See [`LICENSE`](LICENSE).
+MIT. See [`LICENSE`](LICENSE).
