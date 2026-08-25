@@ -1,5 +1,6 @@
 import Link from "next/link";
 import styles from "@/app/operator/operator.module.css";
+import { groupReservationsByDeparture } from "@/lib/departure-manifests";
 import { getLocale } from "@/lib/get-locale";
 import { formatOperatorDate, formatOperatorMoney, reservationStatusLabel, tr } from "@/lib/operator-i18n";
 import { getOperationsRepository } from "@/lib/operations-repository";
@@ -21,28 +22,76 @@ export default async function OperatorDocumentsPage() {
     getTravelRepository().listTrips()
   ]);
   const tripById = new Map(trips.map((trip) => [trip.id, trip]));
+  const departures = groupReservationsByDeparture(reservations);
 
   return (
     <main className="section">
       <div className={`container ${styles.shell}`}>
         <section className={styles.panel}>
           <div className="eyebrow">{tr(locale, "Documents", "Documentos")}</div>
-          <h1>{tr(locale, "Booking confirmations", "Confirmaciones de reserva")}</h1>
+          <h1>{tr(locale, "Travel documents", "Documentos de viaje")}</h1>
           <p className={styles.lead}>{tr(
             locale,
-            "Generate a customer-facing PDF from the current reservation snapshot. The document includes travellers, accommodation and package supplements without exposing internal notes, supplier costs or protected post-purchase traveller data.",
-            "Genera un PDF para el cliente a partir del snapshot actual de la reserva. El documento incluye viajeros, alojamiento y suplementos del paquete sin exponer notas internas, costes de proveedor ni datos post-compra protegidos de viajeros."
+            "Generate private booking confirmations and departure-level operational documents from the current reservation snapshots.",
+            "Genera confirmaciones privadas de reserva y documentos operativos por salida a partir de los snapshots actuales de las reservas."
           )}</p>
           <div className={styles.notice}>
-            {canFinance
-              ? tr(locale, "Your Finance permission allows the generated PDF to include payment status, paid amount and outstanding balance.", "Tu permiso de Finanzas permite que el PDF generado incluya estado de pago, importe pagado y saldo pendiente.")
-              : tr(locale, "Financial payment details are omitted because this account does not have Finance permission.", "Los detalles financieros de pago se omiten porque esta cuenta no tiene permiso de Finanzas.")}
+            {tr(
+              locale,
+              "Traveller and rooming lists use only basic booking data. Protected post-purchase traveller data, internal notes and supplier information are not exported in these documents.",
+              "Las listas de viajeros y rooming lists utilizan únicamente datos básicos de reserva. Los datos post-compra protegidos, notas internas e información de proveedores no se exportan en estos documentos."
+            )}
           </div>
         </section>
 
         <section className={styles.panel} style={{ marginTop: "1rem" }}>
+          <div className="eyebrow">{tr(locale, "Departure documents", "Documentos por salida")}</div>
+          <h2>{tr(locale, "Traveller and rooming lists", "Listas de viajeros y rooming lists")}</h2>
+          <p className={styles.lead}>{tr(
+            locale,
+            "Each row groups all non-cancelled reservations for the same trip departure. The rooming list follows the room allocations stored in each reservation snapshot.",
+            "Cada fila agrupa todas las reservas no canceladas de una misma salida. El rooming list respeta la distribución de habitaciones guardada en cada snapshot de reserva."
+          )}</p>
+          {departures.length ? (
+            <div className={styles.managementList}>
+              {departures.map((departure) => {
+                const trip = tripById.get(departure.tripId);
+                const base = `/operator/documents/departures/${encodeURIComponent(departure.tripId)}/${encodeURIComponent(departure.availabilityId)}`;
+                return (
+                  <div className={styles.managementRow} key={departure.key}>
+                    <span>
+                      <strong>{trip?.title ?? departure.tripTitle}</strong>
+                      <span>
+                        {departure.departureDate ? formatOperatorDate(`${departure.departureDate}T12:00:00Z`, locale) : "—"}
+                        {departure.returnDate ? ` → ${formatOperatorDate(`${departure.returnDate}T12:00:00Z`, locale)}` : ""}
+                      </span>
+                    </span>
+                    <span>
+                      {departure.reservationCount} {tr(locale, "bookings", "reservas")} · {departure.travellerCount} {tr(locale, "travellers", "viajeros")}
+                    </span>
+                    <a className="button button-secondary" href={`${base}/travellers`}>
+                      {tr(locale, "Traveller list", "Lista de viajeros")}
+                    </a>
+                    <a className="button button-secondary" href={`${base}/rooming-list`}>
+                      Rooming list
+                    </a>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className={styles.notice}>{tr(locale, "No active trip departures have reservations yet.", "Todavía no hay salidas activas con reservas.")}</div>
+          )}
+        </section>
+
+        <section className={styles.panel} style={{ marginTop: "1rem" }}>
           <div className="eyebrow">{tr(locale, "Reservation documents", "Documentos de reserva")}</div>
-          <h2>{tr(locale, "Available confirmations", "Confirmaciones disponibles")}</h2>
+          <h2>{tr(locale, "Booking confirmations", "Confirmaciones de reserva")}</h2>
+          <div className={styles.notice}>
+            {canFinance
+              ? tr(locale, "Your Finance permission allows confirmation PDFs to include payment status, paid amount and outstanding balance.", "Tu permiso de Finanzas permite que las confirmaciones PDF incluyan estado de pago, importe pagado y saldo pendiente.")
+              : tr(locale, "Financial payment details are omitted from confirmation PDFs because this account does not have Finance permission.", "Los detalles financieros se omiten de las confirmaciones PDF porque esta cuenta no tiene permiso de Finanzas.")}
+          </div>
           {reservations.length ? (
             <div className={styles.managementList}>
               {reservations.map((reservation) => {
@@ -56,7 +105,7 @@ export default async function OperatorDocumentsPage() {
                       </span>
                     </span>
                     <a className="button button-secondary" href={`/operator/reservations/${encodeURIComponent(reservation.id)}/confirmation`}>
-                      {tr(locale, "Download PDF", "Descargar PDF")}
+                      {tr(locale, "Download confirmation", "Descargar confirmación")}
                     </a>
                   </div>
                 );
