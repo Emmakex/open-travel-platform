@@ -17,11 +17,11 @@ _Última actualización: 25 de agosto de 2026._
 
 El proyecto ya está muy por encima del MVP inicial de catálogo/reservas.
 
-Las bases completadas incluyen identidad persistente cliente/personal, RBAC, reservas de viajes/servicios, pricing por viajero, servicios independientes, email transaccional, contabilidad de pagos, configuración cifrada de PSP, checkout neutral respecto al proveedor, depósitos/cuotas, datos post-compra cifrados, modificaciones de reserva, alojamiento reutilizable, inventario transaccional de habitaciones, suplementos opcionales del paquete, responsable/notas de reserva, tareas y seguimientos internos, gestión de proveedores/fulfilment, colas operativas avanzadas y modificación post-reserva de suplementos.
+Las bases completadas incluyen identidad persistente cliente/personal, RBAC, reservas de viajes/servicios, pricing por viajero, servicios independientes, email transaccional, contabilidad de pagos, configuración cifrada de PSP, checkout neutral respecto al proveedor, depósitos/cuotas, datos post-compra cifrados, modificaciones de reserva, alojamiento reutilizable, inventario transaccional de habitaciones, suplementos opcionales del paquete, responsable/notas de reserva, tareas y seguimientos internos, gestión de proveedores/fulfilment, colas operativas avanzadas, modificación post-reserva de suplementos y permisos granulares del personal.
 
 La validación E2E con credenciales Stripe/Redsys continúa pendiente hasta disponer de cuentas de proveedor adecuadas. Los adapters están implementados, pero la capacidad de pago productiva no se considera validada hasta probar TEST/LIVE.
 
-**Las Fases 6B y 6C están funcionalmente completadas. La Fase 7A — Operaciones avanzadas está EN CURSO: 7A-1 hasta 7A-5 están completadas y el siguiente bloque es 7A-6 — permisos de personal más granulares.**
+**Las Fases 6B, 6C y 7A están funcionalmente completadas. La Fase 7B — Documentos, exportaciones y reporting es la siguiente prioridad de desarrollo.**
 
 ---
 
@@ -255,9 +255,9 @@ Las actividades/transporte con fecha o cupo siguen siendo reservas independiente
 
 # Próximas prioridades
 
-## Fase 7A — Operaciones avanzadas — EN CURSO
+## Fase 7A — Operaciones avanzadas — COMPLETADO
 
-Objetivo: convertir Operator en herramienta diaria completa para un equipo/agencia, no solo en backoffice de catálogo y estados.
+Objetivo cumplido: convertir Operator en herramienta diaria completa para un equipo/agencia, no solo en backoffice de catálogo y estados.
 
 ### 7A-1 — Responsable, notas y prioridad — COMPLETADO
 
@@ -321,15 +321,19 @@ Las vistas guardadas y acciones masivas quedan como extensiones futuras si aport
 - se reutiliza la notificación configurada al cliente sin exponer el motivo interno;
 - gate permanente de CI para modificaciones de suplementos.
 
-### 7A-6 — Permisos más granulares — SIGUIENTE
+### 7A-6 — Permisos más granulares — COMPLETADO
 
-- evolucionar más allá de operator/admin donde sea necesario;
-- controles de capacidad con least privilege;
-- separar permisos de finanzas, catálogo, datos de cliente/viajeros y workflow operativo;
-- conservar roles simples por defecto permitiendo accesos más limitados por despliegue;
-- auditar de forma consistente las acciones privilegiadas.
+- Admin permanece como superusuario con acceso completo y los Operators pueden recibir capacidades explícitas más limitadas;
+- los Operators existentes sin asignación explícita conservan el perfil heredado hasta que un Admin guarde deliberadamente una matriz más restringida;
+- capacidades server-side separan reservas, catálogo, finanzas, datos protegidos de viajeros, gestión de proveedores y tareas;
+- layouts protegidos y server actions sensibles aplican las mismas fronteras de autorización;
+- dashboards, colas de reservas y workspaces solo consultan datos de finanzas, tareas, proveedores o viajeros cuando la cuenta actual tiene permiso;
+- las asignaciones explícitas se guardan en `travel_staff_capabilities`;
+- cada cambio real de permisos registra estado before/after, administrador responsable y fecha/hora en `travel_staff_capability_audit` dentro de la misma transacción MongoDB;
+- navegación y métricas de Operator muestran únicamente las áreas permitidas;
+- el gate permanente `check:staff-permissions` protege el modelo de capacidades y sus fronteras sensibles en CI.
 
-## Fase 7B — Documentos, exportaciones y reporting
+## Fase 7B — Documentos, exportaciones y reporting — SIGUIENTE
 
 Objetivo: soportar documentos e informes habituales de operaciones turísticas.
 
@@ -422,8 +426,6 @@ Objetivo: conectar despliegues con ecosistemas reales mediante adapters sin cont
 # Orden recomendado
 
 ```text
-7A  Operaciones avanzadas
- ↓
 7B  Documentos / exportaciones / reporting
  ↓
 8   Integraciones externas
@@ -433,7 +435,7 @@ Objetivo: conectar despliegues con ecosistemas reales mediante adapters sin cont
 10  Productización open-source / release
 ```
 
-La validación TEST Stripe/Redsys con credenciales debe insertarse en cuanto existan las cuentas proveedor necesarias; no bloquea 7A.
+La validación TEST Stripe/Redsys con credenciales debe insertarse en cuanto existan las cuentas proveedor necesarias; no bloquea 7B.
 
 Parte del testing/security de Fase 9 debe seguir realizándose incrementalmente, especialmente pagos, datos viajeros, modificaciones e inventario concurrente.
 
