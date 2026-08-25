@@ -8,7 +8,7 @@ Open Travel Platform keeps customer booking capabilities separate from staff ope
 
 `OperationsRepository` is staff-facing: cross-customer reservation reads, operational summaries, status transitions and status audit events.
 
-Additional internal workflow data introduced for day-to-day agency work is deliberately stored outside the commercial reservation document. Customer routes do not read this data.
+Additional internal workflow data for day-to-day agency work is deliberately stored outside the commercial reservation document. Customer routes do not read this data.
 
 ## Roles and authorization
 
@@ -55,7 +55,7 @@ Stored separately in `travel_reservation_operations`:
 
 The selected owner is validated server-side against an active staff account. An arbitrary browser-submitted staff ID is rejected.
 
-The collection includes indexes for owner, priority and tags so later queue/search work can filter efficiently without redesigning the model.
+The collection includes indexes for owner, priority and tags so operational queues can filter efficiently without redesigning the model.
 
 ### Internal notes
 
@@ -72,37 +72,96 @@ Stored separately in `travel_reservation_internal_notes`.
 
 Changes to owner, priority and tags create records in `travel_reservation_operations_events`.
 
-Each event includes:
+Each event includes reservation, actor, changed fields with before/after snapshots and timestamp. Internal notes and workflow events are combined into the reservation's operational timeline.
 
-- reservation ID;
-- actor ID, display name and role;
-- changed fields with before/after snapshots;
-- timestamp.
+## Tasks and follow-ups
 
-Internal notes and workflow events are combined into the reservation's operational timeline.
+Operations tasks are a separate internal capability used for work that must be completed later by the team.
+
+A task can target:
+
+```text
+trip-reservation
+service-reservation
+customer
+```
+
+The target must exist on the server before the task is created.
+
+### Task record
+
+Stored in `travel_operations_tasks` with:
+
+- title and optional details;
+- exact target type and ID;
+- status: `open`, `in-progress`, `completed`, `cancelled`;
+- optional due date;
+- optional assigned active staff member;
+- creator identity/role/display name;
+- created/updated timestamps;
+- completion/cancellation timestamp when applicable.
+
+Assignees are validated server-side against `travel_staff_users`. Disabled or invented staff IDs are rejected.
+
+Cancelled tasks are terminal. Completed tasks can be deliberately reopened to `open` or `in-progress`, and that change remains audited.
+
+### Task changes and comments
+
+Task status, assignee and due-date changes create append-only records in `travel_operations_task_events` with before/after values and actor metadata.
+
+Follow-up comments are stored separately in `travel_operations_task_comments`:
+
+- maximum 2,000 characters;
+- staff-only plain text;
+- author and timestamp preserved;
+- appended rather than rewriting the original task description.
+
+No task mutation changes the commercial reservation, traveller pricing or payment ledger.
+
+### Due-date views
+
+`/operator/tasks` provides protected operational filters:
+
+- Open;
+- Mine;
+- Overdue;
+- Today;
+- Upcoming;
+- Completed.
+
+The dashboard also exposes open, assigned-to-me, overdue and due-today counts. Date-only due dates are intentionally kept separate from booking/payment deadlines.
+
+`/operator/tasks/new` can create a task against an exact trip reservation, service reservation or customer. Target workspaces preserve the same server-side validation and follow-up history.
 
 ## Operator UX
 
 `/operator/reservations` shows the current owner, priority and a tag preview for each reservation.
 
-Each reservation exposes two protected views:
+Each trip reservation exposes two protected views:
 
 ```text
-/operator/reservations/[id]          commercial/financial reservation detail
-/operator/reservations/[id]/workflow internal team workspace
+/operator/reservations/[id]           commercial/financial reservation detail
+/operator/reservations/[id]/workflow  internal team workspace + tasks
 ```
 
-A shared staff-only navigation links both views.
+Task management routes include:
 
-The workspace is intentionally separate from My account. Internal notes, tags and ownership are not rendered to the customer and are protected by a permanent CI invariant check.
+```text
+/operator/tasks
+/operator/tasks/new
+/operator/tasks/target/[type]/[id]
+```
 
-## Quality gate
+The task and workflow areas are intentionally separate from My account. Internal notes, tags, ownership, tasks and follow-up comments are never rendered to the customer.
+
+## Quality gates
 
 ```bash
 npm run check:operations
+npm run check:tasks
 ```
 
-The gate validates priority/tag/note rules and verifies that customer account/reservation routes do not import internal reservation workflow storage.
+The operations gate validates priority/tag/note rules and customer-route privacy boundaries. The task gate validates task target/status/date/text rules, overdue/today semantics and verifies that customer routes do not import task storage.
 
 ## Configuration
 
@@ -112,12 +171,12 @@ MongoDB mode is the persistent production/reference path. Demo mode remains usef
 
 ## Extension direction
 
-The internal workflow collections are intentionally separate capability boundaries so later phases can add:
+The internal workflow collections remain separate capability boundaries so later work can add:
 
-- tasks and follow-ups;
 - supplier fulfilment states;
-- saved operational queues and filters;
+- stronger operational search and saved queues;
 - package-supplement amendments;
-- more granular staff permissions.
+- more granular staff permissions;
+- optional internal reminders/notifications for tasks.
 
 These additions should preserve the same principles: staff-only data stays out of customer surfaces, mutations are server-authorized, and history is added rather than silently rewritten.

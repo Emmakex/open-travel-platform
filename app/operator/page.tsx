@@ -10,6 +10,8 @@ import {
 } from "@/lib/operator-i18n";
 import { operationsConfig } from "@/lib/operations-config";
 import { getOperationsRepository } from "@/lib/operations-repository";
+import { isOperationsTaskOpen, isOperationsTaskOverdue } from "@/lib/operations-task-rules";
+import { listOperationsTasks } from "@/lib/operations-tasks";
 import { requireOperationsIdentity } from "@/lib/require-operations-identity";
 import { listServiceReservationsForOperator } from "@/lib/service-reservations";
 import { getTravelRepository } from "@/lib/travel-repository";
@@ -23,13 +25,17 @@ export default async function OperatorPage() {
   const locale = await getLocale();
   const identity = await requireOperationsIdentity();
   const operations = getOperationsRepository();
-  const [summary, reservations, audit, trips, serviceReservations] = await Promise.all([
+  const [summary, reservations, audit, trips, serviceReservations, tasks] = await Promise.all([
     operations.getSummary(),
     operations.listReservations(),
     operations.listAuditEvents(),
     getTravelRepository().listTrips(),
-    listServiceReservationsForOperator()
+    listServiceReservationsForOperator(),
+    listOperationsTasks()
   ]);
+  const openTasks = tasks.filter(isOperationsTaskOpen);
+  const overdueTasks = openTasks.filter((task) => isOperationsTaskOverdue(task));
+  const myTasks = openTasks.filter((task) => task.assigneeStaffId === identity.id);
 
   return (
     <main className="section">
@@ -37,19 +43,23 @@ export default async function OperatorPage() {
         <section className={styles.panel}>
           <div className="eyebrow">{tr(locale, "Operations console", "Consola de operaciones")} · {staffRoleLabel(identity.role, locale)}</div>
           <h1>{identity.displayName}</h1>
-          <p className={styles.lead}>{tr(locale, "Reservations, customers, payments, catalogue and audit history are managed through protected staff permissions.", "Las reservas, clientes, pagos, catálogo e historial de auditoría se gestionan mediante permisos protegidos del personal.")}</p>
+          <p className={styles.lead}>{tr(locale, "Reservations, follow-ups, customers, payments, catalogue and audit history are managed through protected staff permissions.", "Las reservas, seguimientos, clientes, pagos, catálogo e historial de auditoría se gestionan mediante permisos protegidos del personal.")}</p>
 
           <div className={styles.metrics}>
             <div className={styles.metric}><strong>{summary.total}</strong><span>{tr(locale, "Trip reservations", "Reservas de viaje")}</span></div>
             <div className={styles.metric}><strong>{summary.pending}</strong><span>{tr(locale, "Trip pending", "Viajes pendientes")}</span></div>
             <div className={styles.metric}><strong>{serviceReservations.length}</strong><span>{tr(locale, "Service reservations", "Reservas de servicios")}</span></div>
             <div className={styles.metric}><strong>{serviceReservations.filter((item) => item.status === "pending").length}</strong><span>{tr(locale, "Services pending", "Servicios pendientes")}</span></div>
+            <div className={styles.metric}><strong>{myTasks.length}</strong><span>{tr(locale, "My open tasks", "Mis tareas abiertas")}</span></div>
+            <div className={styles.metric}><strong>{overdueTasks.length}</strong><span>{tr(locale, "Overdue tasks", "Tareas vencidas")}</span></div>
           </div>
 
-          {!operationsConfig.writesEnabled ? <div className={styles.notice}>{tr(locale, "Operations are read-only in this deployment. Enable an operations write adapter to change reservation status.", "Las operaciones están en modo de solo lectura en este despliegue. Activa un adaptador de escritura para cambiar estados de reserva.")}</div> : null}
+          {!operationsConfig.writesEnabled ? <div className={styles.notice}>{tr(locale, "Operations are read-only in this deployment. Enable an operations write adapter to change reservation status or internal tasks.", "Las operaciones están en modo de solo lectura en este despliegue. Activa un adaptador de escritura para cambiar estados de reserva o tareas internas.")}</div> : null}
 
           <div className={styles.actions}>
             <Link className="button button-primary" href="/operator/reservations">{tr(locale, "Trip reservations", "Reservas de viaje")}</Link>
+            <Link className="button button-primary" href="/operator/tasks">{tr(locale, "Tasks", "Tareas")}</Link>
+            <Link className="button button-secondary" href="/operator/tasks/new">{tr(locale, "New task", "Nueva tarea")}</Link>
             <Link className="button button-secondary" href="/operator/service-reservations">{tr(locale, "Service reservations", "Reservas de servicios")}</Link>
             <Link className="button button-secondary" href="/operator/customers">{tr(locale, "Customers", "Clientes")}</Link>
             <Link className="button button-secondary" href="/operator/payments">{tr(locale, "Payments", "Pagos")}</Link>
@@ -63,6 +73,15 @@ export default async function OperatorPage() {
             <Link className="button button-secondary" href="/services">{tr(locale, "Public services", "Servicios públicos")}</Link>
             <form action={endStaffSession}><button className="button button-secondary" type="submit">{tr(locale, "Sign out", "Cerrar sesión")}</button></form>
           </div>
+        </section>
+
+        <section className={styles.panel} style={{ marginTop: "1rem" }}>
+          <div className="eyebrow">{tr(locale, "Follow-up", "Seguimiento")}</div>
+          <h2>{tr(locale, "Tasks needing attention", "Tareas que requieren atención")}</h2>
+          {openTasks.length ? <div className={styles.list}>{openTasks
+            .sort((a, b) => (a.dueDate ?? "9999-12-31").localeCompare(b.dueDate ?? "9999-12-31"))
+            .slice(0, 5)
+            .map((task) => <Link className={styles.row} href="/operator/tasks" key={task.id}><strong>{task.title}</strong><span>{task.assigneeDisplayName ?? tr(locale, "Unassigned", "Sin asignar")}</span><span className={styles.badge}>{isOperationsTaskOverdue(task) ? tr(locale, "Overdue", "Vencida") : tr(locale, "Open", "Abierta")}</span><span>{task.dueDate ?? tr(locale, "No due date", "Sin vencimiento")}</span></Link>)}</div> : <div className={styles.notice}>{tr(locale, "No open operational tasks.", "No hay tareas operativas abiertas.")}</div>}
         </section>
 
         <section className={styles.panel} style={{ marginTop: "1rem" }}>

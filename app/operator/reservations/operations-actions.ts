@@ -37,7 +37,7 @@ export async function saveReservationOperationsAction(formData: FormData) {
   const ownerStaffId = value(formData, "ownerStaffId") || undefined;
   const priority = value(formData, "priority");
   const tags = parseReservationTags(value(formData, "tags"));
-  const base = reservationId ? `/operator/reservations/${encodeURIComponent(reservationId)}` : "/operator/reservations";
+  const base = reservationId ? `/operator/reservations/${encodeURIComponent(reservationId)}/workflow` : "/operator/reservations";
 
   if (!operationsConfig.writesEnabled || !reservationId || !isReservationPriority(priority) || !tags) {
     redirect(`${base}?operationsError=invalid-request#internal-workflow`);
@@ -64,7 +64,7 @@ export async function addReservationInternalNoteAction(formData: FormData) {
   const staff = await requireOperationsIdentity();
   const reservationId = value(formData, "reservationId");
   const body = value(formData, "body");
-  const base = reservationId ? `/operator/reservations/${encodeURIComponent(reservationId)}` : "/operator/reservations";
+  const base = reservationId ? `/operator/reservations/${encodeURIComponent(reservationId)}/workflow` : "/operator/reservations";
 
   if (!operationsConfig.writesEnabled || !reservationId || !body) {
     redirect(`${base}?operationsError=invalid-note#internal-workflow`);
