@@ -16,6 +16,7 @@ import { getPaymentRepository } from "@/lib/payment-repository";
 import { notifyReservationEvent } from "@/lib/reservation-emails";
 import { requireCustomerIdentity } from "@/lib/require-customer-identity";
 import { getTravelRepository } from "@/lib/travel-repository";
+import { buildTripPackageAddOns, TripPackageAddOnError } from "@/lib/trip-package-addons";
 import {
   priceTravellerComposition,
   TravellerPricingError,
@@ -28,7 +29,9 @@ function value(formData: FormData, key: string) {
 }
 
 function values(formData: FormData, key: string) {
-  return formData.getAll(key).map((item) => typeof item === "string" ? item.trim() : "");
+  const direct = formData.getAll(key);
+  const source = direct.length ? direct : (key.includes(":") ? formData.getAll(key.replaceAll(":", "__")) : []);
+  return source.map((item) => typeof item === "string" ? item.trim() : "");
 }
 
 const guardianRelationships = new Set<GuardianRelationship>(["parent", "legal-guardian", "other"]);
@@ -67,6 +70,7 @@ export async function createReservationAction(formData: FormData) {
   const availabilityId = value(formData, "availabilityId");
   const travellerDrafts = parseTravellers(formData);
   const selectedOptionalAccommodationIds = values(formData, "optionalAccommodationComponentId").filter(Boolean);
+  const selectedBookingAddOnIds = values(formData, "packageAddOnBookingId").filter(Boolean);
   const backToBooking = tripSlug ? `/trips/${encodeURIComponent(tripSlug)}/book` : "/trips";
 
   if (!bookingConfig.writesEnabled) {
@@ -159,7 +163,30 @@ export async function createReservationAction(formData: FormData) {
     throw error;
   }
 
-  const totalPrice = Number((priced.totalPrice + accommodationAdditionalTotal).toFixed(2));
+  let packageAddOns = [] as ReturnType<typeof buildTripPackageAddOns>["bookings"];
+  let packageAddOnTotal = 0;
+  try {
+    const selectedTravellerIdsByAddOn = Object.fromEntries(
+      (trip.addOns ?? [])
+        .filter((addOn) => addOn.pricingMode === "per-traveller")
+        .map((addOn) => [addOn.id, values(formData, `packageAddOnTraveller:${addOn.id}`).filter(Boolean)])
+    );
+    const addOnResult = buildTripPackageAddOns({
+      addOns: trip.addOns ?? [],
+      travellers: priced.travellers,
+      selectedBookingAddOnIds,
+      selectedTravellerIdsByAddOn
+    });
+    packageAddOns = addOnResult.bookings;
+    packageAddOnTotal = addOnResult.packageAddOnTotal;
+  } catch (error) {
+    if (error instanceof TripPackageAddOnError) {
+      redirect(`${backToBooking}?error=package-addon`);
+    }
+    throw error;
+  }
+
+  const totalPrice = Number((priced.totalPrice + accommodationAdditionalTotal + packageAddOnTotal).toFixed(2));
   let reservation;
   try {
     reservation = await bookingRepository.createReservation({
@@ -174,6 +201,8 @@ export async function createReservationAction(formData: FormData) {
       accommodationTotal,
       accommodationAdditionalTotal,
       accommodationBookings,
+      packageAddOns,
+      packageAddOnTotal,
       totalPrice,
       currency: trip.currency,
       tripTitle: trip.title,

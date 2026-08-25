@@ -1,7 +1,7 @@
 import type { ReservationChangePolicy } from "@/domain/operations/change-policy";
 import type { TravellerRequirementsProfile } from "@/domain/traveller/types";
 import type { AccommodationMealPlan } from "@/domain/accommodation/types";
-import type { TripAccommodationMode } from "@/domain/travel/types";
+import type { TripAccommodationMode, TripAddOnPricingMode } from "@/domain/travel/types";
 
 export type ReservationStatus = "pending" | "confirmed" | "cancelled";
 export type TripDepartureStatus = "open" | "closed" | "sold-out";
@@ -105,6 +105,20 @@ export interface ReservationAccommodationBooking {
   inventory: ReservationAccommodationInventoryAllocation[];
 }
 
+export interface ReservationTripAddOnBooking {
+  addOnId: string;
+  code: string;
+  title: string;
+  titleEs: string;
+  description?: string;
+  descriptionEs?: string;
+  pricingMode: TripAddOnPricingMode;
+  unitPrice: number;
+  quantity: number;
+  travellerIds?: string[];
+  totalPrice: number;
+}
+
 export interface Reservation {
   id: string;
   identityId: string;
@@ -114,13 +128,16 @@ export interface Reservation {
   inventorySpaces?: number;
   travellers?: ReservationTraveller[];
   unitPrice: number;
-  /** Traveller/package fare before optional accommodation additions. */
+  /** Base traveller/package fare before optional accommodation or package supplements. */
   tripPriceTotal?: number;
   /** Sum of all selected accommodation values, including included stays. */
   accommodationTotal?: number;
   /** Only optional accommodation amounts added on top of the trip fare. */
   accommodationAdditionalTotal?: number;
   accommodationBookings?: ReservationAccommodationBooking[];
+  /** Non-inventory optional supplements selected during booking. */
+  packageAddOns?: ReservationTripAddOnBooking[];
+  packageAddOnTotal?: number;
   totalPrice: number;
   currency: string;
   status: ReservationStatus;
@@ -148,6 +165,8 @@ export interface CreateReservationInput {
   accommodationTotal?: number;
   accommodationAdditionalTotal?: number;
   accommodationBookings?: ReservationAccommodationBooking[];
+  packageAddOns?: ReservationTripAddOnBooking[];
+  packageAddOnTotal?: number;
   totalPrice: number;
   currency: string;
   tripTitle?: string;

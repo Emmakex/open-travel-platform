@@ -55,7 +55,8 @@ export default async function BookTripPage({ params, searchParams }: { params: P
     "accommodation-occupancy": locale === "es" ? "La composición de viajeros no encaja en las reglas de ocupación de la habitación seleccionada." : "The traveller group does not fit the selected room occupancy rules.",
     "accommodation-pricing": locale === "es" ? "No se ha podido calcular correctamente el precio del alojamiento." : "The accommodation price could not be calculated correctly.",
     "accommodation-inventory": locale === "es" ? "Ya no quedan suficientes habitaciones para todas las noches de esta estancia. Prueba otra salida o contacta con el equipo." : "There are no longer enough rooms for every night of this stay. Try another departure or contact the team.",
-    "accommodation-currency": locale === "es" ? "La moneda del alojamiento no coincide con la del viaje. El equipo debe corregir la configuración antes de reservar." : "The accommodation currency does not match the trip currency. The configuration must be corrected before booking."
+    "accommodation-currency": locale === "es" ? "La moneda del alojamiento no coincide con la del viaje. El equipo debe corregir la configuración antes de reservar." : "The accommodation currency does not match the trip currency. The configuration must be corrected before booking.",
+    "package-addon": locale === "es" ? "Revisa los suplementos seleccionados. Una de las opciones ya no está disponible para esta reserva." : "Review the selected supplements. One of the options is no longer available for this booking."
   };
   const travelRepository = getTravelRepository();
   const trip = await travelRepository.getTripBySlug(slug);
@@ -82,7 +83,7 @@ export default async function BookTripPage({ params, searchParams }: { params: P
         <section className={styles.panel}>
           <div className="eyebrow">{copy.booking.eyebrow}</div>
           <h1>{localizedTrip.title}</h1>
-          <p className={styles.lead}>{locale === "es" ? "Elige la salida e introduce los datos de cada viajero. Si el viaje incluye alojamiento, verás también la distribución de habitaciones antes de confirmar." : "Choose the departure and enter each traveller. If the trip includes accommodation, you will also see the room distribution before confirming."}</p>
+          <p className={styles.lead}>{locale === "es" ? "Elige la salida e introduce los datos de cada viajero. Después podrás revisar alojamiento y suplementos opcionales antes de confirmar el total." : "Choose the departure and enter each traveller. You can then review accommodation and optional supplements before confirming the total."}</p>
 
           {error && errorMessages[error] ? <div className={styles.error}>{errorMessages[error]}</div> : null}
           {!identity ? <div className={styles.notice}><strong>{copy.booking.customerRequired}</strong> {copy.booking.customerRequiredCopy}{" "}<Link className="text-link" href="/account/sign-in">{copy.booking.signIn}</Link></div> : null}
@@ -99,6 +100,7 @@ export default async function BookTripPage({ params, searchParams }: { params: P
               locale={locale}
               accommodationComponents={trip.accommodations ?? []}
               accommodations={bookingAccommodations}
+              addOns={(trip.addOns ?? []).filter((item) => item.enabled)}
             />
           ) : null}
           {customer && !bookingConfig.writesEnabled ? <div className={styles.notice}>{copy.booking.writesDisabled}</div> : null}

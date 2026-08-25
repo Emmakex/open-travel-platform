@@ -47,6 +47,24 @@ export type TripAccommodationComponent = {
   pricingChildAges?: number[];
 };
 
+export type TripAddOnPricingMode = "per-booking" | "per-traveller";
+
+/**
+ * Non-inventory optional supplement sold inside the trip reservation.
+ * Capacity/date-specific products remain independent travel services.
+ */
+export type TripAddOn = {
+  id: string;
+  code: string;
+  title: string;
+  titleEs: string;
+  description?: string;
+  descriptionEs?: string;
+  price: number;
+  pricingMode: TripAddOnPricingMode;
+  enabled: boolean;
+};
+
 export type DestinationTranslation = {
   name?: string;
   country?: string;
@@ -89,6 +107,8 @@ export type Trip = {
   travellerPricing?: TravellerPricingBand[];
   /** Reusable accommodation components linked by reference. */
   accommodations?: TripAccommodationComponent[];
+  /** Non-inventory optional supplements sold as part of this booking. */
+  addOns?: TripAddOn[];
   /** Advanced data requested after booking, snapshotted onto each reservation. */
   travellerRequirements?: TravellerRequirementsProfile;
   /** Amendment/cancellation rules snapshotted onto new reservations. */

@@ -5,12 +5,13 @@ import { createReservationAction } from "@/app/reservations/actions";
 import styles from "@/app/trips/[slug]/book/booking.module.css";
 import type { Accommodation } from "@/domain/accommodation/types";
 import type { AvailabilityWindow, GuardianRelationship } from "@/domain/booking/types";
-import type { TravellerPricingBand, TravelLocale, TripAccommodationComponent } from "@/domain/travel/types";
+import type { TravellerPricingBand, TravelLocale, TripAccommodationComponent, TripAddOn } from "@/domain/travel/types";
 import {
   AccommodationBookingError,
   accommodationBookingTotals,
   buildAccommodationBookingPlan
 } from "@/lib/accommodation-booking";
+import { buildTripPackageAddOns, TripPackageAddOnError } from "@/lib/trip-package-addons";
 import {
   calculateAgeOnDate,
   findTravellerPricingBand,
@@ -63,7 +64,8 @@ export function TravellerBookingForm({
   availability,
   locale,
   accommodationComponents = [],
-  accommodations = []
+  accommodations = [],
+  addOns = []
 }: {
   tripSlug: string;
   fromPrice: number;
@@ -74,11 +76,14 @@ export function TravellerBookingForm({
   locale: TravelLocale;
   accommodationComponents?: TripAccommodationComponent[];
   accommodations?: Accommodation[];
+  addOns?: TripAddOn[];
 }) {
   const t = (en: string, es: string) => locale === "es" ? es : en;
   const nextId = useRef(3);
   const [selectedAvailabilityId, setSelectedAvailabilityId] = useState(availability[0]?.id ?? "");
   const [selectedOptionalAccommodationIds, setSelectedOptionalAccommodationIds] = useState<string[]>([]);
+  const [selectedBookingAddOnIds, setSelectedBookingAddOnIds] = useState<string[]>([]);
+  const [selectedTravellerAddOnIds, setSelectedTravellerAddOnIds] = useState<Record<string, string[]>>({});
   const [travellers, setTravellers] = useState<TravellerRow[]>([
     blankTraveller("traveller-1"),
     blankTraveller("traveller-2")
@@ -186,13 +191,44 @@ export function TravellerBookingForm({
   }, [accommodationReadyForPreview, selectedAvailability, accommodationComponents, accommodations, travellers, currency]);
 
   const accommodationTotals = accommodationBookingTotals(accommodationPreview.bookings);
-  const total = Number((travellerTotal + accommodationTotals.accommodationAdditionalTotal).toFixed(2));
   const requiredAccommodationInvalid = accommodationComponents.some((component) =>
     component.mode === "included" && componentPreviews.get(component.id)?.error
   );
   const selectedOptionalInvalid = selectedOptionalAccommodationIds.some((id) => componentPreviews.get(id)?.error);
   const accommodationInvalid = Boolean(accommodationPreview.error || requiredAccommodationInvalid || selectedOptionalInvalid);
-  const canSubmit = Boolean(selectedAvailability && complete && !leadIsMinor && !inventoryExceeded && !accommodationInvalid);
+
+  const packageAddOnPreview = useMemo(() => {
+    try {
+      return {
+        ...buildTripPackageAddOns({
+          addOns,
+          travellers,
+          selectedBookingAddOnIds,
+          selectedTravellerIdsByAddOn: selectedTravellerAddOnIds
+        }),
+        error: null as TripPackageAddOnError | null
+      };
+    } catch (error) {
+      return {
+        bookings: [],
+        packageAddOnTotal: 0,
+        error: error instanceof TripPackageAddOnError
+          ? error
+          : new TripPackageAddOnError("ADDON_SELECTION_INVALID", "Package supplement preview is unavailable.")
+      };
+    }
+  }, [addOns, travellers, selectedBookingAddOnIds, selectedTravellerAddOnIds]);
+
+  const addOnBookingById = new Map(packageAddOnPreview.bookings.map((item) => [item.addOnId, item]));
+  const total = Number((travellerTotal + accommodationTotals.accommodationAdditionalTotal + packageAddOnPreview.packageAddOnTotal).toFixed(2));
+  const canSubmit = Boolean(
+    selectedAvailability &&
+    complete &&
+    !leadIsMinor &&
+    !inventoryExceeded &&
+    !accommodationInvalid &&
+    !packageAddOnPreview.error
+  );
 
   function update(id: string, patch: Partial<TravellerRow>) {
     setTravellers((current) => current.map((item) => item.id === id ? { ...item, ...patch } : item));
@@ -210,12 +246,33 @@ export function TravellerBookingForm({
     setTravellers((current) => current
       .filter((item) => item.id !== id)
       .map((item) => item.guardianTravellerId === id ? { ...item, guardianTravellerId: "", guardianRelationship: "" } : item));
+    setSelectedTravellerAddOnIds((current) => Object.fromEntries(
+      Object.entries(current).map(([addOnId, ids]) => [addOnId, ids.filter((travellerId) => travellerId !== id)])
+    ));
   }
 
   function toggleOptionalAccommodation(id: string, checked: boolean) {
     setSelectedOptionalAccommodationIds((current) => checked
       ? [...new Set([...current, id])]
       : current.filter((item) => item !== id));
+  }
+
+  function toggleBookingAddOn(id: string, checked: boolean) {
+    setSelectedBookingAddOnIds((current) => checked
+      ? [...new Set([...current, id])]
+      : current.filter((item) => item !== id));
+  }
+
+  function toggleTravellerAddOn(addOnId: string, travellerId: string, checked: boolean) {
+    setSelectedTravellerAddOnIds((current) => {
+      const selected = current[addOnId] ?? [];
+      return {
+        ...current,
+        [addOnId]: checked
+          ? [...new Set([...selected, travellerId])]
+          : selected.filter((id) => id !== travellerId)
+      };
+    });
   }
 
   function travellerNames(ids: string[]) {
@@ -414,6 +471,79 @@ export function TravellerBookingForm({
         <div className={styles.error}>{t("Review the accommodation options before confirming the reservation.", "Revisa las opciones de alojamiento antes de confirmar la reserva.")}</div>
       ) : null}
 
+      {addOns.length ? (
+        <section className={styles.travellerCard}>
+          <div className={styles.bookingSectionHeader}>
+            <div>
+              <strong>{t("Optional extras", "Extras opcionales")}</strong>
+              <span>{t("Choose only the extras you want. They are added clearly to the reservation total.", "Elige solo los extras que quieras. Se añadirán de forma clara al total de la reserva.")}</span>
+            </div>
+          </div>
+
+          <div className={styles.travellerList}>
+            {addOns.map((addOn) => {
+              const localizedTitle = locale === "es" ? addOn.titleEs : addOn.title;
+              const localizedDescription = locale === "es" ? addOn.descriptionEs : addOn.description;
+              const booking = addOnBookingById.get(addOn.id);
+              const selectedTravellerIds = selectedTravellerAddOnIds[addOn.id] ?? [];
+
+              return (
+                <div className={styles.minorBox} key={addOn.id}>
+                  <div className={styles.travellerHeader}>
+                    <div>
+                      <strong>{localizedTitle}</strong>
+                      <span>{localizedDescription || (addOn.pricingMode === "per-booking" ? t("Charged once per booking", "Se cobra una vez por reserva") : t("Charged for each selected traveller", "Se cobra por cada viajero seleccionado"))}</span>
+                    </div>
+                    <strong>{money(addOn.price, currency, locale)}{addOn.pricingMode === "per-traveller" ? ` / ${t("traveller", "viajero")}` : ""}</strong>
+                  </div>
+
+                  {addOn.pricingMode === "per-booking" ? (
+                    <label className={styles.field}>
+                      <span>{t("Add to this booking", "Añadir a esta reserva")}</span>
+                      <input
+                        type="checkbox"
+                        name="packageAddOnBookingId"
+                        value={addOn.id}
+                        checked={selectedBookingAddOnIds.includes(addOn.id)}
+                        onChange={(event) => toggleBookingAddOn(addOn.id, event.target.checked)}
+                      />
+                    </label>
+                  ) : (
+                    <div className={styles.fareBands}>
+                      {travellers.map((traveller, index) => (
+                        <label key={`${addOn.id}-${traveller.id}`}>
+                          <span>
+                            <input
+                              type="checkbox"
+                              name={`packageAddOnTraveller__${addOn.id}`}
+                              value={traveller.id}
+                              checked={selectedTravellerIds.includes(traveller.id)}
+                              onChange={(event) => toggleTravellerAddOn(addOn.id, traveller.id, event.target.checked)}
+                            />{" "}
+                            {traveller.firstName || `${t("Traveller", "Viajero")} ${index + 1}`} {traveller.lastName}
+                          </span>
+                          <strong>{selectedTravellerIds.includes(traveller.id) ? `+${money(addOn.price, currency, locale)}` : "—"}</strong>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+
+                  {booking ? (
+                    <p><strong>+{money(booking.totalPrice, currency, locale)}</strong>{booking.quantity > 1 ? ` · ${booking.quantity} ${t("travellers", "viajeros")}` : ""}</p>
+                  ) : (
+                    <p>{t("Not selected", "No seleccionado")}</p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
+
+      {packageAddOnPreview.error ? (
+        <div className={styles.error}>{t("Review the optional extras before confirming the reservation.", "Revisa los extras opcionales antes de confirmar la reserva.")}</div>
+      ) : null}
+
       <div className={styles.priceSummary}>
         <div>
           <span>{t("Travellers", "Viajeros")}</span>
@@ -427,6 +557,12 @@ export function TravellerBookingForm({
           <div>
             <span>{t("Optional accommodation", "Alojamiento opcional")}</span>
             <strong>+{money(accommodationTotals.accommodationAdditionalTotal, currency, locale)}</strong>
+          </div>
+        ) : null}
+        {packageAddOnPreview.packageAddOnTotal > 0 ? (
+          <div>
+            <span>{t("Optional extras", "Extras opcionales")}</span>
+            <strong>+{money(packageAddOnPreview.packageAddOnTotal, currency, locale)}</strong>
           </div>
         ) : null}
         <div className={styles.totalRow}>
