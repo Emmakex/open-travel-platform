@@ -23,8 +23,7 @@ const views = new Set(["all", "mine", "overdue", "today", "upcoming", "completed
 
 function taskTargetHref(task: OperationsTask) {
   if (task.targetType === "trip-reservation") return `/operator/reservations/${encodeURIComponent(task.targetId)}/workflow#tasks`;
-  if (task.targetType === "service-reservation") return `/operator/service-reservations/${encodeURIComponent(task.targetId)}#tasks`;
-  return `/operator/customers/${encodeURIComponent(task.targetId)}#tasks`;
+  return `/operator/tasks/target/${encodeURIComponent(task.targetType)}/${encodeURIComponent(task.targetId)}#tasks`;
 }
 
 export const metadata = {
@@ -94,6 +93,7 @@ export default async function OperatorTasksPage({ searchParams }: { searchParams
         {query.taskUpdated ? <div className={styles.notice}>{tr(locale, "Task updated.", "Tarea actualizada.")}</div> : null}
         {query.taskError ? <div className={styles.notice}>{tr(locale, "The task change could not be saved. Open the linked item to review it.", "No se pudo guardar el cambio de la tarea. Abre el elemento vinculado para revisarla.")}</div> : null}
         <div className={styles.actions}>
+          <Link className="button button-primary" href="/operator/tasks/new">{tr(locale, "New task", "Nueva tarea")}</Link>
           <Link className="button button-secondary" href="/operator/tasks">{tr(locale, "Open", "Abiertas")}</Link>
           <Link className="button button-secondary" href="/operator/tasks?view=mine">{tr(locale, "Mine", "Mías")}</Link>
           <Link className="button button-secondary" href="/operator/tasks?view=overdue">{tr(locale, "Overdue", "Vencidas")}</Link>
