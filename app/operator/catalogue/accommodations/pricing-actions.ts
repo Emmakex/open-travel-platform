@@ -14,7 +14,7 @@ import {
   listAccommodationInventory,
   saveAccommodationWithInventory
 } from "@/lib/accommodations";
-import { requireOperationsIdentity } from "@/lib/require-operations-identity";
+import { requireStaffCapability } from "@/lib/require-staff-capability";
 
 const isoDatePattern = /^\d{4}-\d{2}-\d{2}$/;
 const directions = new Set<AccommodationAdjustmentDirection>(["surcharge", "discount"]);
@@ -54,7 +54,7 @@ function validAdjustmentValue(mode: AccommodationAdjustmentMode, value: number) 
 }
 
 export async function saveAccommodationPricingAction(formData: FormData) {
-  await requireOperationsIdentity();
+  await requireStaffCapability("catalogue");
 
   const accommodationId = text(formData, "accommodationId");
   const accommodation = accommodationId ? await getAccommodationForAdmin(accommodationId) : null;
