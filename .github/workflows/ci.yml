@@ -55,6 +55,9 @@ jobs:
       - name: Package supplement invariant check
         run: npm run check:package-addons
 
+      - name: Reservation operations invariant check
+        run: npm run check:operations
+
       - name: Type check
         run: npm run typecheck
 
