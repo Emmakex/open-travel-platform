@@ -71,6 +71,7 @@ async function prepareDatabase(database: Db) {
 }
 
 export function supplierFulfilmentComponentsForTripReservation(reservation: Reservation): SupplierFulfilmentComponent[] {
+  const customerCurrency = reservation.currency as SupplierFulfilmentComponent["customerCurrency"];
   return [
     {
       targetType: "trip-reservation",
@@ -78,7 +79,7 @@ export function supplierFulfilmentComponentsForTripReservation(reservation: Rese
       componentType: "trip",
       componentKey: "trip",
       componentLabel: reservation.tripTitle ?? reservation.tripId,
-      customerCurrency: reservation.currency
+      customerCurrency
     },
     ...(reservation.accommodationBookings ?? []).map((stay) => ({
       targetType: "trip-reservation" as const,
@@ -86,7 +87,7 @@ export function supplierFulfilmentComponentsForTripReservation(reservation: Rese
       componentType: "accommodation" as const,
       componentKey: `accommodation:${stay.componentId}`,
       componentLabel: `${stay.accommodationName} · ${stay.roomTypeName} · ${stay.checkInDate} → ${stay.checkOutDate}`,
-      customerCurrency: reservation.currency
+      customerCurrency
     }))
   ];
 }
