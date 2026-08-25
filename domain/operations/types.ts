@@ -1,4 +1,8 @@
-import type { ReservationAccommodationBooking, ReservationStatus } from "@/domain/booking/types";
+import type {
+  ReservationAccommodationBooking,
+  ReservationStatus,
+  ReservationTripAddOnBooking
+} from "@/domain/booking/types";
 import type { UserRole } from "@/domain/identity/types";
 import type { CurrencyCode } from "@/domain/travel/types";
 
@@ -246,7 +250,7 @@ export interface AddSupplierFulfilmentNoteInput {
   actorDisplayName: string;
 }
 
-export type ReservationAmendmentType = "traveller-correction" | "departure-change";
+export type ReservationAmendmentType = "traveller-correction" | "departure-change" | "package-addons-change";
 export type TravellerCorrectionField = "firstName" | "lastName" | "nationality";
 export type DepartureChangeField =
   | "availabilityId"
@@ -257,7 +261,8 @@ export type DepartureChangeField =
   | "inventorySpaces"
   | "accommodationTotal"
   | "accommodationAdditionalTotal";
-export type ReservationAmendmentField = TravellerCorrectionField | DepartureChangeField;
+export type PackageAddOnChangeField = "packageAddOnTotal" | "totalPrice";
+export type ReservationAmendmentField = TravellerCorrectionField | DepartureChangeField | PackageAddOnChangeField;
 
 export interface ReservationAmendmentChange {
   field: ReservationAmendmentField;
@@ -287,6 +292,9 @@ export interface ReservationAmendment {
   /** Exact accommodation snapshots preserve the room allocation before and after a departure change. */
   accommodationBefore?: ReservationAccommodationBooking[];
   accommodationAfter?: ReservationAccommodationBooking[];
+  /** Exact supplement snapshots preserve contracted extras before and after an Operator amendment. */
+  packageAddOnsBefore?: ReservationTripAddOnBooking[];
+  packageAddOnsAfter?: ReservationTripAddOnBooking[];
   occurredAt: string;
 }
 
@@ -304,6 +312,15 @@ export interface TravellerCorrectionInput {
 export interface DepartureChangeInput {
   reservationId: string;
   newAvailabilityId: string;
+  actorIdentityId: string;
+  actorRole: StaffRole;
+  reason: string;
+}
+
+export interface PackageAddOnChangeInput {
+  reservationId: string;
+  selectedBookingAddOnIds: string[];
+  selectedTravellerIdsByAddOn: Record<string, string[]>;
   actorIdentityId: string;
   actorRole: StaffRole;
   reason: string;
