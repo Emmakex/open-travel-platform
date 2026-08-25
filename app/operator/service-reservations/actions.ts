@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { evaluateServiceReservationPolicy } from "@/lib/change-policy";
 import { notifyServiceReservationChanged } from "@/lib/change-notifications";
-import { requireOperationsIdentity } from "@/lib/require-operations-identity";
+import { requireStaffCapability } from "@/lib/require-staff-capability";
 import { updateServiceReservationStatusByStaff } from "@/lib/service-reservations";
 
 function value(formData: FormData, key: string) {
@@ -20,7 +20,7 @@ function errorCode(error: unknown) {
 }
 
 export async function updateServiceReservationStatusAction(formData: FormData) {
-  const identity = await requireOperationsIdentity();
+  const identity = await requireStaffCapability("reservations");
   const reservationId = value(formData, "reservationId");
   const requested = value(formData, "status");
   const status = requested === "confirmed" || requested === "cancelled" ? requested : null;
