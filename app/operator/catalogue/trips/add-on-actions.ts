@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { TripAddOn } from "@/domain/travel/types";
 import { getMongoTripForAdmin, saveMongoTrip } from "@/lib/mongo-travel-admin";
-import { requireOperationsIdentity } from "@/lib/require-operations-identity";
+import { requireStaffCapability } from "@/lib/require-staff-capability";
 import { validateTripAddOns } from "@/lib/trip-package-addons";
 
 function text(formData: FormData, name: string) {
@@ -27,7 +27,7 @@ function normalizeCode(value: string) {
 }
 
 export async function saveTripAddOnsAction(formData: FormData) {
-  await requireOperationsIdentity();
+  await requireStaffCapability("catalogue");
   const tripId = text(formData, "tripId");
   const returnTo = tripId ? `/operator/catalogue/trips/${encodeURIComponent(tripId)}` : "/operator/catalogue";
   if (!tripId) redirect("/operator/catalogue");
