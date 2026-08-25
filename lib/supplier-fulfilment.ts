@@ -173,8 +173,16 @@ export async function listSupplierFulfilmentQueue() {
   const database = client.db(getMongoDatabaseName());
   await prepareDatabase(database);
   const [reservations, serviceReservations, items] = await Promise.all([
-    database.collection<StoredReservation>(travelReservationCollectionName).find({}).sort({ createdAt: -1 }).limit(500).toArray(),
-    database.collection<ServiceReservation>(serviceReservationCollectionName).find({}).sort({ createdAt: -1 }).limit(500).toArray(),
+    database.collection<StoredReservation>(travelReservationCollectionName)
+      .find({ status: { $ne: "cancelled" } })
+      .sort({ createdAt: -1 })
+      .limit(500)
+      .toArray(),
+    database.collection<ServiceReservation>(serviceReservationCollectionName)
+      .find({ status: { $ne: "cancelled" } })
+      .sort({ createdAt: -1 })
+      .limit(500)
+      .toArray(),
     database.collection<StoredSupplierFulfilmentItem>(travelSupplierFulfilmentCollectionName).find({}).limit(2000).toArray()
   ]);
   const itemByKey = new Map(items.map((item) => [`${item.targetType}:${item.targetId}:${item.componentKey}`, item]));
