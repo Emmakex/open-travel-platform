@@ -18,6 +18,7 @@ import { getIdentityRepository } from "@/lib/identity-repository";
 import { operationsConfig } from "@/lib/operations-config";
 import { getOperationsRepository } from "@/lib/operations-repository";
 import { notifyReservationEvent } from "@/lib/reservation-emails";
+import { hasStaffCapability } from "@/lib/staff-capabilities";
 import {
   authenticateStaff,
   changeStaffPassword,
@@ -165,7 +166,7 @@ function isAllowedTargetStatus(value: string): value is ReservationStatus {
 export async function updateReservationStatusAction(formData: FormData) {
   const identity = await getIdentityRepository().getCurrentIdentity();
 
-  if (!hasOperationsAccess(identity)) {
+  if (!hasOperationsAccess(identity) || !hasStaffCapability(identity, "reservations")) {
     redirect("/operator/sign-in?error=forbidden");
   }
 
