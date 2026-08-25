@@ -17,11 +17,11 @@ _Última actualización: 25 de agosto de 2026._
 
 El proyecto ya está muy por encima del MVP inicial de catálogo/reservas.
 
-Las bases completadas incluyen identidad persistente cliente/personal, RBAC, reservas de viajes/servicios, pricing por viajero, servicios independientes, email transaccional, contabilidad de pagos, configuración cifrada de PSP, checkout neutral respecto al proveedor, depósitos/cuotas, datos post-compra cifrados, modificaciones de reserva, alojamiento reutilizable, inventario transaccional de habitaciones, suplementos opcionales del paquete, responsable/notas de reserva, tareas y seguimientos internos y gestión de proveedores/fulfilment.
+Las bases completadas incluyen identidad persistente cliente/personal, RBAC, reservas de viajes/servicios, pricing por viajero, servicios independientes, email transaccional, contabilidad de pagos, configuración cifrada de PSP, checkout neutral respecto al proveedor, depósitos/cuotas, datos post-compra cifrados, modificaciones de reserva, alojamiento reutilizable, inventario transaccional de habitaciones, suplementos opcionales del paquete, responsable/notas de reserva, tareas y seguimientos internos, gestión de proveedores/fulfilment, colas operativas avanzadas y modificación post-reserva de suplementos.
 
 La validación E2E con credenciales Stripe/Redsys continúa pendiente hasta disponer de cuentas de proveedor adecuadas. Los adapters están implementados, pero la capacidad de pago productiva no se considera validada hasta probar TEST/LIVE.
 
-**Las Fases 6B y 6C están funcionalmente completadas. La Fase 7A — Operaciones avanzadas está EN CURSO: 7A-1, 7A-2 y 7A-3 están completadas y el siguiente bloque es 7A-4 — búsqueda, filtros y colas operativas.**
+**Las Fases 6B y 6C están funcionalmente completadas. La Fase 7A — Operaciones avanzadas está EN CURSO: 7A-1 hasta 7A-5 están completadas y el siguiente bloque es 7A-6 — permisos de personal más granulares.**
 
 ---
 
@@ -294,31 +294,40 @@ Objetivo: convertir Operator en herramienta diaria completa para un equipo/agenc
 - costes/referencias solo internos y sin reescribir total cliente ni ledger;
 - límite preparado para futuras integraciones con APIs de proveedor.
 
-### 7A-4 — Búsqueda, filtros y colas — SIGUIENTE
+### 7A-4 — Búsqueda, filtros y colas — COMPLETADO
 
-- búsqueda avanzada de reservas;
-- filtros por fecha/estado/operador/pago/prioridad/tag;
-- incluir atención de tareas/proveedores cuando aporte valor;
-- paginación;
-- vistas guardadas más adelante si aportan valor;
-- acciones masivas seguras con autorización server-side.
+- búsqueda libre por referencia, cliente, viaje, viajeros, responsable y tags;
+- filtros por estado, responsable, prioridad, tag exacto, pago y rango de salida;
+- filtros de saldo pendiente y cuota vencida;
+- señales de atención por tareas, proveedores, pago o falta de responsable;
+- vistas rápidas Mías / Requieren atención / Sin responsable;
+- orden por salida, creación o prioridad;
+- paginación server-side de 20 registros conservando filtros;
+- gate permanente de CI para búsqueda/filtros/orden/paginación.
 
-### 7A-5 — Modificación post-reserva de suplementos
+Las vistas guardadas y acciones masivas quedan como extensiones futuras si aportan valor; no se ha añadido ninguna mutación masiva genérica insegura.
 
-Cerrar el pequeño hueco operativo restante de los extras del paquete:
+### 7A-5 — Modificación post-reserva de suplementos — COMPLETADO
 
-- Operator añade/quita suplementos después de reservar;
-- cambia asignación por viajero;
-- reutiliza historial de modificaciones;
-- reutiliza delta financiero 6B para cobro adicional/revisión de reembolso;
-- notificación cliente cuando corresponda;
-- snapshot anterior conservado en historial.
+- Operator puede añadir/quitar suplementos después de reservar;
+- puede cambiar la asignación de suplementos por viajero;
+- los suplementos ya contratados conservan su precio unitario snapshot;
+- los suplementos nuevos usan el precio actual del catálogo;
+- suplementos históricos desactivados pueden mantenerse/reducirse/quitarse, pero no ampliarse a viajeros nuevos;
+- reconstrucción autoritativa server-side y validación de viajeros;
+- historial de modificación conserva snapshots exactos before/after y delta de precio;
+- el motor financiero 6B muestra saldo adicional o revisión de reembolso sin reescribir el ledger;
+- condiciones de pago antiguas usan el fallback seguro ya existente;
+- se reutiliza la notificación configurada al cliente sin exponer el motivo interno;
+- gate permanente de CI para modificaciones de suplementos.
 
-### 7A-6 — Permisos más granulares
+### 7A-6 — Permisos más granulares — SIGUIENTE
 
-- evolucionar más allá de operator/admin cuando sea necesario;
-- least privilege;
-- separar permisos de finanzas/catálogo/datos cliente donde tenga sentido.
+- evolucionar más allá de operator/admin donde sea necesario;
+- controles de capacidad con least privilege;
+- separar permisos de finanzas, catálogo, datos de cliente/viajeros y workflow operativo;
+- conservar roles simples por defecto permitiendo accesos más limitados por despliegue;
+- auditar de forma consistente las acciones privilegiadas.
 
 ## Fase 7B — Documentos, exportaciones y reporting
 

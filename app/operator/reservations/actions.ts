@@ -7,11 +7,16 @@ import { notifyTripReservationChanged } from "@/lib/change-notifications";
 import { getIdentityRepository } from "@/lib/identity-repository";
 import { operationsConfig } from "@/lib/operations-config";
 import { getOperationsRepository } from "@/lib/operations-repository";
+import { changeReservationPackageAddOns } from "@/lib/package-addon-amendments";
 import { changeReservationDeparture, correctReservationTraveller } from "@/lib/reservation-amendments";
 
 function value(formData: FormData, key: string) {
   const item = formData.get(key);
   return typeof item === "string" ? item.trim() : "";
+}
+
+function values(formData: FormData, key: string) {
+  return formData.getAll(key).filter((item): item is string => typeof item === "string").map((item) => item.trim()).filter(Boolean);
 }
 
 function amendmentErrorCode(error: unknown) {
@@ -29,6 +34,9 @@ function amendmentErrorCode(error: unknown) {
   if (code === "ACCOMMODATION_UNAVAILABLE") return "accommodation-unavailable";
   if (code === "ACCOMMODATION_REPRICE_FAILED") return "accommodation-reprice-failed";
   if (code === "ACCOMMODATION_INVENTORY_RELEASE_FAILED") return "accommodation-release-failed";
+  if (code === "ADDON_CONFIGURATION_INVALID") return "addon-configuration-invalid";
+  if (code === "ADDON_SELECTION_INVALID") return "addon-selection-invalid";
+  if (code === "ADDON_DISABLED_EXPANSION") return "addon-disabled-expansion";
   if (code === "NO_CHANGES") return "no-changes";
   if (code === "UPDATE_CONFLICT") return "update-conflict";
   return "update-failed";
@@ -141,4 +149,59 @@ export async function changeReservationDepartureAction(formData: FormData) {
 
   await notifyIfEnabled(result.reservation);
   redirect(`${detailUrl}?amendmentUpdated=departure#departure-change`);
+}
+
+export async function changeReservationPackageAddOnsAction(formData: FormData) {
+  const identity = await requireStaffIdentity();
+  const reservationId = value(formData, "reservationId");
+  const reason = value(formData, "reason");
+  const detailUrl = reservationId
+    ? `/operator/reservations/${encodeURIComponent(reservationId)}`
+    : "/operator/reservations";
+
+  if (!operationsConfig.writesEnabled || operationsConfig.mode !== "mongodb") {
+    redirect(`${detailUrl}?amendmentError=amendments-unavailable#package-addons`);
+  }
+  if (!reservationId || !reason) {
+    redirect(`${detailUrl}?amendmentError=invalid-request#package-addons`);
+  }
+
+  const selectedBookingAddOnIds = values(formData, "bookingAddOnIds");
+  const selectedTravellerIdsByAddOn: Record<string, string[]> = {};
+  for (const pair of values(formData, "travellerAddOnSelection")) {
+    const separator = pair.indexOf("|");
+    if (separator <= 0 || separator === pair.length - 1) {
+      redirect(`${detailUrl}?amendmentError=addon-selection-invalid#package-addons`);
+    }
+    try {
+      const addOnId = decodeURIComponent(pair.slice(0, separator));
+      const travellerId = decodeURIComponent(pair.slice(separator + 1));
+      if (!addOnId || !travellerId) throw new Error("invalid");
+      selectedTravellerIdsByAddOn[addOnId] = [...(selectedTravellerIdsByAddOn[addOnId] ?? []), travellerId];
+    } catch {
+      redirect(`${detailUrl}?amendmentError=addon-selection-invalid#package-addons`);
+    }
+  }
+
+  let result;
+  try {
+    await requireModificationWindow(reservationId);
+    result = await changeReservationPackageAddOns({
+      reservationId,
+      selectedBookingAddOnIds,
+      selectedTravellerIdsByAddOn,
+      actorIdentityId: identity.id,
+      actorRole: identity.role,
+      reason
+    });
+  } catch (error) {
+    redirect(`${detailUrl}?amendmentError=${amendmentErrorCode(error)}#package-addons`);
+  }
+
+  if (!result.reservation) {
+    redirect(`${detailUrl}?amendmentError=not-found#package-addons`);
+  }
+
+  await notifyIfEnabled(result.reservation);
+  redirect(`${detailUrl}?amendmentUpdated=package-addons#package-addons`);
 }

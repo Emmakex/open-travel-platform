@@ -17,11 +17,11 @@ _Last updated: 25 August 2026._
 
 The project is well beyond the original catalogue/booking MVP.
 
-Completed foundations now include persistent customer/staff identity, RBAC, trip/service reservations, traveller pricing, independent services, transactional email, payment accounting, encrypted PSP configuration, provider-neutral checkout adapters, deposits/installments, encrypted post-purchase traveller data, reservation amendments, reusable accommodation, transactional room inventory, optional package supplements, reservation ownership/notes, internal tasks/follow-ups and supplier fulfilment tracking.
+Completed foundations now include persistent customer/staff identity, RBAC, trip/service reservations, traveller pricing, independent services, transactional email, payment accounting, encrypted PSP configuration, provider-neutral checkout adapters, deposits/installments, encrypted post-purchase traveller data, reservation amendments, reusable accommodation, transactional room inventory, optional package supplements, reservation ownership/notes, internal tasks/follow-ups, supplier fulfilment tracking, advanced operational queues and post-booking package-supplement amendments.
 
 Stripe/Redsys credentialed end-to-end validation remains intentionally pending until suitable provider accounts are available. The adapters are implemented, but production payment capability is not considered validated until TEST/LIVE provider flows are exercised.
 
-**Phases 6B and 6C are functionally complete. Phase 7A — Rich operations workflow is IN PROGRESS: 7A-1, 7A-2 and 7A-3 are complete, and 7A-4 search/filters/operational queues is next.**
+**Phases 6B and 6C are functionally complete. Phase 7A — Rich operations workflow is IN PROGRESS: 7A-1 through 7A-5 are complete, and 7A-6 granular staff permissions is next.**
 
 ---
 
@@ -293,31 +293,40 @@ Goal: make Operator suitable for the day-to-day work of a real travel agency/tea
 - supplier costs/references remain staff-only and never rewrite customer totals or payment ledger;
 - adapter-ready boundary for future supplier APIs.
 
-### 7A-4 — Search, filters and operational queues — NEXT
+### 7A-4 — Search, filters and operational queues — COMPLETE
 
-- stronger reservation search;
-- filter by dates/status/operator/payment/priority/tag;
-- include task/supplier attention where useful;
-- pagination;
-- saved operational views later if useful;
-- safe bulk actions with explicit server-side authorization.
+- free-text search across reservation reference, customer, trip, travellers, owner and tags;
+- filters by reservation status, owner, priority, exact tag, payment state and departure range;
+- outstanding-balance and overdue-installment filters;
+- task/supplier/payment/unassigned attention signals;
+- quick views for Mine / Needs attention / Unassigned;
+- sorting by departure, creation date or priority;
+- 20-row server-rendered pagination preserving filters;
+- permanent search/filter/sorting/pagination CI gate.
 
-### 7A-5 — Package amendment workflow
+Saved operational views and bulk actions remain later extensions if they prove useful; no unsafe generic bulk mutation was added.
 
-Close the small remaining operational gap around package supplements:
+### 7A-5 — Package amendment workflow — COMPLETE
 
-- Operator adds/removes package supplements after booking;
-- per-traveller supplement assignment changes;
-- reuse the existing amendment history;
-- reuse 6B financial delta for additional balance/refund review;
-- customer notification when configured;
-- old supplement snapshot retained in the amendment history.
+- Operator can add/remove package supplements after booking;
+- per-traveller supplement assignments can be changed;
+- existing contracted supplements preserve their stored unit price;
+- new supplements use the current catalogue price;
+- disabled historical supplements can be kept/reduced/removed but cannot be expanded to new travellers;
+- server-authoritative snapshot rebuilding and traveller validation;
+- amendment history stores exact before/after supplement snapshots and price delta;
+- 6B financial settlement automatically exposes additional balance or refund review without rewriting ledger transactions;
+- stale payment terms use the existing safe fallback;
+- configured customer notification is reused without exposing the internal reason;
+- permanent package-supplement amendment invariant CI gate.
 
-### 7A-6 — More granular permissions
+### 7A-6 — More granular permissions — NEXT
 
 - move beyond only operator/admin where required;
 - least-privilege capability checks;
-- finance/catalogue/customer-data permissions separated where practical.
+- separate finance, catalogue, customer/traveller data and operational workflow permissions;
+- preserve simple role defaults while allowing deployments to grant narrower staff access;
+- audit privileged actions consistently.
 
 ## Phase 7B — Documents, exports and reporting
 
