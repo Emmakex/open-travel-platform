@@ -1,36 +1,28 @@
 # Operator and admin workflows
 
-v0.5 adds internal reservation operations as a capability separate from customer booking.
+Open Travel Platform keeps customer booking capabilities separate from staff operations. The production/reference implementation uses MongoDB-backed operations with server-side authorization, audit history and transactional inventory handling.
 
-## Why a separate repository exists
+## Capability boundary
 
-`BookingRepository` is customer-facing: availability, identity-scoped reservation reads, creation and customer cancellation.
+`BookingRepository` is customer-facing: availability, identity-scoped reservation reads, reservation creation and permitted customer cancellation.
 
-`OperationsRepository` is staff-facing: cross-customer demo queue reads, operational summaries, status transitions and audit events.
+`OperationsRepository` is staff-facing: cross-customer reservation reads, operational summaries, status transitions and status audit events.
 
-Keeping these capabilities separate avoids giving customer UI a broad administrative API merely because both features work with reservations.
+Additional internal workflow data introduced for day-to-day agency work is deliberately stored outside the commercial reservation document. Customer routes do not read this data.
 
-## Roles
+## Roles and authorization
 
 The identity domain defines:
 
-- `customer` — may access customer account/booking surfaces;
-- `operator` — may access staff reservation operations;
-- `admin` — may access staff reservation operations and is reserved for broader future administration.
+- `customer` — customer account and booking surfaces;
+- `operator` — reservation/service operations;
+- `admin` — operations plus privileged administration such as staff and payment-provider configuration.
 
-Demo identities are fixed server-side fixtures. The browser does not submit a role that becomes authoritative.
+Every `/operator` page resolves the active staff identity server-side. Every mutation repeats authorization on the server; hiding a button is never considered authorization.
 
-## Server authorization
+## Reservation status workflow
 
-Every `/operator` page resolves the current identity server-side and requires `operator` or `admin` before reading staff data.
-
-Every operational mutation repeats that role check. UI visibility is never treated as authorization.
-
-Customer account, reservation and booking actions separately require the `customer` role.
-
-## Demo status workflow
-
-The fictional operations adapter allows only:
+Supported reservation transitions are:
 
 ```text
 pending   -> confirmed
@@ -39,53 +31,93 @@ confirmed -> cancelled
 cancelled -> terminal
 ```
 
-Requests for unsupported transitions are rejected on the server.
+Cancellation releases trip inventory and any booked accommodation inventory inside the protected MongoDB operation.
 
-## Audit trail
+## Status audit and amendment history
 
-Each successful demo staff transition records:
+Status transitions are stored in `travel_operations_audit` with reservation, actor, role, before/after status and timestamp.
+
+Reservation amendments use a separate immutable history (`travel_reservation_amendments`) for traveller corrections and departure changes. Payment transactions remain historical facts and are never rewritten by reservation operations.
+
+## Internal reservation workflow
+
+The Operator reservation workspace adds internal team context without putting it into the customer-visible reservation document.
+
+### Current operational state
+
+Stored separately in `travel_reservation_operations`:
+
+- assigned staff owner;
+- owner display-name snapshot;
+- priority: `low`, `normal`, `high`, `urgent`;
+- up to 10 normalized tags;
+- last internal update metadata.
+
+The selected owner is validated server-side against an active staff account. An arbitrary browser-submitted staff ID is rejected.
+
+The collection includes indexes for owner, priority and tags so later queue/search work can filter efficiently without redesigning the model.
+
+### Internal notes
+
+Stored separately in `travel_reservation_internal_notes`.
+
+- notes are staff-only;
+- maximum 2,000 characters;
+- plain text only in the standard UI;
+- author ID, display name, role and timestamp are stored;
+- notes are append-only in the current workflow rather than silently overwriting previous team context;
+- customer account and customer reservation actions do not import the internal workflow layer.
+
+### Operational audit events
+
+Changes to owner, priority and tags create records in `travel_reservation_operations_events`.
+
+Each event includes:
 
 - reservation ID;
-- actor identity ID;
-- actor role;
-- previous status;
-- new status;
+- actor ID, display name and role;
+- changed fields with before/after snapshots;
 - timestamp.
 
-The demo audit is stored in an HTTP-only cookie and capped at ten events. It exists to demonstrate the interface and is not a production audit system.
+Internal notes and workflow events are combined into the reservation's operational timeline.
 
-A production audit implementation should be append-only, durable, access-controlled and independent from client-modifiable state.
+## Operator UX
 
-## Demo persistence
+`/operator/reservations` shows the current owner, priority and a tag preview for each reservation.
 
-The current browser-local demo uses HTTP-only cookies for fictional reservations and audit entries so no database is required.
-
-This means the operator demo sees only the fictional reservations created in the same browser session. That limitation is intentional and must not be confused with multi-user backoffice storage.
-
-## Production configuration
+Each reservation exposes two protected views:
 
 ```text
-OPERATIONS_MODE=disabled
-DEMO_OPERATIONS_ENABLED=false
+/operator/reservations/[id]          commercial/financial reservation detail
+/operator/reservations/[id]/workflow internal team workspace
 ```
 
-Production defaults operations to disabled when `OPERATIONS_MODE` is omitted. Enabling the demo adapter in production requires both:
+A shared staff-only navigation links both views.
 
-```text
-OPERATIONS_MODE=demo
-DEMO_OPERATIONS_ENABLED=true
+The workspace is intentionally separate from My account. Internal notes, tags and ownership are not rendered to the customer and are protected by a permanent CI invariant check.
+
+## Quality gate
+
+```bash
+npm run check:operations
 ```
 
-This is intended only for an explicitly fictional public demo.
+The gate validates priority/tag/note rules and verifies that customer account/reservation routes do not import internal reservation workflow storage.
 
-## Replacing the demo adapter
+## Configuration
 
-A production `OperationsRepository` can be backed by:
+Production operations remain opt-in through environment configuration. See `.env.example` and `lib/operations-config.ts` for supported modes.
 
-- a booking engine;
-- CRM/ERP;
-- tour-operator backoffice;
-- internal database/service;
-- supplier aggregation layer.
+MongoDB mode is the persistent production/reference path. Demo mode remains useful for fictional/read-only evaluation but must not be confused with durable multi-user operations.
 
-The adapter must enforce authorization and status-transition rules on a trusted server-side boundary and must not trust customer/browser state as the source of truth.
+## Extension direction
+
+The internal workflow collections are intentionally separate capability boundaries so later phases can add:
+
+- tasks and follow-ups;
+- supplier fulfilment states;
+- saved operational queues and filters;
+- package-supplement amendments;
+- more granular staff permissions.
+
+These additions should preserve the same principles: staff-only data stays out of customer surfaces, mutations are server-authorized, and history is added rather than silently rewritten.
