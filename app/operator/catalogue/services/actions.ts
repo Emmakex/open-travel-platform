@@ -7,7 +7,7 @@ import type { TravelService, TravelServicePricingMode, TravelServiceType } from 
 import type { CurrencyCode, TravellerPricingBand, TravelMedia, TravelMediaFocalPoint, TravelPublicationStatus } from "@/domain/travel/types";
 import { servicePublishingIssues } from "@/lib/catalogue-content-quality";
 import { parseChangePolicyForm } from "@/lib/change-policy";
-import { requireOperationsIdentity } from "@/lib/require-operations-identity";
+import { requireStaffCapability } from "@/lib/require-staff-capability";
 import { getTravelServiceForAdmin, saveTravelService, serviceBasePath } from "@/lib/travel-services";
 import { validateTravellerPricingBands } from "@/lib/traveller-pricing";
 import { parseTravellerRequirementsForm } from "@/lib/traveller-requirements-form";
@@ -109,7 +109,7 @@ function validOptionalHttpsUrl(value: string) {
 }
 
 export async function saveTravelServiceAction(formData: FormData) {
-  await requireOperationsIdentity();
+  await requireStaffCapability("catalogue");
 
   const requestedId = text(formData, "id");
   const id = requestedId || randomUUID();
