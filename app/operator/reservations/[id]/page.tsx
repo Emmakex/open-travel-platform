@@ -5,6 +5,7 @@ import styles from "@/app/operator/operator.module.css";
 import { PaymentTermsEditor } from "@/components/operator/payment-terms-editor";
 import { ReservationAccommodation } from "@/components/operator/reservation-accommodation";
 import { ReservationDepartureChange } from "@/components/operator/reservation-departure-change";
+import { ReservationPackageAddOns } from "@/components/operator/reservation-package-addons";
 import { ReservationPaymentPanel } from "@/components/operator/reservation-payment-panel";
 import { ReservationTravellers } from "@/components/operator/reservation-travellers";
 import type { ReservationAmendmentField } from "@/domain/operations/types";
@@ -42,7 +43,8 @@ function amendmentValue(
     field === "unitPrice" ||
     field === "totalPrice" ||
     field === "accommodationTotal" ||
-    field === "accommodationAdditionalTotal"
+    field === "accommodationAdditionalTotal" ||
+    field === "packageAddOnTotal"
   ) {
     const number = Number(value);
     return Number.isFinite(number) ? formatOperatorMoney(number, currency, locale, 2) : value;
@@ -122,6 +124,9 @@ export default async function OperatorReservationDetailPage({
     "accommodation-unavailable": tr(locale, "The new departure does not have enough room inventory for the accommodation saved with this reservation.", "La nueva salida no tiene suficientes habitaciones para el alojamiento guardado con esta reserva."),
     "accommodation-reprice-failed": tr(locale, "The saved accommodation cannot be repriced or allocated for the selected departure. Review room, occupancy and pricing configuration.", "El alojamiento guardado no puede recalcularse o distribuirse para la salida seleccionada. Revisa habitación, ocupación y tarifas."),
     "accommodation-release-failed": tr(locale, "The previous room inventory could not be released safely, so the departure change was rolled back.", "No se pudo liberar de forma segura el inventario anterior de habitaciones, por lo que se revirtió el cambio de salida."),
+    "addon-configuration-invalid": tr(locale, "The trip supplement configuration is invalid and must be corrected before this reservation can be amended.", "La configuración de suplementos del viaje no es válida y debe corregirse antes de modificar esta reserva."),
+    "addon-selection-invalid": tr(locale, "The selected supplement combination is no longer valid. Review the available extras and travellers.", "La combinación de suplementos seleccionada ya no es válida. Revisa los extras y viajeros disponibles."),
+    "addon-disabled-expansion": tr(locale, "A historical supplement that is no longer offered cannot be assigned to additional travellers.", "Un suplemento histórico que ya no se ofrece no puede asignarse a viajeros adicionales."),
     "not-found": tr(locale, "The reservation could not be found.", "No se ha encontrado la reserva."),
     "no-changes": tr(locale, "No changes were detected. Choose a different value.", "No se detectaron cambios. Selecciona un valor diferente."),
     "update-conflict": tr(locale, "The reservation changed at the same time. Review it and try again.", "La reserva cambió al mismo tiempo. Revísala y vuelve a intentarlo."),
@@ -138,7 +143,8 @@ export default async function OperatorReservationDetailPage({
     totalPrice: tr(locale, "Reservation total", "Total de la reserva"),
     inventorySpaces: tr(locale, "Reserved spaces", "Plazas reservadas"),
     accommodationTotal: tr(locale, "Accommodation value", "Valor del alojamiento"),
-    accommodationAdditionalTotal: tr(locale, "Accommodation added to total", "Alojamiento añadido al total")
+    accommodationAdditionalTotal: tr(locale, "Accommodation added to total", "Alojamiento añadido al total"),
+    packageAddOnTotal: tr(locale, "Package supplements", "Suplementos del paquete")
   };
 
   return (
@@ -172,6 +178,12 @@ export default async function OperatorReservationDetailPage({
                 {tr(locale, "Review the new dates, traveller fares, accommodation and payment summary below.", "Revisa las nuevas fechas, las tarifas de viajeros, el alojamiento y el resumen de pagos a continuación.")}
               </div>
             ) : null}
+            {amendmentUpdated === "package-addons" ? (
+              <div className={styles.notice}>
+                <strong>{tr(locale, "Package supplements updated.", "Suplementos del paquete actualizados.")}</strong><br />
+                {tr(locale, "Review the new reservation total and payment settlement below. Historical payment movements were not changed.", "Revisa el nuevo total de la reserva y la situación de pago. Los movimientos históricos de pago no se han modificado.")}
+              </div>
+            ) : null}
             {amendmentError && amendmentErrors[amendmentError] ? (
               <div className={styles.notice}>{amendmentErrors[amendmentError]}</div>
             ) : null}
@@ -179,7 +191,7 @@ export default async function OperatorReservationDetailPage({
             {!changePolicy.staffModificationAllowed && reservation.status !== "cancelled" ? (
               <div className={styles.notice}>
                 <strong>{tr(locale, "Modification deadline reached", "Plazo de modificación finalizado")}</strong><br />
-                {tr(locale, "Traveller corrections and departure changes are closed under the conditions saved with this reservation.", "Las correcciones de viajeros y los cambios de salida están cerrados según las condiciones guardadas con esta reserva.")}
+                {tr(locale, "Traveller corrections, departure changes and package supplement changes are closed under the conditions saved with this reservation.", "Las correcciones de viajeros, cambios de salida y cambios de suplementos están cerrados según las condiciones guardadas con esta reserva.")}
               </div>
             ) : null}
             {!changePolicy.staffCancellationAllowed && reservation.status !== "cancelled" ? (
@@ -251,14 +263,16 @@ export default async function OperatorReservationDetailPage({
                       <strong>
                         {amendment.type === "departure-change"
                           ? tr(locale, "Departure change", "Cambio de salida")
-                          : tr(locale, "Traveller correction", "Corrección de viajero")}
+                          : amendment.type === "package-addons-change"
+                            ? tr(locale, "Package supplement change", "Cambio de suplementos")
+                            : tr(locale, "Traveller correction", "Corrección de viajero")}
                       </strong><br />
                       {amendment.changes.map((change) => (
                         <span key={`${amendment.id}-${change.field}`}>
                           {amendmentFieldLabels[change.field]}: {amendmentValue(change.field, change.before, amendment.currency ?? reservation.currency, locale)} → {amendmentValue(change.field, change.after, amendment.currency ?? reservation.currency, locale)}<br />
                         </span>
                       ))}
-                      {amendment.type === "departure-change" && amendment.priceDelta !== undefined ? (
+                      {(amendment.type === "departure-change" || amendment.type === "package-addons-change") && amendment.priceDelta !== undefined ? (
                         <><span>
                           <strong>{tr(locale, "Price difference", "Diferencia de precio")}:</strong>{" "}
                           {Math.abs(amendment.priceDelta) < 0.005
@@ -268,6 +282,9 @@ export default async function OperatorReservationDetailPage({
                       ) : null}
                       {amendment.accommodationBefore?.length || amendment.accommodationAfter?.length ? (
                         <><span><strong>{tr(locale, "Accommodation snapshot", "Snapshot de alojamiento")}:</strong> {amendment.accommodationBefore?.reduce((sum, item) => sum + item.rooms.length, 0) ?? 0} → {amendment.accommodationAfter?.reduce((sum, item) => sum + item.rooms.length, 0) ?? 0} {tr(locale, "room(s)", "habitación(es)")}</span><br /></>
+                      ) : null}
+                      {amendment.packageAddOnsBefore || amendment.packageAddOnsAfter ? (
+                        <><span><strong>{tr(locale, "Supplement snapshot", "Snapshot de suplementos")}:</strong> {amendment.packageAddOnsBefore?.length ?? 0} → {amendment.packageAddOnsAfter?.length ?? 0}</span><br /></>
                       ) : null}
                       <span><strong>{tr(locale, "Reason", "Motivo")}:</strong> {amendment.reason}</span><br />
                       <span>{staffRoleLabel(amendment.actorRole, locale)} · {amendment.actorIdentityId}</span><br />
@@ -288,6 +305,13 @@ export default async function OperatorReservationDetailPage({
 
         <ReservationTravellers reservation={reservation} locale={locale} />
         <ReservationAccommodation reservation={reservation} locale={locale} />
+        <ReservationPackageAddOns
+          reservation={reservation}
+          trip={trip ?? null}
+          locale={locale}
+          writesEnabled={operationsConfig.writesEnabled}
+          modificationAllowed={changePolicy.staffModificationAllowed}
+        />
 
         <PaymentTermsEditor
           reservation={reservation}
