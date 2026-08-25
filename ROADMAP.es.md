@@ -17,11 +17,11 @@ _Última actualización: 25 de agosto de 2026._
 
 El proyecto ya está muy por encima del MVP inicial de catálogo/reservas.
 
-Las bases completadas incluyen identidad persistente cliente/personal, RBAC, reservas de viajes/servicios, pricing por viajero, servicios independientes, email transaccional, contabilidad de pagos, configuración cifrada de PSP, checkout neutral respecto al proveedor, depósitos/cuotas, datos post-compra cifrados, modificaciones de reserva, alojamiento reutilizable, inventario transaccional de habitaciones, suplementos opcionales del paquete, responsable/notas de reserva, tareas y seguimientos internos, gestión de proveedores/fulfilment, colas operativas avanzadas, modificación post-reserva de suplementos y permisos granulares del personal.
+Las bases completadas incluyen identidad persistente cliente/personal, RBAC, reservas de viajes/servicios, pricing por viajero, servicios independientes, email transaccional, contabilidad de pagos, configuración cifrada de PSP, checkout neutral respecto al proveedor, depósitos/cuotas, datos post-compra cifrados, modificaciones de reserva, alojamiento reutilizable, inventario transaccional de habitaciones, suplementos opcionales del paquete, responsable/notas de reserva, tareas y seguimientos internos, gestión de proveedores/fulfilment, colas operativas avanzadas, modificación post-reserva de suplementos, permisos granulares del personal y PDFs de confirmación de reserva orientados al cliente.
 
 La validación E2E con credenciales Stripe/Redsys continúa pendiente hasta disponer de cuentas de proveedor adecuadas. Los adapters están implementados, pero la capacidad de pago productiva no se considera validada hasta probar TEST/LIVE.
 
-**Las Fases 6B, 6C y 7A están funcionalmente completadas. La Fase 7B — Documentos, exportaciones y reporting es la siguiente prioridad de desarrollo.**
+**Las Fases 6B, 6C y 7A están funcionalmente completadas. La Fase 7B — Documentos, exportaciones y reporting está EN CURSO: 7B-1 PDFs de confirmación de reserva está completado y el siguiente bloque es 7B-2 listas de viajeros/rooming lists.**
 
 ---
 
@@ -333,20 +333,45 @@ Las vistas guardadas y acciones masivas quedan como extensiones futuras si aport
 - navegación y métricas de Operator muestran únicamente las áreas permitidas;
 - el gate permanente `check:staff-permissions` protege el modelo de capacidades y sus fronteras sensibles en CI.
 
-## Fase 7B — Documentos, exportaciones y reporting — SIGUIENTE
+## Fase 7B — Documentos, exportaciones y reporting — EN CURSO
 
 Objetivo: soportar documentos e informes habituales de operaciones turísticas.
 
-- confirmación PDF/documento;
-- listas de viajeros y rooming lists;
-- vouchers;
-- exportaciones reservas/servicios;
-- exportación segura/auditada de datos de viajeros para uso legítimo;
-- CSV/XLSX de clientes/pagos;
-- conciliación y saldos pendientes;
+### 7B-1 — PDFs de confirmación de reserva — COMPLETADO
+
+- capa PDF server-side reutilizable mediante `pdf-lib`;
+- descarga de confirmación de reserva propia desde Mis reservas;
+- espacio protegido Documentos dentro de Operator;
+- confirmación EN/ES con fechas de viaje, nombres de viajeros, alojamiento y suplementos del paquete;
+- resumen de contacto del cliente y total actual de la reserva;
+- estado de pago/pagado/pendiente incluido para el cliente y solo para personal con permiso de Finanzas;
+- el renderer no incluye notas internas, referencias/costes de proveedor ni datos post-compra protegidos de viajeros;
+- endpoints privados `no-store`;
+- nombres de archivo seguros e invariante permanente que genera PDFs reales en CI.
+
+### 7B-2 — Listas de viajeros y rooming lists — SIGUIENTE
+
+- manifiesto operativo de viajeros por reserva/salida;
+- rooming list derivada de la asignación de alojamiento guardada como snapshot;
+- formatos imprimibles/PDF;
+- acceso alineado con capacidades de Reservas y Datos de viajeros;
+- no exportar campos documentales protegidos salvo autorización explícita y auditada.
+
+### 7B-3 — Vouchers y expediente imprimible
+
+- vouchers de alojamiento/servicios;
+- referencias de proveedor orientadas al cliente solo cuando estén configuradas para poder divulgarse;
+- expediente consolidado imprimible de Operator;
+- fecha/hora y estado/versión del documento.
+
+### 7B-4 — Exportaciones CSV/XLSX y reporting de conciliación
+
+- exportaciones de reservas/servicios;
+- exportaciones de clientes;
+- conciliación de pagos y saldos pendientes;
+- exportación segura y auditada de datos de viajeros para un uso operativo legítimo;
 - ingresos por producto/servicio;
-- dashboards operativos/comerciales;
-- expediente imprimible Operator.
+- dashboards operativos/comerciales.
 
 ## Fase 8 — Integraciones externas
 
