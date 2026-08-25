@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { TravelImage } from "@/components/travel-image";
 import { TravelMediaGallery } from "@/components/travel-media-gallery";
 import { TripAccommodationSection } from "@/components/trip-accommodation-section";
+import { TripAddOnSection } from "@/components/trip-add-on-section";
 import { getLocale } from "@/lib/get-locale";
 import {
   formatCurrency,
@@ -131,6 +132,7 @@ export default async function TripDetailPage({ params }: PageProps) {
             ) : null}
 
             <TripAccommodationSection trip={trip} locale={locale} />
+            <TripAddOnSection trip={trip} locale={locale} />
 
             {localizedTrip.included?.length || localizedTrip.notIncluded?.length ? (
               <section className="trip-section">
