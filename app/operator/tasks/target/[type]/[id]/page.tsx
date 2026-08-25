@@ -13,6 +13,7 @@ import { getOperationsRepository } from "@/lib/operations-repository";
 import { isOperationsTaskTargetType } from "@/lib/operations-task-rules";
 import { loadOperationsTaskView } from "@/lib/operations-task-view";
 import { requireOperationsIdentity } from "@/lib/require-operations-identity";
+import { hasStaffCapability } from "@/lib/staff-capabilities";
 import { getServiceReservationForOperator } from "@/lib/service-reservations";
 import {
   listSupplierFulfilmentEventsForTarget,
@@ -38,6 +39,8 @@ export default async function OperationsTaskTargetPage({
 }) {
   const locale = await getLocale();
   const staff = await requireOperationsIdentity();
+  const canReservations = hasStaffCapability(staff, "reservations");
+  const canSuppliers = hasStaffCapability(staff, "suppliers");
   const [{ type, id }, query] = await Promise.all([params, searchParams]);
   if (!isOperationsTaskTargetType(type)) notFound();
   const targetType = type as OperationsTaskTargetType;
@@ -75,7 +78,7 @@ export default async function OperationsTaskTargetPage({
   let fulfilment: Awaited<ReturnType<typeof listSupplierFulfilmentForTarget>> = [];
   let fulfilmentEvents: Awaited<ReturnType<typeof listSupplierFulfilmentEventsForTarget>> = [];
   let fulfilmentNotes: Awaited<ReturnType<typeof listSupplierFulfilmentNotesForItems>> = [];
-  if (serviceReservation) {
+  if (serviceReservation && canSuppliers) {
     [fulfilment, fulfilmentEvents] = await Promise.all([
       listSupplierFulfilmentForTarget("service-reservation", id),
       listSupplierFulfilmentEventsForTarget("service-reservation", id)
@@ -87,15 +90,15 @@ export default async function OperationsTaskTargetPage({
     <section className={styles.panel}>
       <div className="eyebrow">{tr(locale, "Task workspace", "Espacio de tareas")}</div>
       <h1>{title}</h1>
-      <p className={styles.lead}>{tr(locale, "Internal follow-up for this specific operational context. Nothing in this workspace is exposed to the customer account.", "Seguimiento interno para este contexto operativo concreto. Nada de este espacio se expone en la cuenta del cliente.")}</p>
+      <p className={styles.lead}>{tr(locale, "Internal follow-up for this specific operational context. Related reservation and supplier areas follow their own staff permissions.", "Seguimiento interno para este contexto operativo concreto. Las áreas relacionadas de reservas y proveedores respetan sus propios permisos de personal.")}</p>
       <div className={styles.actions}>
-        <Link className="button button-secondary" href={sourceHref}>{sourceLabel}</Link>
-        {serviceReservation ? <Link className="button button-secondary" href="/operator/fulfilment">{tr(locale, "Supplier queue", "Cola de proveedores")}</Link> : null}
+        {canReservations ? <Link className="button button-secondary" href={sourceHref}>{sourceLabel}</Link> : null}
+        {serviceReservation && canSuppliers ? <Link className="button button-secondary" href="/operator/fulfilment">{tr(locale, "Supplier queue", "Cola de proveedores")}</Link> : null}
         <Link className="button button-secondary" href="/operator/tasks">{tr(locale, "All tasks", "Todas las tareas")}</Link>
       </div>
     </section>
 
-    {serviceReservation ? <SupplierFulfilmentPanel
+    {serviceReservation && canSuppliers ? <SupplierFulfilmentPanel
       components={supplierFulfilmentComponentsForServiceReservation(serviceReservation)}
       items={fulfilment}
       events={fulfilmentEvents}
