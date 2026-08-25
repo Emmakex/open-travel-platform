@@ -20,7 +20,8 @@
     "check:accommodation": "node scripts/accommodation-foundation-check.mjs",
     "check:package-addons": "node scripts/trip-package-addon-check.mjs",
     "check:operations": "node scripts/reservation-operations-check.mjs",
-    "verify": "npm run check:safety && npm run check:ux && npm run check:release && npm run check:amendments && npm run check:accommodation && npm run check:package-addons && npm run check:operations && npm run typecheck && npm run build",
+    "check:tasks": "node scripts/operations-task-check.mjs",
+    "verify": "npm run check:safety && npm run check:ux && npm run check:release && npm run check:amendments && npm run check:accommodation && npm run check:package-addons && npm run check:operations && npm run check:tasks && npm run typecheck && npm run build",
     "check": "npm run verify"
   },
   "dependencies": {
