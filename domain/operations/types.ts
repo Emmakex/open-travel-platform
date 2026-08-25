@@ -20,6 +20,64 @@ export interface OperationsAuditEvent {
   occurredAt: string;
 }
 
+export type ReservationPriority = "low" | "normal" | "high" | "urgent";
+export type ReservationOperationsField = "owner" | "priority" | "tags";
+
+export interface ReservationOperationsState {
+  reservationId: string;
+  ownerStaffId?: string;
+  ownerDisplayName?: string;
+  priority: ReservationPriority;
+  tags: string[];
+  updatedAt?: string;
+  updatedByStaffId?: string;
+  updatedByDisplayName?: string;
+}
+
+export interface ReservationOperationsChange {
+  field: ReservationOperationsField;
+  before: string;
+  after: string;
+}
+
+export interface ReservationOperationsEvent {
+  id: string;
+  reservationId: string;
+  actorIdentityId: string;
+  actorRole: StaffRole;
+  actorDisplayName: string;
+  changes: ReservationOperationsChange[];
+  occurredAt: string;
+}
+
+export interface ReservationInternalNote {
+  id: string;
+  reservationId: string;
+  body: string;
+  authorStaffId: string;
+  authorRole: StaffRole;
+  authorDisplayName: string;
+  createdAt: string;
+}
+
+export interface UpdateReservationOperationsInput {
+  reservationId: string;
+  ownerStaffId?: string;
+  priority: ReservationPriority;
+  tags: string[];
+  actorIdentityId: string;
+  actorRole: StaffRole;
+  actorDisplayName: string;
+}
+
+export interface AddReservationInternalNoteInput {
+  reservationId: string;
+  body: string;
+  actorIdentityId: string;
+  actorRole: StaffRole;
+  actorDisplayName: string;
+}
+
 export type ReservationAmendmentType = "traveller-correction" | "departure-change";
 export type TravellerCorrectionField = "firstName" | "lastName" | "nationality";
 export type DepartureChangeField =
