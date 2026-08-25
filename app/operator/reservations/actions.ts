@@ -6,6 +6,7 @@ import { evaluateTripReservationPolicy } from "@/lib/change-policy";
 import { notifyTripReservationChanged } from "@/lib/change-notifications";
 import { getIdentityRepository } from "@/lib/identity-repository";
 import { operationsConfig } from "@/lib/operations-config";
+import { getOperationsRepository } from "@/lib/operations-repository";
 import { changeReservationPackageAddOns } from "@/lib/package-addon-amendments";
 import { changeReservationDeparture, correctReservationTraveller } from "@/lib/reservation-amendments";
 
