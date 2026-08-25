@@ -218,7 +218,8 @@ export async function changeReservationDeparture(input: DepartureChangeInput) {
       let travellers = current.travellers;
       let inventorySpaces = current.inventorySpaces ?? current.partySize;
       let unitPrice = current.unitPrice;
-      let tripPriceTotal = current.tripPriceTotal ?? Number((current.totalPrice - (current.accommodationAdditionalTotal ?? 0)).toFixed(2));
+      const packageAddOnTotal = current.packageAddOnTotal ?? 0;
+      let tripPriceTotal = current.tripPriceTotal ?? Number((current.totalPrice - (current.accommodationAdditionalTotal ?? 0) - packageAddOnTotal).toFixed(2));
       let accommodationBookings = current.accommodationBookings;
       let accommodationTotal = current.accommodationTotal ?? 0;
       let accommodationAdditionalTotal = current.accommodationAdditionalTotal ?? 0;
@@ -333,7 +334,7 @@ export async function changeReservationDeparture(input: DepartureChangeInput) {
         }
       }
 
-      totalPrice = Number((tripPriceTotal + accommodationAdditionalTotal).toFixed(2));
+      totalPrice = Number((tripPriceTotal + accommodationAdditionalTotal + packageAddOnTotal).toFixed(2));
 
       const previousInventorySpaces = current.inventorySpaces ?? current.partySize;
       if (previousInventorySpaces > 0) {
