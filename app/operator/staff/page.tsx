@@ -12,7 +12,7 @@ import { identityConfig } from "@/lib/identity-config";
 import { accountStatusLabel, authEventLabel, formatOperatorDate, staffRoleLabel, tr } from "@/lib/operator-i18n";
 import { requireAdminIdentity } from "@/lib/require-admin-identity";
 import { legacyOperatorCapabilities } from "@/lib/staff-capabilities";
-import { listExplicitStaffCapabilities } from "@/lib/staff-permissions";
+import { listExplicitStaffCapabilities, listRecentStaffCapabilityAudit } from "@/lib/staff-permissions";
 import { listStaffUsers } from "@/lib/staff-auth";
 
 export const metadata = { title: "Staff | Kairoseth Travel", description: "Admin-only Kairoseth Travel staff account management." };
@@ -25,18 +25,30 @@ export default async function StaffPage({
   const locale = await getLocale();
   const identity = await requireAdminIdentity();
   const { error, created, updated, permissionsUpdated } = await searchParams;
-  const [users, authAudit, explicitCapabilities] = identityConfig.staffAuthEnabled
-    ? await Promise.all([listStaffUsers(), listRecentAuthAudit(30), listExplicitStaffCapabilities()])
-    : [[], [], new Map<string, StaffCapability[]>()];
+  const [users, authAudit, explicitCapabilities, permissionAudit] = identityConfig.staffAuthEnabled
+    ? await Promise.all([
+        listStaffUsers(),
+        listRecentAuthAudit(30),
+        listExplicitStaffCapabilities(),
+        listRecentStaffCapabilityAudit(40)
+      ])
+    : [[], [], new Map<string, StaffCapability[]>(), []];
 
   const capabilityOptions: Array<{ value: StaffCapability; label: string; description: string }> = [
     { value: "reservations", label: tr(locale, "Reservations", "Reservas"), description: tr(locale, "Reservation queues, status and booking amendments.", "Colas, estados y modificaciones de reservas.") },
     { value: "catalogue", label: tr(locale, "Catalogue", "Catálogo"), description: tr(locale, "Trips, services, accommodation, media and availability configuration.", "Viajes, servicios, alojamientos, multimedia y disponibilidad.") },
     { value: "finance", label: tr(locale, "Finance", "Finanzas"), description: tr(locale, "Payments, refunds, balances, payment terms and reminders.", "Pagos, reembolsos, saldos, condiciones y recordatorios de pago.") },
     { value: "traveller-data", label: tr(locale, "Traveller data", "Datos de viajeros"), description: tr(locale, "Post-purchase traveller-data completion and protected traveller information.", "Completitud e información protegida de viajeros post-compra.") },
-    { value: "suppliers", label: tr(locale, "Suppliers", "Proveedores"), description: tr(locale, "Supplier fulfilment, references, internal cost and follow-up.", "Fulfillment, referencias, coste interno y seguimiento de proveedores.") },
+    { value: "suppliers", label: tr(locale, "Suppliers", "Proveedores"), description: tr(locale, "Supplier fulfilment, references, internal cost and follow-up.", "Gestión, referencias, coste interno y seguimiento de proveedores.") },
     { value: "tasks", label: tr(locale, "Tasks", "Tareas"), description: tr(locale, "Internal tasks, assignees, deadlines and follow-ups.", "Tareas internas, responsables, vencimientos y seguimientos.") }
   ];
+  const capabilityLabels = new Map(capabilityOptions.map((item) => [item.value, item.label]));
+  const staffNames = new Map(users.map((user) => [user.id, user.displayName]));
+  const capabilitySummary = (mode: "legacy" | "explicit", capabilities?: StaffCapability[]) => {
+    if (mode === "legacy") return tr(locale, "Legacy Operator default", "Perfil Operator heredado");
+    if (!capabilities?.length) return tr(locale, "No operational capabilities", "Sin capacidades operativas");
+    return capabilities.map((capability) => capabilityLabels.get(capability) ?? capability).join(", ");
+  };
 
   const errors: Record<string, string> = {
     validation: tr(locale, "Check the name, email, role and password. Passwords require at least 12 characters.", "Revisa nombre, email, rol y contraseña. La contraseña requiere al menos 12 caracteres."),
@@ -143,6 +155,23 @@ export default async function StaffPage({
               </div>
             );
           })}</div>
+        </section>
+
+        <section className={styles.panel} style={{ marginTop: "1rem" }}>
+          <div className="eyebrow">{tr(locale, "Permission audit", "Auditoría de permisos")}</div>
+          <h2>{tr(locale, "Recent access changes", "Cambios recientes de acceso")}</h2>
+          <p className={styles.muted}>{tr(
+            locale,
+            "Every explicit Operator capability change records the previous assignment, the new assignment, the administrator and the timestamp.",
+            "Cada cambio explícito de capacidades de Operator registra la asignación anterior, la nueva, el administrador responsable y la fecha y hora."
+          )}</p>
+          {permissionAudit.length ? <div className={styles.auditList}>{permissionAudit.map((event) => (
+            <div className={styles.auditItem} key={event.id}>
+              <strong>{staffNames.get(event.userId) ?? event.userId}</strong> · {formatOperatorDate(event.occurredAt, locale, true)}<br />
+              {capabilitySummary(event.beforeMode, event.beforeCapabilities)} → {capabilitySummary(event.afterMode, event.afterCapabilities)}<br />
+              <span className={styles.muted}>{tr(locale, "Changed by", "Modificado por")}: {staffNames.get(event.actorIdentityId) ?? event.actorIdentityId}</span>
+            </div>
+          ))}</div> : <p className={styles.muted}>{tr(locale, "No permission changes have been recorded yet.", "Todavía no se han registrado cambios de permisos.")}</p>}
         </section>
 
         <section className={styles.panel} style={{ marginTop: "1rem" }}>
