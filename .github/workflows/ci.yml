@@ -73,6 +73,9 @@ jobs:
       - name: Staff permission invariant check
         run: npm run check:staff-permissions
 
+      - name: Booking document invariant check
+        run: npm run check:booking-documents
+
       - name: Type check
         run: npm run typecheck
 
