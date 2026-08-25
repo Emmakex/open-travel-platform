@@ -78,6 +78,69 @@ export interface AddReservationInternalNoteInput {
   actorDisplayName: string;
 }
 
+export type OperationsTaskTargetType = "trip-reservation" | "service-reservation" | "customer";
+export type OperationsTaskStatus = "open" | "in-progress" | "completed" | "cancelled";
+export type OperationsTaskEventField = "status" | "assignee" | "dueDate";
+
+export interface OperationsTask {
+  id: string;
+  targetType: OperationsTaskTargetType;
+  targetId: string;
+  title: string;
+  details?: string;
+  status: OperationsTaskStatus;
+  dueDate?: string;
+  assigneeStaffId?: string;
+  assigneeDisplayName?: string;
+  createdByStaffId: string;
+  createdByDisplayName: string;
+  createdByRole: StaffRole;
+  createdAt: string;
+  updatedAt?: string;
+  completedAt?: string;
+  cancelledAt?: string;
+}
+
+export interface OperationsTaskEventChange {
+  field: OperationsTaskEventField;
+  before: string;
+  after: string;
+}
+
+export interface OperationsTaskEvent {
+  id: string;
+  taskId: string;
+  targetType: OperationsTaskTargetType;
+  targetId: string;
+  actorIdentityId: string;
+  actorRole: StaffRole;
+  actorDisplayName: string;
+  changes: OperationsTaskEventChange[];
+  occurredAt: string;
+}
+
+export interface CreateOperationsTaskInput {
+  targetType: OperationsTaskTargetType;
+  targetId: string;
+  title: string;
+  details?: string;
+  dueDate?: string;
+  assigneeStaffId?: string;
+  actorIdentityId: string;
+  actorRole: StaffRole;
+  actorDisplayName: string;
+}
+
+export interface UpdateOperationsTaskInput {
+  taskId: string;
+  status: OperationsTaskStatus;
+  dueDate?: string;
+  assigneeStaffId?: string;
+  actorIdentityId: string;
+  actorRole: StaffRole;
+  actorDisplayName: string;
+}
+
 export type ReservationAmendmentType = "traveller-correction" | "departure-change";
 export type TravellerCorrectionField = "firstName" | "lastName" | "nationality";
 export type DepartureChangeField =
