@@ -22,7 +22,8 @@
     "check:operations": "node scripts/reservation-operations-check.mjs",
     "check:tasks": "node scripts/operations-task-check.mjs",
     "check:fulfilment": "node scripts/supplier-fulfilment-check.mjs",
-    "verify": "npm run check:safety && npm run check:ux && npm run check:release && npm run check:amendments && npm run check:accommodation && npm run check:package-addons && npm run check:operations && npm run check:tasks && npm run check:fulfilment && npm run typecheck && npm run build",
+    "check:operations-queue": "node scripts/operations-queue-check.mjs",
+    "verify": "npm run check:safety && npm run check:ux && npm run check:release && npm run check:amendments && npm run check:accommodation && npm run check:package-addons && npm run check:operations && npm run check:tasks && npm run check:fulfilment && npm run check:operations-queue && npm run typecheck && npm run build",
     "check": "npm run verify"
   },
   "dependencies": {
