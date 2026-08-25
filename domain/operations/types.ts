@@ -119,6 +119,16 @@ export interface OperationsTaskEvent {
   occurredAt: string;
 }
 
+export interface OperationsTaskComment {
+  id: string;
+  taskId: string;
+  body: string;
+  authorStaffId: string;
+  authorDisplayName: string;
+  authorRole: StaffRole;
+  createdAt: string;
+}
+
 export interface CreateOperationsTaskInput {
   targetType: OperationsTaskTargetType;
   targetId: string;
@@ -136,6 +146,14 @@ export interface UpdateOperationsTaskInput {
   status: OperationsTaskStatus;
   dueDate?: string;
   assigneeStaffId?: string;
+  actorIdentityId: string;
+  actorRole: StaffRole;
+  actorDisplayName: string;
+}
+
+export interface AddOperationsTaskCommentInput {
+  taskId: string;
+  body: string;
   actorIdentityId: string;
   actorRole: StaffRole;
   actorDisplayName: string;
