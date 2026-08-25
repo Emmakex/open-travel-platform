@@ -133,6 +133,63 @@ The dashboard also exposes open, assigned-to-me, overdue and due-today counts. D
 
 `/operator/tasks/new` can create a task against an exact trip reservation, service reservation or customer. Target workspaces preserve the same server-side validation and follow-up history.
 
+## Supplier fulfilment
+
+Supplier fulfilment is a staff-only operational capability for tracking external confirmations without changing the customer-facing reservation or payment ledger.
+
+The server derives valid components from the actual reservation snapshot:
+
+- the main trip package;
+- every booked accommodation stay on a trip reservation;
+- each independent service reservation.
+
+The browser submits only the target and component key. The server resolves that key again before saving, so an operator cannot create a forged accommodation or service component by manipulating a form.
+
+### Current supplier state
+
+Stored in `travel_supplier_fulfilment`, uniquely by target + reservation + component.
+
+Each item can contain:
+
+- status: `not-requested`, `requested`, `confirmed`, `rejected`, `cancelled`;
+- supplier name;
+- supplier confirmation/reference/locator;
+- optional internal supplier cost and currency;
+- confirmation deadline;
+- created/updated staff metadata;
+- status timestamps.
+
+Supplier costs are operational information only. Updating them never changes `Reservation.totalPrice`, service reservation totals or payment transactions.
+
+Cancelled fulfilment items are terminal. Confirmed or rejected items can be explicitly moved back to `requested` when reconfirmation is required.
+
+### Supplier audit and notes
+
+Changes to supplier, status, reference, cost or deadline create append-only events in `travel_supplier_fulfilment_events` with before/after snapshots and actor metadata.
+
+Internal supplier notes are stored separately in `travel_supplier_fulfilment_notes`:
+
+- maximum 2,000 characters;
+- plain text;
+- author and timestamp preserved;
+- append-only in the standard workflow;
+- never rendered in customer account routes.
+
+### Supplier queue
+
+`/operator/fulfilment` shows all active operational components, including components that have not yet been requested. Filters include:
+
+- Active;
+- Not requested;
+- Requested;
+- Confirmed;
+- Attention;
+- Cancelled.
+
+`Attention` includes rejected components and overdue confirmation deadlines. Untouched components from already-cancelled commercial reservations are excluded from the active queue, while previously saved supplier records remain available for historical follow-up.
+
+The Operator dashboard also surfaces supplier confirmations awaiting response and supplier items requiring attention.
+
 ## Operator UX
 
 `/operator/reservations` shows the current owner, priority and a tag preview for each reservation.
@@ -141,7 +198,7 @@ Each trip reservation exposes two protected views:
 
 ```text
 /operator/reservations/[id]           commercial/financial reservation detail
-/operator/reservations/[id]/workflow  internal team workspace + tasks
+/operator/reservations/[id]/workflow  internal workflow + supplier fulfilment + tasks
 ```
 
 Task management routes include:
@@ -152,16 +209,25 @@ Task management routes include:
 /operator/tasks/target/[type]/[id]
 ```
 
-The task and workflow areas are intentionally separate from My account. Internal notes, tags, ownership, tasks and follow-up comments are never rendered to the customer.
+Supplier management includes:
+
+```text
+/operator/fulfilment
+```
+
+Service-reservation task workspaces also expose their supplier fulfilment panel.
+
+These operational areas are intentionally separate from My account. Internal notes, tags, ownership, tasks, supplier references, supplier costs and follow-up comments are never rendered to the customer.
 
 ## Quality gates
 
 ```bash
 npm run check:operations
 npm run check:tasks
+npm run check:fulfilment
 ```
 
-The operations gate validates priority/tag/note rules and customer-route privacy boundaries. The task gate validates task target/status/date/text rules, overdue/today semantics and verifies that customer routes do not import task storage.
+The operations gate validates priority/tag/note rules and customer-route privacy boundaries. The task gate validates task target/status/date/text rules, overdue/today semantics and verifies that customer routes do not import task storage. The supplier fulfilment gate validates statuses, transitions, supplier cost/date normalization, overdue semantics and customer/public privacy boundaries.
 
 ## Configuration
 
@@ -169,12 +235,14 @@ Production operations remain opt-in through environment configuration. See `.env
 
 MongoDB mode is the persistent production/reference path. Demo mode remains useful for fictional/read-only evaluation but must not be confused with durable multi-user operations.
 
+Supplier fulfilment does not add new environment variables. Future supplier API adapters should resolve external credentials through their own server-side capability boundary rather than placing provider payloads into the core reservation domain.
+
 ## Extension direction
 
 The internal workflow collections remain separate capability boundaries so later work can add:
 
-- supplier fulfilment states;
 - stronger operational search and saved queues;
+- a reusable supplier directory / supplier API adapters;
 - package-supplement amendments;
 - more granular staff permissions;
 - optional internal reminders/notifications for tasks.

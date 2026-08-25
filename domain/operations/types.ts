@@ -1,5 +1,6 @@
 import type { ReservationAccommodationBooking, ReservationStatus } from "@/domain/booking/types";
 import type { UserRole } from "@/domain/identity/types";
+import type { CurrencyCode } from "@/domain/travel/types";
 
 export type StaffRole = Extract<UserRole, "operator" | "admin">;
 
@@ -153,6 +154,92 @@ export interface UpdateOperationsTaskInput {
 
 export interface AddOperationsTaskCommentInput {
   taskId: string;
+  body: string;
+  actorIdentityId: string;
+  actorRole: StaffRole;
+  actorDisplayName: string;
+}
+
+export type SupplierFulfilmentTargetType = "trip-reservation" | "service-reservation";
+export type SupplierFulfilmentComponentType = "trip" | "accommodation" | "service";
+export type SupplierFulfilmentStatus = "not-requested" | "requested" | "confirmed" | "rejected" | "cancelled";
+export type SupplierFulfilmentEventField = "supplier" | "status" | "reference" | "cost" | "deadline";
+
+export interface SupplierFulfilmentComponent {
+  targetType: SupplierFulfilmentTargetType;
+  targetId: string;
+  componentType: SupplierFulfilmentComponentType;
+  componentKey: string;
+  componentLabel: string;
+  customerCurrency: CurrencyCode;
+}
+
+export interface SupplierFulfilmentItem extends SupplierFulfilmentComponent {
+  id: string;
+  status: SupplierFulfilmentStatus;
+  supplierName?: string;
+  supplierReference?: string;
+  supplierCost?: number;
+  supplierCurrency?: CurrencyCode;
+  deadline?: string;
+  createdAt: string;
+  createdByStaffId: string;
+  createdByDisplayName: string;
+  updatedAt?: string;
+  updatedByStaffId?: string;
+  updatedByDisplayName?: string;
+  requestedAt?: string;
+  confirmedAt?: string;
+  rejectedAt?: string;
+  cancelledAt?: string;
+}
+
+export interface SupplierFulfilmentEventChange {
+  field: SupplierFulfilmentEventField;
+  before: string;
+  after: string;
+}
+
+export interface SupplierFulfilmentEvent {
+  id: string;
+  fulfilmentId: string;
+  targetType: SupplierFulfilmentTargetType;
+  targetId: string;
+  componentKey: string;
+  actorIdentityId: string;
+  actorRole: StaffRole;
+  actorDisplayName: string;
+  changes: SupplierFulfilmentEventChange[];
+  occurredAt: string;
+}
+
+export interface SupplierFulfilmentNote {
+  id: string;
+  fulfilmentId: string;
+  body: string;
+  authorStaffId: string;
+  authorDisplayName: string;
+  authorRole: StaffRole;
+  createdAt: string;
+}
+
+export interface SaveSupplierFulfilmentInput {
+  targetType: SupplierFulfilmentTargetType;
+  targetId: string;
+  componentKey: string;
+  status: SupplierFulfilmentStatus;
+  supplierName?: string;
+  supplierReference?: string;
+  supplierCost?: number;
+  supplierCurrency?: CurrencyCode;
+  deadline?: string;
+  actorIdentityId: string;
+  actorRole: StaffRole;
+  actorDisplayName: string;
+}
+
+export interface AddSupplierFulfilmentNoteInput {
+  fulfilmentId: string;
   body: string;
   actorIdentityId: string;
   actorRole: StaffRole;

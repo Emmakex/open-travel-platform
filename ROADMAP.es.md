@@ -17,11 +17,11 @@ _Última actualización: 25 de agosto de 2026._
 
 El proyecto ya está muy por encima del MVP inicial de catálogo/reservas.
 
-Las bases completadas incluyen identidad persistente cliente/personal, RBAC, reservas de viajes/servicios, pricing por viajero, servicios independientes, email transaccional, contabilidad de pagos, configuración cifrada de PSP, checkout neutral respecto al proveedor, depósitos/cuotas, datos post-compra cifrados, modificaciones de reserva, alojamiento reutilizable, inventario transaccional de habitaciones y suplementos opcionales del paquete.
+Las bases completadas incluyen identidad persistente cliente/personal, RBAC, reservas de viajes/servicios, pricing por viajero, servicios independientes, email transaccional, contabilidad de pagos, configuración cifrada de PSP, checkout neutral respecto al proveedor, depósitos/cuotas, datos post-compra cifrados, modificaciones de reserva, alojamiento reutilizable, inventario transaccional de habitaciones, suplementos opcionales del paquete, responsable/notas de reserva, tareas y seguimientos internos y gestión de proveedores/fulfilment.
 
 La validación E2E con credenciales Stripe/Redsys continúa pendiente hasta disponer de cuentas de proveedor adecuadas. Los adapters están implementados, pero la capacidad de pago productiva no se considera validada hasta probar TEST/LIVE.
 
-**Las Fases 6B y 6C están funcionalmente completadas. El siguiente bloque principal es la Fase 7A — Operaciones avanzadas.**
+**Las Fases 6B y 6C están funcionalmente completadas. La Fase 7A — Operaciones avanzadas está EN CURSO: 7A-1, 7A-2 y 7A-3 están completadas y el siguiente bloque es 7A-4 — búsqueda, filtros y colas operativas.**
 
 ---
 
@@ -255,43 +255,50 @@ Las actividades/transporte con fecha o cupo siguen siendo reservas independiente
 
 # Próximas prioridades
 
-## Fase 7A — Operaciones avanzadas — SIGUIENTE
+## Fase 7A — Operaciones avanzadas — EN CURSO
 
 Objetivo: convertir Operator en herramienta diaria completa para un equipo/agencia, no solo en backoffice de catálogo y estados.
 
-Orden recomendado:
+### 7A-1 — Responsable, notas y prioridad — COMPLETADO
 
-### 7A-1 — Responsable, notas y prioridad
+- asignación de responsable/operador con validación server-side de personal activo;
+- notas internas separadas y nunca visibles al cliente;
+- prioridad baja / normal / alta / urgente;
+- tags normalizados;
+- timeline operativo;
+- auditoría de cambios de responsable/prioridad/tags;
+- invariante permanente de privacidad en rutas de cliente.
 
-- asignar owner/operador a reserva;
-- notas internas nunca visibles para cliente;
-- prioridad;
-- tags;
-- timeline operativo enriquecido;
-- auditoría de cambios de ownership/prioridad.
+### 7A-2 — Tareas y seguimientos — COMPLETADO
 
-### 7A-2 — Tareas y seguimientos
+- tareas asociadas a reserva de viaje / reserva de servicio / cliente;
+- responsable y vencimiento;
+- estados abierta / en curso / completada / cancelada;
+- visibilidad vencidas/hoy/próximas;
+- dashboard global y vista Mis tareas;
+- comentarios de seguimiento append-only y auditoría de cambios;
+- validación server-side de objetivo y responsable;
+- gate permanente de CI para tareas y privacidad.
 
-- tareas asociadas a reserva/cliente/servicio;
-- responsable;
-- vencimiento;
-- estado;
-- visibilidad de vencidas;
-- dashboard de seguimiento;
-- recordatorios internos/email opcionales más adelante.
-
-### 7A-3 — Estado proveedor/fulfilment
+### 7A-3 — Estado proveedor/fulfilment — COMPLETADO
 
 - confirmación de proveedor por componente de viaje/servicio/alojamiento;
-- referencia de proveedor;
-- requested / confirmed / rejected / cancelled;
-- notas internas de fulfilment;
-- preparado para integraciones futuras vía adapter.
+- claves de componentes reales resueltas server-side desde snapshots de reserva;
+- estados no solicitado / solicitado / confirmado / rechazado / cancelado;
+- referencia/localizador de proveedor;
+- coste interno opcional + moneda;
+- fecha límite de confirmación y visibilidad de vencidos;
+- notas de proveedor append-only y eventos de auditoría before/after;
+- cola global de proveedores;
+- métricas de atención de proveedores en dashboard;
+- costes/referencias solo internos y sin reescribir total cliente ni ledger;
+- límite preparado para futuras integraciones con APIs de proveedor.
 
-### 7A-4 — Búsqueda, filtros y colas
+### 7A-4 — Búsqueda, filtros y colas — SIGUIENTE
 
 - búsqueda avanzada de reservas;
 - filtros por fecha/estado/operador/pago/prioridad/tag;
+- incluir atención de tareas/proveedores cuando aporte valor;
 - paginación;
 - vistas guardadas más adelante si aportan valor;
 - acciones masivas seguras con autorización server-side.
