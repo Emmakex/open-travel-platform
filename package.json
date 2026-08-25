@@ -25,7 +25,8 @@
     "check:fulfilment": "node scripts/supplier-fulfilment-check.mjs",
     "check:operations-queue": "node scripts/operations-queue-check.mjs",
     "check:staff-permissions": "node scripts/staff-capability-check.mjs",
-    "verify": "npm run check:safety && npm run check:ux && npm run check:release && npm run check:amendments && npm run check:accommodation && npm run check:package-addons && npm run check:package-addon-amendments && npm run check:operations && npm run check:tasks && npm run check:fulfilment && npm run check:operations-queue && npm run check:staff-permissions && npm run typecheck && npm run build",
+    "check:booking-documents": "node scripts/booking-document-check.mjs",
+    "verify": "npm run check:safety && npm run check:ux && npm run check:release && npm run check:amendments && npm run check:accommodation && npm run check:package-addons && npm run check:package-addon-amendments && npm run check:operations && npm run check:tasks && npm run check:fulfilment && npm run check:operations-queue && npm run check:staff-permissions && npm run check:booking-documents && npm run typecheck && npm run build",
     "check": "npm run verify"
   },
   "dependencies": {
