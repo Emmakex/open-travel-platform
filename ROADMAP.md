@@ -17,11 +17,11 @@ _Last updated: 25 August 2026._
 
 The project is well beyond the original catalogue/booking MVP.
 
-Completed foundations now include persistent customer/staff identity, RBAC, trip/service reservations, traveller pricing, independent services, transactional email, payment accounting, encrypted PSP configuration, provider-neutral checkout adapters, deposits/installments, encrypted post-purchase traveller data, reservation amendments, reusable accommodation, transactional room inventory and optional package supplements.
+Completed foundations now include persistent customer/staff identity, RBAC, trip/service reservations, traveller pricing, independent services, transactional email, payment accounting, encrypted PSP configuration, provider-neutral checkout adapters, deposits/installments, encrypted post-purchase traveller data, reservation amendments, reusable accommodation, transactional room inventory, optional package supplements, reservation ownership/notes, internal tasks/follow-ups and supplier fulfilment tracking.
 
 Stripe/Redsys credentialed end-to-end validation remains intentionally pending until suitable provider accounts are available. The adapters are implemented, but production payment capability is not considered validated until TEST/LIVE provider flows are exercised.
 
-**Phases 6B and 6C are now functionally complete. The next major delivery block is Phase 7A — Rich operations workflow.**
+**Phases 6B and 6C are functionally complete. Phase 7A — Rich operations workflow is IN PROGRESS: 7A-1, 7A-2 and 7A-3 are complete, and 7A-4 search/filters/operational queues is next.**
 
 ---
 
@@ -254,43 +254,50 @@ Capacity/date-based activities and transport remain independent service reservat
 
 # Next priorities
 
-## Phase 7A — Rich operations workflow — NEXT
+## Phase 7A — Rich operations workflow — IN PROGRESS
 
 Goal: make Operator suitable for the day-to-day work of a real travel agency/team, not only catalogue and reservation-state management.
 
-Recommended delivery order inside 7A:
+### 7A-1 — Reservation ownership, notes and priorities — COMPLETE
 
-### 7A-1 — Reservation ownership, notes and priorities
+- reservation owner/operator assignment with active-staff server validation;
+- internal notes stored separately and never visible to customers;
+- low / normal / high / urgent priority;
+- normalized tags;
+- operational timeline;
+- audited ownership/priority/tag changes;
+- permanent customer-route privacy invariant.
 
-- assign a reservation owner/operator;
-- internal notes never visible to customers;
-- priority levels;
-- tags;
-- richer operational timeline;
-- audit every ownership/priority change.
+### 7A-2 — Tasks and follow-ups — COMPLETE
 
-### 7A-2 — Tasks and follow-ups
+- tasks attached to trip reservation / service reservation / customer;
+- assignee and due date;
+- open / in progress / completed / cancelled status;
+- overdue/today/upcoming visibility;
+- global task dashboard and My tasks view;
+- append-only follow-up comments and task-change audit;
+- server-side target/assignee validation;
+- permanent task/privacy CI gate.
 
-- tasks attached to reservation/customer/service;
-- assignee;
-- due date;
-- status;
-- overdue visibility;
-- follow-up dashboard;
-- optional reminder email/internal notification later.
-
-### 7A-3 — Supplier/fulfilment tracking
+### 7A-3 — Supplier/fulfilment tracking — COMPLETE
 
 - supplier confirmation state per trip/service/accommodation component;
-- supplier reference;
-- requested / confirmed / rejected / cancelled states;
-- internal fulfilment notes;
-- supplier-facing integration kept adapter-ready.
+- real component keys resolved server-side from reservation snapshots;
+- not requested / requested / confirmed / rejected / cancelled states;
+- supplier reference/localizer;
+- optional internal supplier cost + currency;
+- confirmation deadline and overdue visibility;
+- append-only supplier notes and before/after audit events;
+- global supplier fulfilment queue;
+- dashboard supplier-attention metrics;
+- supplier costs/references remain staff-only and never rewrite customer totals or payment ledger;
+- adapter-ready boundary for future supplier APIs.
 
-### 7A-4 — Search, filters and operational queues
+### 7A-4 — Search, filters and operational queues — NEXT
 
 - stronger reservation search;
 - filter by dates/status/operator/payment/priority/tag;
+- include task/supplier attention where useful;
 - pagination;
 - saved operational views later if useful;
 - safe bulk actions with explicit server-side authorization.
