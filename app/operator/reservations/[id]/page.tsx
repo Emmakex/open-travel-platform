@@ -24,8 +24,9 @@ import { operationsConfig } from "@/lib/operations-config";
 import { getOperationsRepository } from "@/lib/operations-repository";
 import { paymentStatusLabel } from "@/lib/payment-i18n";
 import { getPaymentRepository } from "@/lib/payment-repository";
-import { requireOperationsIdentity } from "@/lib/require-operations-identity";
+import { requireStaffCapability } from "@/lib/require-staff-capability";
 import { listReservationAmendments } from "@/lib/reservation-amendments";
+import { hasStaffCapability } from "@/lib/staff-capabilities";
 import { getTravelRepository } from "@/lib/travel-repository";
 
 export const metadata = {
@@ -73,7 +74,9 @@ export default async function OperatorReservationDetailPage({
   }>;
 }) {
   const locale = await getLocale();
-  const staff = await requireOperationsIdentity();
+  const staff = await requireStaffCapability("reservations");
+  const canFinance = hasStaffCapability(staff, "finance");
+  const canViewTravellerData = hasStaffCapability(staff, "traveller-data");
   const { id } = await params;
   const {
     updated,
@@ -97,10 +100,12 @@ export default async function OperatorReservationDetailPage({
   if (!reservation) notFound();
 
   const paymentRepository = getPaymentRepository();
-  const [paymentSummary, paymentTransactions] = await Promise.all([
-    paymentRepository.getSummary(reservation),
-    paymentRepository.listTransactions(reservation.id)
-  ]);
+  const [paymentSummary, paymentTransactions] = canFinance
+    ? await Promise.all([
+        paymentRepository.getSummary(reservation),
+        paymentRepository.listTransactions(reservation.id)
+      ])
+    : [null, []];
   const trip = trips.find((item) => item.id === reservation.tripId);
   const localizedTrip = trip ? localizeTrip(trip, locale) : null;
   const reservationAudit = audit.filter((event) => event.reservationId === reservation.id);
@@ -175,13 +180,15 @@ export default async function OperatorReservationDetailPage({
             {amendmentUpdated === "departure" ? (
               <div className={styles.notice}>
                 <strong>{tr(locale, "Departure changed successfully.", "Salida cambiada correctamente.")}</strong><br />
-                {tr(locale, "Review the new dates, traveller fares, accommodation and payment summary below.", "Revisa las nuevas fechas, las tarifas de viajeros, el alojamiento y el resumen de pagos a continuación.")}
+                {tr(locale, "Review the new dates, traveller fares and accommodation below.", "Revisa las nuevas fechas, las tarifas de viajeros y el alojamiento a continuación.")}
               </div>
             ) : null}
             {amendmentUpdated === "package-addons" ? (
               <div className={styles.notice}>
                 <strong>{tr(locale, "Package supplements updated.", "Suplementos del paquete actualizados.")}</strong><br />
-                {tr(locale, "Review the new reservation total and payment settlement below. Historical payment movements were not changed.", "Revisa el nuevo total de la reserva y la situación de pago. Los movimientos históricos de pago no se han modificado.")}
+                {canFinance
+                  ? tr(locale, "Review the new reservation total and payment settlement below. Historical payment movements were not changed.", "Revisa el nuevo total de la reserva y la situación de pago. Los movimientos históricos de pago no se han modificado.")
+                  : tr(locale, "The reservation total was recalculated. Finance details are available only to staff with Finance permission.", "El total de la reserva se ha recalculado. Los datos financieros solo están disponibles para personal con permiso de Finanzas.")}
               </div>
             ) : null}
             {amendmentError && amendmentErrors[amendmentError] ? (
@@ -202,7 +209,7 @@ export default async function OperatorReservationDetailPage({
 
             <dl className={styles.definitionList}>
               <div><dt>{tr(locale, "Status", "Estado")}</dt><dd><span className={styles.badge}>{reservationStatusLabel(reservation.status, locale)}</span></dd></div>
-              <div><dt>{tr(locale, "Payment", "Pago")}</dt><dd><span className={styles.badge}>{paymentStatusLabel(paymentSummary.status, locale)}</span></dd></div>
+              {paymentSummary ? <div><dt>{tr(locale, "Payment", "Pago")}</dt><dd><span className={styles.badge}>{paymentStatusLabel(paymentSummary.status, locale)}</span></dd></div> : null}
               <div><dt>{tr(locale, "Customer ID", "ID de cliente")}</dt><dd>{reservation.identityId}</dd></div>
               <div><dt>{tr(locale, "Travellers", "Viajeros")}</dt><dd>{reservation.partySize}</dd></div>
               <div><dt>{tr(locale, "Reserved spaces", "Plazas reservadas")}</dt><dd>{reservation.inventorySpaces ?? reservation.partySize}</dd></div>
@@ -303,7 +310,7 @@ export default async function OperatorReservationDetailPage({
           <ReservationDepartureChange reservation={reservation} trip={trip ?? null} locale={locale} />
         ) : null}
 
-        <ReservationTravellers reservation={reservation} locale={locale} />
+        <ReservationTravellers reservation={reservation} locale={locale} canViewTravellerData={canViewTravellerData} />
         <ReservationAccommodation reservation={reservation} locale={locale} />
         <ReservationPackageAddOns
           reservation={reservation}
@@ -313,23 +320,37 @@ export default async function OperatorReservationDetailPage({
           modificationAllowed={changePolicy.staffModificationAllowed}
         />
 
-        <PaymentTermsEditor
-          reservation={reservation}
-          summary={paymentSummary}
-          locale={locale}
-          termsUpdated={termsUpdated}
-          termsError={termsError}
-          termsReminder={termsReminder}
-        />
+        {paymentSummary ? (
+          <>
+            <PaymentTermsEditor
+              reservation={reservation}
+              summary={paymentSummary}
+              locale={locale}
+              termsUpdated={termsUpdated}
+              termsError={termsError}
+              termsReminder={termsReminder}
+            />
 
-        <ReservationPaymentPanel
-          reservation={reservation}
-          summary={paymentSummary}
-          transactions={paymentTransactions}
-          paymentUpdated={paymentUpdated}
-          paymentError={paymentError}
-          locale={locale}
-        />
+            <ReservationPaymentPanel
+              reservation={reservation}
+              summary={paymentSummary}
+              transactions={paymentTransactions}
+              paymentUpdated={paymentUpdated}
+              paymentError={paymentError}
+              locale={locale}
+            />
+          </>
+        ) : (
+          <section className={styles.panel}>
+            <div className="eyebrow">{tr(locale, "Finance", "Finanzas")}</div>
+            <h2>{tr(locale, "Restricted financial details", "Datos financieros restringidos")}</h2>
+            <p className={styles.muted}>{tr(
+              locale,
+              "Payments, refunds, balances and payment terms require the Finance permission.",
+              "Pagos, reembolsos, saldos y condiciones de pago requieren el permiso de Finanzas."
+            )}</p>
+          </section>
+        )}
       </div>
     </main>
   );

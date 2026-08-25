@@ -12,6 +12,7 @@ import {
   KTRAVEL_STAFF_SESSION_COOKIE,
   identityConfig
 } from "@/lib/identity-config";
+import { getExplicitStaffCapabilities } from "@/lib/staff-permissions";
 import { resolveStaffSession, type SafeStaffUser } from "@/lib/staff-auth";
 import type { IdentityRepository } from "@/repositories/identity-repository";
 
@@ -24,12 +25,16 @@ function toIdentity(user: StoredCustomerUser): UserIdentity {
   };
 }
 
-function toStaffIdentity(user: SafeStaffUser): UserIdentity {
+async function toStaffIdentity(user: SafeStaffUser): Promise<UserIdentity> {
+  const capabilities = user.role === "operator"
+    ? await getExplicitStaffCapabilities(user.id)
+    : undefined;
   return {
     id: user.id,
     email: user.email,
     displayName: user.displayName,
-    role: user.role
+    role: user.role,
+    ...(capabilities !== undefined ? { capabilities } : {})
   };
 }
 

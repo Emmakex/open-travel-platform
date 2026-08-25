@@ -29,6 +29,7 @@ import { getPaymentRepository } from "@/lib/payment-repository";
 import { deriveReservationPaymentSchedule } from "@/lib/payment-terms";
 import { listReservationOperationsStates } from "@/lib/reservation-operations";
 import { requireOperationsIdentity } from "@/lib/require-operations-identity";
+import { hasStaffCapability } from "@/lib/staff-capabilities";
 import { listStaffUsers } from "@/lib/staff-auth";
 import { isSupplierFulfilmentOverdue } from "@/lib/supplier-fulfilment-rules";
 import { listSupplierFulfilmentQueue } from "@/lib/supplier-fulfilment";
@@ -91,22 +92,24 @@ type QueueSearchParams = {
 export default async function OperatorReservationsPage({ searchParams }: { searchParams: Promise<QueueSearchParams> }) {
   const locale = await getLocale();
   const identity = await requireOperationsIdentity();
+  const canFinance = hasStaffCapability(identity, "finance");
+  const canTasks = hasStaffCapability(identity, "tasks");
+  const canSuppliers = hasStaffCapability(identity, "suppliers");
   const query = await searchParams;
   const operations = getOperationsRepository();
-  const payments = getPaymentRepository();
 
   const [reservations, trips, tasks, fulfilmentQueue, persistentStaff, customers] = await Promise.all([
     operations.listReservations(),
     getTravelRepository().listTrips(),
-    listOperationsTasks(),
-    listSupplierFulfilmentQueue(),
+    canTasks ? listOperationsTasks() : Promise.resolve([]),
+    canSuppliers ? listSupplierFulfilmentQueue() : Promise.resolve([]),
     identityConfig.staffAuthEnabled ? listStaffUsers() : Promise.resolve([]),
     identityConfig.customerAuthEnabled ? listCustomersForOperations() : Promise.resolve([])
   ]);
-  const [operationsStates, paymentSummaries] = await Promise.all([
-    listReservationOperationsStates(reservations.map((reservation) => reservation.id)),
-    payments.getSummaries(reservations)
-  ]);
+  const operationsStates = await listReservationOperationsStates(reservations.map((reservation) => reservation.id));
+  const paymentSummaries = canFinance
+    ? await getPaymentRepository().getSummaries(reservations)
+    : null;
 
   const tripById = new Map(trips.map((trip) => [trip.id, trip]));
   const customerById = new Map(customers.map((customer) => [customer.id, customer]));
@@ -130,20 +133,32 @@ export default async function OperatorReservationsPage({ searchParams }: { searc
 
   const queueRows: OperationsQueueRow[] = reservations.map((reservation) => {
     const customer = customerById.get(reservation.identityId);
-    const schedule = deriveReservationPaymentSchedule(reservation, paymentSummaries[reservation.id]);
-    const paymentOverdue = reservation.status !== "cancelled" && schedule.installments.some((item) => item.state === "overdue");
+    const payment = paymentSummaries?.[reservation.id];
+    const schedule = payment ? deriveReservationPaymentSchedule(reservation, payment) : null;
+    const paymentOverdue = Boolean(
+      schedule && reservation.status !== "cancelled" && schedule.installments.some((item) => item.state === "overdue")
+    );
     return {
       reservation,
       tripTitle: tripById.get(reservation.tripId)?.title ?? reservation.tripTitle ?? reservation.tripId,
       customerName: customer?.displayName,
       customerEmail: customer?.email,
       workflow: workflowState(operationsStates, reservation.id),
-      payment: paymentSummaries[reservation.id],
+      payment,
       paymentOverdue,
       overdueTaskCount: overdueTasksByReservation.get(reservation.id) ?? 0,
       supplierAttentionCount: supplierAttentionByReservation.get(reservation.id) ?? 0
     };
   });
+
+  let attention = query.attention && attentionFilters.has(query.attention as OperationsQueueAttention)
+    ? query.attention as OperationsQueueAttention
+    : "all" as const;
+  if (
+    (attention === "overdue-tasks" && !canTasks) ||
+    (attention === "supplier" && !canSuppliers) ||
+    (attention === "payment" && !canFinance)
+  ) attention = "all";
 
   const filters = {
     q: normalizeQueueSearch(query.q),
@@ -151,10 +166,10 @@ export default async function OperatorReservationsPage({ searchParams }: { searc
     owner: query.owner?.trim() || "all",
     priority: query.priority && priorities.has(query.priority as ReservationPriority) ? query.priority as ReservationPriority : "all" as const,
     tag: normalizeQueueTag(query.tag),
-    payment: query.payment && paymentFilters.has(query.payment as OperationsQueuePayment) ? query.payment as OperationsQueuePayment : "all" as const,
+    payment: canFinance && query.payment && paymentFilters.has(query.payment as OperationsQueuePayment) ? query.payment as OperationsQueuePayment : "all" as const,
     departureFrom: normalizeQueueDate(query.from),
     departureTo: normalizeQueueDate(query.to),
-    attention: query.attention && attentionFilters.has(query.attention as OperationsQueueAttention) ? query.attention as OperationsQueueAttention : "all" as const,
+    attention,
     sort: query.sort && sortOptions.has(query.sort as OperationsQueueSort) ? query.sort as OperationsQueueSort : "departure-asc" as const
   };
 
@@ -167,15 +182,15 @@ export default async function OperatorReservationsPage({ searchParams }: { searc
     : [{ id: identity.id, displayName: identity.displayName, role: identity.role, status: "active" as const }];
 
   const attentionCount = filtered.filter((row) => row.overdueTaskCount > 0 || row.supplierAttentionCount > 0 || row.paymentOverdue || !row.workflow.ownerStaffId).length;
-  const overdueTaskCount = filtered.reduce((sum, row) => sum + row.overdueTaskCount, 0);
-  const overduePaymentCount = filtered.filter((row) => row.paymentOverdue).length;
+  const overdueTaskCount = canTasks ? filtered.reduce((sum, row) => sum + row.overdueTaskCount, 0) : 0;
+  const overduePaymentCount = canFinance ? filtered.filter((row) => row.paymentOverdue).length : 0;
   const queryForLinks: Record<string, string | undefined> = {
     q: filters.q,
     status: filters.status,
     owner: filters.owner,
     priority: filters.priority,
     tag: filters.tag,
-    payment: filters.payment,
+    payment: canFinance ? filters.payment : undefined,
     from: filters.departureFrom,
     to: filters.departureTo,
     attention: filters.attention,
@@ -191,8 +206,8 @@ export default async function OperatorReservationsPage({ searchParams }: { searc
           <h1>{tr(locale, "Reservations", "Reservas")}</h1>
           <p className={styles.lead}>{tr(
             locale,
-            "Search and prioritize reservations using customer, owner, payment, departure and operational follow-up signals.",
-            "Busca y prioriza reservas usando cliente, responsable, pagos, salida y señales de seguimiento operativo."
+            "Search and prioritize reservations using the operational signals this account is allowed to access.",
+            "Busca y prioriza reservas utilizando las señales operativas a las que esta cuenta tiene permiso de acceso."
           )}</p>
 
           {query.error === "not-found" ? <div className={styles.notice}>{tr(locale, "Reservation not found.", "Reserva no encontrada.")}</div> : null}
@@ -200,8 +215,8 @@ export default async function OperatorReservationsPage({ searchParams }: { searc
           <div className={styles.metrics}>
             <div className={styles.metric}><strong>{filtered.length}</strong><span>{tr(locale, "Matching reservations", "Reservas encontradas")}</span></div>
             <div className={styles.metric}><strong>{attentionCount}</strong><span>{tr(locale, "Need attention", "Requieren atención")}</span></div>
-            <div className={styles.metric}><strong>{overdueTaskCount}</strong><span>{tr(locale, "Overdue tasks", "Tareas vencidas")}</span></div>
-            <div className={styles.metric}><strong>{overduePaymentCount}</strong><span>{tr(locale, "Payment overdue", "Pago vencido")}</span></div>
+            {canTasks ? <div className={styles.metric}><strong>{overdueTaskCount}</strong><span>{tr(locale, "Overdue tasks", "Tareas vencidas")}</span></div> : null}
+            {canFinance ? <div className={styles.metric}><strong>{overduePaymentCount}</strong><span>{tr(locale, "Payment overdue", "Pago vencido")}</span></div> : null}
           </div>
 
           <div className={styles.actions}>
@@ -244,7 +259,7 @@ export default async function OperatorReservationsPage({ searchParams }: { searc
                   <option value="low">{tr(locale, "Low", "Baja")}</option>
                 </select>
               </label>
-              <label className={styles.field}>
+              {canFinance ? <label className={styles.field}>
                 <span>{tr(locale, "Payment", "Pago")}</span>
                 <select name="payment" defaultValue={filters.payment}>
                   <option value="all">{tr(locale, "All", "Todos")}</option>
@@ -257,15 +272,15 @@ export default async function OperatorReservationsPage({ searchParams }: { searc
                   <option value="partially_refunded">{tr(locale, "Partially refunded", "Parcialmente reembolsado")}</option>
                   <option value="refunded">{tr(locale, "Refunded", "Reembolsado")}</option>
                 </select>
-              </label>
+              </label> : null}
               <label className={styles.field}>
                 <span>{tr(locale, "Attention", "Atención")}</span>
                 <select name="attention" defaultValue={filters.attention}>
                   <option value="all">{tr(locale, "All", "Todas")}</option>
-                  <option value="any">{tr(locale, "Any attention signal", "Cualquier señal")}</option>
-                  <option value="overdue-tasks">{tr(locale, "Overdue tasks", "Tareas vencidas")}</option>
-                  <option value="supplier">{tr(locale, "Supplier pending", "Proveedor pendiente")}</option>
-                  <option value="payment">{tr(locale, "Payment overdue", "Pago vencido")}</option>
+                  <option value="any">{tr(locale, "Any permitted attention signal", "Cualquier señal permitida")}</option>
+                  {canTasks ? <option value="overdue-tasks">{tr(locale, "Overdue tasks", "Tareas vencidas")}</option> : null}
+                  {canSuppliers ? <option value="supplier">{tr(locale, "Supplier pending", "Proveedor pendiente")}</option> : null}
+                  {canFinance ? <option value="payment">{tr(locale, "Payment overdue", "Pago vencido")}</option> : null}
                   <option value="unassigned">{tr(locale, "No owner", "Sin responsable")}</option>
                 </select>
               </label>
@@ -312,7 +327,7 @@ export default async function OperatorReservationsPage({ searchParams }: { searc
             <div className={styles.managementList}>
               {page.rows.map((row) => {
                 const reservation = row.reservation;
-                const paymentLabel = row.payment ? paymentStatusLabel(row.payment.status, locale) : "—";
+                const paymentLabel = canFinance && row.payment ? paymentStatusLabel(row.payment.status, locale) : null;
                 return (
                   <div className={queueStyles.queueRow} key={reservation.id}>
                     <div className={queueStyles.queueMain}>
@@ -325,20 +340,20 @@ export default async function OperatorReservationsPage({ searchParams }: { searc
                       </span>
                       {row.workflow.tags.length ? <span>{row.workflow.tags.join(" · ")}</span> : null}
                       <div className={queueStyles.queueSignals}>
-                        {row.overdueTaskCount > 0 ? <span className={styles.badge}>{tr(locale, `${row.overdueTaskCount} overdue tasks`, `${row.overdueTaskCount} tareas vencidas`)}</span> : null}
-                        {row.supplierAttentionCount > 0 ? <span className={styles.badge}>{tr(locale, `${row.supplierAttentionCount} supplier pending`, `${row.supplierAttentionCount} proveedor pendiente`)}</span> : null}
-                        {row.paymentOverdue ? <span className={styles.badge}>{tr(locale, "Payment overdue", "Pago vencido")}</span> : null}
+                        {canTasks && row.overdueTaskCount > 0 ? <span className={styles.badge}>{tr(locale, `${row.overdueTaskCount} overdue tasks`, `${row.overdueTaskCount} tareas vencidas`)}</span> : null}
+                        {canSuppliers && row.supplierAttentionCount > 0 ? <span className={styles.badge}>{tr(locale, `${row.supplierAttentionCount} supplier pending`, `${row.supplierAttentionCount} proveedor pendiente`)}</span> : null}
+                        {canFinance && row.paymentOverdue ? <span className={styles.badge}>{tr(locale, "Payment overdue", "Pago vencido")}</span> : null}
                         {!row.workflow.ownerStaffId ? <span className={styles.badge}>{tr(locale, "Unassigned", "Sin responsable")}</span> : null}
                       </div>
                     </div>
                     <span className={styles.badge}>{priorityLabel(row.workflow.priority, locale)}</span>
                     <div className={queueStyles.queueStatusStack}>
                       <span className={styles.badge}>{reservationStatusLabel(reservation.status, locale)}</span>
-                      <span className={styles.badge}>{paymentLabel}</span>
+                      {paymentLabel ? <span className={styles.badge}>{paymentLabel}</span> : null}
                     </div>
                     <div>
                       <strong>{formatOperatorMoney(reservation.totalPrice, reservation.currency, locale)}</strong>
-                      {row.payment && row.payment.outstandingAmount > 0 ? <span className={queueStyles.queueSubtext}>{tr(locale, "Outstanding", "Pendiente")}: {formatOperatorMoney(row.payment.outstandingAmount, row.payment.currency, locale)}</span> : null}
+                      {canFinance && row.payment && row.payment.outstandingAmount > 0 ? <span className={queueStyles.queueSubtext}>{tr(locale, "Outstanding", "Pendiente")}: {formatOperatorMoney(row.payment.outstandingAmount, row.payment.currency, locale)}</span> : null}
                     </div>
                     <Link className="button button-secondary" href={`/operator/reservations/${encodeURIComponent(reservation.id)}/workflow`}>{tr(locale, "Workspace", "Gestión")}</Link>
                   </div>

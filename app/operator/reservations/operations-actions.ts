@@ -10,7 +10,7 @@ import {
   isReservationPriority,
   parseReservationTags
 } from "@/lib/reservation-operations-rules";
-import { requireOperationsIdentity } from "@/lib/require-operations-identity";
+import { requireStaffCapability } from "@/lib/require-staff-capability";
 
 function value(formData: FormData, key: string) {
   const item = formData.get(key);
@@ -32,7 +32,7 @@ function workflowErrorQuery(error: unknown) {
 }
 
 export async function saveReservationOperationsAction(formData: FormData) {
-  const staff = await requireOperationsIdentity();
+  const staff = await requireStaffCapability("reservations");
   const reservationId = value(formData, "reservationId");
   const ownerStaffId = value(formData, "ownerStaffId") || undefined;
   const priority = value(formData, "priority");
@@ -61,7 +61,7 @@ export async function saveReservationOperationsAction(formData: FormData) {
 }
 
 export async function addReservationInternalNoteAction(formData: FormData) {
-  const staff = await requireOperationsIdentity();
+  const staff = await requireStaffCapability("reservations");
   const reservationId = value(formData, "reservationId");
   const body = value(formData, "body");
   const base = reservationId ? `/operator/reservations/${encodeURIComponent(reservationId)}/workflow` : "/operator/reservations";

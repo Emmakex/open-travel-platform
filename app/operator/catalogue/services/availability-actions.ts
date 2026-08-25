@@ -7,7 +7,7 @@ import type {
   TravelServiceType
 } from "@/domain/services/types";
 import type { ServiceAvailabilityDraft } from "@/lib/service-availability";
-import { requireOperationsIdentity } from "@/lib/require-operations-identity";
+import { requireStaffCapability } from "@/lib/require-staff-capability";
 import {
   saveServiceAvailabilitySlots,
   validateServiceAvailabilityDraft
@@ -27,7 +27,7 @@ function texts(formData: FormData, name: string) {
 }
 
 export async function saveServiceAvailabilityAction(formData: FormData) {
-  await requireOperationsIdentity();
+  await requireStaffCapability("catalogue");
 
   const serviceId = text(formData, "serviceId");
   const rawType = text(formData, "serviceType") as TravelServiceType;

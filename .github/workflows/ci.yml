@@ -70,6 +70,9 @@ jobs:
       - name: Operations queue invariant check
         run: npm run check:operations-queue
 
+      - name: Staff permission invariant check
+        run: npm run check:staff-permissions
+
       - name: Type check
         run: npm run typecheck
 

@@ -6,7 +6,7 @@ import type { TripAccommodationComponent, TripAccommodationMode } from "@/domain
 import { isAccommodationOccupancyAllowed } from "@/lib/accommodation-pricing";
 import { listAccommodationsForAdmin } from "@/lib/accommodations";
 import { getMongoTripForAdmin, saveMongoTrip } from "@/lib/mongo-travel-admin";
-import { requireOperationsIdentity } from "@/lib/require-operations-identity";
+import { requireStaffCapability } from "@/lib/require-staff-capability";
 
 function text(formData: FormData, name: string) {
   const value = formData.get(name) ?? formData.get(name.replaceAll(":", "__"));
@@ -24,7 +24,7 @@ function parseChildAges(value: string) {
 }
 
 export async function saveTripAccommodationsAction(formData: FormData) {
-  await requireOperationsIdentity();
+  await requireStaffCapability("catalogue");
 
   const tripId = text(formData, "tripId");
   const trip = tripId ? await getMongoTripForAdmin(tripId) : null;

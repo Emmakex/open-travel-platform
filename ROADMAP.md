@@ -17,11 +17,11 @@ _Last updated: 25 August 2026._
 
 The project is well beyond the original catalogue/booking MVP.
 
-Completed foundations now include persistent customer/staff identity, RBAC, trip/service reservations, traveller pricing, independent services, transactional email, payment accounting, encrypted PSP configuration, provider-neutral checkout adapters, deposits/installments, encrypted post-purchase traveller data, reservation amendments, reusable accommodation, transactional room inventory, optional package supplements, reservation ownership/notes, internal tasks/follow-ups, supplier fulfilment tracking, advanced operational queues and post-booking package-supplement amendments.
+Completed foundations now include persistent customer/staff identity, RBAC, trip/service reservations, traveller pricing, independent services, transactional email, payment accounting, encrypted PSP configuration, provider-neutral checkout adapters, deposits/installments, encrypted post-purchase traveller data, reservation amendments, reusable accommodation, transactional room inventory, optional package supplements, reservation ownership/notes, internal tasks/follow-ups, supplier fulfilment tracking, advanced operational queues, post-booking package-supplement amendments and granular staff permissions.
 
 Stripe/Redsys credentialed end-to-end validation remains intentionally pending until suitable provider accounts are available. The adapters are implemented, but production payment capability is not considered validated until TEST/LIVE provider flows are exercised.
 
-**Phases 6B and 6C are functionally complete. Phase 7A — Rich operations workflow is IN PROGRESS: 7A-1 through 7A-5 are complete, and 7A-6 granular staff permissions is next.**
+**Phases 6B, 6C and 7A are functionally complete. Phase 7B — Documents, exports and reporting is the next delivery priority.**
 
 ---
 
@@ -254,9 +254,9 @@ Capacity/date-based activities and transport remain independent service reservat
 
 # Next priorities
 
-## Phase 7A — Rich operations workflow — IN PROGRESS
+## Phase 7A — Rich operations workflow — COMPLETE
 
-Goal: make Operator suitable for the day-to-day work of a real travel agency/team, not only catalogue and reservation-state management.
+Goal achieved: make Operator suitable for the day-to-day work of a real travel agency/team, not only catalogue and reservation-state management.
 
 ### 7A-1 — Reservation ownership, notes and priorities — COMPLETE
 
@@ -320,15 +320,19 @@ Saved operational views and bulk actions remain later extensions if they prove u
 - configured customer notification is reused without exposing the internal reason;
 - permanent package-supplement amendment invariant CI gate.
 
-### 7A-6 — More granular permissions — NEXT
+### 7A-6 — More granular permissions — COMPLETE
 
-- move beyond only operator/admin where required;
-- least-privilege capability checks;
-- separate finance, catalogue, customer/traveller data and operational workflow permissions;
-- preserve simple role defaults while allowing deployments to grant narrower staff access;
-- audit privileged actions consistently.
+- Admin remains a full-access superuser while Operator accounts can receive narrower explicit capabilities;
+- existing Operators without an explicit assignment preserve the legacy role profile until an Admin deliberately saves a narrower matrix;
+- server-authoritative capabilities separate reservations, catalogue, finance, protected traveller data, supplier fulfilment and tasks;
+- protected route layouts and sensitive server actions enforce the same capability boundaries;
+- shared dashboards, reservation queues and workspaces only fetch finance/task/supplier/traveller datasets when the current staff account is authorized;
+- explicit assignments are stored in `travel_staff_capabilities`;
+- every real permission change writes before/after capability state, administrator identity and timestamp to `travel_staff_capability_audit` in the same MongoDB transaction;
+- Operator navigation and metrics expose only permitted operational areas;
+- permanent `check:staff-permissions` CI invariant protects the permission model and sensitive boundaries.
 
-## Phase 7B — Documents, exports and reporting
+## Phase 7B — Documents, exports and reporting — NEXT
 
 Goal: support operational documents and reports commonly required by travel teams.
 
@@ -427,8 +431,6 @@ Goal: make Open Travel Platform easy for third parties to adopt while Kairoseth 
 # Suggested delivery order
 
 ```text
-7A  Rich Operator workflow
- ↓
 7B  Documents / exports / reporting
  ↓
 8   External integrations
@@ -438,7 +440,7 @@ Goal: make Open Travel Platform easy for third parties to adopt while Kairoseth 
 10  Open-source productisation / release
 ```
 
-Credentialed Stripe/Redsys TEST validation should be inserted as soon as provider accounts are available and does not need to block 7A.
+Credentialed Stripe/Redsys TEST validation should be inserted as soon as provider accounts are available and does not need to block 7B.
 
 Phase 9 testing/security work should continue incrementally rather than waiting until the end, especially for payments, traveller data, amendments and concurrent inventory.
 

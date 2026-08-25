@@ -19,7 +19,7 @@ import {
   getAccommodationForAdmin,
   saveAccommodationWithInventory
 } from "@/lib/accommodations";
-import { requireOperationsIdentity } from "@/lib/require-operations-identity";
+import { requireStaffCapability } from "@/lib/require-staff-capability";
 
 function text(formData: FormData, name: string) {
   const value = formData.get(name) ?? (name.includes(":") ? formData.get(name.replaceAll(":", "__")) : null);
@@ -182,7 +182,7 @@ function parseCoverImage(formData: FormData): TravelMedia | null | undefined {
 }
 
 export async function saveAccommodationAction(formData: FormData) {
-  await requireOperationsIdentity();
+  await requireStaffCapability("catalogue");
 
   const requestedId = text(formData, "id");
   const id = requestedId || randomUUID();

@@ -21,7 +21,7 @@ import {
   saveMongoTrip,
   seedDemoCatalogueToMongo
 } from "@/lib/mongo-travel-admin";
-import { requireOperationsIdentity } from "@/lib/require-operations-identity";
+import { requireStaffCapability } from "@/lib/require-staff-capability";
 import { validateTravellerPricingBands } from "@/lib/traveller-pricing";
 import { parseTravellerRequirementsForm } from "@/lib/traveller-requirements-form";
 
@@ -261,7 +261,7 @@ function remainingStatus(status: TripDepartureStatus, capacity: number, reserved
 }
 
 export async function seedMongoCatalogueAction() {
-  await requireOperationsIdentity();
+  await requireStaffCapability("catalogue");
 
   let result: Awaited<ReturnType<typeof seedDemoCatalogueToMongo>>;
 
@@ -284,7 +284,7 @@ export async function seedMongoCatalogueAction() {
 }
 
 export async function saveDestinationAction(formData: FormData) {
-  await requireOperationsIdentity();
+  await requireStaffCapability("catalogue");
 
   const requestedId = text(formData, "id");
   const id = requestedId || randomUUID();
@@ -339,7 +339,7 @@ export async function saveDestinationAction(formData: FormData) {
 }
 
 export async function saveTripAction(formData: FormData) {
-  await requireOperationsIdentity();
+  await requireStaffCapability("catalogue");
 
   const requestedId = text(formData, "id");
   const id = requestedId || randomUUID();

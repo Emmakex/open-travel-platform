@@ -8,7 +8,7 @@ import {
   listAccommodationInventory,
   saveAccommodationWithInventory
 } from "@/lib/accommodations";
-import { requireOperationsIdentity } from "@/lib/require-operations-identity";
+import { requireStaffCapability } from "@/lib/require-staff-capability";
 
 const focalPoints = new Set<TravelMediaFocalPoint>(["center", "top", "bottom", "left", "right"]);
 
@@ -58,7 +58,7 @@ function parseGallery(formData: FormData, prefix: string): TravelMedia[] | null 
 }
 
 export async function saveAccommodationMediaAction(formData: FormData) {
-  await requireOperationsIdentity();
+  await requireStaffCapability("catalogue");
 
   const accommodationId = text(formData, "accommodationId");
   const accommodation = accommodationId ? await getAccommodationForAdmin(accommodationId) : null;

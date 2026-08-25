@@ -1,14 +1,13 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { hasOperationsAccess } from "@/lib/access-control";
 import { evaluateTripReservationPolicy } from "@/lib/change-policy";
 import { notifyTripReservationChanged } from "@/lib/change-notifications";
-import { getIdentityRepository } from "@/lib/identity-repository";
 import { operationsConfig } from "@/lib/operations-config";
 import { getOperationsRepository } from "@/lib/operations-repository";
 import { changeReservationPackageAddOns } from "@/lib/package-addon-amendments";
 import { changeReservationDeparture, correctReservationTraveller } from "@/lib/reservation-amendments";
+import { requireStaffCapability } from "@/lib/require-staff-capability";
 
 function value(formData: FormData, key: string) {
   const item = formData.get(key);
@@ -42,14 +41,6 @@ function amendmentErrorCode(error: unknown) {
   return "update-failed";
 }
 
-async function requireStaffIdentity() {
-  const identity = await getIdentityRepository().getCurrentIdentity();
-  if (!hasOperationsAccess(identity)) {
-    redirect("/operator/sign-in?error=forbidden");
-  }
-  return identity;
-}
-
 async function requireModificationWindow(reservationId: string) {
   const reservation = await getOperationsRepository().getReservation(reservationId);
   if (!reservation) return null;
@@ -69,7 +60,7 @@ async function notifyIfEnabled(reservation: NonNullable<Awaited<ReturnType<typeo
 }
 
 export async function correctReservationTravellerAction(formData: FormData) {
-  const identity = await requireStaffIdentity();
+  const identity = await requireStaffCapability("reservations");
   const reservationId = value(formData, "reservationId");
   const travellerId = value(formData, "travellerId");
   const firstName = value(formData, "firstName");
@@ -114,7 +105,7 @@ export async function correctReservationTravellerAction(formData: FormData) {
 }
 
 export async function changeReservationDepartureAction(formData: FormData) {
-  const identity = await requireStaffIdentity();
+  const identity = await requireStaffCapability("reservations");
   const reservationId = value(formData, "reservationId");
   const newAvailabilityId = value(formData, "newAvailabilityId");
   const reason = value(formData, "reason");
@@ -152,7 +143,7 @@ export async function changeReservationDepartureAction(formData: FormData) {
 }
 
 export async function changeReservationPackageAddOnsAction(formData: FormData) {
-  const identity = await requireStaffIdentity();
+  const identity = await requireStaffCapability("reservations");
   const reservationId = value(formData, "reservationId");
   const reason = value(formData, "reason");
   const detailUrl = reservationId

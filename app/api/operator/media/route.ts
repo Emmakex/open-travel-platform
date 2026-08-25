@@ -7,15 +7,16 @@ import {
   maxTravelMediaBytes,
   uploadMediaToLibrary
 } from "@/lib/media-library";
+import { hasStaffCapability } from "@/lib/staff-capabilities";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/avif"]);
 
-async function getOperationsIdentity() {
+async function getCatalogueIdentity() {
   const identity = await getIdentityRepository().getCurrentIdentity();
-  return hasOperationsAccess(identity) ? identity : null;
+  return hasOperationsAccess(identity) && hasStaffCapability(identity, "catalogue") ? identity : null;
 }
 
 function safeFilename(name: string) {
@@ -28,7 +29,7 @@ function safeFilename(name: string) {
 }
 
 export async function GET() {
-  const identity = await getOperationsIdentity();
+  const identity = await getCatalogueIdentity();
   if (!identity) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const items = await listMediaLibrary();
@@ -36,7 +37,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const identity = await getOperationsIdentity();
+  const identity = await getCatalogueIdentity();
   if (!identity) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   let formData: FormData;

@@ -11,7 +11,7 @@ import {
   listAccommodationInventory,
   saveAccommodationWithInventory
 } from "@/lib/accommodations";
-import { requireOperationsIdentity } from "@/lib/require-operations-identity";
+import { requireStaffCapability } from "@/lib/require-staff-capability";
 
 const roomKinds = new Set<AccommodationRoomKind>([
   "single",
@@ -37,7 +37,7 @@ function text(formData: FormData, name: string) {
 }
 
 export async function saveAccommodationRoomRatesAction(formData: FormData) {
-  await requireOperationsIdentity();
+  await requireStaffCapability("catalogue");
 
   const accommodationId = text(formData, "accommodationId");
   if (!accommodationId) redirect("/operator/catalogue?error=validation");

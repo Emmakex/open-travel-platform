@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import type { CurrencyCode } from "@/domain/travel/types";
 import { operationsConfig } from "@/lib/operations-config";
-import { requireOperationsIdentity } from "@/lib/require-operations-identity";
+import { requireStaffCapability } from "@/lib/require-staff-capability";
 import {
   isSupplierCurrency,
   isSupplierFulfilmentStatus,
@@ -50,7 +50,7 @@ function errorQuery(error: unknown) {
 }
 
 export async function saveSupplierFulfilmentAction(formData: FormData) {
-  const staff = await requireOperationsIdentity();
+  const staff = await requireStaffCapability("suppliers");
   const targetType = value(formData, "targetType");
   const targetId = value(formData, "targetId");
   const componentKey = value(formData, "componentKey");
@@ -101,7 +101,7 @@ export async function saveSupplierFulfilmentAction(formData: FormData) {
 }
 
 export async function addSupplierFulfilmentNoteAction(formData: FormData) {
-  const staff = await requireOperationsIdentity();
+  const staff = await requireStaffCapability("suppliers");
   const fulfilmentId = value(formData, "fulfilmentId");
   const body = value(formData, "body");
   const returnTo = safeReturnTo(value(formData, "returnTo"));

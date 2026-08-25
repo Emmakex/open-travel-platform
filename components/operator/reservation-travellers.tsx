@@ -10,10 +10,12 @@ import { operationsConfig } from "@/lib/operations-config";
 
 export async function ReservationTravellers({
   reservation,
-  locale
+  locale,
+  canViewTravellerData = false
 }: {
   reservation: Reservation;
   locale: TravelLocale;
+  canViewTravellerData?: boolean;
 }) {
   if (!reservation.travellers?.length) return null;
 
@@ -21,7 +23,7 @@ export async function ReservationTravellers({
     reservation.travellerRequirements &&
     reservation.travellerRequirements.preset !== "none"
   );
-  const completion = requirementsActive
+  const completion = requirementsActive && canViewTravellerData
     ? await listTravellerCompletionForOperator({
         targetType: "trip",
         reservationId: reservation.id,
@@ -42,7 +44,7 @@ export async function ReservationTravellers({
   return (
     <section className={styles.panel} style={{ marginTop: "1rem" }} id="travellers">
       <div className="eyebrow">{tr(locale, "Travellers", "Viajeros")}</div>
-      <h2>{tr(locale, "Passenger details & post-purchase status", "Pasajeros y estado de datos post-compra")}</h2>
+      <h2>{tr(locale, "Passenger details", "Datos de pasajeros")}</h2>
       <p className={styles.lead}>
         {tr(
           locale,
@@ -51,7 +53,7 @@ export async function ReservationTravellers({
         )}
       </p>
 
-      {requirementsActive ? (
+      {requirementsActive && canViewTravellerData ? (
         <div className={styles.notice}>
           <strong>
             {allComplete
@@ -62,6 +64,14 @@ export async function ReservationTravellers({
             locale,
             `${completedCount}/${reservation.travellers.length} travellers complete. The customer manages this task from My account → Reservation → Traveller information.`,
             `${completedCount}/${reservation.travellers.length} viajeros completos. El cliente gestiona esta tarea desde Mi cuenta → Reserva → Datos de viajeros.`
+          )}
+        </div>
+      ) : requirementsActive ? (
+        <div className={styles.notice}>
+          {tr(
+            locale,
+            "Additional traveller information exists for this reservation, but your staff permissions do not include post-purchase traveller data.",
+            "Esta reserva requiere información adicional de viajeros, pero tus permisos no incluyen los datos post-compra de viajeros."
           )}
         </div>
       ) : (
@@ -91,7 +101,7 @@ export async function ReservationTravellers({
                 {traveller.firstName} {traveller.lastName}
                 {traveller.isLead ? ` · ${tr(locale, "Lead traveller", "Viajero principal")}` : ""}
               </strong><br />
-              {requirementsActive ? (
+              {requirementsActive && canViewTravellerData ? (
                 <><strong>
                   {tr(locale, "Traveller-data status", "Estado de datos")}: {travellerCompletion?.complete
                     ? tr(locale, "Complete", "Completo")
