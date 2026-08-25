@@ -76,6 +76,9 @@ jobs:
       - name: Booking document invariant check
         run: npm run check:booking-documents
 
+      - name: Departure document invariant check
+        run: npm run check:departure-documents
+
       - name: Type check
         run: npm run typecheck
 
