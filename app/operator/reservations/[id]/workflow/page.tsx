@@ -20,6 +20,7 @@ import {
   listReservationOperationsEvents
 } from "@/lib/reservation-operations";
 import { requireOperationsIdentity } from "@/lib/require-operations-identity";
+import { hasStaffCapability } from "@/lib/staff-capabilities";
 import { listStaffUsers } from "@/lib/staff-auth";
 import {
   listSupplierFulfilmentEventsForTarget,
@@ -50,6 +51,8 @@ export default async function ReservationWorkflowPage({
 }) {
   const locale = await getLocale();
   const staff = await requireOperationsIdentity();
+  const canTasks = hasStaffCapability(staff, "tasks");
+  const canSuppliers = hasStaffCapability(staff, "suppliers");
   const [{ id }, query] = await Promise.all([params, searchParams]);
   const operations = getOperationsRepository();
   const [reservation, trips, state, notes, events, persistentStaff, tasks, fulfilmentItems, fulfilmentEvents] = await Promise.all([
@@ -59,21 +62,23 @@ export default async function ReservationWorkflowPage({
     listReservationInternalNotes(id),
     listReservationOperationsEvents(id),
     identityConfig.staffAuthEnabled ? listStaffUsers() : Promise.resolve([]),
-    listOperationsTasksForTarget("trip-reservation", id),
-    listSupplierFulfilmentForTarget("trip-reservation", id),
-    listSupplierFulfilmentEventsForTarget("trip-reservation", id)
+    canTasks ? listOperationsTasksForTarget("trip-reservation", id) : Promise.resolve([]),
+    canSuppliers ? listSupplierFulfilmentForTarget("trip-reservation", id) : Promise.resolve([]),
+    canSuppliers ? listSupplierFulfilmentEventsForTarget("trip-reservation", id) : Promise.resolve([])
   ]);
 
   if (!reservation) notFound();
   const [fulfilmentNotes, histories] = await Promise.all([
-    listSupplierFulfilmentNotesForItems(fulfilmentItems.map((item) => item.id)),
-    Promise.all(tasks.map(async (task) => [
-      task.id,
-      {
-        events: await listOperationsTaskEvents(task.id),
-        comments: await listOperationsTaskComments(task.id)
-      }
-    ]))
+    canSuppliers ? listSupplierFulfilmentNotesForItems(fulfilmentItems.map((item) => item.id)) : Promise.resolve([]),
+    canTasks
+      ? Promise.all(tasks.map(async (task) => [
+          task.id,
+          {
+            events: await listOperationsTaskEvents(task.id),
+            comments: await listOperationsTaskComments(task.id)
+          }
+        ]))
+      : Promise.resolve([])
   ]);
   const trip = trips.find((item) => item.id === reservation.tripId);
   const staffOptions = persistentStaff.length
@@ -81,7 +86,7 @@ export default async function ReservationWorkflowPage({
     : [{ id: staff.id, displayName: staff.displayName, role: staff.role, status: "active" as const }];
   const taskHistories = Object.fromEntries(histories);
   const returnTo = `/operator/reservations/${encodeURIComponent(reservation.id)}/workflow`;
-  const fulfilmentComponents = supplierFulfilmentComponentsForTripReservation(reservation);
+  const fulfilmentComponents = canSuppliers ? supplierFulfilmentComponentsForTripReservation(reservation) : [];
 
   return (
     <main className="section">
@@ -91,8 +96,8 @@ export default async function ReservationWorkflowPage({
           <h1>{trip?.title ?? reservation.tripTitle ?? tr(locale, "Reservation", "Reserva")}</h1>
           <p className={styles.lead}>{tr(
             locale,
-            "Manage the team's internal ownership, supplier confirmations, priorities, tasks and follow-ups without changing customer-visible booking or payment records.",
-            "Gestiona responsables, confirmaciones de proveedores, prioridades, tareas y seguimientos internos sin modificar los datos de reserva o pagos visibles para el cliente."
+            "Manage the internal reservation workflow. Task and supplier areas are loaded only when this account has the corresponding permission.",
+            "Gestiona el flujo interno de la reserva. Las áreas de tareas y proveedores solo se cargan cuando esta cuenta dispone del permiso correspondiente."
           )}</p>
           <dl className={styles.definitionList}>
             <div><dt>{tr(locale, "Status", "Estado")}</dt><dd><span className={styles.badge}>{reservationStatusLabel(reservation.status, locale)}</span></dd></div>
@@ -102,8 +107,8 @@ export default async function ReservationWorkflowPage({
           </dl>
           <div className={styles.actions}>
             <Link className="button button-secondary" href={`/operator/reservations/${encodeURIComponent(reservation.id)}`}>{tr(locale, "Reservation detail", "Detalle de la reserva")}</Link>
-            <Link className="button button-secondary" href="/operator/fulfilment">{tr(locale, "Supplier queue", "Cola de proveedores")}</Link>
-            <Link className="button button-secondary" href="/operator/tasks">{tr(locale, "All tasks", "Todas las tareas")}</Link>
+            {canSuppliers ? <Link className="button button-secondary" href="/operator/fulfilment">{tr(locale, "Supplier queue", "Cola de proveedores")}</Link> : null}
+            {canTasks ? <Link className="button button-secondary" href="/operator/tasks">{tr(locale, "All tasks", "Todas las tareas")}</Link> : null}
             <Link className="button button-secondary" href="/operator/reservations">{tr(locale, "Reservation queue", "Cola de reservas")}</Link>
           </div>
         </section>
@@ -120,7 +125,7 @@ export default async function ReservationWorkflowPage({
           error={query.operationsError}
         />
 
-        <SupplierFulfilmentPanel
+        {canSuppliers ? <SupplierFulfilmentPanel
           components={fulfilmentComponents}
           items={fulfilmentItems}
           events={fulfilmentEvents}
@@ -130,9 +135,9 @@ export default async function ReservationWorkflowPage({
           returnTo={returnTo}
           updated={query.fulfilmentUpdated}
           error={query.fulfilmentError}
-        />
+        /> : null}
 
-        <OperationsTasks
+        {canTasks ? <OperationsTasks
           targetType="trip-reservation"
           targetId={reservation.id}
           tasks={tasks}
@@ -143,7 +148,7 @@ export default async function ReservationWorkflowPage({
           returnTo={returnTo}
           updated={query.taskUpdated}
           error={query.taskError}
-        />
+        /> : null}
       </div>
     </main>
   );
