@@ -41,7 +41,7 @@ const sourceChecks = [
   ["app/operator/payments/layout.tsx", 'requireStaffCapability("finance")'],
   ["app/operator/tasks/layout.tsx", 'requireStaffCapability("tasks")'],
   ["app/operator/fulfilment/layout.tsx", 'requireStaffCapability("suppliers")'],
-  ["app/operator/actions.ts", 'requireStaffCapability("reservations")'],
+  ["app/operator/actions.ts", 'hasStaffCapability(identity, "reservations")'],
   ["app/operator/payments/actions.ts", 'requireStaffCapability("finance")'],
   ["app/operator/tasks/actions.ts", 'requireStaffCapability("tasks")'],
   ["app/operator/fulfilment/actions.ts", 'requireStaffCapability("suppliers")'],
