@@ -52,6 +52,9 @@ jobs:
       - name: Accommodation invariant check
         run: npm run check:accommodation
 
+      - name: Package supplement invariant check
+        run: npm run check:package-addons
+
       - name: Type check
         run: npm run typecheck
 
