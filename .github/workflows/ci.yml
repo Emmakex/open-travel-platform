@@ -64,6 +64,9 @@ jobs:
       - name: Supplier fulfilment invariant check
         run: npm run check:fulfilment
 
+      - name: Operations queue invariant check
+        run: npm run check:operations-queue
+
       - name: Type check
         run: npm run typecheck
 
