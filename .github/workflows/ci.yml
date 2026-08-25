@@ -58,6 +58,9 @@ jobs:
       - name: Reservation operations invariant check
         run: npm run check:operations
 
+      - name: Operations task invariant check
+        run: npm run check:tasks
+
       - name: Type check
         run: npm run typecheck
 
