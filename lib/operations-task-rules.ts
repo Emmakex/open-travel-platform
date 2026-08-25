@@ -28,6 +28,11 @@ export function normalizeOperationsTaskDetails(value?: string) {
   return details.length <= 2000 ? details : null;
 }
 
+export function normalizeOperationsTaskComment(value: string) {
+  const body = value.trim().replace(/\r\n/g, "\n");
+  return body.length >= 1 && body.length <= 2000 ? body : null;
+}
+
 export function normalizeOperationsTaskDueDate(value?: string) {
   if (!value) return undefined;
   const dueDate = value.trim();
