@@ -17,11 +17,11 @@ _Last updated: 25 August 2026._
 
 The project is well beyond the original catalogue/booking MVP.
 
-Completed foundations now include persistent customer/staff identity, RBAC, trip/service reservations, traveller pricing, independent services, transactional email, payment accounting, encrypted PSP configuration, provider-neutral checkout adapters, deposits/installments, encrypted post-purchase traveller data, reservation amendments, reusable accommodation, transactional room inventory, optional package supplements, reservation ownership/notes, internal tasks/follow-ups, supplier fulfilment tracking, advanced operational queues, post-booking package-supplement amendments and granular staff permissions.
+Completed foundations now include persistent customer/staff identity, RBAC, trip/service reservations, traveller pricing, independent services, transactional email, payment accounting, encrypted PSP configuration, provider-neutral checkout adapters, deposits/installments, encrypted post-purchase traveller data, reservation amendments, reusable accommodation, transactional room inventory, optional package supplements, reservation ownership/notes, internal tasks/follow-ups, supplier fulfilment tracking, advanced operational queues, post-booking package-supplement amendments, granular staff permissions and customer-facing booking confirmation PDFs.
 
 Stripe/Redsys credentialed end-to-end validation remains intentionally pending until suitable provider accounts are available. The adapters are implemented, but production payment capability is not considered validated until TEST/LIVE provider flows are exercised.
 
-**Phases 6B, 6C and 7A are functionally complete. Phase 7B — Documents, exports and reporting is the next delivery priority.**
+**Phases 6B, 6C and 7A are functionally complete. Phase 7B — Documents, exports and reporting is IN PROGRESS: 7B-1 booking confirmation PDFs are complete and 7B-2 traveller/rooming lists is next.**
 
 ---
 
@@ -332,20 +332,45 @@ Saved operational views and bulk actions remain later extensions if they prove u
 - Operator navigation and metrics expose only permitted operational areas;
 - permanent `check:staff-permissions` CI invariant protects the permission model and sensitive boundaries.
 
-## Phase 7B — Documents, exports and reporting — NEXT
+## Phase 7B — Documents, exports and reporting — IN PROGRESS
 
 Goal: support operational documents and reports commonly required by travel teams.
 
-- booking confirmation document/PDF;
-- traveller lists and rooming lists;
-- vouchers;
+### 7B-1 — Booking confirmation PDFs — COMPLETE
+
+- reusable server-side PDF document layer using `pdf-lib`;
+- customer-owned booking confirmation download from My reservations;
+- protected Operator Documents workspace;
+- EN/ES reservation confirmation with trip dates, traveller names, accommodation and package supplements;
+- customer contact summary and current reservation total;
+- payment status/paid/outstanding details included for the customer and only for staff with Finance permission;
+- no internal notes, supplier references/costs or protected post-purchase traveller data in the renderer;
+- private `no-store` document endpoints;
+- safe PDF filenames and permanent real-PDF CI invariant.
+
+### 7B-2 — Traveller lists and rooming lists — NEXT
+
+- operational traveller manifest by reservation/departure;
+- rooming list derived from snapshotted accommodation allocation;
+- printable/PDF formats;
+- access rules aligned with Reservations and Traveller data capabilities;
+- no accidental export of protected document fields unless explicitly authorized and audited.
+
+### 7B-3 — Vouchers and printable reservation dossier
+
+- accommodation/service vouchers;
+- customer-facing supplier-safe references only where configured for disclosure;
+- consolidated printable Operator dossier;
+- document status/version timestamp.
+
+### 7B-4 — CSV/XLSX exports and reconciliation reports
+
 - reservation/service exports;
+- customer exports;
+- payment/reconciliation and outstanding-balance reports;
 - secure audited traveller-data export for legitimate operational use;
-- CSV/XLSX customer/payment exports;
-- reconciliation and outstanding-balance reports;
 - revenue by product/service;
-- operational/commercial dashboards;
-- printable Operator dossier.
+- operational/commercial dashboards.
 
 ## Phase 8 — External integrations
 

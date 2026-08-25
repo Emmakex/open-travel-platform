@@ -48,6 +48,10 @@ export default async function ReservationsPage() {
                       {reservation.partySize} {travellerLabel} · {total} · {status}
                       <br />
                       <Link className="text-link" href={`/account/reservations/${reservation.id}`}>{copy.view}</Link>
+                      {" · "}
+                      <a className="text-link" href={`/account/reservations/${encodeURIComponent(reservation.id)}/confirmation`}>
+                        {locale === "es" ? "Descargar confirmación PDF" : "Download confirmation PDF"}
+                      </a>
                     </dd>
                   </div>
                 );
