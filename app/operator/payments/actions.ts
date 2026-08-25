@@ -3,10 +3,8 @@
 import { redirect } from "next/navigation";
 import type { DepositCalculationType, PaymentTermsMode } from "@/domain/booking/types";
 import type { PaymentTransactionType } from "@/domain/payment/types";
-import { hasOperationsAccess } from "@/lib/access-control";
 import { getCustomerForOperations } from "@/lib/customer-auth";
 import { emailConfig, isEmailDeliveryConfigured, sendEmail } from "@/lib/email";
-import { getIdentityRepository } from "@/lib/identity-repository";
 import { getOperationsRepository } from "@/lib/operations-repository";
 import { paymentConfig } from "@/lib/payment-config";
 import { getPaymentRepository } from "@/lib/payment-repository";
@@ -17,6 +15,7 @@ import {
   deriveReservationPaymentSchedule,
   saveReservationPaymentTerms
 } from "@/lib/payment-terms";
+import { requireStaffCapability } from "@/lib/require-staff-capability";
 
 function value(formData: FormData, key: string) {
   const item = formData.get(key);
@@ -96,8 +95,7 @@ function escapeHtml(input: string) {
 }
 
 export async function recordManualPaymentAction(formData: FormData) {
-  const identity = await getIdentityRepository().getCurrentIdentity();
-  if (!hasOperationsAccess(identity)) redirect("/operator/sign-in?error=forbidden");
+  const identity = await requireStaffCapability("finance");
 
   const reservationId = value(formData, "reservationId");
   const type = transactionType(value(formData, "type"));
@@ -147,8 +145,7 @@ export async function recordManualPaymentAction(formData: FormData) {
 }
 
 export async function savePaymentTermsAction(formData: FormData) {
-  const identity = await getIdentityRepository().getCurrentIdentity();
-  if (!hasOperationsAccess(identity)) redirect("/operator/sign-in?error=forbidden");
+  const identity = await requireStaffCapability("finance");
 
   const reservationId = value(formData, "reservationId");
   const mode = termsMode(value(formData, "mode"));
@@ -209,8 +206,7 @@ export async function savePaymentTermsAction(formData: FormData) {
 }
 
 export async function sendPaymentReminderAction(formData: FormData) {
-  const identity = await getIdentityRepository().getCurrentIdentity();
-  if (!hasOperationsAccess(identity)) redirect("/operator/sign-in?error=forbidden");
+  await requireStaffCapability("finance");
   const reservationId = value(formData, "reservationId");
   const detailUrl = reservationId
     ? `/operator/reservations/${encodeURIComponent(reservationId)}`
