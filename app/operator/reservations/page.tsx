@@ -1,5 +1,6 @@
 import Link from "next/link";
 import styles from "@/app/operator/operator.module.css";
+import queueStyles from "@/app/operator/reservations/reservations.module.css";
 import type { ReservationStatus } from "@/domain/booking/types";
 import type { PaymentStatus } from "@/domain/payment/types";
 import type { ReservationOperationsState, ReservationPriority } from "@/domain/operations/types";
@@ -210,8 +211,8 @@ export default async function OperatorReservationsPage({ searchParams }: { searc
             <Link className="button button-secondary" href={queueHref(queryForLinks, { owner: "unassigned", page: undefined })}>{tr(locale, "Unassigned", "Sin responsable")}</Link>
           </div>
 
-          <form className={styles.queueFilterForm} method="get">
-            <div className={styles.queueFilterGrid}>
+          <form className={queueStyles.queueFilterForm} method="get">
+            <div className={queueStyles.queueFilterGrid}>
               <label className={styles.field}>
                 <span>{tr(locale, "Search", "Buscar")}</span>
                 <input name="q" defaultValue={filters.q ?? ""} placeholder={tr(locale, "Reference, customer, trip, traveller, tag…", "Referencia, cliente, viaje, viajero, etiqueta…")} />
@@ -313,8 +314,8 @@ export default async function OperatorReservationsPage({ searchParams }: { searc
                 const reservation = row.reservation;
                 const paymentLabel = row.payment ? paymentStatusLabel(row.payment.status, locale) : "—";
                 return (
-                  <div className={styles.queueRow} key={reservation.id}>
-                    <div className={styles.queueMain}>
+                  <div className={queueStyles.queueRow} key={reservation.id}>
+                    <div className={queueStyles.queueMain}>
                       <strong><Link className="text-link" href={`/operator/reservations/${encodeURIComponent(reservation.id)}`}>{row.tripTitle}</Link></strong>
                       <span>{row.customerName ? `${row.customerName}${row.customerEmail ? ` · ${row.customerEmail}` : ""}` : reservation.id}</span>
                       <span>
@@ -323,7 +324,7 @@ export default async function OperatorReservationsPage({ searchParams }: { searc
                         {` · ${tr(locale, "Owner", "Responsable")}: ${row.workflow.ownerDisplayName ?? tr(locale, "Unassigned", "Sin asignar")}`}
                       </span>
                       {row.workflow.tags.length ? <span>{row.workflow.tags.join(" · ")}</span> : null}
-                      <div className={styles.queueSignals}>
+                      <div className={queueStyles.queueSignals}>
                         {row.overdueTaskCount > 0 ? <span className={styles.badge}>{tr(locale, `${row.overdueTaskCount} overdue tasks`, `${row.overdueTaskCount} tareas vencidas`)}</span> : null}
                         {row.supplierAttentionCount > 0 ? <span className={styles.badge}>{tr(locale, `${row.supplierAttentionCount} supplier pending`, `${row.supplierAttentionCount} proveedor pendiente`)}</span> : null}
                         {row.paymentOverdue ? <span className={styles.badge}>{tr(locale, "Payment overdue", "Pago vencido")}</span> : null}
@@ -331,13 +332,13 @@ export default async function OperatorReservationsPage({ searchParams }: { searc
                       </div>
                     </div>
                     <span className={styles.badge}>{priorityLabel(row.workflow.priority, locale)}</span>
-                    <div className={styles.queueStatusStack}>
+                    <div className={queueStyles.queueStatusStack}>
                       <span className={styles.badge}>{reservationStatusLabel(reservation.status, locale)}</span>
                       <span className={styles.badge}>{paymentLabel}</span>
                     </div>
                     <div>
                       <strong>{formatOperatorMoney(reservation.totalPrice, reservation.currency, locale)}</strong>
-                      {row.payment && row.payment.outstandingAmount > 0 ? <span className={styles.queueSubtext}>{tr(locale, "Outstanding", "Pendiente")}: {formatOperatorMoney(row.payment.outstandingAmount, row.payment.currency, locale)}</span> : null}
+                      {row.payment && row.payment.outstandingAmount > 0 ? <span className={queueStyles.queueSubtext}>{tr(locale, "Outstanding", "Pendiente")}: {formatOperatorMoney(row.payment.outstandingAmount, row.payment.currency, locale)}</span> : null}
                     </div>
                     <Link className="button button-secondary" href={`/operator/reservations/${encodeURIComponent(reservation.id)}/workflow`}>{tr(locale, "Workspace", "Gestión")}</Link>
                   </div>
@@ -346,7 +347,7 @@ export default async function OperatorReservationsPage({ searchParams }: { searc
             </div>
           ) : <div className={styles.notice}>{tr(locale, "No reservations match these filters.", "No hay reservas que coincidan con estos filtros.")}</div>}
 
-          {page.totalPages > 1 ? <nav className={styles.pagination} aria-label={tr(locale, "Reservation queue pages", "Páginas de la cola de reservas")}>
+          {page.totalPages > 1 ? <nav className={queueStyles.pagination} aria-label={tr(locale, "Reservation queue pages", "Páginas de la cola de reservas")}>
             {page.page > 1 ? <Link className="button button-secondary" href={queueHref(queryForLinks, { page: String(page.page - 1) })}>{tr(locale, "← Previous", "← Anterior")}</Link> : <span />}
             <span>{page.page} / {page.totalPages}</span>
             {page.page < page.totalPages ? <Link className="button button-secondary" href={queueHref(queryForLinks, { page: String(page.page + 1) })}>{tr(locale, "Next →", "Siguiente →")}</Link> : <span />}
