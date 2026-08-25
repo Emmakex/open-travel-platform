@@ -1,7 +1,7 @@
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import type { Reservation } from "@/domain/booking/types";
 import type { TravelLocale } from "@/domain/travel/types";
-import { buildRoomingListRows, buildTravellerManifestRows } from "@/lib/departure-manifests";
+import { buildRoomingListRows, buildTravellerManifestRows } from "./departure-manifests.ts";
 
 export type DepartureDocumentInput = {
   reservations: Reservation[];
