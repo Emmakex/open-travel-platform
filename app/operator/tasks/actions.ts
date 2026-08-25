@@ -12,7 +12,7 @@ import {
   normalizeOperationsTaskDueDate
 } from "@/lib/operations-task-rules";
 import { operationsConfig } from "@/lib/operations-config";
-import { requireOperationsIdentity } from "@/lib/require-operations-identity";
+import { requireStaffCapability } from "@/lib/require-staff-capability";
 
 function value(formData: FormData, key: string) {
   const item = formData.get(key);
@@ -46,7 +46,7 @@ function taskErrorQuery(error: unknown) {
 }
 
 export async function createOperationsTaskAction(formData: FormData) {
-  const staff = await requireOperationsIdentity();
+  const staff = await requireStaffCapability("tasks");
   const targetType = value(formData, "targetType");
   const targetId = value(formData, "targetId");
   const title = value(formData, "title");
@@ -78,7 +78,7 @@ export async function createOperationsTaskAction(formData: FormData) {
 }
 
 export async function updateOperationsTaskAction(formData: FormData) {
-  const staff = await requireOperationsIdentity();
+  const staff = await requireStaffCapability("tasks");
   const taskId = value(formData, "taskId");
   const status = value(formData, "status");
   const dueDate = value(formData, "dueDate") || undefined;
@@ -106,7 +106,7 @@ export async function updateOperationsTaskAction(formData: FormData) {
 }
 
 export async function addOperationsTaskCommentAction(formData: FormData) {
-  const staff = await requireOperationsIdentity();
+  const staff = await requireStaffCapability("tasks");
   const taskId = value(formData, "taskId");
   const body = value(formData, "body");
   const returnTo = safeReturnTo(value(formData, "returnTo"));
