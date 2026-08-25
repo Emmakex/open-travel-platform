@@ -88,6 +88,7 @@ export default async function OperatorPage() {
 
           <div className={styles.actions}>
             {canReservations ? <Link className="button button-primary" href="/operator/reservations">{tr(locale, "Trip reservations", "Reservas de viaje")}</Link> : null}
+            {canReservations ? <Link className="button button-primary" href="/operator/documents">{tr(locale, "Documents", "Documentos")}</Link> : null}
             {canTasks ? <Link className="button button-primary" href="/operator/tasks">{tr(locale, "Tasks", "Tareas")}</Link> : null}
             {canSuppliers ? <Link className="button button-primary" href="/operator/fulfilment">{tr(locale, "Suppliers", "Proveedores")}</Link> : null}
             {canTasks ? <Link className="button button-secondary" href="/operator/tasks/new">{tr(locale, "New task", "Nueva tarea")}</Link> : null}
