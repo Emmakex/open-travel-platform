@@ -70,9 +70,9 @@ export async function POST(request: Request) {
   if (!claimed) return new NextResponse("OK");
 
   if (isSuccessfulRedsysResponse(notification.response)) {
-    await finalizeCheckoutOrder(order.id, "paid", notification.authorizationCode || notification.order);
+    await finalizeCheckoutOrder(order.id, "paid", notification.order);
   } else {
-    await finalizeCheckoutOrder(order.id, "failed", notification.authorizationCode || notification.order);
+    await finalizeCheckoutOrder(order.id, "failed", notification.order);
   }
 
   return new NextResponse("OK");
