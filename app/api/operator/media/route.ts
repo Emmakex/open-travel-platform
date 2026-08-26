@@ -7,6 +7,7 @@ import {
   maxTravelMediaBytes,
   uploadMediaToLibrary
 } from "@/lib/media-library";
+import { browserMutationHasTrustedOrigin } from "@/lib/request-security";
 import { hasStaffCapability } from "@/lib/staff-capabilities";
 
 export const runtime = "nodejs";
@@ -28,42 +29,47 @@ function safeFilename(name: string) {
   return `${Date.now()}-${randomUUID()}-${cleaned || "travel-image"}`;
 }
 
+function json(body: Record<string, unknown>, status = 200) {
+  return NextResponse.json(body, {
+    status,
+    headers: { "Cache-Control": "no-store, max-age=0" }
+  });
+}
+
 export async function GET() {
   const identity = await getCatalogueIdentity();
-  if (!identity) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!identity) return json({ error: "forbidden" }, 403);
 
   const items = await listMediaLibrary();
-  return NextResponse.json({ items });
+  return json({ items });
 }
 
 export async function POST(request: Request) {
+  if (!browserMutationHasTrustedOrigin(request)) {
+    return json({ error: "invalid-origin" }, 403);
+  }
+
   const identity = await getCatalogueIdentity();
-  if (!identity) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!identity) return json({ error: "forbidden" }, 403);
 
   let formData: FormData;
   try {
     formData = await request.formData();
   } catch {
-    return NextResponse.json({ error: "invalid-form-data" }, { status: 400 });
+    return json({ error: "invalid-form-data" }, 400);
   }
 
   const file = formData.get("file");
   if (!(file instanceof File)) {
-    return NextResponse.json({ error: "file-required" }, { status: 400 });
+    return json({ error: "file-required" }, 400);
   }
 
   if (!allowedTypes.has(file.type)) {
-    return NextResponse.json(
-      { error: "unsupported-type", allowed: Array.from(allowedTypes) },
-      { status: 415 }
-    );
+    return json({ error: "unsupported-type", allowed: Array.from(allowedTypes) }, 415);
   }
 
   if (file.size < 1 || file.size > maxTravelMediaBytes) {
-    return NextResponse.json(
-      { error: "invalid-size", maxBytes: maxTravelMediaBytes },
-      { status: 413 }
-    );
+    return json({ error: "invalid-size", maxBytes: maxTravelMediaBytes }, 413);
   }
 
   const alt = typeof formData.get("alt") === "string" ? String(formData.get("alt")).trim() : "";
@@ -80,9 +86,9 @@ export async function POST(request: Request) {
       uploadedBy: identity.email
     });
 
-    return NextResponse.json({ item }, { status: 201 });
+    return json({ item }, 201);
   } catch (error) {
     console.error("Media upload failed", error);
-    return NextResponse.json({ error: "upload-failed" }, { status: 500 });
+    return json({ error: "upload-failed" }, 500);
   }
 }

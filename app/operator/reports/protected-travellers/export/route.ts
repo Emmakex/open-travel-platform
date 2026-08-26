@@ -7,6 +7,7 @@ import {
   protectedTravellerTabularExport,
   readProtectedTravellerExportRows
 } from "@/lib/protected-traveller-export";
+import { browserMutationHasTrustedOrigin } from "@/lib/request-security";
 import { requireStaffCapability } from "@/lib/require-staff-capability";
 import { getServiceReservationForOperator } from "@/lib/service-reservations";
 import { hasStaffCapability } from "@/lib/staff-capabilities";
@@ -20,6 +21,13 @@ function formValue(formData: FormData, key: string) {
 }
 
 export async function POST(request: Request) {
+  if (!browserMutationHasTrustedOrigin(request)) {
+    return NextResponse.json({ error: "invalid-origin" }, {
+      status: 403,
+      headers: { "Cache-Control": "no-store, max-age=0" }
+    });
+  }
+
   const staff = await requireStaffCapability("traveller-data");
   if (!hasStaffCapability(staff, "reservations")) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });

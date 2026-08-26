@@ -22,6 +22,7 @@ import {
 } from "@/lib/identity-config";
 import { DEMO_OPERATIONS_AUDIT_COOKIE } from "@/lib/operations-config";
 import { requireCustomerIdentity } from "@/lib/require-customer-identity";
+import { consumeAuthRateLimit } from "@/lib/security-rate-limit";
 import { revokeStaffSession } from "@/lib/staff-auth";
 
 function value(formData: FormData, key: string) {
@@ -72,6 +73,10 @@ export async function registerCustomerAction(formData: FormData) {
   const email = value(formData, "email");
   const password = value(formData, "password");
   const country = value(formData, "country");
+  const rateLimit = await consumeAuthRateLimit("customer-register", email);
+  if (!rateLimit.allowed) {
+    redirect(authErrorPath("/account/register", "rate-limited", next));
+  }
 
   if (
     !firstName || firstName.length > 80 ||
@@ -113,6 +118,10 @@ export async function signInCustomerAction(formData: FormData) {
 
   const email = value(formData, "email");
   const password = value(formData, "password");
+  const rateLimit = await consumeAuthRateLimit("customer-sign-in", email);
+  if (!rateLimit.allowed) {
+    redirect(authErrorPath("/account/sign-in", "rate-limited", next));
+  }
 
   if (!validEmail(email) || !password) {
     redirect(authErrorPath("/account/sign-in", "invalid-credentials", next));

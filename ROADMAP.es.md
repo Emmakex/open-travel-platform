@@ -17,7 +17,7 @@ _Última actualización: 26 de agosto de 2026._
 
 La plataforma está muy por encima del MVP original de catálogo/reservas. Ya están implementadas identidad persistente, reservas/inventario transaccionales, pricing por viajero, alojamiento, servicios independientes, pagos, datos post-compra, modificaciones, workflow Operator avanzado, permisos granulares, documentos, reporting y la infraestructura común de integraciones.
 
-**Las Fases 8A, 8B y 8C están COMPLETADAS. El roadmap core de integraciones externas de la Fase 8 está completado. La Fase 9 — Endurecimiento productivo es la SIGUIENTE.**
+**La Fase 8 está COMPLETADA. La Fase 9 — Endurecimiento productivo está EN PROGRESO: la Fase 9A de seguridad / operabilidad productiva está COMPLETADA y la Fase 9B de E2E críticos + validación de concurrencia MongoDB es la SIGUIENTE.**
 
 La validación E2E TEST/LIVE con credenciales Stripe/Redsys sigue pendiente hasta disponer de cuentas proveedor adecuadas. Los adapters están implementados, pero la capacidad productiva de pagos no se considera validada hasta probar dichos flujos.
 
@@ -227,34 +227,54 @@ Son extensiones y no bloquean el cierre de la frontera core de la Fase 8:
 
 ---
 
-# Fase 9 — Endurecimiento productivo — SIGUIENTE
+# Fase 9 — Endurecimiento productivo — EN PROGRESO
 
-La siguiente prioridad es endurecer para producción la superficie funcional ya construida.
+La prioridad es endurecer para producción la amplia superficie funcional ya construida.
 
-### Testing
+## 9A — Baseline de seguridad / operabilidad productiva — COMPLETADO
+
+- CSP global y headers HTTP defensivos;
+- HSTS y upgrade de requests inseguras solo en producción;
+- validación explícita same-origin en Route Handlers autenticados por cookie que realizan mutaciones;
+- callbacks Stripe/Redsys siguen autenticados por firma del proveedor y el integration worker interno sigue autenticado por Bearer;
+- throttling persistente MongoDB para login cliente/staff, registro cliente y solicitudes de reset de contraseña;
+- los buckets de rate limit guardan solo identificadores SHA-256, nunca email/IP en claro;
+- throttling adicional por cliente/IP solo cuando se habilita explícitamente la confianza en headers IP del proxy;
+- tokens de sesión opacos almacenados como hash, con expiración TTL, revocación server-side y atributos seguros de cookie;
+- endpoint de liveness `/api/health/live`;
+- endpoint de readiness `/api/health/ready`;
+- contrato explícito `KTRAVEL_DEPLOYMENT_PROFILE=demo|live`;
+- en `live`, readiness rechaza capacidades demo, URL pública HTTPS inválida, MongoDB requerido no disponible y ausencia de autenticación del worker outbound;
+- guía de seguridad productiva EN/ES más guía de despliegue/checklist modernizados;
+- gate permanente `check:production-security` y smoke CI de headers, health y rechazo de mutaciones con Origin externo.
+
+## 9B — E2E críticos y validación de persistencia/concurrencia — SIGUIENTE
+
 - E2E navegador registro → reserva → paquete/servicios → pago → Operator;
-- integración/concurrencia MongoDB;
-- webhooks/idempotencia de pagos;
-- pricing de viajeros/menores y modificaciones;
+- tests de integración/concurrencia MongoDB sobre inventario limitado y mutaciones de reserva;
+- tests de webhooks/idempotencia de pagos;
+- E2E de pricing de viajeros/menores y modificaciones;
 - tests de contratos/integración de adapters;
-- accesibilidad/rendimiento.
+- E2E Stripe/Redsys TEST/LIVE con credenciales en cuanto existan cuentas proveedor adecuadas.
 
-### Seguridad/privacidad
-- CSRF, rate limiting, CSP/security headers y cookies/sesiones;
-- escaneo de dependencias/secretos;
-- revisión de auditoría privilegiada;
-- recuperación/rotación de claves y backup/restore;
-- workflows GDPR/privacidad/reservas/cookies/retención/exportación/eliminación;
-- revisión regulatoria por mercado.
+## 9C — Observabilidad, recuperación y endurecimiento de auditoría privilegiada
 
-### Observabilidad/operaciones
 - logs estructurados y errores centralizados;
-- uptime/health;
+- monitorización externa de uptime/readiness y alertas accionables;
 - visibilidad de fallos de pagos/integraciones;
-- disaster recovery/rollback;
+- revisión de auditoría de acciones privilegiadas;
+- procedimientos de recuperación/rotación de claves;
+- simulaciones de backup/restore MongoDB, disaster recovery y rollback;
 - revisión de índices/rendimiento de base de datos.
 
-La validación TEST/LIVE Stripe/Redsys debe insertarse en cuanto existan cuentas proveedor adecuadas y sigue formando parte del endurecimiento productivo.
+## 9D — Preparación de privacidad, regulación, accesibilidad y rendimiento
+
+- workflows GDPR/privacidad/reservas/cookies/retención/exportación/eliminación;
+- revisión específica por mercado de viajes/pagos/consumidor/fiscal;
+- revisión de accesibilidad;
+- revisión de rendimiento/carga en paths críticos de cliente y Operator.
+
+La validación TEST/LIVE Stripe/Redsys con credenciales sigue siendo requisito de hardening productivo y debe insertarse inmediatamente cuando existan cuentas proveedor adecuadas.
 
 ---
 
@@ -275,9 +295,13 @@ La validación TEST/LIVE Stripe/Redsys debe insertarse en cuanto existan cuentas
 # Orden de entrega sugerido
 
 ```text
-9A    Baseline de seguridad / operabilidad productiva
+9A    Baseline de seguridad / operabilidad productiva — COMPLETADO
   ↓
-9     Endurecimiento productivo y E2E con credenciales
+9B    E2E críticos + validación de concurrencia MongoDB — SIGUIENTE
+  ↓
+9C    Observabilidad / recuperación / auditoría privilegiada
+  ↓
+9D    Privacidad / regulación / accesibilidad / rendimiento
   ↓
 10    Productización open-source / release
   ↓

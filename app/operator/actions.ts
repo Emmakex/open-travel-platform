@@ -18,6 +18,7 @@ import { getIdentityRepository } from "@/lib/identity-repository";
 import { operationsConfig } from "@/lib/operations-config";
 import { getOperationsRepository } from "@/lib/operations-repository";
 import { notifyReservationEvent } from "@/lib/reservation-emails";
+import { consumeAuthRateLimit } from "@/lib/security-rate-limit";
 import { hasStaffCapability } from "@/lib/staff-capabilities";
 import {
   authenticateStaff,
@@ -91,6 +92,11 @@ export async function signInStaffAction(formData: FormData) {
 
   const email = value(formData, "email");
   const password = value(formData, "password");
+  const rateLimit = await consumeAuthRateLimit("staff-sign-in", email);
+  if (!rateLimit.allowed) {
+    redirect("/operator/sign-in?error=rate-limited");
+  }
+
   if (!validEmail(email) || !password) {
     redirect("/operator/sign-in?error=invalid-credentials");
   }
