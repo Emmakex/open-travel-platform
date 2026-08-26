@@ -78,19 +78,20 @@ export async function requeueDeadLetterDeliveryAction(formData: FormData) {
   const reason = value(formData, "reason");
   if (!deliveryId) redirect("/operator/integrations?error=delivery-not-found");
   const detailPath = `/operator/integrations/deliveries/${encodeURIComponent(deliveryId)}`;
+  let requeued = false;
 
   try {
-    const result = await requeueDeadLetterDelivery({
+    requeued = Boolean(await requeueDeadLetterDelivery({
       deliveryId,
       actorIdentityId: admin.id,
       actorRole: admin.role,
       reason
-    });
-    if (!result) redirect(`${detailPath}?error=not-dead-letter`);
+    }));
   } catch (error) {
     const code = error && typeof error === "object" && "code" in error ? String(error.code) : "";
     redirect(`${detailPath}?error=${code === "INTEGRATION_REPLAY_REASON_INVALID" ? "replay-reason" : "replay-failed"}`);
   }
 
+  if (!requeued) redirect(`${detailPath}?error=not-dead-letter`);
   redirect(`${detailPath}?requeued=1`);
 }
