@@ -85,6 +85,9 @@ jobs:
       - name: Reporting and export invariant check
         run: npm run check:reporting-exports
 
+      - name: Outbound integration invariant check
+        run: npm run check:outbound-integrations
+
       - name: Type check
         run: npm run typecheck
 

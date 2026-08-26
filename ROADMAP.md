@@ -17,11 +17,11 @@ _Last updated: 26 August 2026._
 
 The project is well beyond the original catalogue/booking MVP.
 
-Completed foundations include persistent customer/staff identity, RBAC, trip/service reservations, traveller pricing, independent services, transactional email, payment accounting, encrypted PSP configuration, provider-neutral checkout adapters, deposits/installments, encrypted post-purchase traveller data, reservation amendments, reusable accommodation, transactional room inventory, package supplements, rich operations, granular staff permissions, booking/departure documents, customer-safe vouchers, an internal reservation dossier, CSV/XLSX operational exports, finance reconciliation/reporting and audited protected-traveller exports.
+Completed foundations include persistent customer/staff identity, RBAC, trip/service reservations, traveller pricing, independent services, transactional email, payment accounting, encrypted PSP configuration, provider-neutral checkout adapters, deposits/installments, encrypted post-purchase traveller data, reservation amendments, reusable accommodation, transactional room inventory, package supplements, rich operations, granular staff permissions, booking/departure documents, customer-safe vouchers, an internal reservation dossier, CSV/XLSX operational exports, finance reconciliation/reporting, audited protected-traveller exports and the first provider-neutral outbound integration boundary.
 
 Stripe/Redsys credentialed end-to-end validation remains pending until suitable provider accounts are available. The adapters are implemented, but production payment capability is not considered validated until TEST/LIVE provider flows are exercised.
 
-**Phases 6B, 6C, 7A and 7B are complete. Phase 8 — External integrations is NEXT.**
+**Phases 6B, 6C, 7A, 7B and 8A are complete. Phase 8B — scheduled integration delivery, replay and observability is NEXT.**
 
 ---
 
@@ -254,22 +254,53 @@ Goal achieved: provide travel-team operational documents, safe exports and comme
 
 ---
 
-# Phase 8 — External integrations — NEXT
+# Phase 8 — External integrations — IN PROGRESS
 
 Goal: connect deployments to real business ecosystems through adapters while keeping provider payloads out of the core domains.
 
-Candidate adapters:
+## 8A — Provider-neutral outbound integrations — COMPLETE
+
+- versioned event envelope for trip/service reservation creation and status changes;
+- MongoDB transactional outbox written inside the same reservation transaction/session;
+- one idempotent durable delivery record per `(eventId, endpointId)`;
+- Admin-only `/operator/integrations` configuration;
+- endpoint subscriptions and enable/disable state;
+- dedicated `INTEGRATION_SECRETS_KEY` with AES-256-GCM encrypted signing secrets;
+- HMAC-SHA256 signed HTTPS webhook reference adapter;
+- HTTPS-only target validation, URL credential/fragment rejection and localhost/private/reserved network blocking;
+- all DNS answers inspected and DNS revalidated on every delivery;
+- validated-IP pinning while preserving original TLS SNI and HTTP Host;
+- redirects not followed, timeout bounded and response body limited;
+- delivery leasing, crash recovery, bounded retry/backoff and `dead-letter` retention;
+- durable per-attempt history;
+- protected post-purchase traveller data excluded from the generic event contract;
+- manual bounded Admin processor as the first execution surface;
+- EN/ES integration documentation;
+- permanent `check:outbound-integrations` gate wired into `npm run verify` and GitHub CI.
+
+## 8B — Scheduled delivery, replay and observability — NEXT
+
+- scheduler/worker entry point suitable for the deployment platform without relying on a logged-in browser session;
+- server-only worker authentication and rate/batch controls;
+- safe dead-letter replay/requeue controls with audit history;
+- delivery/event detail view for Admin;
+- queue health metrics: pending, retrying, dead-letter, oldest due delivery and recent success/failure rate;
+- retention policy for completed delivery attempts/events that preserves operational audit requirements;
+- health/operational diagnostics without exposing signing secrets or protected traveller values.
+
+## 8C — Business adapters — PLANNED
+
+Candidate adapters after the common delivery layer is operationally mature:
 
 - supplier/booking APIs;
 - CRM synchronization;
 - ERP/accounting;
-- generic outbound webhooks;
-- CMS/catalogue source;
-- enterprise identity;
+- CMS/catalogue sources;
 - generic REST booking adapter;
-- payment providers beyond Stripe/Redsys.
+- enterprise identity where appropriate;
+- additional payment providers when commercially useful.
 
-Recommended first slice: establish the outbound integration/event boundary and one reference adapter before adding vendor-specific integrations, so retries, idempotency, audit and secret handling are solved once.
+Vendor-specific payloads should remain inside adapters and consume the versioned event boundary rather than leaking into reservation domains.
 
 # Phase 9 — Production hardening
 
@@ -315,7 +346,9 @@ Recommended first slice: establish the outbound integration/event boundary and o
 # Suggested delivery order
 
 ```text
-8   External integrations
+8B  Scheduled integration delivery / replay / observability
+ ↓
+8C  Business adapters
  ↓
 9   Production hardening
  ↓

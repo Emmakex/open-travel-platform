@@ -4,7 +4,7 @@
 
 > Reusable open-source travel platform foundation for agencies, tour operators and booking products.
 
-Open Travel Platform is a clean-room **Next.js + TypeScript + MongoDB** platform built around explicit domain, repository and adapter boundaries. It can run with bundled demo data for local evaluation or with persistent catalogue, identity, booking, accommodation, services, operations and payment capabilities.
+Open Travel Platform is a clean-room **Next.js + TypeScript + MongoDB** platform built around explicit domain, repository and adapter boundaries. It can run with bundled demo data for local evaluation or with persistent catalogue, identity, booking, accommodation, services, operations, payment and integration capabilities.
 
 The official commercial/reference implementation is **Kairoseth Travel**, deployed at **[travel.kairoseth.com](https://travel.kairoseth.com)**.
 
@@ -54,11 +54,14 @@ The platform is well beyond the original catalogue/booking MVP. The implementati
 - payment reconciliation, outstanding-balance and revenue reporting;
 - audited fail-closed export of retained protected traveller data for legitimate operational use;
 - export audit metadata without persisting exported cell values;
-- currency-safe finance dashboards and reports that never aggregate different currencies together.
+- currency-safe finance dashboards and reports that never aggregate different currencies together;
+- provider-neutral outbound reservation events with a transactional MongoDB outbox;
+- Admin-managed signed HTTPS webhooks with encrypted secrets, bounded retries, delivery history and dead-letter retention;
+- SSRF/DNS-rebinding protections for configurable outbound webhook targets.
 
 Stripe and Redsys credentialed end-to-end validation remains intentionally pending until suitable provider accounts are available. The adapters are implemented, but production payment capability is not considered validated until provider TEST/LIVE flows have been exercised.
 
-**Phase 7B — Documents, exports and reporting is complete: booking confirmations, traveller/rooming lists, vouchers/dossiers, CSV/XLSX exports, reconciliation and reporting are implemented. The next delivery phase is Phase 8 — External integrations.**
+**Phase 8A — Provider-neutral outbound integrations is complete. The next delivery slice is Phase 8B — scheduled integration delivery, replay and observability.**
 
 ## Current capabilities
 
@@ -126,6 +129,7 @@ Stripe and Redsys credentialed end-to-end validation remains intentionally pendi
 - authentication audit events;
 - payment-provider secrets encrypted with AES-256-GCM;
 - advanced traveller data stored separately and encrypted with AES-256-GCM;
+- outbound integration signing secrets encrypted with a dedicated AES-256-GCM master key;
 - privileged configuration and sensitive data protected by server-side capabilities.
 
 ### Payments and finance
@@ -175,6 +179,21 @@ Stripe and Redsys credentialed end-to-end validation remains intentionally pendi
 - protected traveller export is POST-only and fail-closed: persistent audit must succeed before sensitive bytes are returned;
 - financial metrics and revenue groups remain separated by currency.
 
+### Outbound integrations
+
+- Admin-only `/operator/integrations` workspace;
+- versioned provider-neutral events for trip/service reservation creation and status changes;
+- transactional outbox committed with the reservation mutation;
+- idempotent delivery records per event/endpoint pair;
+- HMAC-SHA256 signed HTTPS webhook reference adapter;
+- encrypted write-only signing secrets using `INTEGRATION_SECRETS_KEY`;
+- HTTPS-only targets with private/local/reserved network rejection and DNS revalidation before delivery;
+- validated-IP pinning while preserving the original hostname for TLS SNI and HTTP Host;
+- redirects disabled, bounded request timeouts and bounded response bodies;
+- delivery leasing, crash recovery, retry/backoff, attempt history and dead-letter retention;
+- protected post-purchase traveller values excluded from the generic event contract;
+- manual bounded Admin processor ready for a deployment scheduler in Phase 8B.
+
 ## Architecture
 
 ```text
@@ -209,9 +228,13 @@ customer area ---------------------- staff/operator/admin
 IdentityRepository                 Operations / RBAC / audit
                                            |
                      documents / reports / fulfilment / tasks
+                                           |
+                            transactional event outbox
+                                           |
+                            outbound integration adapters
 ```
 
-Provider-specific payloads stay inside adapters. Catalogue, booking, accommodation, identity, services, operations, documents, reporting and payment accounting remain replaceable capability boundaries.
+Provider-specific payloads stay inside adapters. Catalogue, booking, accommodation, identity, services, operations, documents, reporting, payment accounting and external integration delivery remain replaceable capability boundaries.
 
 ## Reservation and payment states are independent
 
@@ -241,7 +264,7 @@ npm run dev
 
 Open `http://localhost:3000`.
 
-A fresh clone can use the safe demo/read-only modes documented in `.env.example`. Persistent MongoDB, SMTP and payment capabilities are optional integrations.
+A fresh clone can use the safe demo/read-only modes documented in `.env.example`. Persistent MongoDB, SMTP, payment and outbound-integration capabilities are optional.
 
 ## Main routes
 
@@ -280,6 +303,7 @@ A fresh clone can use the safe demo/read-only modes documented in `.env.example`
 /operator/fulfilment                   supplier fulfilment queue
 /operator/payments                     finance dashboard
 /operator/payments/providers           admin-only PSP configuration
+/operator/integrations                 admin-only outbound integrations
 /operator/staff                        staff and capability management
 ```
 
@@ -304,9 +328,10 @@ SMTP_FROM_NAME=Kairoseth Travel
 KTRAVEL_OPERATIONS_EMAILS=
 PAYMENT_SECRETS_KEY=
 TRAVELLER_DATA_KEY=
+INTEGRATION_SECRETS_KEY=
 ```
 
-`PAYMENT_SECRETS_KEY` and `TRAVELLER_DATA_KEY` should be stable high-entropy 32-byte keys. Do not rotate them without a migration plan. Stripe/Redsys credentials are managed from Admin. `NEXT_PUBLIC_*` variables are browser-visible and must never contain secrets.
+`PAYMENT_SECRETS_KEY`, `TRAVELLER_DATA_KEY` and `INTEGRATION_SECRETS_KEY` should be stable high-entropy 32-byte keys. Do not rotate them without a migration/re-encryption plan. Stripe/Redsys and outbound integration credentials are managed from Admin. `NEXT_PUBLIC_*` variables are browser-visible and must never contain secrets.
 
 ## Documentation
 
@@ -326,6 +351,7 @@ TRAVELLER_DATA_KEY=
 - [`docs/DEPARTURE-DOCUMENTS.md`](docs/DEPARTURE-DOCUMENTS.md) — traveller and rooming-list PDFs.
 - [`docs/VOUCHERS-DOSSIERS.md`](docs/VOUCHERS-DOSSIERS.md) — vouchers, dossier and supplier-reference disclosure.
 - [`docs/REPORTING-EXPORTS.md`](docs/REPORTING-EXPORTS.md) — CSV/XLSX, finance reports and audited protected-data exports.
+- [`docs/OUTBOUND-INTEGRATIONS.md`](docs/OUTBOUND-INTEGRATIONS.md) — event contract, signed webhooks, transactional outbox and delivery security.
 - [`docs/ADAPTER-GUIDE.md`](docs/ADAPTER-GUIDE.md) — adding integrations.
 - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — deployment model.
 - [`docs/PRODUCTION-CHECKLIST.md`](docs/PRODUCTION-CHECKLIST.md) — production review.
@@ -357,6 +383,7 @@ check:booking-documents
 check:departure-documents
 check:voucher-documents
 check:reporting-exports
+check:outbound-integrations
 typecheck
 build
 ```
@@ -384,24 +411,26 @@ CI performs a clean install, runs the invariant checks, type-checks, builds the 
 | Vouchers and printable reservation dossier | Done |
 | CSV/XLSX exports and reconciliation/reporting | Done |
 | Phase 7B — Documents, exports and reporting | **Complete** |
+| Phase 8A — Provider-neutral outbound integrations | **Complete** |
 
 Future work is tracked in **[ROADMAP.md](ROADMAP.md)** · **[ROADMAP.es.md](ROADMAP.es.md)**.
 
 ## Next development priority
 
-The next block is **Phase 8 — External integrations**. The core should now connect to real business ecosystems through provider-neutral adapters without leaking provider payloads into core domains.
+The next block is **Phase 8B — Scheduled integration delivery, replay and observability**.
 
-Initial adapter priorities are:
+The common event/outbox/webhook boundary is already implemented. The next slice will make it operational without requiring an Admin browser action by adding:
 
-- supplier/booking APIs;
-- generic outbound webhooks;
-- CRM synchronization;
-- ERP/accounting integration;
-- CMS/catalogue sources;
-- generic REST booking adapter;
-- additional payment providers where commercially useful.
+- a scheduler/worker entry point with server-only authentication;
+- bounded batch/rate controls;
+- audited dead-letter replay/requeue;
+- Admin event/delivery detail views;
+- queue health metrics and failure visibility;
+- retention rules for completed event/delivery history.
 
-Credentialed Stripe/Redsys TEST/LIVE validation should be inserted as soon as suitable provider accounts are available and does not need to block Phase 8 adapter work.
+After 8B, Phase 8C can add supplier/booking, CRM, ERP/accounting, CMS and generic REST business adapters on top of the same provider-neutral boundary.
+
+Credentialed Stripe/Redsys TEST/LIVE validation should be inserted as soon as suitable provider accounts are available and does not need to block Phase 8 work.
 
 ## Project principles
 
@@ -415,6 +444,7 @@ Credentialed Stripe/Redsys TEST/LIVE validation should be inserted as soon as su
 - inventory-controlled services remain independent from lightweight package supplements;
 - customer-safe documents exclude internal notes, protected traveller data and supplier costs;
 - sensitive exports are capability-gated, purpose-bound and persistently audited before delivery;
+- generic outbound events exclude protected traveller data and provider-specific payloads;
 - public UX is bilingual, responsive and free of internal development terminology;
 - proprietary Kairoseth/customer-specific integrations stay outside the MIT core when appropriate.
 

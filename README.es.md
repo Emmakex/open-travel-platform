@@ -4,7 +4,7 @@
 
 > Base open-source reutilizable para agencias, turoperadores y productos de reserva de viajes.
 
-Open Travel Platform es una plataforma clean-room construida con **Next.js + TypeScript + MongoDB** y organizada alrededor de límites explícitos de dominio, repositorios y adapters.
+Open Travel Platform es una plataforma clean-room construida con **Next.js + TypeScript + MongoDB** y organizada alrededor de límites explícitos de dominio, repositorios y adapters. Puede ejecutarse con datos demo para evaluación local o con capacidades persistentes de catálogo, identidad, reservas, alojamiento, servicios, operaciones, pagos e integraciones.
 
 La implementación comercial/de referencia oficial es **Kairoseth Travel**, desplegada en **[travel.kairoseth.com](https://travel.kairoseth.com)**.
 
@@ -54,11 +54,14 @@ La plataforma está muy por encima del MVP original de catálogo/reservas. La im
 - conciliación de pagos, saldos pendientes e ingresos por producto/servicio;
 - exportación fail-closed y auditada de datos protegidos del viajero para uso operativo legítimo;
 - auditoría de exportaciones sin persistir los valores de las celdas exportadas;
-- finanzas y reporting multimoneda sin sumar monedas diferentes entre sí.
+- finanzas y reporting multimoneda sin sumar monedas diferentes entre sí;
+- eventos salientes neutrales para reservas con outbox transaccional MongoDB;
+- webhooks HTTPS firmados gestionados por Admin, secretos cifrados, reintentos limitados, historial de entregas y retención dead-letter;
+- protecciones SSRF/DNS rebinding para destinos webhook configurables.
 
 La validación E2E con credenciales Stripe/Redsys sigue pendiente hasta disponer de cuentas adecuadas. Los adapters están implementados, pero la capacidad productiva no se considera validada hasta probar TEST/LIVE.
 
-**La Fase 7B — Documentos, exportaciones y reporting está completada: confirmaciones, listas de viajeros/rooming lists, vouchers/expedientes, CSV/XLSX, conciliación y reporting están implementados. La siguiente fase de entrega es la Fase 8 — Integraciones externas.**
+**La Fase 8A — Integraciones salientes neutrales respecto a proveedor está completada. El siguiente bloque de entrega es la Fase 8B — ejecución programada, replay y observabilidad de integraciones.**
 
 ## Capacidades actuales
 
@@ -126,6 +129,7 @@ La validación E2E con credenciales Stripe/Redsys sigue pendiente hasta disponer
 - auditoría de autenticación;
 - secretos PSP cifrados AES-256-GCM;
 - datos avanzados del viajero almacenados aparte y cifrados AES-256-GCM;
+- secretos de firma de integraciones salientes cifrados con una clave maestra AES-256-GCM dedicada;
 - configuración privilegiada protegida por capacidades server-side.
 
 ### Pagos y finanzas
@@ -175,6 +179,21 @@ La validación E2E con credenciales Stripe/Redsys sigue pendiente hasta disponer
 - exportación protegida exclusivamente por POST y fail-closed: la auditoría persistente debe guardarse antes de devolver los bytes sensibles;
 - métricas financieras e ingresos agrupados siempre por moneda.
 
+### Integraciones salientes
+
+- workspace `/operator/integrations` exclusivo de Admin;
+- eventos versionados y neutrales para creación/cambio de estado de reservas de viaje y servicio;
+- outbox transaccional confirmado junto con la modificación de la reserva;
+- entregas idempotentes por pareja evento/endpoint;
+- adapter webhook HTTPS firmado con HMAC-SHA256;
+- secretos write-only cifrados mediante `INTEGRATION_SECRETS_KEY`;
+- destinos exclusivamente HTTPS, rechazo de redes privadas/locales/reservadas y revalidación DNS antes de entregar;
+- conexión al IP validado conservando el hostname original para TLS SNI y HTTP Host;
+- redirects desactivados, timeout y tamaño de respuesta limitados;
+- leasing de entregas, recuperación tras caída, reintentos/backoff, historial de intentos y dead-letter;
+- valores post-compra protegidos del viajero excluidos del contrato genérico;
+- procesador manual y limitado desde Admin, preparado para un scheduler del despliegue en Fase 8B.
+
 ## Arquitectura
 
 ```text
@@ -207,7 +226,13 @@ destinos + viajes + alojamiento + servicios
 IdentityRepository                 Operations / RBAC / auditoría
                                            |
                        documentos / informes / fulfilment / tareas
+                                           |
+                              outbox transaccional
+                                           |
+                         adapters de integración saliente
 ```
+
+Los payloads específicos de proveedor permanecen dentro de adapters. Catálogo, reservas, alojamiento, identidad, servicios, operaciones, documentos, reporting, pagos e integraciones externas conservan fronteras reemplazables.
 
 ## Inicio rápido
 
@@ -251,12 +276,23 @@ npm run dev
 /operator/fulfilment                   proveedores
 /operator/payments                     finanzas
 /operator/payments/providers           PSP solo Admin
+/operator/integrations                 integraciones salientes solo Admin
 /operator/staff                        personal/permisos
 ```
 
 ## Configuración
 
 La plantilla completa vive en [`.env.example`](.env.example). Los secretos nunca deben usar `NEXT_PUBLIC_*`.
+
+Claves maestras server-only relevantes:
+
+```text
+PAYMENT_SECRETS_KEY=
+TRAVELLER_DATA_KEY=
+INTEGRATION_SECRETS_KEY=
+```
+
+Deben ser claves estables de alta entropía y 32 bytes. No deben rotarse sin un plan de migración/re-cifrado.
 
 ## Documentación
 
@@ -276,6 +312,7 @@ La plantilla completa vive en [`.env.example`](.env.example). Los secretos nunca
 - [`docs/DEPARTURE-DOCUMENTS.es.md`](docs/DEPARTURE-DOCUMENTS.es.md)
 - [`docs/VOUCHERS-DOSSIERS.es.md`](docs/VOUCHERS-DOSSIERS.es.md)
 - [`docs/REPORTING-EXPORTS.es.md`](docs/REPORTING-EXPORTS.es.md)
+- [`docs/OUTBOUND-INTEGRATIONS.es.md`](docs/OUTBOUND-INTEGRATIONS.es.md)
 - [`docs/ADAPTER-GUIDE.md`](docs/ADAPTER-GUIDE.md)
 - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 - [`docs/PRODUCTION-CHECKLIST.md`](docs/PRODUCTION-CHECKLIST.md)
@@ -305,6 +342,7 @@ check:booking-documents
 check:departure-documents
 check:voucher-documents
 check:reporting-exports
+check:outbound-integrations
 typecheck
 build
 ```
@@ -330,22 +368,24 @@ build
 | Vouchers y expediente imprimible | Completado |
 | CSV/XLSX y conciliación/reporting | Completado |
 | Fase 7B — Documentos, exportaciones y reporting | **Completada** |
+| Fase 8A — Integraciones salientes neutrales | **Completada** |
 
 ## Siguiente prioridad
 
-El siguiente bloque es la **Fase 8 — Integraciones externas**. El core debe conectarse ahora con ecosistemas de negocio reales mediante adapters neutrales, manteniendo los payloads específicos de cada proveedor fuera de los dominios centrales.
+El siguiente bloque es la **Fase 8B — ejecución programada, replay y observabilidad de integraciones**.
 
-Prioridades iniciales:
+La frontera común de eventos/outbox/webhook ya existe. Ahora toca operar esta capa sin depender de una acción manual de Admin:
 
-- APIs de proveedores/reservas;
-- webhooks salientes genéricos;
-- sincronización CRM;
-- integración ERP/contabilidad;
-- fuentes CMS/catálogo;
-- adapter REST genérico de reservas;
-- PSP adicionales cuando aporten valor comercial.
+- entry point scheduler/worker con autenticación server-only;
+- límites de lote/frecuencia;
+- replay/requeue auditado de dead-letter;
+- detalle Admin de eventos y entregas;
+- métricas de salud de la cola y visibilidad de fallos;
+- reglas de retención del historial completado.
 
-La validación TEST/LIVE de Stripe/Redsys se insertará cuando existan cuentas proveedor adecuadas y no necesita bloquear el trabajo de adapters de la Fase 8.
+Después, la Fase 8C podrá añadir adapters de proveedores/reservas, CRM, ERP/contabilidad, CMS y REST genérico sobre la misma frontera neutral.
+
+La validación TEST/LIVE de Stripe/Redsys se insertará cuando existan cuentas proveedor adecuadas y no necesita bloquear la Fase 8.
 
 ## Principios
 
@@ -358,6 +398,7 @@ La validación TEST/LIVE de Stripe/Redsys se insertará cuando existan cuentas p
 - datos avanzados solo post-compra cuando aplican;
 - documentos de cliente sin notas internas, datos protegidos ni costes proveedor;
 - exportaciones sensibles limitadas por permisos, finalidad operativa y auditoría persistente antes de entregarse;
+- eventos salientes genéricos sin datos protegidos del viajero ni payloads específicos de proveedor;
 - UX pública bilingüe y responsive;
 - integraciones propietarias fuera del core MIT cuando corresponda.
 

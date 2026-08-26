@@ -6,6 +6,11 @@ import type {
   ServiceReservationStatus
 } from "@/domain/services/booking-types";
 import { evaluateServiceReservationPolicy } from "@/lib/change-policy";
+import {
+  createIntegrationEvent,
+  enqueueIntegrationEvent,
+  ensureIntegrationOutboxIndexes
+} from "@/lib/integration-outbox";
 import { serviceAvailabilityCollectionName } from "@/lib/service-availability";
 import { getMongoClient, getMongoDatabaseName } from "@/lib/mongodb";
 
@@ -38,72 +43,55 @@ export async function listServiceReservationsForCustomer(identityId: string) {
   const client = await getMongoClient();
   const database = client.db(getMongoDatabaseName());
   await ensureServiceReservationIndexes(database);
-  return database
-    .collection<StoredServiceReservation>(serviceReservationCollectionName)
-    .find({ identityId })
-    .sort({ createdAt: -1 })
-    .toArray();
+  return database.collection<StoredServiceReservation>(serviceReservationCollectionName)
+    .find({ identityId }).sort({ createdAt: -1 }).toArray();
 }
 
 export async function getServiceReservationForCustomer(identityId: string, id: string) {
   const client = await getMongoClient();
   const database = client.db(getMongoDatabaseName());
   await ensureServiceReservationIndexes(database);
-  return database
-    .collection<StoredServiceReservation>(serviceReservationCollectionName)
-    .findOne({ id, identityId });
+  return database.collection<StoredServiceReservation>(serviceReservationCollectionName).findOne({ id, identityId });
 }
 
 export async function listServiceReservationsForRelatedTrip(relatedReservationId: string) {
   const client = await getMongoClient();
   const database = client.db(getMongoDatabaseName());
   await ensureServiceReservationIndexes(database);
-  return database
-    .collection<StoredServiceReservation>(serviceReservationCollectionName)
-    .find({ relatedReservationId })
-    .sort({ serviceDate: 1, createdAt: 1 })
-    .toArray();
+  return database.collection<StoredServiceReservation>(serviceReservationCollectionName)
+    .find({ relatedReservationId }).sort({ serviceDate: 1, createdAt: 1 }).toArray();
 }
 
-export async function listServiceReservationsForRelatedTripForCustomer(
-  identityId: string,
-  relatedReservationId: string
-) {
+export async function listServiceReservationsForRelatedTripForCustomer(identityId: string, relatedReservationId: string) {
   const client = await getMongoClient();
   const database = client.db(getMongoDatabaseName());
   await ensureServiceReservationIndexes(database);
-  return database
-    .collection<StoredServiceReservation>(serviceReservationCollectionName)
-    .find({ identityId, relatedReservationId })
-    .sort({ serviceDate: 1, createdAt: 1 })
-    .toArray();
+  return database.collection<StoredServiceReservation>(serviceReservationCollectionName)
+    .find({ identityId, relatedReservationId }).sort({ serviceDate: 1, createdAt: 1 }).toArray();
 }
 
 export async function listServiceReservationsForOperator() {
   const client = await getMongoClient();
   const database = client.db(getMongoDatabaseName());
   await ensureServiceReservationIndexes(database);
-  return database
-    .collection<StoredServiceReservation>(serviceReservationCollectionName)
-    .find({})
-    .sort({ createdAt: -1 })
-    .limit(500)
-    .toArray();
+  return database.collection<StoredServiceReservation>(serviceReservationCollectionName)
+    .find({}).sort({ createdAt: -1 }).limit(500).toArray();
 }
 
 export async function getServiceReservationForOperator(id: string) {
   const client = await getMongoClient();
   const database = client.db(getMongoDatabaseName());
   await ensureServiceReservationIndexes(database);
-  return database
-    .collection<StoredServiceReservation>(serviceReservationCollectionName)
-    .findOne({ id });
+  return database.collection<StoredServiceReservation>(serviceReservationCollectionName).findOne({ id });
 }
 
 export async function createServiceReservation(input: CreateServiceReservationInput) {
   const client = await getMongoClient();
   const database = client.db(getMongoDatabaseName());
-  await ensureServiceReservationIndexes(database);
+  await Promise.all([
+    ensureServiceReservationIndexes(database),
+    ensureIntegrationOutboxIndexes(database)
+  ]);
   const reservations = database.collection<StoredServiceReservation>(serviceReservationCollectionName);
   const availability = database.collection(serviceAvailabilityCollectionName);
   const session = client.startSession();
@@ -114,6 +102,24 @@ export async function createServiceReservation(input: CreateServiceReservationIn
     statusHistory: [],
     createdAt: new Date().toISOString()
   };
+  const integrationEvent = createIntegrationEvent({
+    type: "service.reservation.created",
+    aggregateType: "service-reservation",
+    aggregateId: reservation.id,
+    occurredAt: reservation.createdAt,
+    payload: {
+      reservationId: reservation.id,
+      serviceId: reservation.serviceId,
+      serviceType: reservation.serviceType,
+      status: reservation.status,
+      partySize: reservation.partySize,
+      quantity: reservation.quantity,
+      totalPrice: reservation.totalPrice,
+      currency: reservation.currency,
+      serviceDate: reservation.serviceDate,
+      createdAt: reservation.createdAt
+    }
+  });
 
   try {
     await session.withTransaction(async () => {
@@ -125,23 +131,15 @@ export async function createServiceReservation(input: CreateServiceReservationIn
             serviceId: input.serviceId,
             status: "open",
             date: { $gte: today },
-            $expr: {
-              $gte: [
-                { $subtract: ["$capacity", "$reserved"] },
-                input.inventoryUnits
-              ]
-            }
+            $expr: { $gte: [{ $subtract: ["$capacity", "$reserved"] }, input.inventoryUnits] }
           },
-          {
-            $inc: { reserved: input.inventoryUnits },
-            $set: { updatedAt: new Date() }
-          },
+          { $inc: { reserved: input.inventoryUnits }, $set: { updatedAt: new Date() } },
           { session }
         );
         if (inventoryResult.modifiedCount !== 1) throw inventoryError();
       }
-
       await reservations.insertOne(reservation, { session });
+      await enqueueIntegrationEvent(database, session, integrationEvent);
     });
     return reservation;
   } finally {
@@ -159,19 +157,20 @@ async function changeStatus(input: {
 }) {
   const client = await getMongoClient();
   const database = client.db(getMongoDatabaseName());
-  await ensureServiceReservationIndexes(database);
+  await Promise.all([
+    ensureServiceReservationIndexes(database),
+    ensureIntegrationOutboxIndexes(database)
+  ]);
   const reservations = database.collection<StoredServiceReservation>(serviceReservationCollectionName);
   const availability = database.collection(serviceAvailabilityCollectionName);
   const session = client.startSession();
+  const integrationEventId = `intevt-${randomUUID()}`;
   let changed: ServiceReservation | null = null;
 
   try {
     await session.withTransaction(async () => {
       const current = await reservations.findOne(
-        {
-          id: input.reservationId,
-          ...(input.identityId ? { identityId: input.identityId } : {})
-        },
+        { id: input.reservationId, ...(input.identityId ? { identityId: input.identityId } : {}) },
         { session }
       );
       if (!current || current.status === input.toStatus) return;
@@ -197,34 +196,35 @@ async function changeStatus(input: {
         actorId: input.actorId,
         at: updatedAt
       } as const;
-
       const update = await reservations.updateOne(
         { id: current.id, status: current.status },
-        {
-          $set: { status: input.toStatus, updatedAt },
-          $push: { statusHistory: event }
-        },
+        { $set: { status: input.toStatus, updatedAt }, $push: { statusHistory: event } },
         { session }
       );
       if (update.modifiedCount !== 1) return;
 
       if (input.toStatus === "cancelled" && current.availabilityId && current.inventoryUnits > 0) {
         const release = await availability.updateOne(
-          {
-            id: current.availabilityId,
-            serviceId: current.serviceId,
-            reserved: { $gte: current.inventoryUnits }
-          },
-          {
-            $inc: { reserved: -current.inventoryUnits },
-            $set: { updatedAt: new Date() }
-          },
+          { id: current.availabilityId, serviceId: current.serviceId, reserved: { $gte: current.inventoryUnits } },
+          { $inc: { reserved: -current.inventoryUnits }, $set: { updatedAt: new Date() } },
           { session }
         );
-        if (release.modifiedCount !== 1) {
-          throw serviceError("SERVICE_INVENTORY_RELEASE_FAILED", "Service inventory could not be released safely.");
-        }
+        if (release.modifiedCount !== 1) throw serviceError("SERVICE_INVENTORY_RELEASE_FAILED", "Service inventory could not be released safely.");
       }
+
+      await enqueueIntegrationEvent(database, session, createIntegrationEvent({
+        id: integrationEventId,
+        type: "service.reservation.status.changed",
+        aggregateType: "service-reservation",
+        aggregateId: current.id,
+        occurredAt: updatedAt,
+        payload: {
+          reservationId: current.id,
+          fromStatus: current.status,
+          toStatus: input.toStatus,
+          updatedAt
+        }
+      }));
 
       changed = {
         ...current,
@@ -240,25 +240,9 @@ async function changeStatus(input: {
 }
 
 export function cancelServiceReservationForCustomer(identityId: string, reservationId: string) {
-  return changeStatus({
-    reservationId,
-    identityId,
-    toStatus: "cancelled",
-    actorType: "customer",
-    actorId: identityId,
-    customerPendingOnly: true
-  });
+  return changeStatus({ reservationId, identityId, toStatus: "cancelled", actorType: "customer", actorId: identityId, customerPendingOnly: true });
 }
 
-export function updateServiceReservationStatusByStaff(
-  reservationId: string,
-  toStatus: "confirmed" | "cancelled",
-  actorId: string
-) {
-  return changeStatus({
-    reservationId,
-    toStatus,
-    actorType: "staff",
-    actorId
-  });
+export function updateServiceReservationStatusByStaff(reservationId: string, toStatus: "confirmed" | "cancelled", actorId: string) {
+  return changeStatus({ reservationId, toStatus, actorType: "staff", actorId });
 }
