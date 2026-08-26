@@ -12,7 +12,7 @@ const routeSource = await readFile(new URL("../app/api/internal/integrations/pro
 assert.ok(routeSource.includes("export async function POST"), "scheduler entrypoint must be POST-only");
 assert.equal(routeSource.includes("export async function GET"), false, "scheduler entrypoint must not expose GET execution");
 assert.ok(routeSource.includes("authenticateIntegrationWorkerRequest(request)"), "scheduler must authenticate before processing");
-assert.ok(routeSource.indexOf("authenticateIntegrationWorkerRequest(request)") < routeSource.indexOf("claimIntegrationWorkerRun"), "authentication must happen before worker claim");
+assert.ok(routeSource.indexOf("authenticateIntegrationWorkerRequest(request)") < routeSource.indexOf("const claim = await claimIntegrationWorkerRun"), "authentication must happen before worker claim");
 assert.ok(routeSource.includes("claimIntegrationWorkerRun({ source: \"scheduler\""), "scheduler must use the durable worker lock");
 assert.ok(routeSource.includes("getIntegrationWorkerBatchSize()"), "scheduled batch size must be server-controlled");
 assert.ok(routeSource.includes("pruneCompletedIntegrationHistory()"), "scheduled runs must apply completed-history retention");
