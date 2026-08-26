@@ -1,6 +1,7 @@
 import styles from "@/app/operator/operator.module.css";
 import {
   addSupplierFulfilmentNoteAction,
+  runSupplierAdapterAction,
   saveSupplierFulfilmentAction
 } from "@/app/operator/fulfilment/actions";
 import { setSupplierReferenceDisclosureAction } from "@/app/operator/fulfilment/reference-actions";
@@ -14,7 +15,12 @@ import type {
 import type { TravelLocale } from "@/domain/travel/types";
 import { listSupplierReferenceDisclosures } from "@/lib/customer-document-references";
 import { formatOperatorDate, formatOperatorMoney, tr } from "@/lib/operator-i18n";
+import { isSupplierFulfilmentAdapterConfigured } from "@/lib/supplier-fulfilment-adapter-config";
 import { isSupplierFulfilmentOverdue, supplierFulfilmentDateKey } from "@/lib/supplier-fulfilment-rules";
+import {
+  listSupplierAdapterAuditForTarget,
+  type SupplierFulfilmentAdapterAuditEvent
+} from "@/lib/supplier-fulfilment-sync";
 
 const statusOrder: SupplierFulfilmentStatus[] = ["not-requested", "requested", "confirmed", "rejected", "cancelled"];
 
@@ -70,6 +76,20 @@ function eventValue(
   return value;
 }
 
+function adapterOperationLabel(event: SupplierFulfilmentAdapterAuditEvent, locale: TravelLocale) {
+  if (event.operation === "request") return tr(locale, "External request", "Solicitud externa");
+  if (event.operation === "cancel") return tr(locale, "External cancellation", "Cancelación externa");
+  return tr(locale, "External status sync", "Sincronización externa de estado");
+}
+
+function adapterOutcomeLabel(event: SupplierFulfilmentAdapterAuditEvent, locale: TravelLocale) {
+  if (event.outcome === "applied") return tr(locale, "Applied", "Aplicado");
+  if (event.outcome === "no-change") return tr(locale, "No local change", "Sin cambio local");
+  if (event.outcome === "conflict") return tr(locale, "Local transition conflict", "Conflicto de transición local");
+  if (event.outcome === "failed") return tr(locale, "Failed", "Fallido");
+  return tr(locale, "Response received", "Respuesta recibida");
+}
+
 export async function SupplierFulfilmentPanel({
   components,
   items,
@@ -103,6 +123,22 @@ export async function SupplierFulfilmentPanel({
     "invalid-fulfilment": tr(locale, "Review the supplier, status, cost and deadline before saving.", "Revisa proveedor, estado, coste y fecha límite antes de guardar."),
     "no-changes": tr(locale, "No supplier changes were detected.", "No se detectaron cambios del proveedor."),
     "update-failed": tr(locale, "The supplier tracking change could not be saved.", "No se pudo guardar el cambio de seguimiento del proveedor."),
+    "adapter-disabled": tr(locale, "The external supplier adapter is disabled in this deployment.", "El adapter externo de proveedores está desactivado en este despliegue."),
+    "adapter-unavailable": tr(locale, "The external supplier adapter is temporarily unavailable.", "El adapter externo de proveedores no está disponible temporalmente."),
+    "adapter-config": tr(locale, "Review the server-only supplier adapter configuration.", "Revisa la configuración server-only del adapter de proveedores."),
+    "adapter-supplier-required": tr(locale, "Save a supplier locally before sending an external request.", "Guarda primero el proveedor localmente antes de enviar una solicitud externa."),
+    "adapter-invalid-operation": tr(locale, "That external supplier operation is not allowed from the current state.", "Esa operación externa de proveedor no está permitida desde el estado actual."),
+    "adapter-fulfilment-not-found": tr(locale, "The local supplier record no longer exists.", "El registro local del proveedor ya no existe."),
+    "adapter-auth": tr(locale, "The supplier API rejected server authentication.", "La API del proveedor rechazó la autenticación del servidor."),
+    "adapter-not-found": tr(locale, "The supplier API could not find this fulfilment request.", "La API del proveedor no encontró esta solicitud de fulfilment."),
+    "adapter-conflict": tr(locale, "The supplier response conflicts with the current local state and was not forced.", "La respuesta del proveedor entra en conflicto con el estado local actual y no se ha forzado."),
+    "adapter-rejected": tr(locale, "The supplier API rejected the operation.", "La API del proveedor rechazó la operación."),
+    "adapter-rate-limited": tr(locale, "The supplier API is rate limited. Try again later.", "La API del proveedor está limitada temporalmente. Inténtalo más tarde."),
+    "adapter-timeout": tr(locale, "The supplier API did not respond before the timeout.", "La API del proveedor no respondió antes del timeout."),
+    "adapter-network": tr(locale, "The supplier API could not be reached.", "No se pudo conectar con la API del proveedor."),
+    "adapter-contract": tr(locale, "The supplier API response does not match the supported contract version.", "La respuesta de la API del proveedor no cumple la versión de contrato soportada."),
+    "adapter-response-too-large": tr(locale, "The supplier API response exceeded the configured safety limit.", "La respuesta de la API del proveedor superó el límite de seguridad configurado."),
+    "adapter-audit": tr(locale, "The external response could not be audited, so it was not applied locally.", "La respuesta externa no pudo auditarse, por lo que no se aplicó localmente."),
     "reference-disclosure-unavailable": tr(locale, "Customer voucher reference controls are unavailable in this deployment.", "Los controles de referencia para vouchers de cliente no están disponibles en este despliegue."),
     "reference-required": tr(locale, "Save a supplier reference before allowing it on customer vouchers.", "Guarda una referencia de proveedor antes de permitirla en vouchers del cliente."),
     "invalid-reference-disclosure": tr(locale, "The customer voucher reference setting is invalid.", "La configuración de referencia del voucher de cliente no es válida."),
@@ -111,6 +147,11 @@ export async function SupplierFulfilmentPanel({
   const itemByKey = new Map(items.map((item) => [item.componentKey, item]));
   const disclosures = await listSupplierReferenceDisclosures(items.map((item) => item.id)).catch(() => []);
   const disclosureByFulfilmentId = new Map(disclosures.map((item) => [item.fulfilmentId, item]));
+  const adapterConfigured = isSupplierFulfilmentAdapterConfigured();
+  const firstComponent = components[0];
+  const adapterAudit = firstComponent && adapterConfigured
+    ? await listSupplierAdapterAuditForTarget(firstComponent.targetType, firstComponent.targetId).catch(() => [])
+    : [];
   const today = supplierFulfilmentDateKey();
 
   return (
@@ -122,9 +163,13 @@ export async function SupplierFulfilmentPanel({
         "Track each operational component without changing the customer's booking price or payment ledger. Supplier costs and notes always remain staff-only. A supplier reference appears on customer vouchers only after explicit approval below.",
         "Haz seguimiento de cada componente operativo sin modificar el precio de la reserva del cliente ni el historial de pagos. Los costes y notas del proveedor siempre son internos. Una referencia solo aparece en vouchers del cliente tras aprobarla explícitamente aquí."
       )}</p>
+      <p className={styles.muted}>{adapterConfigured
+        ? tr(locale, "External supplier API synchronization is enabled. External responses still pass local transition rules and are audited before application.", "La sincronización con API externa de proveedores está habilitada. Las respuestas externas siguen pasando por las reglas locales de transición y se auditan antes de aplicarse.")
+        : tr(locale, "External supplier API synchronization is disabled; manual supplier tracking remains fully available.", "La sincronización con API externa de proveedores está desactivada; el seguimiento manual sigue totalmente disponible.")}</p>
       {updated === "saved" ? <div className={styles.notice}>{tr(locale, "Supplier tracking updated.", "Seguimiento del proveedor actualizado.")}</div> : null}
       {updated === "note" ? <div className={styles.notice}>{tr(locale, "Supplier note added.", "Nota del proveedor añadida.")}</div> : null}
       {updated === "reference-disclosure" ? <div className={styles.notice}>{tr(locale, "Customer voucher reference policy updated.", "Política de referencia para vouchers del cliente actualizada.")}</div> : null}
+      {updated?.startsWith("adapter-") ? <div className={styles.notice}>{tr(locale, "External supplier synchronization completed.", "Sincronización externa con proveedor completada.")}</div> : null}
       {error && errors[error] ? <div className={styles.notice}>{errors[error]}</div> : null}
 
       <div className={styles.managementList}>
@@ -134,6 +179,7 @@ export async function SupplierFulfilmentPanel({
           const overdue = item ? isSupplierFulfilmentOverdue(item, today) : false;
           const itemEvents = item ? events.filter((event) => event.fulfilmentId === item.id) : [];
           const itemNotes = item ? notes.filter((note) => note.fulfilmentId === item.id) : [];
+          const itemAdapterAudit = item ? adapterAudit.filter((entry) => entry.fulfilmentId === item.id) : [];
           const timeline = [
             ...itemEvents.map((event) => ({ kind: "event" as const, at: event.occurredAt, event })),
             ...itemNotes.map((note) => ({ kind: "note" as const, at: note.createdAt, note }))
@@ -200,6 +246,59 @@ export async function SupplierFulfilmentPanel({
                 ) : null}
                 {writesEnabled && status !== "cancelled" ? <button className="button button-primary" type="submit">{tr(locale, "Save supplier tracking", "Guardar seguimiento")}</button> : null}
               </form>
+
+              {adapterConfigured && writesEnabled ? (
+                item ? (
+                  <div className={styles.editorForm}>
+                    <strong>{tr(locale, "External supplier API", "API externa del proveedor")}</strong>
+                    <p className={styles.muted}>{tr(locale, "Only operational component identifiers, supplier name/reference and deadline are sent. Prices, payment ledger and protected traveller data are excluded.", "Solo se envían identificadores operativos del componente, proveedor/referencia y fecha límite. Se excluyen precios, historial de pagos y datos protegidos del viajero.")}</p>
+                    <div className={styles.actions}>
+                      {(status === "not-requested" || status === "rejected") ? (
+                        <form action={runSupplierAdapterAction}>
+                          <input type="hidden" name="fulfilmentId" value={item.id} />
+                          <input type="hidden" name="operation" value="request" />
+                          <input type="hidden" name="returnTo" value={returnTo} />
+                          <button className="button button-secondary" type="submit">{status === "rejected" ? tr(locale, "Request again", "Solicitar de nuevo") : tr(locale, "Send supplier request", "Enviar solicitud al proveedor")}</button>
+                        </form>
+                      ) : null}
+                      {status !== "not-requested" && status !== "cancelled" ? (
+                        <form action={runSupplierAdapterAction}>
+                          <input type="hidden" name="fulfilmentId" value={item.id} />
+                          <input type="hidden" name="operation" value="status" />
+                          <input type="hidden" name="returnTo" value={returnTo} />
+                          <button className="button button-secondary" type="submit">{tr(locale, "Sync supplier status", "Sincronizar estado")}</button>
+                        </form>
+                      ) : null}
+                      {status !== "not-requested" && status !== "cancelled" ? (
+                        <form action={runSupplierAdapterAction}>
+                          <input type="hidden" name="fulfilmentId" value={item.id} />
+                          <input type="hidden" name="operation" value="cancel" />
+                          <input type="hidden" name="returnTo" value={returnTo} />
+                          <button className="button button-secondary" type="submit">{tr(locale, "Cancel with supplier", "Cancelar con proveedor")}</button>
+                        </form>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : (
+                  <p className={styles.muted}>{tr(locale, "Save the supplier locally once before using the external adapter.", "Guarda el proveedor localmente una vez antes de usar el adapter externo.")}</p>
+                )
+              ) : null}
+
+              {itemAdapterAudit.length ? (
+                <div className={styles.auditList}>
+                  {itemAdapterAudit.map((entry) => (
+                    <div className={styles.auditItem} key={entry.id}>
+                      <strong>{adapterOperationLabel(entry, locale)} · {adapterOutcomeLabel(entry, locale)}</strong><br />
+                      {entry.responseStatus ? <>{tr(locale, "External status", "Estado externo")}: {entry.responseStatus}<br /></> : null}
+                      {entry.responseReference ? <>{tr(locale, "External reference", "Referencia externa")}: {entry.responseReference}<br /></> : null}
+                      {entry.providerMessage ? <>{tr(locale, "Provider message", "Mensaje del proveedor")}: {entry.providerMessage}<br /></> : null}
+                      {entry.errorCode ? <>{tr(locale, "Error code", "Código de error")}: {entry.errorCode}<br /></> : null}
+                      <span>{entry.actorDisplayName} · {entry.adapterId}</span><br />
+                      {formatOperatorDate(entry.occurredAt, locale, true)}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
 
               {item?.supplierReference ? (
                 <div className={styles.editorForm}>

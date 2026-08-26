@@ -94,6 +94,9 @@ jobs:
       - name: Generic REST booking adapter invariant check
         run: npm run check:rest-booking-adapter
 
+      - name: Supplier fulfilment adapter invariant check
+        run: npm run check:supplier-fulfilment-adapter
+
       - name: Type check
         run: npm run typecheck
 

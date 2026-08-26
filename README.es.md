@@ -61,11 +61,12 @@ La plataforma está muy por encima del MVP original de catálogo/reservas. La im
 - ejecución programada server-only de integraciones con lock durable y límites de ejecución;
 - métricas de salud, diagnóstico de eventos/entregas y replay auditado de dead-letter desde Admin;
 - retención limitada del historial de integraciones completadas correctamente, preservando trabajo activo/dead-letter y auditoría de replay;
-- adapter REST genérico y versionado de `BookingRepository` con autenticación server-only, validación runtime, transporte limitado y reintentos idempotentes de mutaciones.
+- adapter REST genérico y versionado de `BookingRepository` con autenticación server-only, validación runtime, transporte limitado y reintentos idempotentes de mutaciones;
+- adapter opcional y neutral de fulfilment de proveedores con sincronización auditada request/status/cancel, idempotencia determinista para mutaciones y fronteras estrictas comerciales/de privacidad.
 
 La validación E2E con credenciales Stripe/Redsys sigue pendiente hasta disponer de cuentas adecuadas. Los adapters están implementados, pero la capacidad productiva no se considera validada hasta probar TEST/LIVE.
 
-**La Fase 8C — adapters de negocio está EN CURSO. La Fase 8C-1 — adapter REST genérico de reservas está completada; la Fase 8C-2 — frontera de adapter de fulfilment de proveedores es la siguiente.**
+**La Fase 8C — adapters de negocio está EN CURSO. La Fase 8C-1 — adapter REST genérico de reservas y la Fase 8C-2 — frontera de adapter de fulfilment de proveedores están completadas; la Fase 8C-3 — adapter de sincronización CRM es la siguiente.**
 
 ## Capacidades actuales
 
@@ -206,14 +207,21 @@ La validación E2E con credenciales Stripe/Redsys sigue pendiente hasta disponer
 ### Adapters de negocio
 
 - `BOOKING_MODE=rest` compone un API externo de reservas detrás de la interfaz existente `BookingRepository`;
-- contrato REST `/v1` versionado con `X-OTP-Contract-Version: 1`;
+- contrato REST `/v1` de reservas versionado con `X-OTP-Contract-Version: 1`;
 - autenticación Bearer server-only y HTTPS obligatorio en producción;
 - rechazo de redirects, `no-store`, timeout limitado y tamaño máximo de respuesta leído en streaming;
 - validación runtime antes de permitir que JSON externo se convierta en datos del dominio de reservas;
 - ownership del cliente y alcance solicitado de viaje/salida verificados después del mapping;
-- las mutaciones llevan `Idempotency-Key` estable por invocación y usan reintentos transitorios limitados;
+- las mutaciones de reservas llevan `Idempotency-Key` estable por invocación y usan reintentos transitorios limitados;
+- `SUPPLIER_FULFILMENT_ADAPTER_MODE=rest` activa un adapter externo de proveedores sin sustituir el almacén local de fulfilment;
+- las operaciones REST v1 de proveedor son explícitas `request`, `status` y `cancel`; request debe normalizar a `requested` y cancel a `cancelled`;
+- las mutaciones request/cancel de proveedor usan claves de idempotencia deterministas y reintentos transitorios limitados;
+- las respuestas externas del proveedor se auditan persistentemente antes de aplicarse localmente y luego vuelven a pasar por `saveSupplierFulfilment()`;
+- los payloads externos de proveedor excluyen totales de cliente, ledger de pagos/reembolsos, costes de proveedor, instrucciones de inventario y datos protegidos del viajero;
+- una respuesta externa solo puede actualizar estado/referencia normalizados, preservando coste/moneda local del proveedor;
+- las referencias recibidas externamente siguen siendo internas hasta superar la aprobación explícita separada para vouchers de cliente;
 - ledger de pagos, operaciones de personal, datos de viajeros, catálogo e integraciones salientes siguen siendo capacidades componibles de forma independiente;
-- los payloads específicos de proveedor deben normalizarse dentro de adapters y no filtrarse al dominio central de reservas.
+- los payloads específicos de proveedor deben normalizarse dentro de adapters y no filtrarse a dominios centrales.
 
 ## Arquitectura
 
@@ -249,6 +257,10 @@ destinos + viajes + alojamiento + servicios
 IdentityRepository                 Operations / RBAC / auditoría
                                            |
                        documentos / informes / fulfilment / tareas
+                                           |
+                       SupplierFulfilmentAdapter
+                         /             \
+                    disabled         REST /v1
                                            |
                               outbox transaccional
                                            |
@@ -321,6 +333,11 @@ REST_BOOKING_BASE_URL=
 REST_BOOKING_BEARER_TOKEN=
 REST_BOOKING_TIMEOUT_MS=10000
 REST_BOOKING_MAX_RESPONSE_BYTES=2000000
+SUPPLIER_FULFILMENT_ADAPTER_MODE=disabled
+REST_SUPPLIER_FULFILMENT_BASE_URL=
+REST_SUPPLIER_FULFILMENT_BEARER_TOKEN=
+REST_SUPPLIER_FULFILMENT_TIMEOUT_MS=10000
+REST_SUPPLIER_FULFILMENT_MAX_RESPONSE_BYTES=262144
 PAYMENT_SECRETS_KEY=
 TRAVELLER_DATA_KEY=
 INTEGRATION_SECRETS_KEY=
@@ -330,7 +347,7 @@ INTEGRATION_WORKER_MIN_INTERVAL_SECONDS=60
 INTEGRATION_COMPLETED_RETENTION_DAYS=180
 ```
 
-`REST_BOOKING_BEARER_TOKEN` es server-only y nunca debe usar `NEXT_PUBLIC_*`. Los endpoints REST de reservas en producción deben usar HTTPS. Las tres claves maestras deben ser estables, de alta entropía y 32 bytes. `KTRAVEL_INTEGRATION_WORKER_TOKEN` es una credencial Bearer server-only independiente y debe contener al menos 32 caracteres de alta entropía. Las claves de cifrado no deben rotarse sin un plan de migración/re-cifrado.
+`REST_BOOKING_BEARER_TOKEN` y `REST_SUPPLIER_FULFILMENT_BEARER_TOKEN` son server-only y nunca deben usar `NEXT_PUBLIC_*`. Los endpoints REST de reservas y proveedores en producción deben usar HTTPS. Las tres claves maestras deben ser estables, de alta entropía y 32 bytes. `KTRAVEL_INTEGRATION_WORKER_TOKEN` es una credencial Bearer server-only independiente y debe contener al menos 32 caracteres de alta entropía. Las claves de cifrado no deben rotarse sin un plan de migración/re-cifrado.
 
 ## Documentación
 
@@ -338,6 +355,7 @@ INTEGRATION_COMPLETED_RETENTION_DAYS=180
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 - [`docs/BOOKING.md`](docs/BOOKING.md)
 - [`docs/REST-BOOKING-ADAPTER.es.md`](docs/REST-BOOKING-ADAPTER.es.md) — contrato `/v1`, autenticación, idempotencia y validación del adapter REST genérico de `BookingRepository`.
+- [`docs/SUPPLIER-FULFILMENT-ADAPTER.es.md`](docs/SUPPLIER-FULFILMENT-ADAPTER.es.md) — contrato externo request/status/cancel, auditoría antes de aplicar y fronteras de datos.
 - [`docs/OPERATIONS.md`](docs/OPERATIONS.md)
 - [`docs/CATALOGUE-BACKOFFICE.md`](docs/CATALOGUE-BACKOFFICE.md)
 - [`docs/DEPARTURES.md`](docs/DEPARTURES.md)
@@ -385,6 +403,7 @@ check:reporting-exports
 check:outbound-integrations
 check:integration-operations
 check:rest-booking-adapter
+check:supplier-fulfilment-adapter
 typecheck
 build
 ```
@@ -413,23 +432,26 @@ build
 | Fase 8A — Integraciones salientes neutrales | **Completada** |
 | Fase 8B — Ejecución programada, replay y observabilidad | **Completada** |
 | Fase 8C-1 — Adapter REST genérico de reservas | **Completada** |
+| Fase 8C-2 — Frontera de adapter de fulfilment de proveedores | **Completada** |
 | Fase 8C — Adapters de negocio | **En curso** |
 
 ## Siguiente prioridad
 
-El siguiente bloque es la **Fase 8C-2 — frontera de adapter de fulfilment de proveedores**.
+El siguiente bloque es la **Fase 8C-3 — adapter de sincronización CRM**.
 
-El adapter REST genérico de reservas demuestra que un sistema externo puede sustituir una capacidad sin cambiar el dominio central ni la UI. El siguiente bloque aplicará el mismo principio a la operación con proveedores:
+Con persistencia de reservas y fulfilment de proveedores ya demostrados como fronteras neutrales y reemplazables de forma independiente, el siguiente adapter de negocio debe sincronizar datos seleccionados del ciclo de cliente/reserva con sistemas CRM sin convertir al CRM en autoridad de inventario, pricing o contabilidad de pagos.
 
-- interfaz neutral de adapter de fulfilment de proveedores;
-- contrato request / confirm / reject / cancel;
-- referencias externas y estados de proveedor normalizados;
-- mutaciones salientes idempotentes y traducción estable de errores;
-- sincronización auditable con el workflow de fulfilment existente;
-- sin reescritura automática de totales de cliente ni del ledger de pagos;
-- autenticación y mapping específicos de proveedor contenidos dentro de adapters.
+Dirección prevista para 8C-3:
 
-Más adelante, 8C podrá añadir sincronización CRM, ERP/contabilidad, fuentes CMS/catálogo, identidad enterprise y PSP adicionales cuando aporten valor comercial.
+- interfaz neutral de sincronización CRM y contrato normalizado de contacto/ciclo de reserva;
+- semántica explícita create/update con idempotencia y referencias externas estables;
+- minimización de datos y allowlists de campos;
+- sin datos post-compra protegidos del viajero en el contrato CRM genérico;
+- resultados de sincronización auditados y traducción operativa de reintentos/errores;
+- autenticación y mapping específicos de CRM contenidos dentro de adapters;
+- reservas, fulfilment de proveedores, ledger de pagos e inventario siguen siendo autoritativos en sus fronteras actuales.
+
+Más adelante, 8C podrá añadir ERP/contabilidad, fuentes CMS/catálogo, identidad enterprise y PSP adicionales cuando aporten valor comercial.
 
 La validación TEST/LIVE de Stripe/Redsys se insertará cuando existan cuentas proveedor adecuadas y no necesita bloquear la Fase 8.
 
@@ -447,6 +469,7 @@ La validación TEST/LIVE de Stripe/Redsys se insertará cuando existan cuentas p
 - eventos salientes genéricos sin datos protegidos del viajero ni payloads específicos de proveedor;
 - ejecución programada de integraciones autenticada server-side, limitada y observable;
 - los APIs externos de reservas deben cumplir contrato runtime, ownership e idempotencia antes de que sus datos entren en el core;
+- los APIs externos de proveedores no pueden saltarse transiciones locales de fulfilment, reescribir datos comerciales/de pago ni auto-publicar referencias en vouchers de cliente;
 - UX pública bilingüe y responsive;
 - integraciones propietarias fuera del core MIT cuando corresponda.
 
