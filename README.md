@@ -61,11 +61,13 @@ The platform is well beyond the original catalogue/booking MVP. The implementati
 - a versioned generic REST `BookingRepository` adapter with server-only authentication and idempotent mutations;
 - an optional provider-neutral supplier-fulfilment adapter with audited request/status/cancel synchronization;
 - a downstream-only CRM synchronization adapter that reuses the same durable integration worker and keeps customer/profile events out of generic webhook subscriptions;
-- a downstream-only ERP/accounting adapter that exports only finalized payment/refund ledger movements through the same durable worker without granting the ERP authority over local booking/payment history.
+- a downstream-only ERP/accounting adapter that exports only finalized payment/refund ledger movements through the same durable worker without granting the ERP authority over local booking/payment history;
+- global CSP/security headers, persistent auth throttling, explicit Origin checks for cookie-authenticated Route Handler mutations and health/readiness endpoints;
+- explicit `demo|live` deployment readiness profiles that fail closed when a live configuration still relies on demo capabilities or required infrastructure is unavailable.
 
 Stripe and Redsys credentialed end-to-end validation remains intentionally pending until suitable provider accounts are available. The adapters are implemented, but production payment capability is not considered validated until provider TEST/LIVE flows have been exercised.
 
-**Phase 8 — External integrations is COMPLETE, including Phase 8C-1 booking, 8C-2 supplier fulfilment, 8C-3 CRM synchronization and 8C-4 ERP/accounting. Phase 9 — Production hardening is next.**
+**Phase 8 — External integrations is COMPLETE. Phase 9 — Production hardening is IN PROGRESS: Phase 9A production security / operability baseline is COMPLETE, and Phase 9B critical E2E + MongoDB concurrency validation is next.**
 
 ## Current capabilities
 
@@ -128,9 +130,19 @@ Stripe and Redsys credentialed end-to-end validation remains intentionally pendi
 - persistent customer registration and sessions;
 - separate staff Operator/Admin authentication;
 - customer/staff session separation;
+- opaque session tokens stored only as SHA-256 hashes with TTL expiry and server-side revocation;
+- `HttpOnly` session cookies with production `Secure`, customer `SameSite=Lax` and staff `SameSite=Strict`;
 - account lockout after repeated failures;
-- password change and SMTP recovery;
+- persistent MongoDB auth throttling for customer/staff sign-in, registration and password-reset requests;
+- rate-limit buckets store only SHA-256 identifiers, not raw email addresses or client IP values;
+- optional per-client throttling only when trusted proxy IP headers are explicitly enabled;
+- password change and SMTP recovery with non-enumerating reset-request responses;
 - authentication audit events;
+- global Content Security Policy and defensive HTTP security headers;
+- production HSTS and insecure-request upgrade;
+- explicit trusted-Origin checks for cookie-authenticated Route Handler mutations while provider webhooks retain signature-based authentication;
+- `/api/health/live` and `/api/health/ready` operational probes;
+- `KTRAVEL_DEPLOYMENT_PROFILE=demo|live` readiness contract;
 - payment-provider secrets encrypted with AES-256-GCM;
 - advanced traveller data stored separately and encrypted with AES-256-GCM;
 - outbound integration signing secrets encrypted with a dedicated AES-256-GCM master key;
@@ -368,6 +380,8 @@ A fresh clone can use the safe demo/read-only modes documented in `.env.example`
 /operator/integrations/deliveries/[deliveryId] admin-only delivery/replay diagnostics
 /operator/staff                        staff and capability management
 
+/api/health/live                       process liveness probe
+/api/health/ready                      configuration/infrastructure readiness probe
 /api/internal/integrations/process     server-only scheduled integration worker (POST)
 ```
 
@@ -377,6 +391,9 @@ The full template lives in [`.env.example`](.env.example).
 
 ```text
 KTRAVEL_PUBLIC_URL=https://travel.kairoseth.com
+KTRAVEL_DEPLOYMENT_PROFILE=demo
+KTRAVEL_ALLOWED_BROWSER_ORIGINS=
+KTRAVEL_TRUST_PROXY_IP_HEADERS=false
 MONGODB_URI=
 MONGODB_DB_NAME=ktravel
 IDENTITY_MODE=demo
@@ -418,6 +435,8 @@ INTEGRATION_WORKER_MIN_INTERVAL_SECONDS=60
 INTEGRATION_COMPLETED_RETENTION_DAYS=180
 ```
 
+`KTRAVEL_DEPLOYMENT_PROFILE=live` turns readiness into a stricter production contract: demo capabilities, invalid canonical HTTPS configuration, unavailable required MongoDB and missing outbound worker authentication make `/api/health/ready` fail with 503. `KTRAVEL_ALLOWED_BROWSER_ORIGINS` accepts exact additional browser origins only. Leave `KTRAVEL_TRUST_PROXY_IP_HEADERS=false` unless the deployment edge strips spoofed forwarding headers and writes trusted client IP values.
+
 `REST_BOOKING_BEARER_TOKEN`, `REST_SUPPLIER_FULFILMENT_BEARER_TOKEN`, `REST_CRM_BEARER_TOKEN` and `REST_ERP_ACCOUNTING_BEARER_TOKEN` are server-only and must never use `NEXT_PUBLIC_*` variables. Production REST booking, supplier, CRM and ERP/accounting targets must use HTTPS. `PAYMENT_SECRETS_KEY`, `TRAVELLER_DATA_KEY` and `INTEGRATION_SECRETS_KEY` should be stable high-entropy 32-byte keys. `KTRAVEL_INTEGRATION_WORKER_TOKEN` is a separate server-only Bearer credential and must contain at least 32 high-entropy characters. Do not rotate encryption keys without a migration/re-encryption plan. `NEXT_PUBLIC_*` variables are browser-visible and must never contain secrets.
 
 ## Documentation
@@ -444,6 +463,7 @@ INTEGRATION_COMPLETED_RETENTION_DAYS=180
 - [`docs/REPORTING-EXPORTS.md`](docs/REPORTING-EXPORTS.md) — CSV/XLSX, finance reports and audited protected-data exports.
 - [`docs/OUTBOUND-INTEGRATIONS.md`](docs/OUTBOUND-INTEGRATIONS.md) — event contract, signed webhooks, transactional outbox and delivery security.
 - [`docs/INTEGRATION-OPERATIONS.md`](docs/INTEGRATION-OPERATIONS.md) — scheduler, replay, queue health, diagnostics and retention.
+- [`docs/PRODUCTION-SECURITY.md`](docs/PRODUCTION-SECURITY.md) / [`docs/PRODUCTION-SECURITY.es.md`](docs/PRODUCTION-SECURITY.es.md) — Phase 9A HTTP, Origin/CSRF, rate-limit, session and readiness baseline.
 - [`docs/ADAPTER-GUIDE.md`](docs/ADAPTER-GUIDE.md) — adding integrations.
 - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — deployment model.
 - [`docs/PRODUCTION-CHECKLIST.md`](docs/PRODUCTION-CHECKLIST.md) — production review.
@@ -481,11 +501,12 @@ check:rest-booking-adapter
 check:supplier-fulfilment-adapter
 check:crm-sync-adapter
 check:erp-accounting-adapter
+check:production-security
 typecheck
 build
 ```
 
-CI performs a clean install, runs the invariant checks, type-checks, builds the production application, runs HTTP smoke validation and audits dependencies.
+CI performs a clean install, runs the invariant checks, type-checks, builds the production application, validates security headers/health/cross-origin rejection with HTTP smoke tests and audits dependencies.
 
 ## Project status
 
@@ -514,52 +535,25 @@ CI performs a clean install, runs the invariant checks, type-checks, builds the 
 | Phase 8C-4 — ERP/accounting adapter | **Complete** |
 | Phase 8C — Business adapters | **Complete** |
 | Phase 8 — External integrations | **Complete** |
-| Phase 9 — Production hardening | **Next** |
+| Phase 9A — Production security / operability baseline | **Complete** |
+| Phase 9B — Critical E2E + MongoDB concurrency validation | **Next** |
+| Phase 9 — Production hardening | **In progress** |
 
 Future work is tracked in **[ROADMAP.md](ROADMAP.md)** · **[ROADMAP.es.md](ROADMAP.es.md)**.
 
 ## Next development priority
 
-The next block is **Phase 9 — Production hardening**.
+The next block is **Phase 9B — Critical E2E and persistence/concurrency validation**.
 
-The core platform now has broad catalogue, booking, operations, payments, documents, reporting and external-adapter coverage. The priority shifts from adding provider surface area to proving and hardening the existing product in realistic production conditions.
+Phase 9A established the shared HTTP, browser-mutation, abuse-control, session and health/readiness baseline. The next priority is to prove the authoritative booking/payment flows under realistic browser and concurrent persistence conditions rather than add more provider surface area.
 
-Initial Phase 9 direction:
+Initial Phase 9B direction:
 
 - browser E2E across registration → booking → package/services → payment → Operator;
-- MongoDB transaction/concurrency tests for booking, inventory and payment finalization;
-- payment webhook/idempotency and integration-adapter contract tests;
-- centralized production security baseline: CSP/security headers, CSRF/origin review, rate limiting and cookie/session review;
-- structured logs, health/readiness and failure visibility;
-- backup/restore, disaster-recovery and key-recovery/rotation procedures;
-- GDPR/privacy/retention/export/deletion and market-specific regulatory review;
-- accessibility, performance and database index review;
+- MongoDB transaction/concurrency tests for constrained trip/service/accommodation inventory and reservation mutations;
+- payment webhook/idempotency regression tests that do not depend on LIVE provider credentials;
+- traveller/minor pricing and amendment E2E;
+- adapter contract/integration regression tests;
 - credentialed Stripe/Redsys TEST/LIVE E2E as soon as suitable provider accounts are available.
 
-Optional CMS/catalogue, enterprise SSO, additional PSP and jurisdiction-specific accounting adapters can be added later when commercially justified without blocking Phase 9.
-
-## Project principles
-
-- clean-room implementation;
-- provider-neutral capability interfaces;
-- server-authorized customer and staff operations;
-- server-validated pricing, inventory, ownership and state transitions;
-- historical snapshots preserve contracted traveller, accommodation, package and financial values;
-- reservation state remains separate from payment state;
-- advanced traveller data is collected only after purchase when required;
-- inventory-controlled services remain independent from lightweight package supplements;
-- customer-safe documents exclude internal notes, protected traveller data and supplier costs;
-- sensitive exports are capability-gated, purpose-bound and persistently audited before delivery;
-- generic outbound webhook events exclude protected traveller data and provider-specific payloads;
-- CRM-only customer events and ERP-only financial events are not available to generic webhook subscriptions;
-- scheduled integration execution remains server-authenticated, bounded and observable;
-- external booking APIs must satisfy runtime contract, ownership and idempotency boundaries before data enters the core;
-- external supplier APIs cannot bypass local fulfilment transitions or auto-disclose supplier references;
-- CRM adapters are downstream-only and cannot mutate authoritative booking, pricing, inventory, supplier or ledger state;
-- ERP/accounting adapters are downstream-only and cannot rewrite local payment/refund history; legal invoicing is not inferred from incomplete fiscal data;
-- public UX is bilingual, responsive and free of internal development terminology;
-- proprietary Kairoseth/customer-specific integrations stay outside the MIT core when appropriate.
-
-## License
-
-MIT. See [`LICENSE`](LICENSE).
+Later Phase 9 slices cover centralized observability, privileged audit review, key recovery/rotation, backup/restore and disaster recovery, GDPR/privacy/regulatory workflows, accessibility, performance and database index review. Optional CMS/catalogue, enterprise SSO, additional PSP and jurisdiction-specific accounting adapters can still be added later when commercially justified.
