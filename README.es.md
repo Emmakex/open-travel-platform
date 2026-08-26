@@ -47,26 +47,24 @@ La plataforma está muy por encima del MVP original de catálogo/reservas. La im
 - suplementos opcionales y modificaciones post-reserva;
 - workflow Operator con responsable, notas internas, prioridades, tags, tareas y fulfilment;
 - colas operativas avanzadas y permisos granulares;
-- PDFs de confirmación, manifiestos de viajeros y rooming lists;
-- vouchers de alojamiento/servicios seguros para cliente y expediente imprimible interno;
-- aprobación explícita/auditada de referencias proveedor antes de mostrarlas en vouchers de cliente;
-- exportaciones CSV/XLSX de reservas, servicios y clientes según permisos;
-- conciliación de pagos, saldos pendientes e ingresos por producto/servicio;
-- exportación fail-closed y auditada de datos protegidos del viajero para uso operativo legítimo;
-- auditoría de exportaciones sin persistir los valores de las celdas exportadas;
-- finanzas y reporting multimoneda sin sumar monedas diferentes entre sí;
-- eventos salientes neutrales para reservas con outbox transaccional MongoDB;
-- webhooks HTTPS firmados gestionados por Admin, secretos cifrados, reintentos limitados, historial de entregas y retención dead-letter;
-- protecciones SSRF/DNS rebinding para destinos webhook configurables;
-- ejecución programada server-only de integraciones con lock durable y límites de ejecución;
-- métricas de salud, diagnóstico de eventos/entregas y replay auditado de dead-letter desde Admin;
-- retención limitada del historial de integraciones completadas correctamente, preservando trabajo activo/dead-letter y auditoría de replay;
-- adapter REST genérico y versionado de `BookingRepository` con autenticación server-only, validación runtime, transporte limitado y reintentos idempotentes de mutaciones;
-- adapter opcional y neutral de fulfilment de proveedores con sincronización auditada request/status/cancel, idempotencia determinista para mutaciones y fronteras estrictas comerciales/de privacidad.
+- PDFs de confirmación, manifiestos y rooming lists;
+- vouchers seguros para cliente y expediente interno imprimible;
+- aprobación explícita/auditada de referencias proveedor antes de mostrarlas en vouchers;
+- exportaciones CSV/XLSX según permisos;
+- conciliación, saldos pendientes e ingresos por producto/servicio;
+- exportación fail-closed y auditada de datos protegidos de viajeros;
+- reporting financiero multimoneda sin sumar monedas distintas;
+- eventos salientes neutrales con outbox MongoDB transaccional;
+- webhooks HTTPS firmados gestionados por Admin, secretos cifrados, retries, historial y dead-letter;
+- protecciones SSRF/DNS rebinding para destinos webhook;
+- worker de integraciones server-only con locking durable, replay y retención;
+- adapter REST genérico y versionado de `BookingRepository`;
+- adapter opcional y neutral de fulfilment de proveedores con sincronización auditada request/status/cancel;
+- adapter CRM exclusivamente downstream que reutiliza el mismo worker durable y mantiene los eventos de cliente/perfil fuera de las suscripciones webhook genéricas.
 
 La validación E2E con credenciales Stripe/Redsys sigue pendiente hasta disponer de cuentas adecuadas. Los adapters están implementados, pero la capacidad productiva no se considera validada hasta probar TEST/LIVE.
 
-**La Fase 8C — adapters de negocio está EN CURSO. La Fase 8C-1 — adapter REST genérico de reservas y la Fase 8C-2 — frontera de adapter de fulfilment de proveedores están completadas; la Fase 8C-3 — adapter de sincronización CRM es la siguiente.**
+**La Fase 8C — Adapters de negocio está EN CURSO. La Fase 8C-1 — adapter REST genérico de reservas, la Fase 8C-2 — frontera de fulfilment de proveedores y la Fase 8C-3 — sincronización CRM están completadas. La Fase 8C-4 — adapter ERP/contabilidad es la siguiente.**
 
 ## Capacidades actuales
 
@@ -134,7 +132,7 @@ La validación E2E con credenciales Stripe/Redsys sigue pendiente hasta disponer
 - auditoría de autenticación;
 - secretos PSP cifrados AES-256-GCM;
 - datos avanzados del viajero almacenados aparte y cifrados AES-256-GCM;
-- secretos de firma de integraciones salientes cifrados con una clave maestra AES-256-GCM dedicada;
+- secretos de firma de integraciones salientes cifrados con clave AES-256-GCM dedicada;
 - configuración privilegiada protegida por capacidades server-side.
 
 ### Pagos y finanzas
@@ -150,78 +148,100 @@ La validación E2E con credenciales Stripe/Redsys sigue pendiente hasta disponer
 - perfiles TEST/LIVE gestionados por Admin;
 - snapshots de pago completo, depósito y cuotas;
 - cálculo de saldo pendiente y próximo pago;
-- totales del dashboard financiero separados por moneda y nunca sumados entre monedas diferentes.
+- totales financieros agrupados por moneda, nunca sumados entre monedas diferentes.
 
 ### Documentos
 
 - generación PDF server-side con `pdf-lib`;
-- confirmaciones PDF para cliente/Operator;
-- manifiestos EN/ES y rooming lists por salida;
-- vouchers de alojamiento para reservas confirmadas elegibles;
-- vouchers de servicio para actividades, transporte y protección confirmados;
-- expediente consolidado interno para Operator;
+- confirmaciones PDF cliente/Operator;
+- manifiestos EN/ES y rooming lists;
+- vouchers de alojamiento/servicio seguros para cliente;
+- expediente consolidado interno;
 - versión/estado del documento y timestamp UTC;
-- datos financieros en documentos internos solo con permiso Finanzas;
-- sección de proveedores solo con permiso Proveedores;
-- referencia proveedor en voucher cliente solo tras aprobar explícitamente la referencia exacta actual;
-- cambiar el localizador invalida automáticamente la aprobación anterior;
-- aprobaciones de referencia guardadas separadamente y auditadas;
-- notas internas, costes proveedor y valores post-compra protegidos excluidos de renderers de cliente;
-- endpoints PDF privados `no-store` + `nosniff` y nombres seguros.
+- finanzas en documentos internos solo con permiso Finanzas;
+- sección de proveedor solo con permiso Proveedores;
+- referencias proveedor en vouchers cliente únicamente tras aprobar la referencia exacta actual;
+- cambiar el localizador invalida la aprobación anterior;
+- aprobaciones guardadas separadamente y auditadas;
+- notas internas, costes proveedor y valores post-compra protegidos excluidos de renderers cliente;
+- endpoints privados `no-store` + `nosniff`.
 
 ### Informes y exportaciones
 
 - workspace protegido `/operator/reports`;
-- exportaciones CSV/XLSX de reservas de viaje, reservas de servicios y clientes;
-- filtros server-side por fecha de creación y límites de tamaño para descargas desde navegador;
-- exportaciones de conciliación, saldos pendientes/cuotas vencidas e ingresos por producto/servicio solo con permiso Finanzas;
-- misma definición tipada de columnas para los renderers CSV y XLSX;
-- mitigación de inyección de fórmulas en datos controlados por usuarios;
-- XLSX OOXML ligero con cabecera congelada y autofiltro;
+- CSV/XLSX de reservas de viaje, servicios y clientes;
+- filtros server-side y límites de descarga;
+- conciliación, saldos/cuotas vencidas e ingresos solo con permiso Finanzas;
+- definiciones tabulares comunes para CSV/XLSX;
+- mitigación de inyección de fórmulas;
+- XLSX OOXML con cabecera congelada/autofiltro;
 - respuestas privadas `no-store` + `nosniff`;
-- auditoría con actor, tipo, formato, filtros, columnas, número de filas y timestamp, sin guardar valores exportados;
-- exportación de datos protegidos exige simultáneamente permisos Datos de viajeros + Reservas, una reserva activa y un motivo operativo explícito;
-- exportación protegida exclusivamente por POST y fail-closed: la auditoría persistente debe guardarse antes de devolver los bytes sensibles;
-- métricas financieras e ingresos agrupados siempre por moneda.
+- auditoría de actor/tipo/formato/filtros/columnas/filas/timestamp sin valores exportados;
+- exportación protegida requiere Datos de viajeros + Reservas, reserva activa y motivo operativo;
+- exportación protegida POST-only y fail-closed ante fallo de auditoría;
+- métricas financieras siempre agrupadas por moneda.
 
 ### Integraciones salientes
 
 - workspace `/operator/integrations` exclusivo de Admin;
-- eventos versionados y neutrales para creación/cambio de estado de reservas de viaje y servicio;
-- outbox transaccional confirmado junto con la modificación de la reserva;
-- entregas idempotentes por pareja evento/endpoint;
-- adapter webhook HTTPS firmado con HMAC-SHA256;
-- secretos write-only cifrados mediante `INTEGRATION_SECRETS_KEY`;
-- destinos exclusivamente HTTPS, rechazo de redes privadas/locales/reservadas y revalidación DNS antes de entregar;
-- conexión al IP validado conservando el hostname original para TLS SNI y HTTP Host;
+- eventos versionados neutrales de reservas;
+- outbox transaccional confirmado junto con la mutación de reserva;
+- entregas idempotentes por evento/endpoint;
+- adapter webhook HTTPS firmado HMAC-SHA256;
+- secretos write-only cifrados con `INTEGRATION_SECRETS_KEY`;
+- destinos HTTPS, rechazo de redes privadas/locales/reservadas y revalidación DNS;
+- conexión a IP validada manteniendo SNI/Host original;
 - redirects desactivados, timeout y tamaño de respuesta limitados;
-- leasing por entrega, recuperación tras caída, reintentos/backoff, historial de intentos y dead-letter;
-- entry point server-only `POST /api/internal/integrations/process` con autenticación Bearer;
-- lock global durable compartido por scheduler y ejecuciones manuales Admin;
-- límites server-side de lote/frecuencia y `Retry-After` ante ejecuciones solapadas/rate limiting;
-- métricas de salud y vistas Admin de detalle de evento/entrega;
-- reencolado auditado de dead-letter exclusivo de Admin conservando el historial previo de intentos;
-- retención limitada de historial de entregas exitosas antiguas con auditoría agregada de retención;
-- valores protegidos post-compra, secretos de firma y credenciales del worker excluidos de diagnósticos operativos.
+- leasing, recuperación tras caída, retries/backoff, historial de intentos y dead-letter;
+- `POST /api/internal/integrations/process` server-only con Bearer;
+- lock global durable para scheduler/ejecución manual;
+- límites de lote/frecuencia y `Retry-After`;
+- métricas de salud y diagnóstico Admin de evento/entrega;
+- replay dead-letter auditado conservando historial;
+- retención limitada de éxitos antiguos;
+- valores protegidos, secretos de firma y credenciales del worker excluidos de diagnósticos.
 
 ### Adapters de negocio
 
-- `BOOKING_MODE=rest` compone un API externo de reservas detrás de la interfaz existente `BookingRepository`;
-- contrato REST `/v1` de reservas versionado con `X-OTP-Contract-Version: 1`;
-- autenticación Bearer server-only y HTTPS obligatorio en producción;
-- rechazo de redirects, `no-store`, timeout limitado y tamaño máximo de respuesta leído en streaming;
-- validación runtime antes de permitir que JSON externo se convierta en datos del dominio de reservas;
-- ownership del cliente y alcance solicitado de viaje/salida verificados después del mapping;
-- las mutaciones de reservas llevan `Idempotency-Key` estable por invocación y usan reintentos transitorios limitados;
-- `SUPPLIER_FULFILMENT_ADAPTER_MODE=rest` activa un adapter externo de proveedores sin sustituir el almacén local de fulfilment;
-- las operaciones REST v1 de proveedor son explícitas `request`, `status` y `cancel`; request debe normalizar a `requested` y cancel a `cancelled`;
-- las mutaciones request/cancel de proveedor usan claves de idempotencia deterministas y reintentos transitorios limitados;
-- las respuestas externas del proveedor se auditan persistentemente antes de aplicarse localmente y luego vuelven a pasar por `saveSupplierFulfilment()`;
-- los payloads externos de proveedor excluyen totales de cliente, ledger de pagos/reembolsos, costes de proveedor, instrucciones de inventario y datos protegidos del viajero;
-- una respuesta externa solo puede actualizar estado/referencia normalizados, preservando coste/moneda local del proveedor;
-- las referencias recibidas externamente siguen siendo internas hasta superar la aprobación explícita separada para vouchers de cliente;
-- ledger de pagos, operaciones de personal, datos de viajeros, catálogo e integraciones salientes siguen siendo capacidades componibles de forma independiente;
-- los payloads específicos de proveedor deben normalizarse dentro de adapters y no filtrarse a dominios centrales.
+#### Reservas REST genéricas
+
+- `BOOKING_MODE=rest` compone un API externo detrás de `BookingRepository`;
+- contrato `/v1` versionado mediante `X-OTP-Contract-Version: 1`;
+- Bearer server-only y HTTPS obligatorio en producción;
+- rechazo de redirects, `no-store`, timeout y respuesta acotados;
+- validación runtime antes de que JSON externo entre en el dominio;
+- ownership de cliente y alcance viaje/salida revalidados tras mapping;
+- create/cancel con idempotencia estable y retries transitorios limitados.
+
+#### Fulfilment de proveedores
+
+- `SUPPLIER_FULFILMENT_ADAPTER_MODE=rest` habilita un adapter externo sin sustituir el almacén local;
+- operaciones REST v1 explícitas `request`, `status` y `cancel`;
+- request solo normaliza a `requested`; cancel solo a `cancelled`; confirmación/rechazo llega mediante `status`;
+- request/cancel usan idempotencia determinista y retries limitados;
+- respuestas externas se auditan persistentemente antes de aplicarse y luego vuelven a `saveSupplierFulfilment()`;
+- transiciones inválidas se registran como conflicto y nunca se fuerzan;
+- payload externo excluye totales cliente, ledger, costes proveedor, instrucciones de inventario y datos protegidos;
+- coste/moneda local de proveedor se preservan;
+- referencias recibidas siguen internas hasta la aprobación separada para voucher cliente.
+
+#### Sincronización CRM
+
+- `CRM_SYNC_MODE=rest` activa un `CrmSyncAdapter` neutral y exclusivamente downstream;
+- endpoints REST v1 `/v1/crm/contacts/upsert` y `/v1/crm/reservations/upsert`;
+- registro/actualización de perfil encolan `customer.created` / `customer.profile.updated` en la misma transacción MongoDB que la escritura del cliente;
+- eventos `customer.*` no están disponibles para suscripciones webhook genéricas;
+- CRM reutiliza outbox, worker, retry/backoff, dead-letter, replay y métricas mediante el destino virtual `crm-rest:primary`;
+- eventos de reserva hacen upsert del contacto antes del upsert de reserva;
+- `Idempotency-Key` deriva del evento y permanece estable en retries/replay;
+- snapshots de contacto/reserva usan allowlists explícitas;
+- snapshots de reserva excluyen precios, moneda/condiciones de pago, proveedores, mutaciones de inventario, arrays de viajeros y datos post-compra protegidos;
+- IDs externos se guardan aparte en `travel_crm_sync_links`;
+- outcomes normalizados se auditan sin PII en `travel_crm_sync_audit`;
+- diagnóstico Admin en `/operator/integrations/crm`;
+- CRM no puede mutar reservas, pricing, inventario, fulfilment ni ledger local.
+
+Los payloads específicos de proveedor deben normalizarse dentro de adapters y no filtrarse a dominios centrales.
 
 ## Arquitectura
 
@@ -255,21 +275,21 @@ destinos + viajes + alojamiento + servicios
 área cliente ---------------------- staff/operator/admin
      |                                      |
 IdentityRepository                 Operations / RBAC / auditoría
-                                           |
-                       documentos / informes / fulfilment / tareas
-                                           |
-                       SupplierFulfilmentAdapter
-                         /             \
-                    disabled         REST /v1
-                                           |
-                              outbox transaccional
-                                           |
-                         adapters de integración saliente
-                                           |
-                         worker programado de entregas
+     |                                      |
+eventos cliente/perfil      documentos / informes / fulfilment / tareas
+     |                                      |
+     +---------------- outbox transaccional de integraciones ----------------+
+                                                                             |
+                                        webhooks firmados / CRM REST / futuros adapters
+                                                                             |
+                                                    worker durable programado
+
+SupplierFulfilmentAdapter
+       /        \
+ disabled      REST /v1
 ```
 
-Los payloads específicos de proveedor permanecen dentro de adapters. Catálogo, reservas, alojamiento, identidad, servicios, operaciones, documentos, reporting, pagos e integraciones externas conservan fronteras reemplazables.
+Los payloads específicos de proveedor permanecen dentro de adapters. Catálogo, reservas, alojamiento, identidad, servicios, operaciones, documentos, reporting, pagos, fulfilment e integraciones mantienen fronteras reemplazables.
 
 ## Inicio rápido
 
@@ -308,14 +328,15 @@ npm run dev
 /operator/catalogue                    catálogo
 /operator/media                        multimedia
 /operator/documents                    documentos
-/operator/reports                      informes y exportaciones CSV/XLSX
+/operator/reports                      informes y CSV/XLSX
 /operator/tasks                        tareas
 /operator/fulfilment                   proveedores
 /operator/payments                     finanzas
 /operator/payments/providers           PSP solo Admin
-/operator/integrations                 integraciones salientes solo Admin
+/operator/integrations                 webhooks/cola solo Admin
+/operator/integrations/crm             estado/auditoría CRM solo Admin
 /operator/integrations/events/[eventId] diagnóstico Admin de eventos
-/operator/integrations/deliveries/[deliveryId] diagnóstico/replay Admin de entregas
+/operator/integrations/deliveries/[deliveryId] diagnóstico/replay Admin
 /operator/staff                        personal/permisos
 
 /api/internal/integrations/process     worker programado server-only (POST)
@@ -324,8 +345,6 @@ npm run dev
 ## Configuración
 
 La plantilla completa vive en [`.env.example`](.env.example). Los secretos nunca deben usar `NEXT_PUBLIC_*`.
-
-Configuración server-only relevante:
 
 ```text
 BOOKING_MODE=demo
@@ -338,6 +357,11 @@ REST_SUPPLIER_FULFILMENT_BASE_URL=
 REST_SUPPLIER_FULFILMENT_BEARER_TOKEN=
 REST_SUPPLIER_FULFILMENT_TIMEOUT_MS=10000
 REST_SUPPLIER_FULFILMENT_MAX_RESPONSE_BYTES=262144
+CRM_SYNC_MODE=disabled
+REST_CRM_BASE_URL=
+REST_CRM_BEARER_TOKEN=
+REST_CRM_TIMEOUT_MS=10000
+REST_CRM_MAX_RESPONSE_BYTES=262144
 PAYMENT_SECRETS_KEY=
 TRAVELLER_DATA_KEY=
 INTEGRATION_SECRETS_KEY=
@@ -347,15 +371,16 @@ INTEGRATION_WORKER_MIN_INTERVAL_SECONDS=60
 INTEGRATION_COMPLETED_RETENTION_DAYS=180
 ```
 
-`REST_BOOKING_BEARER_TOKEN` y `REST_SUPPLIER_FULFILMENT_BEARER_TOKEN` son server-only y nunca deben usar `NEXT_PUBLIC_*`. Los endpoints REST de reservas y proveedores en producción deben usar HTTPS. Las tres claves maestras deben ser estables, de alta entropía y 32 bytes. `KTRAVEL_INTEGRATION_WORKER_TOKEN` es una credencial Bearer server-only independiente y debe contener al menos 32 caracteres de alta entropía. Las claves de cifrado no deben rotarse sin un plan de migración/re-cifrado.
+`REST_BOOKING_BEARER_TOKEN`, `REST_SUPPLIER_FULFILMENT_BEARER_TOKEN` y `REST_CRM_BEARER_TOKEN` son server-only y nunca deben usar `NEXT_PUBLIC_*`. Los endpoints REST de reservas, proveedores y CRM en producción deben usar HTTPS. Las tres claves maestras deben ser estables, de alta entropía y 32 bytes. `KTRAVEL_INTEGRATION_WORKER_TOKEN` es una credencial Bearer server-only independiente. No se deben rotar claves de cifrado sin un plan de migración/re-cifrado.
 
 ## Documentación
 
 - [`ROADMAP.es.md`](ROADMAP.es.md) — estado y prioridades.
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 - [`docs/BOOKING.md`](docs/BOOKING.md)
-- [`docs/REST-BOOKING-ADAPTER.es.md`](docs/REST-BOOKING-ADAPTER.es.md) — contrato `/v1`, autenticación, idempotencia y validación del adapter REST genérico de `BookingRepository`.
-- [`docs/SUPPLIER-FULFILMENT-ADAPTER.es.md`](docs/SUPPLIER-FULFILMENT-ADAPTER.es.md) — contrato externo request/status/cancel, auditoría antes de aplicar y fronteras de datos.
+- [`docs/REST-BOOKING-ADAPTER.es.md`](docs/REST-BOOKING-ADAPTER.es.md) — contrato REST genérico de `BookingRepository`.
+- [`docs/SUPPLIER-FULFILMENT-ADAPTER.es.md`](docs/SUPPLIER-FULFILMENT-ADAPTER.es.md) — request/status/cancel y auditoría antes de aplicar.
+- [`docs/CRM-SYNC-ADAPTER.es.md`](docs/CRM-SYNC-ADAPTER.es.md) — CRM downstream, allowlists, arquitectura de una sola cola, idempotencia y auditoría.
 - [`docs/OPERATIONS.md`](docs/OPERATIONS.md)
 - [`docs/CATALOGUE-BACKOFFICE.md`](docs/CATALOGUE-BACKOFFICE.md)
 - [`docs/DEPARTURES.md`](docs/DEPARTURES.md)
@@ -404,9 +429,12 @@ check:outbound-integrations
 check:integration-operations
 check:rest-booking-adapter
 check:supplier-fulfilment-adapter
+check:crm-sync-adapter
 typecheck
 build
 ```
+
+CI realiza instalación limpia, invariantes, typecheck, build productivo, smoke HTTP y auditoría de dependencias.
 
 ## Estado del proyecto
 
@@ -424,52 +452,55 @@ build
 | Alojamiento y paquetes | Completado |
 | Workflow avanzado Operator | Completado |
 | Permisos granulares | Completado |
-| PDFs de confirmación | Completado |
-| Manifiestos y rooming lists | Completado |
-| Vouchers y expediente imprimible | Completado |
+| PDFs, vouchers y expediente | Completado |
 | CSV/XLSX y conciliación/reporting | Completado |
 | Fase 7B — Documentos, exportaciones y reporting | **Completada** |
 | Fase 8A — Integraciones salientes neutrales | **Completada** |
-| Fase 8B — Ejecución programada, replay y observabilidad | **Completada** |
+| Fase 8B — Scheduler, replay y observabilidad | **Completada** |
 | Fase 8C-1 — Adapter REST genérico de reservas | **Completada** |
-| Fase 8C-2 — Frontera de adapter de fulfilment de proveedores | **Completada** |
+| Fase 8C-2 — Fulfilment de proveedores | **Completada** |
+| Fase 8C-3 — Sincronización CRM | **Completada** |
 | Fase 8C — Adapters de negocio | **En curso** |
 
 ## Siguiente prioridad
 
-El siguiente bloque es la **Fase 8C-3 — adapter de sincronización CRM**.
+El siguiente bloque es la **Fase 8C-4 — adapter ERP/contabilidad**.
 
-Con persistencia de reservas y fulfilment de proveedores ya demostrados como fronteras neutrales y reemplazables de forma independiente, el siguiente adapter de negocio debe sincronizar datos seleccionados del ciclo de cliente/reserva con sistemas CRM sin convertir al CRM en autoridad de inventario, pricing o contabilidad de pagos.
+La fase CRM demuestra que varios adapters de negocio pueden compartir el worker durable sin ampliar la autoridad del sistema externo. El siguiente bloque debe sincronizar registros comerciales preparados para contabilidad manteniendo al ledger neutral de pagos como fuente financiera autoritativa.
 
-Dirección prevista para 8C-3:
+Dirección prevista:
 
-- interfaz neutral de sincronización CRM y contrato normalizado de contacto/ciclo de reserva;
-- semántica explícita create/update con idempotencia y referencias externas estables;
-- minimización de datos y allowlists de campos;
-- sin datos post-compra protegidos del viajero en el contrato CRM genérico;
-- resultados de sincronización auditados y traducción operativa de reintentos/errores;
-- autenticación y mapping específicos de CRM contenidos dentro de adapters;
-- reservas, fulfilment de proveedores, ledger de pagos e inventario siguen siendo autoritativos en sus fronteras actuales.
+- interfaz neutral ERP/contabilidad;
+- contrato explícito para clientes, facturas/recibos o movimientos listos para journal cuando corresponda;
+- payload contable derivado de snapshots autoritativos de reservas/pagos, no de objetos crudos del proveedor;
+- moneda exacta y referencias de origen inmutables;
+- idempotencia determinista y mapping de IDs externos;
+- auditoría/retry/dead-letter mediante el worker compartido cuando corresponda;
+- sin datos protegidos del viajero, notas operativas de proveedor ni credenciales;
+- los acknowledgements del ERP no pueden reescribir automáticamente historial de reservas/pagos;
+- mapping específico de plan contable/impuestos contenido dentro de adapters.
 
-Más adelante, 8C podrá añadir ERP/contabilidad, fuentes CMS/catálogo, identidad enterprise y PSP adicionales cuando aporten valor comercial.
+Después, 8C podrá añadir fuentes CMS/catálogo, identidad enterprise/SSO y PSP adicionales cuando aporten valor comercial.
 
-La validación TEST/LIVE de Stripe/Redsys se insertará cuando existan cuentas proveedor adecuadas y no necesita bloquear la Fase 8.
+La validación TEST/LIVE Stripe/Redsys se insertará cuando existan cuentas adecuadas y no necesita bloquear la Fase 8.
 
 ## Principios
 
 - implementación clean-room;
-- neutralidad respecto a proveedores;
+- fronteras de capacidades neutrales respecto a proveedor;
 - autorización server-side;
-- pricing/inventario/transiciones validados en servidor;
+- pricing/inventario/ownership/transiciones validados en servidor;
 - snapshots históricos de valores contratados;
 - estado de reserva separado del pago;
 - datos avanzados solo post-compra cuando aplican;
-- documentos de cliente sin notas internas, datos protegidos ni costes proveedor;
-- exportaciones sensibles limitadas por permisos, finalidad operativa y auditoría persistente antes de entregarse;
-- eventos salientes genéricos sin datos protegidos del viajero ni payloads específicos de proveedor;
-- ejecución programada de integraciones autenticada server-side, limitada y observable;
-- los APIs externos de reservas deben cumplir contrato runtime, ownership e idempotencia antes de que sus datos entren en el core;
-- los APIs externos de proveedores no pueden saltarse transiciones locales de fulfilment, reescribir datos comerciales/de pago ni auto-publicar referencias en vouchers de cliente;
+- documentos cliente sin notas internas, datos protegidos ni costes proveedor;
+- exportaciones sensibles limitadas por permisos/finalidad y auditadas antes de entregarse;
+- webhooks genéricos sin datos protegidos ni payloads específicos;
+- eventos CRM de cliente no disponibles para webhooks genéricos;
+- ejecución programada autenticada server-side, limitada y observable;
+- APIs externos de reservas deben cumplir contrato runtime, ownership e idempotencia;
+- APIs de proveedores no pueden saltarse transiciones locales ni auto-publicar referencias;
+- CRM es downstream y no puede mutar reservas, pricing, inventario, proveedores ni ledger autoritativo;
 - UX pública bilingüe y responsive;
 - integraciones propietarias fuera del core MIT cuando corresponda.
 

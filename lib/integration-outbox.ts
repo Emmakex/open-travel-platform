@@ -4,10 +4,20 @@ import type {
   IntegrationDelivery,
   IntegrationDeliveryStatus,
   IntegrationEventEnvelope,
-  IntegrationEventType
+  IntegrationEventType,
+  WebhookIntegrationEventType
 } from "@/domain/integrations/types";
-import { integrationEndpointCollectionName } from "@/lib/integration-endpoints";
-import { getIntegrationEndpointRuntime } from "@/lib/integration-endpoints";
+import {
+  crmIntegrationDeliveryEndpointId,
+  deliverCrmIntegrationEvent,
+  isCrmIntegrationDelivery,
+  shouldQueueCrmIntegrationEvent
+} from "@/lib/crm-sync";
+import {
+  getIntegrationEndpointRuntime,
+  integrationEndpointCollectionName,
+  integrationEventTypes
+} from "@/lib/integration-endpoints";
 import { getMongoClient, getMongoDatabaseName } from "@/lib/mongodb";
 import {
   deliverSignedIntegrationWebhook,
@@ -20,11 +30,12 @@ export const integrationDeliveryAttemptCollectionName = "travel_integration_deli
 
 const maxAttempts = 8;
 const retrySeconds = [60, 300, 900, 3600, 14400, 43200, 86400, 86400];
+const webhookEventTypes = new Set<WebhookIntegrationEventType>(integrationEventTypes);
 
 type StoredEndpointSubscription = {
   id: string;
   enabled: boolean;
-  subscribedEvents: IntegrationEventType[];
+  subscribedEvents: WebhookIntegrationEventType[];
 };
 
 type IntegrationDeliveryAttempt = {
@@ -38,6 +49,10 @@ type IntegrationDeliveryAttempt = {
   error?: string;
   occurredAt: string;
 };
+
+function isWebhookIntegrationEventType(type: IntegrationEventType): type is WebhookIntegrationEventType {
+  return webhookEventTypes.has(type as WebhookIntegrationEventType);
+}
 
 export async function ensureIntegrationOutboxIndexes(database: Db) {
   await Promise.all([
@@ -77,20 +92,29 @@ export async function enqueueIntegrationEvent(
   session: ClientSession,
   event: IntegrationEventEnvelope
 ) {
-  const endpoints = await database.collection<StoredEndpointSubscription>(integrationEndpointCollectionName)
-    .find({ enabled: true, subscribedEvents: event.type }, { session })
-    .project<{ id: string }>({ id: 1 })
-    .toArray();
+  const endpoints = isWebhookIntegrationEventType(event.type)
+    ? await database.collection<StoredEndpointSubscription>(integrationEndpointCollectionName)
+      .find({ enabled: true, subscribedEvents: event.type }, { session })
+      .project<{ id: string }>({ id: 1 })
+      .toArray()
+    : [];
+
+  const destinationIds = endpoints.map((endpoint) => endpoint.id);
+  if (shouldQueueCrmIntegrationEvent(event.type)) destinationIds.push(crmIntegrationDeliveryEndpointId);
+
+  // Customer events are CRM-only by design. If CRM is disabled, do not retain
+  // an orphan customer trigger that no configured destination can consume.
+  if (event.aggregateType === "customer" && destinationIds.length === 0) return 0;
 
   await database.collection<IntegrationEventEnvelope>(integrationEventCollectionName)
     .updateOne({ id: event.id }, { $setOnInsert: event }, { upsert: true, session });
 
-  if (endpoints.length) {
+  if (destinationIds.length) {
     const createdAt = event.occurredAt;
-    const deliveries = endpoints.map((endpoint): IntegrationDelivery => ({
-      id: `intdel-${event.id}-${endpoint.id}`,
+    const deliveries = destinationIds.map((endpointId): IntegrationDelivery => ({
+      id: `intdel-${event.id}-${endpointId}`,
       eventId: event.id,
-      endpointId: endpoint.id,
+      endpointId,
       status: "pending",
       attempts: 0,
       nextAttemptAt: createdAt,
@@ -107,7 +131,7 @@ export async function enqueueIntegrationEvent(
       { ordered: false, session }
     );
   }
-  return endpoints.length;
+  return destinationIds.length;
 }
 
 function retryAt(attempt: number, now = Date.now()) {
@@ -160,6 +184,26 @@ async function recordAttempt(
   });
 }
 
+async function markUnavailableDelivery(database: Db, delivery: IntegrationDelivery, error: string) {
+  const status: IntegrationDeliveryStatus = delivery.attempts >= maxAttempts ? "dead-letter" : "retrying";
+  const now = new Date().toISOString();
+  await database.collection<IntegrationDelivery>(integrationDeliveryCollectionName).updateOne(
+    { id: delivery.id, status: "delivering" },
+    {
+      $set: {
+        status,
+        lastError: error,
+        nextAttemptAt: status === "retrying" ? retryAt(delivery.attempts) : delivery.nextAttemptAt,
+        ...(status === "dead-letter" ? { deadLetteredAt: now } : {}),
+        updatedAt: now
+      },
+      $unset: { leaseUntil: "" }
+    }
+  );
+  await recordAttempt(database, delivery, status === "dead-letter" ? "dead-letter" : "retrying", { error });
+  return status;
+}
+
 export async function processIntegrationDeliveries(input?: { limit?: number }) {
   const client = await getMongoClient();
   const database = client.db(getMongoDatabaseName());
@@ -173,38 +217,34 @@ export async function processIntegrationDeliveries(input?: { limit?: number }) {
     result.processed += 1;
     const event = await database.collection<IntegrationEventEnvelope>(integrationEventCollectionName)
       .findOne({ id: delivery.eventId });
-    const endpoint = await getIntegrationEndpointRuntime(delivery.endpointId);
 
-    if (!event || !endpoint) {
-      const error = !event ? "Integration event no longer exists." : "Integration endpoint is unavailable or disabled.";
-      const status: IntegrationDeliveryStatus = delivery.attempts >= maxAttempts ? "dead-letter" : "retrying";
-      const now = new Date().toISOString();
-      await database.collection<IntegrationDelivery>(integrationDeliveryCollectionName).updateOne(
-        { id: delivery.id, status: "delivering" },
-        {
-          $set: {
-            status,
-            lastError: error,
-            nextAttemptAt: status === "retrying" ? retryAt(delivery.attempts) : delivery.nextAttemptAt,
-            ...(status === "dead-letter" ? { deadLetteredAt: now } : {}),
-            updatedAt: now
-          },
-          $unset: { leaseUntil: "" }
-        }
-      );
-      await recordAttempt(database, delivery, status === "dead-letter" ? "dead-letter" : "retrying", { error });
+    if (!event) {
+      const status = await markUnavailableDelivery(database, delivery, "Integration event no longer exists.");
       if (status === "dead-letter") result.deadLettered += 1;
       else result.retried += 1;
       continue;
     }
 
     try {
-      const target = await validateIntegrationWebhookUrl(endpoint.url);
-      const response = await deliverSignedIntegrationWebhook({
-        target,
-        secret: endpoint.signingSecret,
-        event
-      });
+      let response: { status: number };
+      if (isCrmIntegrationDelivery(delivery.endpointId)) {
+        response = await deliverCrmIntegrationEvent({ event, deliveryId: delivery.id });
+      } else {
+        const endpoint = await getIntegrationEndpointRuntime(delivery.endpointId);
+        if (!endpoint) {
+          const status = await markUnavailableDelivery(database, delivery, "Integration endpoint is unavailable or disabled.");
+          if (status === "dead-letter") result.deadLettered += 1;
+          else result.retried += 1;
+          continue;
+        }
+        const target = await validateIntegrationWebhookUrl(endpoint.url);
+        response = await deliverSignedIntegrationWebhook({
+          target,
+          secret: endpoint.signingSecret,
+          event
+        });
+      }
+
       const now = new Date().toISOString();
       await database.collection<IntegrationDelivery>(integrationDeliveryCollectionName).updateOne(
         { id: delivery.id, status: "delivering" },

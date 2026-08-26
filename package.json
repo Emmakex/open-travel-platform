@@ -33,7 +33,8 @@
     "check:integration-operations": "node scripts/integration-operations-check.mjs",
     "check:rest-booking-adapter": "node scripts/rest-booking-adapter-check.mjs",
     "check:supplier-fulfilment-adapter": "node scripts/supplier-fulfilment-adapter-check.mjs",
-    "verify": "npm run check:safety && npm run check:ux && npm run check:release && npm run check:amendments && npm run check:accommodation && npm run check:package-addons && npm run check:package-addon-amendments && npm run check:operations && npm run check:tasks && npm run check:fulfilment && npm run check:operations-queue && npm run check:staff-permissions && npm run check:booking-documents && npm run check:departure-documents && npm run check:voucher-documents && npm run check:reporting-exports && npm run check:outbound-integrations && npm run check:integration-operations && npm run check:rest-booking-adapter && npm run check:supplier-fulfilment-adapter && npm run typecheck && npm run build",
+    "check:crm-sync-adapter": "node scripts/crm-sync-adapter-check.mjs",
+    "verify": "npm run check:safety && npm run check:ux && npm run check:release && npm run check:amendments && npm run check:accommodation && npm run check:package-addons && npm run check:package-addon-amendments && npm run check:operations && npm run check:tasks && npm run check:fulfilment && npm run check:operations-queue && npm run check:staff-permissions && npm run check:booking-documents && npm run check:departure-documents && npm run check:voucher-documents && npm run check:reporting-exports && npm run check:outbound-integrations && npm run check:integration-operations && npm run check:rest-booking-adapter && npm run check:supplier-fulfilment-adapter && npm run check:crm-sync-adapter && npm run typecheck && npm run build",
     "check": "npm run verify"
   },
   "dependencies": {
