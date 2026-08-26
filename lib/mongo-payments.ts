@@ -20,7 +20,8 @@ export async function ensureMongoPaymentIndexes(database: Db) {
     payments.createIndex(
       { provider: 1, providerReference: 1 },
       {
-        name: "travel_payment_provider_reference",
+        name: "travel_payment_provider_reference_unique",
+        unique: true,
         partialFilterExpression: { providerReference: { $type: "string" } }
       }
     )
