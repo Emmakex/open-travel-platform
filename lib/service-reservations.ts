@@ -6,7 +6,11 @@ import type {
   ServiceReservationStatus
 } from "@/domain/services/booking-types";
 import { evaluateServiceReservationPolicy } from "@/lib/change-policy";
-import { createIntegrationEvent, enqueueIntegrationEvent } from "@/lib/integration-outbox";
+import {
+  createIntegrationEvent,
+  enqueueIntegrationEvent,
+  ensureIntegrationOutboxIndexes
+} from "@/lib/integration-outbox";
 import { serviceAvailabilityCollectionName } from "@/lib/service-availability";
 import { getMongoClient, getMongoDatabaseName } from "@/lib/mongodb";
 
@@ -84,7 +88,10 @@ export async function getServiceReservationForOperator(id: string) {
 export async function createServiceReservation(input: CreateServiceReservationInput) {
   const client = await getMongoClient();
   const database = client.db(getMongoDatabaseName());
-  await ensureServiceReservationIndexes(database);
+  await Promise.all([
+    ensureServiceReservationIndexes(database),
+    ensureIntegrationOutboxIndexes(database)
+  ]);
   const reservations = database.collection<StoredServiceReservation>(serviceReservationCollectionName);
   const availability = database.collection(serviceAvailabilityCollectionName);
   const session = client.startSession();
@@ -131,7 +138,6 @@ export async function createServiceReservation(input: CreateServiceReservationIn
         );
         if (inventoryResult.modifiedCount !== 1) throw inventoryError();
       }
-
       await reservations.insertOne(reservation, { session });
       await enqueueIntegrationEvent(database, session, integrationEvent);
     });
@@ -151,7 +157,10 @@ async function changeStatus(input: {
 }) {
   const client = await getMongoClient();
   const database = client.db(getMongoDatabaseName());
-  await ensureServiceReservationIndexes(database);
+  await Promise.all([
+    ensureServiceReservationIndexes(database),
+    ensureIntegrationOutboxIndexes(database)
+  ]);
   const reservations = database.collection<StoredServiceReservation>(serviceReservationCollectionName);
   const availability = database.collection(serviceAvailabilityCollectionName);
   const session = client.startSession();
@@ -200,9 +209,7 @@ async function changeStatus(input: {
           { $inc: { reserved: -current.inventoryUnits }, $set: { updatedAt: new Date() } },
           { session }
         );
-        if (release.modifiedCount !== 1) {
-          throw serviceError("SERVICE_INVENTORY_RELEASE_FAILED", "Service inventory could not be released safely.");
-        }
+        if (release.modifiedCount !== 1) throw serviceError("SERVICE_INVENTORY_RELEASE_FAILED", "Service inventory could not be released safely.");
       }
 
       await enqueueIntegrationEvent(database, session, createIntegrationEvent({
