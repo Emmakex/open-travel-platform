@@ -17,7 +17,7 @@ _Last updated: 26 August 2026._
 
 The platform is well beyond the original catalogue/booking MVP. Persistent identity, transactional reservations/inventory, traveller pricing, accommodation, independent services, payments, post-purchase traveller data, amendments, rich Operator workflows, granular permissions, documents, reporting and the common integration infrastructure are already implemented.
 
-**Phase 8C — Business adapters is IN PROGRESS. 8C-1 Generic REST booking, 8C-2 supplier fulfilment and 8C-3 CRM synchronization are COMPLETE. Phase 8C-4 — ERP/accounting adapter is NEXT.**
+**Phases 8A, 8B and 8C are COMPLETE. The core Phase 8 external-integration roadmap is complete. Phase 9 — Production hardening is NEXT.**
 
 Stripe/Redsys credentialed TEST/LIVE end-to-end validation remains pending until suitable provider accounts are available. The adapters are implemented, but production payment capability is not considered validated until those provider flows have been exercised.
 
@@ -134,7 +134,7 @@ Supplier data does not rewrite customer totals or the payment ledger.
 
 ---
 
-# Phase 8 — External integrations — IN PROGRESS
+# Phase 8 — External integrations — COMPLETE
 
 Goal: connect real business systems through explicit adapters without leaking vendor payloads into core domains.
 
@@ -159,7 +159,7 @@ Goal: connect real business systems through explicit adapters without leaking ve
 - completed-success retention policy and retention audit;
 - permanent `check:integration-operations` gate.
 
-## 8C — Business adapters — IN PROGRESS
+## 8C — Business adapters — COMPLETE
 
 ### 8C-1 — Generic REST booking adapter — COMPLETE
 
@@ -199,33 +199,37 @@ Goal: connect real business systems through explicit adapters without leaking ve
 - Admin diagnostics at `/operator/integrations/crm`;
 - permanent `check:crm-sync-adapter` gate.
 
-### 8C-4 — ERP/accounting adapter — NEXT
+### 8C-4 — ERP/accounting adapter — COMPLETE
 
-Goal: synchronize accounting-ready commercial documents/movements without allowing an ERP to rewrite booking state or the provider-neutral payment ledger.
+- provider-neutral downstream-only `ErpAccountingAdapter`;
+- opt-in `ERP_ACCOUNTING_MODE=disabled|rest` and REST v1 movement upsert reference adapter;
+- only authoritative local `succeeded` payment/refund ledger movements are eligible;
+- payment/refund finalization and its ERP outbox trigger commit in the same MongoDB transaction;
+- exact source amount, currency, provider and immutable payment reference are preserved;
+- deterministic event IDs and stable event-derived idempotency keys;
+- ERP financial events are not exposed to generic webhook subscriptions and are not consumed by CRM;
+- the existing integration worker provides retry/backoff, dead-letter, replay and health visibility without a second queue;
+- external references are stored separately in `travel_erp_accounting_links`;
+- acknowledgement audit in `travel_erp_accounting_audit` excludes amounts, currency, provider references, customer PII and raw HTTP bodies;
+- Admin diagnostics at `/operator/integrations/erp`;
+- the generic core exports accounting-ready movements and deliberately does not claim jurisdiction-specific legal invoice generation without authoritative tax/billing data;
+- vendor-specific chart-of-accounts/tax mapping remains inside downstream adapters;
+- permanent `check:erp-accounting-adapter` gate.
 
-Planned boundary:
+### Optional future adapters
 
-- provider-neutral ERP/accounting adapter interface;
-- explicit export/upsert contract for customers, invoices/receipts or accounting journal-ready movements as appropriate;
-- accounting payload derived from authoritative booking/payment snapshots, never raw provider documents;
-- exact currency and immutable source references;
-- deterministic idempotency and external-reference mapping;
-- audit/retry/dead-letter through the existing integration worker where appropriate;
-- no protected traveller data, supplier operational notes or authentication values;
-- ERP acknowledgements cannot mutate reservation/payment history automatically;
-- vendor-specific chart-of-accounts/tax mapping contained inside adapters.
-
-### Later 8C candidates
+These are extensions rather than blockers for the completed Phase 8 core integration boundary:
 
 - CMS/catalogue source adapter;
 - enterprise identity/SSO where useful;
-- additional payment providers when commercially justified.
+- additional payment providers when commercially justified;
+- jurisdiction/vendor-specific invoicing adapters after authoritative fiscal data is modeled.
 
 ---
 
-# Phase 9 — Production hardening
+# Phase 9 — Production hardening — NEXT
 
-Work should continue incrementally rather than waiting for Phase 8 to finish.
+The next priority is to harden the already broad product surface for production operation.
 
 ### Testing
 - browser E2E registration → booking → package/services → payment → Operator;
@@ -250,6 +254,8 @@ Work should continue incrementally rather than waiting for Phase 8 to finish.
 - disaster recovery and rollback;
 - database index/performance review.
 
+Credentialed Stripe/Redsys TEST/LIVE validation should be inserted as soon as provider accounts are available and remains part of production hardening.
+
 ---
 
 # Phase 10 — Open-source productisation
@@ -269,16 +275,14 @@ Work should continue incrementally rather than waiting for Phase 8 to finish.
 # Suggested delivery order
 
 ```text
-8C-4  ERP/accounting adapter
+9A    Production security / operability baseline
   ↓
-8C    Remaining business adapters as commercially useful
-  ↓
-9     Production hardening
+9     Production hardening and credentialed E2E
   ↓
 10    Open-source productisation / release
+  ↓
+optional adapters driven by commercial need
 ```
-
-Credentialed Stripe/Redsys TEST/LIVE validation should be inserted as soon as provider accounts are available and does not need to block Phase 8.
 
 ---
 
