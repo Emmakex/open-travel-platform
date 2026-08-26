@@ -69,10 +69,6 @@ export async function POST(request: Request) {
   });
   if (!claimed) return new NextResponse("OK");
 
-  // Ds_Order is the stable merchant-side identifier used to resolve this
-  // checkout and is therefore the authoritative idempotency reference stored
-  // in the payment ledger. The authorization code remains part of eventId for
-  // webhook replay detection but is not treated as a globally unique payment key.
   if (isSuccessfulRedsysResponse(notification.response)) {
     await finalizeCheckoutOrder(order.id, "paid", notification.order);
   } else {
