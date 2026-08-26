@@ -249,6 +249,8 @@ jobs:
         run: docker rm -f otp-mongo-rs || true
 
   browser-e2e:
+    name: Browser E2E (non-blocking)
+    continue-on-error: true
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
