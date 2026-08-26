@@ -14,6 +14,12 @@ import {
   shouldQueueCrmIntegrationEvent
 } from "@/lib/crm-sync";
 import {
+  deliverErpAccountingEvent,
+  erpAccountingDeliveryEndpointId,
+  isErpAccountingDelivery,
+  shouldQueueErpAccountingEvent
+} from "@/lib/erp-accounting-sync";
+import {
   getIntegrationEndpointRuntime,
   integrationEndpointCollectionName,
   integrationEventTypes
@@ -101,10 +107,15 @@ export async function enqueueIntegrationEvent(
 
   const destinationIds = endpoints.map((endpoint) => endpoint.id);
   if (shouldQueueCrmIntegrationEvent(event.type)) destinationIds.push(crmIntegrationDeliveryEndpointId);
+  if (shouldQueueErpAccountingEvent(event.type)) destinationIds.push(erpAccountingDeliveryEndpointId);
 
-  // Customer events are CRM-only by design. If CRM is disabled, do not retain
-  // an orphan customer trigger that no configured destination can consume.
-  if (event.aggregateType === "customer" && destinationIds.length === 0) return 0;
+  // Customer and payment-transaction events are dedicated business-adapter
+  // triggers. If their adapter is disabled, do not retain orphan events that
+  // generic webhooks cannot consume.
+  if (
+    (event.aggregateType === "customer" || event.aggregateType === "payment-transaction") &&
+    destinationIds.length === 0
+  ) return 0;
 
   await database.collection<IntegrationEventEnvelope>(integrationEventCollectionName)
     .updateOne({ id: event.id }, { $setOnInsert: event }, { upsert: true, session });
@@ -229,6 +240,8 @@ export async function processIntegrationDeliveries(input?: { limit?: number }) {
       let response: { status: number };
       if (isCrmIntegrationDelivery(delivery.endpointId)) {
         response = await deliverCrmIntegrationEvent({ event, deliveryId: delivery.id });
+      } else if (isErpAccountingDelivery(delivery.endpointId)) {
+        response = await deliverErpAccountingEvent({ event, deliveryId: delivery.id });
       } else {
         const endpoint = await getIntegrationEndpointRuntime(delivery.endpointId);
         if (!endpoint) {
