@@ -5,7 +5,10 @@ import {
   deleteIntegrationEndpoint,
   saveIntegrationEndpoint
 } from "@/lib/integration-endpoints";
-import { processIntegrationDeliveries } from "@/lib/integration-outbox";
+import {
+  processIntegrationDeliveries,
+  requeueDeadLetterDelivery
+} from "@/lib/integration-outbox";
 import { requireAdminIdentity } from "@/lib/require-admin-identity";
 
 function value(formData: FormData, key: string) {
@@ -67,4 +70,27 @@ export async function processIntegrationDeliveriesAction() {
     dead: String(result.deadLettered)
   });
   redirect(`/operator/integrations?${params.toString()}`);
+}
+
+export async function requeueDeadLetterDeliveryAction(formData: FormData) {
+  const admin = await requireAdminIdentity();
+  const deliveryId = value(formData, "deliveryId");
+  const reason = value(formData, "reason");
+  if (!deliveryId) redirect("/operator/integrations?error=delivery-not-found");
+  const detailPath = `/operator/integrations/deliveries/${encodeURIComponent(deliveryId)}`;
+
+  try {
+    const result = await requeueDeadLetterDelivery({
+      deliveryId,
+      actorIdentityId: admin.id,
+      actorRole: admin.role,
+      reason
+    });
+    if (!result) redirect(`${detailPath}?error=not-dead-letter`);
+  } catch (error) {
+    const code = error && typeof error === "object" && "code" in error ? String(error.code) : "";
+    redirect(`${detailPath}?error=${code === "INTEGRATION_REPLAY_REASON_INVALID" ? "replay-reason" : "replay-failed"}`);
+  }
+
+  redirect(`${detailPath}?requeued=1`);
 }
