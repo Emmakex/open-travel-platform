@@ -100,6 +100,7 @@ export default async function OperatorPage() {
             {canCatalogue ? <Link className="button button-secondary" href="/operator/media">{tr(locale, "Media", "Multimedia")}</Link> : null}
             {canTravellerData && canReservations ? <Link className="button button-secondary" href="/operator/reservations">{tr(locale, "Traveller-data status", "Estado de datos de viajeros")}</Link> : null}
             <Link className="button button-secondary" href="/operator/security">{tr(locale, "Security", "Seguridad")}</Link>
+            {identity.role === "admin" ? <Link className="button button-secondary" href="/operator/integrations">{tr(locale, "Integrations", "Integraciones")}</Link> : null}
             {identity.role === "admin" ? <Link className="button button-secondary" href="/operator/payments/providers">{tr(locale, "Payment providers", "Pasarelas de pago")}</Link> : null}
             {identity.role === "admin" ? <Link className="button button-secondary" href="/operator/staff">{tr(locale, "Staff access", "Acceso del personal")}</Link> : null}
             <Link className="button button-secondary" href="/accommodations">{tr(locale, "Public accommodation", "Alojamiento público")}</Link>
