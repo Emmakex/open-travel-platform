@@ -163,3 +163,70 @@ jobs:
 
       - name: Dependency audit
         run: npm audit --audit-level=high
+
+  mongodb-concurrency:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      MONGODB_URI: mongodb://127.0.0.1:27017/?replicaSet=rs0
+      MONGODB_DB_NAME: ktravel_ci_${{ github.run_id }}_${{ github.run_attempt }}
+      CRM_SYNC_MODE: disabled
+      ERP_ACCOUNTING_MODE: disabled
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Resolve dependency lock
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+
+      - name: Clean install from resolved lock
+        run: npm ci --no-fund
+
+      - name: Start MongoDB 8.0 replica set
+        run: |
+          docker run --rm -d \
+            --name otp-mongo-rs \
+            -p 27017:27017 \
+            mongo:8.0.29 \
+            --replSet rs0 \
+            --bind_ip_all
+
+          reachable=false
+          for attempt in {1..30}; do
+            if docker exec otp-mongo-rs mongosh --quiet --eval 'db.adminCommand({ ping: 1 }).ok' 2>/dev/null | grep -q 1; then
+              reachable=true
+              break
+            fi
+            sleep 1
+          done
+          test "$reachable" = "true"
+
+          docker exec otp-mongo-rs mongosh --quiet --eval \
+            'rs.initiate({_id:"rs0",members:[{_id:0,host:"127.0.0.1:27017"}]})'
+
+          primary=false
+          for attempt in {1..30}; do
+            if docker exec otp-mongo-rs mongosh --quiet --eval 'db.hello().isWritablePrimary' 2>/dev/null | grep -q true; then
+              primary=true
+              break
+            fi
+            sleep 1
+          done
+          test "$primary" = "true"
+
+      - name: MongoDB booking concurrency and rollback test
+        run: npm run test:mongodb-concurrency
+
+      - name: MongoDB diagnostics on failure
+        if: failure()
+        run: docker logs otp-mongo-rs || true
+
+      - name: Stop MongoDB test container
+        if: always()
+        run: docker rm -f otp-mongo-rs || true
