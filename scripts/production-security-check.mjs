@@ -15,6 +15,9 @@ const customerActions = read("app/account/actions.ts");
 const staffActions = read("app/operator/actions.ts");
 const customerRecovery = read("app/account/password-recovery-actions.ts");
 const staffRecovery = read("app/operator/password-recovery-actions.ts");
+const customerSignIn = read("app/account/sign-in/page.tsx");
+const customerRegister = read("app/account/register/page.tsx");
+const staffSignIn = read("app/operator/sign-in/page.tsx");
 const mediaRoute = read("app/api/operator/media/route.ts");
 const mediaDeleteRoute = read("app/api/operator/media/[id]/route.ts");
 const protectedExportRoute = read("app/operator/reports/protected-travellers/export/route.ts");
@@ -26,6 +29,10 @@ const readyRoute = read("app/api/health/ready/route.ts");
 const customerAuth = read("lib/customer-auth.ts");
 const staffAuth = read("lib/staff-auth.ts");
 const envExample = read(".env.example");
+const securityDocs = read("docs/PRODUCTION-SECURITY.md");
+const securityDocsEs = read("docs/PRODUCTION-SECURITY.es.md");
+const deploymentDocs = read("docs/DEPLOYMENT.md");
+const productionChecklist = read("docs/PRODUCTION-CHECKLIST.md");
 
 for (const header of [
   "Content-Security-Policy",
@@ -55,9 +62,11 @@ for (const [name, source] of [
   ["media delete", mediaDeleteRoute],
   ["protected traveller export", protectedExportRoute]
 ]) {
-  assert(source.includes("browserMutationHasTrustedOrigin"), `${name} must validate browser Origin`);
-  assert(source.indexOf("browserMutationHasTrustedOrigin") < source.indexOf("getCurrentIdentity") || !source.includes("getCurrentIdentity"), `${name} origin validation must occur before authenticated mutation work`);
+  assert(source.includes("if (!browserMutationHasTrustedOrigin(request))"), `${name} must reject untrusted browser Origin`);
 }
+assert(mediaRoute.indexOf("if (!browserMutationHasTrustedOrigin(request))") < mediaRoute.indexOf("const identity = await getCatalogueIdentity()"), "media upload must reject cross-origin requests before identity resolution");
+assert(mediaDeleteRoute.indexOf("if (!browserMutationHasTrustedOrigin(request))") < mediaDeleteRoute.indexOf("if (!(await canManageMedia()))"), "media delete must reject cross-origin requests before identity resolution");
+assert(protectedExportRoute.indexOf("if (!browserMutationHasTrustedOrigin(request))") < protectedExportRoute.indexOf('requireStaffCapability("traveller-data")'), "protected export must reject cross-origin requests before staff capability resolution");
 assert(!stripeWebhook.includes("browserMutationHasTrustedOrigin"), "Stripe webhook must remain provider-signature authenticated, not browser-origin authenticated");
 assert(!redsysWebhook.includes("browserMutationHasTrustedOrigin"), "Redsys callback must remain provider-signature authenticated, not browser-origin authenticated");
 assert(workerRoute.includes("authenticateIntegrationWorkerRequest"), "internal worker must retain Bearer authentication");
@@ -81,6 +90,9 @@ for (const [scope, source] of [
 }
 assert(customerRecovery.includes('/account/forgot-password?sent=1'), "customer recovery throttling must preserve non-enumerating response");
 assert(staffRecovery.includes('/operator/forgot-password?sent=1'), "staff recovery throttling must preserve non-enumerating response");
+assert(customerSignIn.includes('"rate-limited"'), "customer sign-in must explain throttling without account disclosure");
+assert(customerRegister.includes('"rate-limited"'), "customer registration must explain throttling");
+assert(staffSignIn.includes('"rate-limited"'), "staff sign-in must explain throttling without account disclosure");
 
 for (const [name, source] of [["customer", customerAuth], ["staff", staffAuth]]) {
   assert(source.includes('createHash("sha256")') && source.includes("hashSessionToken"), `${name} sessions must persist only token hashes`);
@@ -105,5 +117,17 @@ for (const variable of [
 ]) {
   assert(envExample.includes(`${variable}=`), `${variable} must be documented in .env.example`);
 }
+
+for (const [name, source] of [
+  ["English production-security guide", securityDocs],
+  ["Spanish production-security guide", securityDocsEs],
+  ["deployment guide", deploymentDocs],
+  ["production checklist", productionChecklist]
+]) {
+  assert(source.includes("KTRAVEL_DEPLOYMENT_PROFILE"), `${name} must document the deployment readiness profile`);
+  assert(source.includes("/api/health/ready"), `${name} must document readiness monitoring`);
+}
+assert(securityDocs.includes("KTRAVEL_TRUST_PROXY_IP_HEADERS"), "English security guide must document trusted proxy IP opt-in");
+assert(securityDocsEs.includes("KTRAVEL_TRUST_PROXY_IP_HEADERS"), "Spanish security guide must document trusted proxy IP opt-in");
 
 console.log("Production security invariant check passed.");
