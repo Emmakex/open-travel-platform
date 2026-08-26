@@ -44,11 +44,7 @@ export function encryptIntegrationSecret(value: string): EncryptedIntegrationSec
 }
 
 export function decryptIntegrationSecret(secret: EncryptedIntegrationSecret) {
-  const decipher = createDecipheriv(
-    "aes-256-gcm",
-    integrationEncryptionKey(),
-    Buffer.from(secret.iv, "base64")
-  );
+  const decipher = createDecipheriv("aes-256-gcm", integrationEncryptionKey(), Buffer.from(secret.iv, "base64"));
   decipher.setAuthTag(Buffer.from(secret.tag, "base64"));
   return Buffer.concat([
     decipher.update(Buffer.from(secret.value, "base64")),
