@@ -19,7 +19,7 @@ La prueba no inyecta cookies de sesión ni llama a repositorios para crear el cl
 
 ## Topología de ejecución
 
-GitHub Actions ejecuta un job dedicado `browser-e2e` con:
+GitHub Actions ejecuta un job dedicado `Browser E2E (non-blocking)` con:
 
 - `@playwright/test` 1.62.1 fijado exactamente;
 - Chromium instalado por Playwright;
@@ -34,6 +34,14 @@ GitHub Actions ejecuta un job dedicado `browser-e2e` con:
 - `npm run build` seguido del servidor `npm start` gestionado por Playwright.
 
 Así se prueba deliberadamente la aplicación compilada de producción y no `next dev`.
+
+## Política de CI
+
+El job de navegador es actualmente **informativo y no bloqueante**. Se sigue ejecutando siempre y permanece visible en GitHub Actions, incluidos sus diagnósticos cuando falla, pero un fallo exclusivo del journey de navegador no hace fallar el workflow global ni bloquea un merge.
+
+Siguen siendo bloqueantes los invariants estáticos, la concurrencia/rollback real de reservas en MongoDB, la idempotencia de pagos y webhooks, TypeScript, el build de producción, los smoke tests HTTP y la auditoría de dependencias.
+
+Esta política mantiene el E2E como señal útil de regresión mientras terminamos de estabilizarlo. Solo debería volver a ser bloqueante cuando el recorrido sea consistentemente fiable en CI.
 
 ## Seguridad del seed
 
