@@ -99,11 +99,15 @@ export async function enqueueIntegrationEvent(
       .toArray()
     : [];
 
-  await database.collection<IntegrationEventEnvelope>(integrationEventCollectionName)
-    .updateOne({ id: event.id }, { $setOnInsert: event }, { upsert: true, session });
-
   const destinationIds = endpoints.map((endpoint) => endpoint.id);
   if (shouldQueueCrmIntegrationEvent(event.type)) destinationIds.push(crmIntegrationDeliveryEndpointId);
+
+  // Customer events are CRM-only by design. If CRM is disabled, do not retain
+  // an orphan customer trigger that no configured destination can consume.
+  if (event.aggregateType === "customer" && destinationIds.length === 0) return 0;
+
+  await database.collection<IntegrationEventEnvelope>(integrationEventCollectionName)
+    .updateOne({ id: event.id }, { $setOnInsert: event }, { upsert: true, session });
 
   if (destinationIds.length) {
     const createdAt = event.occurredAt;
