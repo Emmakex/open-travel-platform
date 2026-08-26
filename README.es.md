@@ -60,11 +60,12 @@ La plataforma está muy por encima del MVP original de catálogo/reservas. La im
 - protecciones SSRF/DNS rebinding para destinos webhook configurables;
 - ejecución programada server-only de integraciones con lock durable y límites de ejecución;
 - métricas de salud, diagnóstico de eventos/entregas y replay auditado de dead-letter desde Admin;
-- retención limitada del historial de integraciones completadas correctamente, preservando trabajo activo/dead-letter y auditoría de replay.
+- retención limitada del historial de integraciones completadas correctamente, preservando trabajo activo/dead-letter y auditoría de replay;
+- adapter REST genérico y versionado de `BookingRepository` con autenticación server-only, validación runtime, transporte limitado y reintentos idempotentes de mutaciones.
 
 La validación E2E con credenciales Stripe/Redsys sigue pendiente hasta disponer de cuentas adecuadas. Los adapters están implementados, pero la capacidad productiva no se considera validada hasta probar TEST/LIVE.
 
-**La Fase 8B — ejecución programada, replay y observabilidad de integraciones está completada. El siguiente bloque de entrega es la Fase 8C — adapters de negocio.**
+**La Fase 8C — adapters de negocio está EN CURSO. La Fase 8C-1 — adapter REST genérico de reservas está completada; la Fase 8C-2 — frontera de adapter de fulfilment de proveedores es la siguiente.**
 
 ## Capacidades actuales
 
@@ -202,6 +203,18 @@ La validación E2E con credenciales Stripe/Redsys sigue pendiente hasta disponer
 - retención limitada de historial de entregas exitosas antiguas con auditoría agregada de retención;
 - valores protegidos post-compra, secretos de firma y credenciales del worker excluidos de diagnósticos operativos.
 
+### Adapters de negocio
+
+- `BOOKING_MODE=rest` compone un API externo de reservas detrás de la interfaz existente `BookingRepository`;
+- contrato REST `/v1` versionado con `X-OTP-Contract-Version: 1`;
+- autenticación Bearer server-only y HTTPS obligatorio en producción;
+- rechazo de redirects, `no-store`, timeout limitado y tamaño máximo de respuesta leído en streaming;
+- validación runtime antes de permitir que JSON externo se convierta en datos del dominio de reservas;
+- ownership del cliente y alcance solicitado de viaje/salida verificados después del mapping;
+- las mutaciones llevan `Idempotency-Key` estable por invocación y usan reintentos transitorios limitados;
+- ledger de pagos, operaciones de personal, datos de viajeros, catálogo e integraciones salientes siguen siendo capacidades componibles de forma independiente;
+- los payloads específicos de proveedor deben normalizarse dentro de adapters y no filtrarse al dominio central de reservas.
+
 ## Arquitectura
 
 ```text
@@ -214,6 +227,8 @@ destinos + viajes + alojamiento + servicios
       +---------------- salidas / inventario
       |                         |
       |                  BookingRepository
+      |                  /      |       \
+      |               demo    MongoDB   REST /v1
       |                         |
       |                   reservas viaje
       |                         |
@@ -301,6 +316,11 @@ La plantilla completa vive en [`.env.example`](.env.example). Los secretos nunca
 Configuración server-only relevante:
 
 ```text
+BOOKING_MODE=demo
+REST_BOOKING_BASE_URL=
+REST_BOOKING_BEARER_TOKEN=
+REST_BOOKING_TIMEOUT_MS=10000
+REST_BOOKING_MAX_RESPONSE_BYTES=2000000
 PAYMENT_SECRETS_KEY=
 TRAVELLER_DATA_KEY=
 INTEGRATION_SECRETS_KEY=
@@ -310,13 +330,14 @@ INTEGRATION_WORKER_MIN_INTERVAL_SECONDS=60
 INTEGRATION_COMPLETED_RETENTION_DAYS=180
 ```
 
-Las tres claves maestras deben ser estables, de alta entropía y 32 bytes. `KTRAVEL_INTEGRATION_WORKER_TOKEN` es una credencial Bearer server-only independiente y debe contener al menos 32 caracteres de alta entropía. Las claves de cifrado no deben rotarse sin un plan de migración/re-cifrado.
+`REST_BOOKING_BEARER_TOKEN` es server-only y nunca debe usar `NEXT_PUBLIC_*`. Los endpoints REST de reservas en producción deben usar HTTPS. Las tres claves maestras deben ser estables, de alta entropía y 32 bytes. `KTRAVEL_INTEGRATION_WORKER_TOKEN` es una credencial Bearer server-only independiente y debe contener al menos 32 caracteres de alta entropía. Las claves de cifrado no deben rotarse sin un plan de migración/re-cifrado.
 
 ## Documentación
 
 - [`ROADMAP.es.md`](ROADMAP.es.md) — estado y prioridades.
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 - [`docs/BOOKING.md`](docs/BOOKING.md)
+- [`docs/REST-BOOKING-ADAPTER.es.md`](docs/REST-BOOKING-ADAPTER.es.md) — contrato `/v1`, autenticación, idempotencia y validación del adapter REST genérico de `BookingRepository`.
 - [`docs/OPERATIONS.md`](docs/OPERATIONS.md)
 - [`docs/CATALOGUE-BACKOFFICE.md`](docs/CATALOGUE-BACKOFFICE.md)
 - [`docs/DEPARTURES.md`](docs/DEPARTURES.md)
@@ -363,6 +384,7 @@ check:voucher-documents
 check:reporting-exports
 check:outbound-integrations
 check:integration-operations
+check:rest-booking-adapter
 typecheck
 build
 ```
@@ -390,22 +412,24 @@ build
 | Fase 7B — Documentos, exportaciones y reporting | **Completada** |
 | Fase 8A — Integraciones salientes neutrales | **Completada** |
 | Fase 8B — Ejecución programada, replay y observabilidad | **Completada** |
+| Fase 8C-1 — Adapter REST genérico de reservas | **Completada** |
+| Fase 8C — Adapters de negocio | **En curso** |
 
 ## Siguiente prioridad
 
-El siguiente bloque es la **Fase 8C — adapters de negocio**.
+El siguiente bloque es la **Fase 8C-2 — frontera de adapter de fulfilment de proveedores**.
 
-La frontera de eventos/outbox/webhook y su worker operativo ya están implementados. 8C puede añadir adapters concretos sin introducir payloads de proveedor en los dominios de reserva. Candidatos iniciales:
+El adapter REST genérico de reservas demuestra que un sistema externo puede sustituir una capacidad sin cambiar el dominio central ni la UI. El siguiente bloque aplicará el mismo principio a la operación con proveedores:
 
-- APIs de proveedores/reservas;
-- sincronización CRM;
-- integraciones ERP/contabilidad;
-- fuentes CMS/catálogo;
-- adapter REST genérico de reservas;
-- identidad enterprise cuando corresponda;
-- PSP adicionales cuando aporten valor comercial.
+- interfaz neutral de adapter de fulfilment de proveedores;
+- contrato request / confirm / reject / cancel;
+- referencias externas y estados de proveedor normalizados;
+- mutaciones salientes idempotentes y traducción estable de errores;
+- sincronización auditable con el workflow de fulfilment existente;
+- sin reescritura automática de totales de cliente ni del ledger de pagos;
+- autenticación y mapping específicos de proveedor contenidos dentro de adapters.
 
-El mapping de payloads, autenticación y traducción de errores específicos de proveedor debe permanecer dentro de adapters, mientras el core conserva contratos neutrales y versionados.
+Más adelante, 8C podrá añadir sincronización CRM, ERP/contabilidad, fuentes CMS/catálogo, identidad enterprise y PSP adicionales cuando aporten valor comercial.
 
 La validación TEST/LIVE de Stripe/Redsys se insertará cuando existan cuentas proveedor adecuadas y no necesita bloquear la Fase 8.
 
@@ -422,6 +446,7 @@ La validación TEST/LIVE de Stripe/Redsys se insertará cuando existan cuentas p
 - exportaciones sensibles limitadas por permisos, finalidad operativa y auditoría persistente antes de entregarse;
 - eventos salientes genéricos sin datos protegidos del viajero ni payloads específicos de proveedor;
 - ejecución programada de integraciones autenticada server-side, limitada y observable;
+- los APIs externos de reservas deben cumplir contrato runtime, ownership e idempotencia antes de que sus datos entren en el core;
 - UX pública bilingüe y responsive;
 - integraciones propietarias fuera del core MIT cuando corresponda.
 
