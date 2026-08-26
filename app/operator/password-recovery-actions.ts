@@ -15,6 +15,7 @@ import {
   consumePasswordResetToken,
   createPasswordResetToken
 } from "@/lib/password-reset";
+import { consumeAuthRateLimit } from "@/lib/security-rate-limit";
 
 function value(formData: FormData, key: string) {
   const item = formData.get(key);
@@ -27,6 +28,11 @@ function validEmail(email: string) {
 
 export async function requestStaffPasswordResetAction(formData: FormData) {
   const email = value(formData, "email");
+  const rateLimit = await consumeAuthRateLimit("staff-password-reset", email);
+  if (!rateLimit.allowed) {
+    redirect("/operator/forgot-password?sent=1");
+  }
+
   if (!validEmail(email)) {
     redirect("/operator/forgot-password?sent=1");
   }
