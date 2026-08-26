@@ -38,12 +38,24 @@ assert.ok(authSource.includes("timingSafeEqual"), "worker token comparison must 
 assert.ok(authSource.includes('request.headers.get("authorization")'), "worker authentication must use a request header");
 assert.equal(authSource.includes("searchParams"), false, "worker secrets must never be accepted from URL query parameters");
 
+const workerRunSource = await readFile(new URL("../lib/integration-worker-run.ts", import.meta.url), "utf8");
+assert.ok(workerRunSource.includes("INTEGRATION_WORKER_MIN_INTERVAL_SECONDS"));
+assert.ok(workerRunSource.includes("Math.max(10, Math.min(configured, 3600))"), "distributed worker throttle must remain bounded");
+assert.ok(workerRunSource.includes('integrationWorkerStateCollectionName = "travel_integration_worker_state"'));
+assert.ok(workerRunSource.includes('name: "integration_worker_state_id_unique"'), "worker throttle state must use a unique singleton key");
+assert.ok(workerRunSource.includes("findOneAndUpdate"), "worker throttle acquisition must be atomic");
+assert.ok(workerRunSource.includes('nextAllowedAt: { $lte: now }'), "worker runs must be denied until the distributed interval expires");
+
 const routeSource = await readFile(new URL("../app/api/internal/integrations/process/route.ts", import.meta.url), "utf8");
 assert.ok(routeSource.includes("export async function POST(request: Request)"), "scheduler entry point must be POST-only");
 assert.equal(routeSource.includes("export async function GET"), false, "scheduler processor must not expose GET");
 assert.ok(routeSource.includes("authorizeIntegrationWorkerRequest(request)"));
-assert.ok(routeSource.indexOf("authorizeIntegrationWorkerRequest(request)") < routeSource.indexOf("await processIntegrationDeliveries"), "authorization must happen before delivery processing");
+assert.ok(routeSource.includes("await tryAcquireIntegrationWorkerRun()"), "authenticated runs must also acquire the distributed throttle");
+assert.ok(routeSource.indexOf("authorizeIntegrationWorkerRequest(request)") < routeSource.indexOf("await tryAcquireIntegrationWorkerRun()"), "authentication must happen before touching worker throttle state");
+assert.ok(routeSource.indexOf("await tryAcquireIntegrationWorkerRun()") < routeSource.indexOf("await processIntegrationDeliveries"), "distributed throttle must be acquired before delivery processing");
 assert.ok(routeSource.includes("parsed < 1 || parsed > 100"), "scheduler batch size must remain bounded to 1–100");
+assert.ok(routeSource.includes('error: "WORKER_RATE_LIMITED"'));
+assert.ok(routeSource.includes('{ "Retry-After": String(run.retryAfterSeconds) }'), "rate-limited scheduler calls must advertise Retry-After");
 assert.ok(routeSource.includes('"Cache-Control": "no-store, max-age=0"'));
 assert.ok(routeSource.includes('"X-Content-Type-Options": "nosniff"'));
 assert.ok(routeSource.includes("pruneCompletedIntegrationHistory({ limit: 500 })"), "scheduled runs should execute bounded retention cleanup");
@@ -87,7 +99,8 @@ assert.ok(actionSource.includes("actorRole: admin.role"));
 
 const envSource = await readFile(new URL("../.env.example", import.meta.url), "utf8");
 assert.ok(envSource.includes("INTEGRATION_WORKER_SECRET="));
+assert.ok(envSource.includes("INTEGRATION_WORKER_MIN_INTERVAL_SECONDS=30"));
 assert.ok(envSource.includes("INTEGRATION_HISTORY_RETENTION_DAYS=180"));
 assert.equal(envSource.includes("NEXT_PUBLIC_INTEGRATION_WORKER_SECRET"), false);
 
-console.log("Integration worker authentication, replay, retention and observability invariants passed.");
+console.log("Integration worker authentication, throttling, replay, retention and observability invariants passed.");
