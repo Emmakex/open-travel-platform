@@ -136,6 +136,7 @@ export default async function OperatorDocumentsPage() {
         </section>
 
         <div className={styles.toolbar}>
+          <Link className="button button-primary" href="/operator/reports">{tr(locale, "Reports and exports", "Informes y exportaciones")}</Link>
           <Link className="button button-secondary" href="/operator/reservations">{tr(locale, "Reservation queue", "Cola de reservas")}</Link>
           <Link className="button button-secondary" href="/operator/service-reservations">{tr(locale, "Service queue", "Cola de servicios")}</Link>
           <Link className="button button-secondary" href="/operator">{tr(locale, "← Operator dashboard", "← Panel de operador")}</Link>
