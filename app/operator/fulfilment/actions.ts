@@ -62,7 +62,6 @@ function errorQuery(error: unknown) {
     case "SUPPLIER_ADAPTER_STATUS_CONFLICT": return "adapter-conflict";
     case "SUPPLIER_ADAPTER_REJECTED": return "adapter-rejected";
     case "SUPPLIER_ADAPTER_RATE_LIMITED": return "adapter-rate-limited";
-    case "SUPPLIER_ADAPTER_UNAVAILABLE": return "adapter-unavailable";
     case "SUPPLIER_ADAPTER_TIMEOUT": return "adapter-timeout";
     case "SUPPLIER_ADAPTER_NETWORK_ERROR": return "adapter-network";
     case "SUPPLIER_ADAPTER_CONTRACT_INVALID":
