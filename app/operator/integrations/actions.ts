@@ -5,6 +5,14 @@ import {
   deleteIntegrationEndpoint,
   saveIntegrationEndpoint
 } from "@/lib/integration-endpoints";
+import {
+  claimIntegrationWorkerRun,
+  finishIntegrationWorkerRun,
+  getIntegrationWorkerMinimumIntervalSeconds,
+  pruneCompletedIntegrationHistory,
+  releaseIntegrationWorkerLease,
+  requeueDeadLetterDelivery
+} from "@/lib/integration-operations";
 import { processIntegrationDeliveries } from "@/lib/integration-outbox";
 import { requireAdminIdentity } from "@/lib/require-admin-identity";
 
@@ -59,7 +67,23 @@ export async function deleteIntegrationEndpointAction(formData: FormData) {
 
 export async function processIntegrationDeliveriesAction() {
   await requireAdminIdentity();
-  const result = await processIntegrationDeliveries({ limit: 25 });
+  const claim = await claimIntegrationWorkerRun({
+    source: "admin",
+    minimumIntervalSeconds: getIntegrationWorkerMinimumIntervalSeconds()
+  });
+  if (!claim.claimed) redirect("/operator/integrations?error=worker-busy");
+
+  let result: Awaited<ReturnType<typeof processIntegrationDeliveries>>;
+  try {
+    result = await processIntegrationDeliveries({ limit: 25 });
+    await pruneCompletedIntegrationHistory();
+    await finishIntegrationWorkerRun({ result });
+  } catch (error) {
+    await releaseIntegrationWorkerLease();
+    console.error("Admin integration delivery run failed", error);
+    redirect("/operator/integrations?error=worker-failed");
+  }
+
   const params = new URLSearchParams({
     processed: String(result.processed),
     succeeded: String(result.succeeded),
@@ -67,4 +91,17 @@ export async function processIntegrationDeliveriesAction() {
     dead: String(result.deadLettered)
   });
   redirect(`/operator/integrations?${params.toString()}`);
+}
+
+export async function requeueIntegrationDeliveryAction(formData: FormData) {
+  const admin = await requireAdminIdentity();
+  const deliveryId = value(formData, "deliveryId");
+  if (!deliveryId) redirect("/operator/integrations?error=delivery-not-found");
+  const changed = await requeueDeadLetterDelivery({
+    deliveryId,
+    actorIdentityId: admin.id,
+    actorRole: admin.role
+  });
+  if (!changed) redirect(`/operator/integrations/deliveries/${encodeURIComponent(deliveryId)}?error=not-dead-letter`);
+  redirect(`/operator/integrations/deliveries/${encodeURIComponent(deliveryId)}?requeued=1`);
 }

@@ -9,8 +9,15 @@ import {
   integrationEventTypes,
   listIntegrationEndpointSummaries
 } from "@/lib/integration-endpoints";
+import {
+  getIntegrationCompletedRetentionDays,
+  getIntegrationHealthMetrics,
+  getIntegrationWorkerBatchSize,
+  getIntegrationWorkerMinimumIntervalSeconds
+} from "@/lib/integration-operations";
 import { listRecentIntegrationDeliveries } from "@/lib/integration-outbox";
 import { isIntegrationSecretEncryptionConfigured } from "@/lib/integration-secrets";
+import { isIntegrationWorkerAuthConfigured } from "@/lib/integration-worker-auth";
 import { getLocale } from "@/lib/get-locale";
 import { formatOperatorDate, tr } from "@/lib/operator-i18n";
 import { requireAdminIdentity } from "@/lib/require-admin-identity";
@@ -31,6 +38,10 @@ function eventLabel(event: string, locale: "en" | "es") {
   return locale === "es" ? pair[1] : pair[0];
 }
 
+function percentage(value: number | null) {
+  return value === null ? "—" : `${Math.round(value * 100)}%`;
+}
+
 export default async function OperatorIntegrationsPage({
   searchParams
 }: {
@@ -47,11 +58,16 @@ export default async function OperatorIntegrationsPage({
   const [locale, query] = await Promise.all([getLocale(), searchParams]);
   await requireAdminIdentity();
   const encryptionReady = isIntegrationSecretEncryptionConfigured();
-  const [endpoints, deliveries] = await Promise.all([
+  const workerAuthReady = isIntegrationWorkerAuthConfigured();
+  const [endpoints, deliveries, health] = await Promise.all([
     listIntegrationEndpointSummaries(),
-    listRecentIntegrationDeliveries(100)
+    listRecentIntegrationDeliveries(100),
+    getIntegrationHealthMetrics()
   ]);
   const endpointById = new Map(endpoints.map((endpoint) => [endpoint.id, endpoint]));
+  const workerBatch = getIntegrationWorkerBatchSize();
+  const workerMinimumInterval = getIntegrationWorkerMinimumIntervalSeconds();
+  const retentionDays = getIntegrationCompletedRetentionDays();
   const errors: Record<string, string> = {
     "encryption-required": tr(locale, "Set INTEGRATION_SECRETS_KEY before storing webhook secrets.", "Configura INTEGRATION_SECRETS_KEY antes de guardar secretos de webhook."),
     "invalid-name": tr(locale, "Use an integration name between 3 and 120 characters.", "Usa un nombre de integración de entre 3 y 120 caracteres."),
@@ -60,7 +76,10 @@ export default async function OperatorIntegrationsPage({
     "private-target": tr(locale, "The webhook target resolves to a private, local or reserved network and was rejected.", "El webhook resuelve a una red privada, local o reservada y ha sido rechazado."),
     "events-required": tr(locale, "Select at least one event to deliver.", "Selecciona al menos un evento para enviar."),
     "not-found": tr(locale, "The integration endpoint could not be found.", "No se ha encontrado el endpoint de integración."),
-    "secret-required": tr(locale, "Enter a signing secret for a new endpoint.", "Introduce un secreto de firma para un endpoint nuevo."),
+    "secret-required": tr(locale, "Enter a signing secret of at least 16 characters for a new endpoint.", "Introduce un secreto de firma de al menos 16 caracteres para un endpoint nuevo."),
+    "worker-busy": tr(locale, "The integration worker is already running or inside its minimum interval. Try again after the current run window.", "El worker de integraciones ya está ejecutándose o dentro de su intervalo mínimo. Inténtalo después de la ventana actual."),
+    "worker-failed": tr(locale, "The integration worker run failed. Review server logs and delivery diagnostics.", "La ejecución del worker de integraciones falló. Revisa los logs del servidor y los diagnósticos de entrega."),
+    "delivery-not-found": tr(locale, "The integration delivery could not be found.", "No se ha encontrado la entrega de integración."),
     "save-failed": tr(locale, "The integration endpoint could not be saved.", "No se pudo guardar el endpoint de integración.")
   };
 
@@ -72,8 +91,8 @@ export default async function OperatorIntegrationsPage({
           <h1>{tr(locale, "Outbound integrations", "Integraciones salientes")}</h1>
           <p className={styles.lead}>{tr(
             locale,
-            "Configure provider-neutral signed webhooks for reservation events. Endpoints receive a minimal operational event envelope rather than internal database documents or protected traveller data.",
-            "Configura webhooks firmados y neutrales respecto a proveedor para eventos de reservas. Los endpoints reciben un evento operativo mínimo, no documentos internos de base de datos ni datos protegidos de viajeros."
+            "Configure provider-neutral signed webhooks for reservation events and operate their durable delivery queue. Endpoints receive a minimal operational event envelope rather than internal database documents or protected traveller data.",
+            "Configura webhooks firmados y neutrales respecto a proveedor para eventos de reservas y opera su cola durable de entregas. Los endpoints reciben un evento operativo mínimo, no documentos internos de base de datos ni datos protegidos de viajeros."
           )}</p>
           <div className={styles.notice}>{tr(
             locale,
@@ -91,6 +110,39 @@ export default async function OperatorIntegrationsPage({
           )}</div> : null}
           <div className={styles.actions}>
             <Link className="button button-secondary" href="/operator">{tr(locale, "← Operator dashboard", "← Panel de operador")}</Link>
+          </div>
+        </section>
+
+        <section className={styles.panel} style={{ marginTop: "1rem" }}>
+          <div className="eyebrow">{tr(locale, "Queue health · last 24 hours", "Salud de cola · últimas 24 horas")}</div>
+          <h2>{tr(locale, "Integration delivery health", "Salud de entregas de integración")}</h2>
+          <div className={styles.metrics}>
+            <div className={styles.metric}><strong>{health.pending}</strong><span>Pending</span></div>
+            <div className={styles.metric}><strong>{health.retrying}</strong><span>Retrying</span></div>
+            <div className={styles.metric}><strong>{health.deadLetter}</strong><span>Dead-letter</span></div>
+            <div className={styles.metric}><strong>{percentage(health.recentSuccessRate)}</strong><span>{tr(locale, "Attempt success", "Éxito de intentos")}</span></div>
+            <div className={styles.metric}><strong>{percentage(health.recentFailureRate)}</strong><span>{tr(locale, "Attempt failure", "Fallo de intentos")}</span></div>
+          </div>
+          <div className={styles.notice}>
+            <strong>{tr(locale, "Oldest due delivery", "Entrega vencida más antigua")}:</strong>{" "}
+            {health.oldestDueAt ? formatOperatorDate(health.oldestDueAt, locale, true) : tr(locale, "none", "ninguna")}<br />
+            {tr(locale, `${health.recentAttempts} attempts observed in the last 24 hours.`, `${health.recentAttempts} intentos observados en las últimas 24 horas.`)}
+          </div>
+        </section>
+
+        <section className={styles.panel} style={{ marginTop: "1rem" }}>
+          <div className="eyebrow">{tr(locale, "Scheduler / worker", "Scheduler / worker")}</div>
+          <h2>{tr(locale, "Server-only scheduled execution", "Ejecución programada server-only")}</h2>
+          <p className={styles.lead}>{tr(
+            locale,
+            "Deployments can POST to /api/internal/integrations/process with a server-only Bearer token. The route uses a durable worker lease and minimum interval so browser sessions are not required and overlapping schedulers are bounded; no delivery is claimed to run continuously unless the deployment actually invokes this worker on a schedule.",
+            "Los despliegues pueden hacer POST a /api/internal/integrations/process con un Bearer token server-only. La ruta usa un lease durable y un intervalo mínimo para no depender de sesiones de navegador y limitar schedulers solapados; no se afirma que ninguna entrega se ejecute continuamente salvo que el despliegue invoque realmente este worker mediante un scheduler."
+          )}</p>
+          <div className={styles.metrics}>
+            <div className={styles.metric}><strong>{workerAuthReady ? tr(locale, "READY", "LISTO") : tr(locale, "NOT CONFIGURED", "SIN CONFIGURAR")}</strong><span>{tr(locale, "Worker authentication", "Autenticación del worker")}</span></div>
+            <div className={styles.metric}><strong>{workerBatch}</strong><span>{tr(locale, "Scheduled batch", "Lote programado")}</span></div>
+            <div className={styles.metric}><strong>{workerMinimumInterval}s</strong><span>{tr(locale, "Minimum interval", "Intervalo mínimo")}</span></div>
+            <div className={styles.metric}><strong>{retentionDays}d</strong><span>{tr(locale, "Completed retention", "Retención completada")}</span></div>
           </div>
         </section>
 
@@ -171,23 +223,23 @@ export default async function OperatorIntegrationsPage({
           <h2>{tr(locale, "Pending and recent deliveries", "Entregas pendientes y recientes")}</h2>
           <p className={styles.lead}>{tr(
             locale,
-            "This first reference implementation exposes the durable processor as an Admin action. A deployment scheduler can call the same processor later; no delivery is claimed to run continuously without such a scheduler.",
-            "Esta primera implementación de referencia expone el procesador durable como una acción de Admin. Más adelante un scheduler del despliegue podrá llamar al mismo procesador; no se presupone ejecución continua sin ese scheduler."
+            "The Admin processor and the server-only scheduler share the same durable worker lock. Delivery records still use per-item leases for crash recovery and concurrency safety.",
+            "El procesador de Admin y el scheduler server-only comparten el mismo lock durable del worker. Las entregas siguen usando leases por elemento para recuperación tras caída y seguridad ante concurrencia."
           )}</p>
           <form action={processIntegrationDeliveriesAction}>
             <button className="button button-primary" type="submit">{tr(locale, "Process up to 25 due deliveries", "Procesar hasta 25 entregas vencidas")}</button>
           </form>
           {deliveries.length ? (
-            <div className={styles.auditList} style={{ marginTop: "1rem" }}>
+            <div className={styles.list} style={{ marginTop: "1rem" }}>
               {deliveries.slice(0, 50).map((delivery) => {
                 const endpoint = endpointById.get(delivery.endpointId);
                 return (
-                  <div className={styles.auditItem} key={delivery.id}>
-                    <strong>{endpoint?.name ?? delivery.endpointId} · {delivery.status}</strong><br />
-                    {delivery.eventId} · {tr(locale, "attempts", "intentos")}: {delivery.attempts}<br />
-                    {delivery.responseStatus ? `HTTP ${delivery.responseStatus} · ` : ""}{delivery.lastError ?? ""}<br />
-                    {formatOperatorDate(delivery.updatedAt ?? delivery.createdAt, locale, true)}
-                  </div>
+                  <Link className={styles.row} href={`/operator/integrations/deliveries/${encodeURIComponent(delivery.id)}`} key={delivery.id}>
+                    <strong>{endpoint?.name ?? delivery.endpointId}</strong>
+                    <span className={styles.badge}>{delivery.status}</span>
+                    <span>{tr(locale, "Attempts", "Intentos")}: {delivery.attempts}</span>
+                    <span>{formatOperatorDate(delivery.updatedAt ?? delivery.createdAt, locale, true)}</span>
+                  </Link>
                 );
               })}
             </div>
