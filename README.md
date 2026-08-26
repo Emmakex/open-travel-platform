@@ -60,11 +60,12 @@ The platform is well beyond the original catalogue/booking MVP. The implementati
 - SSRF/DNS-rebinding protections for configurable outbound webhook targets;
 - server-only scheduled integration delivery with durable worker locking and bounded execution;
 - Admin integration health metrics, event/delivery diagnostics and audited dead-letter replay;
-- bounded retention of completed successful integration history while preserving active/dead-letter work and replay audit.
+- bounded retention of completed successful integration history while preserving active/dead-letter work and replay audit;
+- a versioned generic REST `BookingRepository` adapter with server-only authentication, runtime validation, bounded transport behavior and idempotent mutation retries.
 
 Stripe and Redsys credentialed end-to-end validation remains intentionally pending until suitable provider accounts are available. The adapters are implemented, but production payment capability is not considered validated until provider TEST/LIVE flows have been exercised.
 
-**Phase 8B — Scheduled integration delivery, replay and observability is complete. The next delivery slice is Phase 8C — business adapters.**
+**Phase 8C — Business adapters is IN PROGRESS. Phase 8C-1 — Generic REST booking adapter is complete; Phase 8C-2 — Supplier fulfilment adapter boundary is next.**
 
 ## Current capabilities
 
@@ -202,6 +203,18 @@ Stripe and Redsys credentialed end-to-end validation remains intentionally pendi
 - bounded retention for old successful delivery history with retention audit metadata;
 - protected post-purchase traveller values, signing secrets and worker credentials excluded from operational diagnostics.
 
+### Business adapters
+
+- `BOOKING_MODE=rest` composes an external booking API behind the existing `BookingRepository` interface;
+- versioned `/v1` REST contract with `X-OTP-Contract-Version: 1`;
+- server-only Bearer authentication and production HTTPS enforcement;
+- redirect rejection, `no-store`, bounded timeout and bounded streamed response size;
+- runtime validation before external JSON can become booking-domain data;
+- customer ownership and requested trip/departure scope verified after mapping;
+- mutating calls carry stable per-invocation `Idempotency-Key` values and use bounded transient retries;
+- payment ledger, staff operations, traveller data, catalogue and outbound integrations remain independently composable capabilities;
+- provider-specific payloads must be normalized inside adapters instead of leaking into the core booking domain.
+
 ## Architecture
 
 ```text
@@ -214,6 +227,8 @@ destinations + trips + accommodation + services
       +---------------- trip departures / inventory
       |                         |
       |                  BookingRepository
+      |                  /      |       \
+      |               demo    MongoDB   REST /v1
       |                         |
       |                 trip reservations
       |                         |
@@ -274,7 +289,7 @@ npm run dev
 
 Open `http://localhost:3000`.
 
-A fresh clone can use the safe demo/read-only modes documented in `.env.example`. Persistent MongoDB, SMTP, payment and outbound-integration capabilities are optional.
+A fresh clone can use the safe demo/read-only modes documented in `.env.example`. Persistent MongoDB, SMTP, payment and integration capabilities are optional.
 
 ## Main routes
 
@@ -332,6 +347,10 @@ MONGODB_DB_NAME=ktravel
 IDENTITY_MODE=demo
 STAFF_AUTH_MODE=demo
 BOOKING_MODE=demo
+REST_BOOKING_BASE_URL=
+REST_BOOKING_BEARER_TOKEN=
+REST_BOOKING_TIMEOUT_MS=10000
+REST_BOOKING_MAX_RESPONSE_BYTES=2000000
 OPERATIONS_MODE=demo
 SMTP_HOST=smtp.hostinger.com
 SMTP_PORT=465
@@ -349,13 +368,14 @@ INTEGRATION_WORKER_MIN_INTERVAL_SECONDS=60
 INTEGRATION_COMPLETED_RETENTION_DAYS=180
 ```
 
-`PAYMENT_SECRETS_KEY`, `TRAVELLER_DATA_KEY` and `INTEGRATION_SECRETS_KEY` should be stable high-entropy 32-byte keys. `KTRAVEL_INTEGRATION_WORKER_TOKEN` is a separate server-only Bearer credential and must contain at least 32 high-entropy characters. Do not rotate encryption keys without a migration/re-encryption plan. Stripe/Redsys and outbound endpoint credentials are managed from Admin. `NEXT_PUBLIC_*` variables are browser-visible and must never contain secrets.
+`REST_BOOKING_BEARER_TOKEN` is server-only and must never use a `NEXT_PUBLIC_*` variable. Production REST booking endpoints must use HTTPS. `PAYMENT_SECRETS_KEY`, `TRAVELLER_DATA_KEY` and `INTEGRATION_SECRETS_KEY` should be stable high-entropy 32-byte keys. `KTRAVEL_INTEGRATION_WORKER_TOKEN` is a separate server-only Bearer credential and must contain at least 32 high-entropy characters. Do not rotate encryption keys without a migration/re-encryption plan. Stripe/Redsys and outbound endpoint credentials are managed from Admin. `NEXT_PUBLIC_*` variables are browser-visible and must never contain secrets.
 
 ## Documentation
 
 - [`ROADMAP.md`](ROADMAP.md) — current delivery status and next priorities.
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — capability and trust boundaries.
 - [`docs/BOOKING.md`](docs/BOOKING.md) — booking integrity and adapter rules.
+- [`docs/REST-BOOKING-ADAPTER.md`](docs/REST-BOOKING-ADAPTER.md) — generic external BookingRepository `/v1` contract, authentication, idempotency and validation.
 - [`docs/OPERATIONS.md`](docs/OPERATIONS.md) — staff authorization and workflows.
 - [`docs/CATALOGUE-BACKOFFICE.md`](docs/CATALOGUE-BACKOFFICE.md) — persistent catalogue management.
 - [`docs/DEPARTURES.md`](docs/DEPARTURES.md) — departure inventory.
@@ -404,6 +424,7 @@ check:voucher-documents
 check:reporting-exports
 check:outbound-integrations
 check:integration-operations
+check:rest-booking-adapter
 typecheck
 build
 ```
@@ -433,24 +454,26 @@ CI performs a clean install, runs the invariant checks, type-checks, builds the 
 | Phase 7B — Documents, exports and reporting | **Complete** |
 | Phase 8A — Provider-neutral outbound integrations | **Complete** |
 | Phase 8B — Scheduled integration delivery, replay and observability | **Complete** |
+| Phase 8C-1 — Generic REST booking adapter | **Complete** |
+| Phase 8C — Business adapters | **In progress** |
 
 Future work is tracked in **[ROADMAP.md](ROADMAP.md)** · **[ROADMAP.es.md](ROADMAP.es.md)**.
 
 ## Next development priority
 
-The next block is **Phase 8C — Business adapters**.
+The next block is **Phase 8C-2 — Supplier fulfilment adapter boundary**.
 
-The event/outbox/webhook boundary and its operational worker are now in place. Phase 8C can add concrete adapters without pushing vendor payloads into reservation domains. Initial candidates are:
+The generic REST booking adapter now proves that an external business system can replace one capability without changing the core domain or UI. The next slice applies the same principle to supplier operations:
 
-- supplier/booking APIs;
-- CRM synchronization;
-- ERP/accounting integrations;
-- CMS/catalogue sources;
-- a generic REST booking adapter;
-- enterprise identity where appropriate;
-- additional payment providers when commercially useful.
+- provider-neutral supplier fulfilment adapter interface;
+- request / confirm / reject / cancel contract;
+- normalized external supplier references and statuses;
+- idempotent outbound mutations and stable error translation;
+- auditable synchronization into the existing fulfilment workflow;
+- no automatic rewrite of customer totals or the payment ledger;
+- provider-specific authentication/payload mapping contained inside adapters.
 
-Vendor-specific payload mapping, authentication and error translation must remain inside adapters while the core continues to publish/consume stable provider-neutral contracts.
+Later 8C candidates include CRM synchronization, ERP/accounting, CMS/catalogue sources, enterprise identity and additional payment providers when commercially useful.
 
 Credentialed Stripe/Redsys TEST/LIVE validation should be inserted as soon as suitable provider accounts are available and does not need to block Phase 8 work.
 
@@ -468,6 +491,7 @@ Credentialed Stripe/Redsys TEST/LIVE validation should be inserted as soon as su
 - sensitive exports are capability-gated, purpose-bound and persistently audited before delivery;
 - generic outbound events exclude protected traveller data and provider-specific payloads;
 - scheduled integration execution remains server-authenticated, bounded and observable;
+- external booking APIs must satisfy runtime contract, ownership and idempotency boundaries before their data enters the core;
 - public UX is bilingual, responsive and free of internal development terminology;
 - proprietary Kairoseth/customer-specific integrations stay outside the MIT core when appropriate.
 
