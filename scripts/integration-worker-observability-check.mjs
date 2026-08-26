@@ -42,7 +42,7 @@ const routeSource = await readFile(new URL("../app/api/internal/integrations/pro
 assert.ok(routeSource.includes("export async function POST(request: Request)"), "scheduler entry point must be POST-only");
 assert.equal(routeSource.includes("export async function GET"), false, "scheduler processor must not expose GET");
 assert.ok(routeSource.includes("authorizeIntegrationWorkerRequest(request)"));
-assert.ok(routeSource.indexOf("authorizeIntegrationWorkerRequest(request)") < routeSource.indexOf("processIntegrationDeliveries"), "authorization must happen before delivery processing");
+assert.ok(routeSource.indexOf("authorizeIntegrationWorkerRequest(request)") < routeSource.indexOf("await processIntegrationDeliveries"), "authorization must happen before delivery processing");
 assert.ok(routeSource.includes("parsed < 1 || parsed > 100"), "scheduler batch size must remain bounded to 1–100");
 assert.ok(routeSource.includes('"Cache-Control": "no-store, max-age=0"'));
 assert.ok(routeSource.includes('"X-Content-Type-Options": "nosniff"'));
