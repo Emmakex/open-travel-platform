@@ -1,19 +1,11 @@
 import { randomUUID } from "node:crypto";
-import type { ClientSession, Db, MongoClient } from "mongodb";
-import type { ServiceReservation } from "@/domain/services/booking-types";
+import type { Db, MongoClient } from "mongodb";
+import type { Reservation } from "@/domain/booking/types";
 import type { IntegrationEventEnvelope, IntegrationEventType } from "@/domain/integrations/types";
-import {
-  customerUserCollectionName,
-  type StoredCustomerUser
-} from "@/lib/customer-auth";
+import type { ServiceReservation } from "@/domain/services/booking-types";
 import { getCrmSyncAdapter } from "@/lib/crm-sync-adapter";
 import { isCrmSyncConfigured } from "@/lib/crm-sync-config";
-import {
-  travelReservationCollectionName,
-  type StoredReservation
-} from "@/lib/mongo-reservations";
 import { getMongoClient, getMongoDatabaseName } from "@/lib/mongodb";
-import { serviceReservationCollectionName } from "@/lib/service-reservations";
 import type {
   CrmContactSnapshot,
   CrmReservationSnapshot,
@@ -24,6 +16,10 @@ export const crmIntegrationDeliveryEndpointId = "crm-rest:primary";
 export const crmSyncLinkCollectionName = "travel_crm_sync_links";
 export const crmSyncAuditCollectionName = "travel_crm_sync_audit";
 
+const customerUserCollectionName = "travel_users";
+const travelReservationCollectionName = "travel_reservations";
+const serviceReservationCollectionName = "travel_service_reservations";
+
 const crmRelevantEventTypes = new Set<IntegrationEventType>([
   "customer.created",
   "customer.profile.updated",
@@ -32,6 +28,17 @@ const crmRelevantEventTypes = new Set<IntegrationEventType>([
   "service.reservation.created",
   "service.reservation.status.changed"
 ]);
+
+type StoredCrmCustomer = {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: "customer";
+  phone?: string;
+  country?: string;
+  preferredLocale?: string;
+};
 
 type CrmEntityType = "contact" | "trip-reservation" | "service-reservation";
 
@@ -87,7 +94,7 @@ export async function ensureCrmSyncIndexes(database: Db) {
   ]);
 }
 
-function contactSnapshot(user: StoredCustomerUser): CrmContactSnapshot {
+function contactSnapshot(user: StoredCrmCustomer): CrmContactSnapshot {
   return {
     localId: user.id,
     firstName: user.firstName,
@@ -99,7 +106,7 @@ function contactSnapshot(user: StoredCustomerUser): CrmContactSnapshot {
   };
 }
 
-function tripReservationSnapshot(reservation: StoredReservation): CrmReservationSnapshot {
+function tripReservationSnapshot(reservation: Reservation): CrmReservationSnapshot {
   return {
     reservationType: "trip",
     localId: reservation.id,
@@ -187,7 +194,7 @@ async function persistSuccessfulSync(input: {
 }
 
 async function loadCustomer(database: Db, customerId: string) {
-  const user = await database.collection<StoredCustomerUser>(customerUserCollectionName)
+  const user = await database.collection<StoredCrmCustomer>(customerUserCollectionName)
     .findOne({ id: customerId, role: "customer" });
   if (!user) throw crmError("CRM_SYNC_CONTACT_NOT_FOUND", "The CRM synchronization contact no longer exists.");
   return user;
@@ -198,7 +205,7 @@ async function syncContact(input: {
   database: Db;
   event: IntegrationEventEnvelope;
   deliveryId: string;
-  customer: StoredCustomerUser;
+  customer: StoredCrmCustomer;
 }) {
   const adapter = getCrmSyncAdapter();
   const result = await adapter.upsertContact({
@@ -239,7 +246,7 @@ export async function deliverCrmIntegrationEvent(input: {
   }
 
   if (input.event.aggregateType === "trip-reservation") {
-    const reservation = await database.collection<StoredReservation>(travelReservationCollectionName)
+    const reservation = await database.collection<Reservation>(travelReservationCollectionName)
       .findOne({ id: input.event.aggregateId });
     if (!reservation) throw crmError("CRM_SYNC_RESERVATION_NOT_FOUND", "The trip reservation no longer exists.");
     const customer = await loadCustomer(database, reservation.identityId);
