@@ -57,11 +57,14 @@ The platform is well beyond the original catalogue/booking MVP. The implementati
 - currency-safe finance dashboards and reports that never aggregate different currencies together;
 - provider-neutral outbound reservation events with a transactional MongoDB outbox;
 - Admin-managed signed HTTPS webhooks with encrypted secrets, bounded retries, delivery history and dead-letter retention;
-- SSRF/DNS-rebinding protections for configurable outbound webhook targets.
+- SSRF/DNS-rebinding protections for configurable outbound webhook targets;
+- server-only scheduled integration delivery with durable worker locking and bounded execution;
+- Admin integration health metrics, event/delivery diagnostics and audited dead-letter replay;
+- bounded retention of completed successful integration history while preserving active/dead-letter work and replay audit.
 
 Stripe and Redsys credentialed end-to-end validation remains intentionally pending until suitable provider accounts are available. The adapters are implemented, but production payment capability is not considered validated until provider TEST/LIVE flows have been exercised.
 
-**Phase 8A — Provider-neutral outbound integrations is complete. The next delivery slice is Phase 8B — scheduled integration delivery, replay and observability.**
+**Phase 8B — Scheduled integration delivery, replay and observability is complete. The next delivery slice is Phase 8C — business adapters.**
 
 ## Current capabilities
 
@@ -190,9 +193,14 @@ Stripe and Redsys credentialed end-to-end validation remains intentionally pendi
 - HTTPS-only targets with private/local/reserved network rejection and DNS revalidation before delivery;
 - validated-IP pinning while preserving the original hostname for TLS SNI and HTTP Host;
 - redirects disabled, bounded request timeouts and bounded response bodies;
-- delivery leasing, crash recovery, retry/backoff, attempt history and dead-letter retention;
-- protected post-purchase traveller values excluded from the generic event contract;
-- manual bounded Admin processor ready for a deployment scheduler in Phase 8B.
+- per-delivery leasing, crash recovery, retry/backoff, attempt history and dead-letter retention;
+- server-only `POST /api/internal/integrations/process` scheduler entry point with Bearer authentication;
+- durable global worker lock shared by scheduled and manual Admin runs;
+- server-side batch/frequency limits and `Retry-After` for overlapping/rate-limited runs;
+- Admin health metrics, event detail and delivery detail views;
+- Admin-only audited dead-letter requeue with prior attempt history preserved;
+- bounded retention for old successful delivery history with retention audit metadata;
+- protected post-purchase traveller values, signing secrets and worker credentials excluded from operational diagnostics.
 
 ## Architecture
 
@@ -232,6 +240,8 @@ IdentityRepository                 Operations / RBAC / audit
                             transactional event outbox
                                            |
                             outbound integration adapters
+                                           |
+                         scheduled delivery worker
 ```
 
 Provider-specific payloads stay inside adapters. Catalogue, booking, accommodation, identity, services, operations, documents, reporting, payment accounting and external integration delivery remain replaceable capability boundaries.
@@ -304,7 +314,11 @@ A fresh clone can use the safe demo/read-only modes documented in `.env.example`
 /operator/payments                     finance dashboard
 /operator/payments/providers           admin-only PSP configuration
 /operator/integrations                 admin-only outbound integrations
+/operator/integrations/events/[eventId] admin-only integration event diagnostics
+/operator/integrations/deliveries/[deliveryId] admin-only delivery/replay diagnostics
 /operator/staff                        staff and capability management
+
+/api/internal/integrations/process     server-only scheduled integration worker (POST)
 ```
 
 ## Configuration overview
@@ -329,9 +343,13 @@ KTRAVEL_OPERATIONS_EMAILS=
 PAYMENT_SECRETS_KEY=
 TRAVELLER_DATA_KEY=
 INTEGRATION_SECRETS_KEY=
+KTRAVEL_INTEGRATION_WORKER_TOKEN=
+INTEGRATION_WORKER_BATCH_SIZE=10
+INTEGRATION_WORKER_MIN_INTERVAL_SECONDS=60
+INTEGRATION_COMPLETED_RETENTION_DAYS=180
 ```
 
-`PAYMENT_SECRETS_KEY`, `TRAVELLER_DATA_KEY` and `INTEGRATION_SECRETS_KEY` should be stable high-entropy 32-byte keys. Do not rotate them without a migration/re-encryption plan. Stripe/Redsys and outbound integration credentials are managed from Admin. `NEXT_PUBLIC_*` variables are browser-visible and must never contain secrets.
+`PAYMENT_SECRETS_KEY`, `TRAVELLER_DATA_KEY` and `INTEGRATION_SECRETS_KEY` should be stable high-entropy 32-byte keys. `KTRAVEL_INTEGRATION_WORKER_TOKEN` is a separate server-only Bearer credential and must contain at least 32 high-entropy characters. Do not rotate encryption keys without a migration/re-encryption plan. Stripe/Redsys and outbound endpoint credentials are managed from Admin. `NEXT_PUBLIC_*` variables are browser-visible and must never contain secrets.
 
 ## Documentation
 
@@ -352,6 +370,7 @@ INTEGRATION_SECRETS_KEY=
 - [`docs/VOUCHERS-DOSSIERS.md`](docs/VOUCHERS-DOSSIERS.md) — vouchers, dossier and supplier-reference disclosure.
 - [`docs/REPORTING-EXPORTS.md`](docs/REPORTING-EXPORTS.md) — CSV/XLSX, finance reports and audited protected-data exports.
 - [`docs/OUTBOUND-INTEGRATIONS.md`](docs/OUTBOUND-INTEGRATIONS.md) — event contract, signed webhooks, transactional outbox and delivery security.
+- [`docs/INTEGRATION-OPERATIONS.md`](docs/INTEGRATION-OPERATIONS.md) — scheduler, replay, queue health, diagnostics and retention.
 - [`docs/ADAPTER-GUIDE.md`](docs/ADAPTER-GUIDE.md) — adding integrations.
 - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — deployment model.
 - [`docs/PRODUCTION-CHECKLIST.md`](docs/PRODUCTION-CHECKLIST.md) — production review.
@@ -384,6 +403,7 @@ check:departure-documents
 check:voucher-documents
 check:reporting-exports
 check:outbound-integrations
+check:integration-operations
 typecheck
 build
 ```
@@ -412,23 +432,25 @@ CI performs a clean install, runs the invariant checks, type-checks, builds the 
 | CSV/XLSX exports and reconciliation/reporting | Done |
 | Phase 7B — Documents, exports and reporting | **Complete** |
 | Phase 8A — Provider-neutral outbound integrations | **Complete** |
+| Phase 8B — Scheduled integration delivery, replay and observability | **Complete** |
 
 Future work is tracked in **[ROADMAP.md](ROADMAP.md)** · **[ROADMAP.es.md](ROADMAP.es.md)**.
 
 ## Next development priority
 
-The next block is **Phase 8B — Scheduled integration delivery, replay and observability**.
+The next block is **Phase 8C — Business adapters**.
 
-The common event/outbox/webhook boundary is already implemented. The next slice will make it operational without requiring an Admin browser action by adding:
+The event/outbox/webhook boundary and its operational worker are now in place. Phase 8C can add concrete adapters without pushing vendor payloads into reservation domains. Initial candidates are:
 
-- a scheduler/worker entry point with server-only authentication;
-- bounded batch/rate controls;
-- audited dead-letter replay/requeue;
-- Admin event/delivery detail views;
-- queue health metrics and failure visibility;
-- retention rules for completed event/delivery history.
+- supplier/booking APIs;
+- CRM synchronization;
+- ERP/accounting integrations;
+- CMS/catalogue sources;
+- a generic REST booking adapter;
+- enterprise identity where appropriate;
+- additional payment providers when commercially useful.
 
-After 8B, Phase 8C can add supplier/booking, CRM, ERP/accounting, CMS and generic REST business adapters on top of the same provider-neutral boundary.
+Vendor-specific payload mapping, authentication and error translation must remain inside adapters while the core continues to publish/consume stable provider-neutral contracts.
 
 Credentialed Stripe/Redsys TEST/LIVE validation should be inserted as soon as suitable provider accounts are available and does not need to block Phase 8 work.
 
@@ -445,6 +467,7 @@ Credentialed Stripe/Redsys TEST/LIVE validation should be inserted as soon as su
 - customer-safe documents exclude internal notes, protected traveller data and supplier costs;
 - sensitive exports are capability-gated, purpose-bound and persistently audited before delivery;
 - generic outbound events exclude protected traveller data and provider-specific payloads;
+- scheduled integration execution remains server-authenticated, bounded and observable;
 - public UX is bilingual, responsive and free of internal development terminology;
 - proprietary Kairoseth/customer-specific integrations stay outside the MIT core when appropriate.
 
