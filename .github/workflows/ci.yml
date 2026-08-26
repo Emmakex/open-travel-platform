@@ -88,6 +88,9 @@ jobs:
       - name: Outbound integration invariant check
         run: npm run check:outbound-integrations
 
+      - name: Integration operations invariant check
+        run: npm run check:integration-operations
+
       - name: Type check
         run: npm run typecheck
 
