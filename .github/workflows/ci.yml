@@ -110,6 +110,9 @@ jobs:
       - name: MongoDB concurrency CI invariant check
         run: npm run check:mongodb-concurrency
 
+      - name: Payment idempotency invariant check
+        run: npm run check:payment-idempotency
+
       - name: Type check
         run: npm run typecheck
 
@@ -225,6 +228,14 @@ jobs:
 
       - name: MongoDB booking concurrency and rollback test
         run: npm run test:mongodb-concurrency
+
+      - name: MongoDB payment and webhook idempotency test
+        env:
+          PAYMENT_LEDGER_MODE: mongodb
+          ERP_ACCOUNTING_MODE: rest
+          REST_ERP_ACCOUNTING_BASE_URL: https://erp.invalid/
+          REST_ERP_ACCOUNTING_BEARER_TOKEN: ci-payment-idempotency-token
+        run: npm run test:mongodb-payment-idempotency
 
       - name: MongoDB diagnostics on failure
         if: failure()
