@@ -4,16 +4,18 @@ import {
   pruneCompletedIntegrationHistory
 } from "@/lib/integration-outbox";
 import { authorizeIntegrationWorkerRequest } from "@/lib/integration-worker-auth";
+import { tryAcquireIntegrationWorkerRun } from "@/lib/integration-worker-run";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function noStoreJson(body: unknown, status = 200) {
+function noStoreJson(body: unknown, status = 200, extraHeaders?: Record<string, string>) {
   return NextResponse.json(body, {
     status,
     headers: {
       "Cache-Control": "no-store, max-age=0",
-      "X-Content-Type-Options": "nosniff"
+      "X-Content-Type-Options": "nosniff",
+      ...(extraHeaders ?? {})
     }
   });
 }
@@ -39,11 +41,26 @@ export async function POST(request: Request) {
   }
 
   try {
+    const run = await tryAcquireIntegrationWorkerRun();
+    if (!run.acquired) {
+      return noStoreJson(
+        {
+          ok: false,
+          error: "WORKER_RATE_LIMITED",
+          retryAfterSeconds: run.retryAfterSeconds,
+          nextAllowedAt: run.nextAllowedAt
+        },
+        429,
+        { "Retry-After": String(run.retryAfterSeconds) }
+      );
+    }
+
     const delivery = await processIntegrationDeliveries({ limit });
     const retention = await pruneCompletedIntegrationHistory({ limit: 500 });
     return noStoreJson({
       ok: true,
       processedAt: new Date().toISOString(),
+      nextAllowedAt: run.nextAllowedAt,
       limit,
       delivery,
       retention
