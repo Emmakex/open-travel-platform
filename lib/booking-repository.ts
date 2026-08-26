@@ -1,5 +1,6 @@
 import { DemoBookingRepository } from "@/adapters/demo-booking-repository";
 import { MongoBookingRepository } from "@/adapters/mongo-booking-repository";
+import { RestBookingRepository } from "@/adapters/rest-booking-repository";
 import type { CreateReservationInput, Reservation } from "@/domain/booking/types";
 import { bookingConfig } from "@/lib/booking-config";
 import type { BookingRepository } from "@/repositories/booking-repository";
@@ -29,6 +30,10 @@ class DisabledBookingRepository implements BookingRepository {
 export function getBookingRepository(): BookingRepository {
   if (bookingConfig.mode === "mongodb") {
     return new MongoBookingRepository();
+  }
+
+  if (bookingConfig.mode === "rest") {
+    return new RestBookingRepository();
   }
 
   if (bookingConfig.mode === "demo") {

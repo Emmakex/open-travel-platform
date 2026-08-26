@@ -17,11 +17,11 @@ _Last updated: 26 August 2026._
 
 The project is well beyond the original catalogue/booking MVP.
 
-Completed foundations include persistent customer/staff identity, RBAC, trip/service reservations, traveller pricing, independent services, transactional email, payment accounting, encrypted PSP configuration, provider-neutral checkout adapters, deposits/installments, encrypted post-purchase traveller data, reservation amendments, reusable accommodation, transactional room inventory, package supplements, rich operations, granular staff permissions, booking/departure documents, customer-safe vouchers, an internal reservation dossier, CSV/XLSX operational exports, finance reconciliation/reporting, audited protected-traveller exports, provider-neutral outbound integration events and durable scheduled integration operations with replay, health metrics and retention.
+Completed foundations include persistent customer/staff identity, RBAC, trip/service reservations, traveller pricing, independent services, transactional email, payment accounting, encrypted PSP configuration, provider-neutral checkout adapters, deposits/installments, encrypted post-purchase traveller data, reservation amendments, reusable accommodation, transactional room inventory, package supplements, rich operations, granular staff permissions, booking/departure documents, customer-safe vouchers, an internal reservation dossier, CSV/XLSX operational exports, finance reconciliation/reporting, audited protected-traveller exports, provider-neutral outbound integration events, durable scheduled integration operations with replay/health/retention and the first concrete business adapter: a versioned generic REST `BookingRepository` implementation.
 
 Stripe/Redsys credentialed end-to-end validation remains pending until suitable provider accounts are available. The adapters are implemented, but production payment capability is not considered validated until TEST/LIVE provider flows are exercised.
 
-**Phases 6B, 6C, 7A, 7B, 8A and 8B are complete. Phase 8C — business adapters is NEXT.**
+**Phases 6B, 6C, 7A, 7B, 8A and 8B are complete. Phase 8C — Business adapters is IN PROGRESS. Phase 8C-1 — Generic REST booking adapter is COMPLETE; Phase 8C-2 — Supplier fulfilment adapter boundary is NEXT.**
 
 ---
 
@@ -295,19 +295,44 @@ Goal: connect deployments to real business ecosystems through adapters while kee
 - EN/ES integration-operations documentation;
 - permanent `check:integration-operations` gate wired into `npm run verify` and GitHub CI.
 
-## 8C — Business adapters — NEXT
+## 8C — Business adapters — IN PROGRESS
 
-The common event/outbox/delivery layer is now operationally mature enough for concrete business adapters. Initial candidates:
+The common integration and capability boundaries are now mature enough for concrete business adapters without vendor payloads leaking into the core.
 
-- supplier/booking APIs;
+### 8C-1 — Generic REST booking adapter — COMPLETE
+
+- `BOOKING_MODE=rest` composes an external booking API behind the existing `BookingRepository` interface;
+- stable versioned `/v1` contract using `X-OTP-Contract-Version: 1`;
+- server-only Bearer authentication with no browser-visible secret;
+- production HTTPS enforcement;
+- redirect rejection, `no-store`, bounded timeout and bounded streamed response size;
+- runtime validation before external JSON becomes domain data;
+- customer ownership and requested trip/departure scope revalidated after mapping;
+- create/cancel mutations use stable per-invocation idempotency keys and bounded transient retries;
+- stable application-level error translation instead of leaking provider/network internals;
+- payment ledger, staff operations, catalogue, traveller data and outbound integrations remain separately composable capabilities;
+- EN/ES contract/deployment documentation;
+- permanent `check:rest-booking-adapter` invariant wired into `npm run verify` and GitHub CI.
+
+### 8C-2 — Supplier fulfilment adapter boundary — NEXT
+
+- provider-neutral supplier fulfilment adapter interface;
+- request / confirm / reject / cancel contract;
+- normalized external supplier references and statuses;
+- idempotent outbound mutations and stable provider error translation;
+- auditable synchronization into the existing fulfilment workflow;
+- provider-specific authentication and payload mapping kept inside adapters;
+- external supplier responses must not automatically rewrite customer totals or payment ledger movements.
+
+### Later 8C candidates
+
 - CRM synchronization;
 - ERP/accounting;
 - CMS/catalogue sources;
-- generic REST booking adapter;
 - enterprise identity where appropriate;
 - additional payment providers when commercially useful.
 
-Vendor-specific payloads must remain inside adapters and consume the versioned event boundary rather than leaking into reservation domains.
+Vendor-specific payloads must remain inside adapters and consume stable provider-neutral boundaries rather than leaking into reservation domains.
 
 # Phase 9 — Production hardening
 
@@ -353,11 +378,13 @@ Vendor-specific payloads must remain inside adapters and consume the versioned e
 # Suggested delivery order
 
 ```text
-8C  Business adapters
- ↓
-9   Production hardening
- ↓
-10  Open-source productisation / release
+8C-2  Supplier fulfilment adapter boundary
+  ↓
+8C    Remaining business adapters as commercially useful
+  ↓
+9     Production hardening
+  ↓
+10    Open-source productisation / release
 ```
 
 Credentialed Stripe/Redsys TEST validation should be inserted as soon as provider accounts are available and does not need to block Phase 8.
