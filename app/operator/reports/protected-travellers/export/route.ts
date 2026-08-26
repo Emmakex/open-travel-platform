@@ -14,18 +14,23 @@ import { hasStaffCapability } from "@/lib/staff-capabilities";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(request: Request) {
+function formValue(formData: FormData, key: string) {
+  const value = formData.get(key);
+  return typeof value === "string" ? value.trim() : "";
+}
+
+export async function POST(request: Request) {
   const staff = await requireStaffCapability("traveller-data");
   if (!hasStaffCapability(staff, "reservations")) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
-  const url = new URL(request.url);
-  const format = parseExportFormat(url.searchParams.get("format"));
+  const formData = await request.formData();
+  const format = parseExportFormat(formValue(formData, "format"));
   if (!format) return NextResponse.json({ error: "invalid-format" }, { status: 400 });
-  const targetType = url.searchParams.get("targetType");
-  const targetId = url.searchParams.get("targetId")?.trim();
-  const reason = url.searchParams.get("reason")?.trim() ?? "";
+  const targetType = formValue(formData, "targetType");
+  const targetId = formValue(formData, "targetId");
+  const reason = formValue(formData, "reason");
   if ((targetType !== "trip" && targetType !== "service") || !targetId) {
     return NextResponse.json({ error: "invalid-target" }, { status: 400 });
   }
