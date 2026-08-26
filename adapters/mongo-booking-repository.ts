@@ -4,6 +4,7 @@ import {
   releaseAccommodationBookingInventory,
   reserveAccommodationBookingInventory
 } from "@/lib/accommodation-booking-inventory";
+import { createIntegrationEvent, enqueueIntegrationEvent } from "@/lib/integration-outbox";
 import { travelDepartureCollectionName, listPublicMongoAvailability } from "@/lib/mongo-departures";
 import {
   ensureMongoReservationIndexes,
@@ -68,6 +69,24 @@ export class MongoBookingRepository implements BookingRepository {
       status: "pending",
       createdAt: new Date().toISOString()
     };
+    const integrationEvent = createIntegrationEvent({
+      type: "trip.reservation.created",
+      aggregateType: "trip-reservation",
+      aggregateId: reservation.id,
+      occurredAt: reservation.createdAt,
+      payload: {
+        reservationId: reservation.id,
+        tripId: reservation.tripId,
+        availabilityId: reservation.availabilityId,
+        status: reservation.status,
+        partySize: reservation.partySize,
+        totalPrice: reservation.totalPrice,
+        currency: reservation.currency,
+        departureDate: reservation.departureDate,
+        returnDate: reservation.returnDate,
+        createdAt: reservation.createdAt
+      }
+    });
 
     try {
       await session.withTransaction(async () => {
@@ -92,14 +111,11 @@ export class MongoBookingRepository implements BookingRepository {
           { session }
         );
 
-        if (inventoryResult.modifiedCount !== 1) {
-          throw inventoryError();
-        }
-
+        if (inventoryResult.modifiedCount !== 1) throw inventoryError();
         await reserveAccommodationBookingInventory(database, session, input.accommodationBookings ?? []);
         await reservations.insertOne(reservation, { session });
+        await enqueueIntegrationEvent(database, session, integrationEvent);
       });
-
       return reservation;
     } finally {
       await session.endSession();
@@ -114,6 +130,7 @@ export class MongoBookingRepository implements BookingRepository {
     const reservations = database.collection<StoredReservation>(travelReservationCollectionName);
     const departures = database.collection(travelDepartureCollectionName);
     const session = client.startSession();
+    const integrationEventId = `intevt-${randomUUID()}`;
     let cancelled: Reservation | null = null;
 
     try {
@@ -122,7 +139,6 @@ export class MongoBookingRepository implements BookingRepository {
           { id: reservationId, identityId },
           { session }
         );
-
         if (!current || current.status !== "pending") return;
 
         const updatedAt = new Date().toISOString();
@@ -131,7 +147,6 @@ export class MongoBookingRepository implements BookingRepository {
           { $set: { status: "cancelled", updatedAt } },
           { session }
         );
-
         if (update.modifiedCount !== 1) return;
 
         const inventorySpaces = current.inventorySpaces ?? current.partySize;
@@ -152,7 +167,6 @@ export class MongoBookingRepository implements BookingRepository {
         }
 
         await releaseAccommodationBookingInventory(database, session, current.accommodationBookings);
-
         await departures.updateOne(
           {
             id: current.availabilityId,
@@ -164,13 +178,22 @@ export class MongoBookingRepository implements BookingRepository {
           { session }
         );
 
-        cancelled = {
-          ...current,
-          status: "cancelled",
-          updatedAt
-        };
-      });
+        await enqueueIntegrationEvent(database, session, createIntegrationEvent({
+          id: integrationEventId,
+          type: "trip.reservation.status.changed",
+          aggregateType: "trip-reservation",
+          aggregateId: current.id,
+          occurredAt: updatedAt,
+          payload: {
+            reservationId: current.id,
+            fromStatus: current.status,
+            toStatus: "cancelled",
+            updatedAt
+          }
+        }));
 
+        cancelled = { ...current, status: "cancelled", updatedAt };
+      });
       return cancelled;
     } finally {
       await session.endSession();
