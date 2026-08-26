@@ -18,6 +18,9 @@ export default async function OperatorIntegrationsLayout({ children }: { childre
             <Link className="button button-secondary" href="/operator/integrations/crm">
               {tr(locale, "CRM sync", "Sincronización CRM")}
             </Link>
+            <Link className="button button-secondary" href="/operator/integrations/erp">
+              {tr(locale, "ERP / accounting", "ERP / contabilidad")}
+            </Link>
           </div>
         </div>
       </div>
