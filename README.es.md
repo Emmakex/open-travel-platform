@@ -61,11 +61,13 @@ La plataforma está muy por encima del MVP original de catálogo/reservas. La im
 - adapter REST genérico y versionado de `BookingRepository`;
 - adapter opcional y neutral de fulfilment de proveedores con sincronización auditada request/status/cancel;
 - adapter CRM exclusivamente downstream que reutiliza el mismo worker durable y mantiene los eventos de cliente/perfil fuera de las suscripciones webhook genéricas;
-- adapter ERP/contabilidad exclusivamente downstream que exporta solo movimientos finalizados de pago/reembolso mediante el mismo worker durable sin dar al ERP autoridad sobre reservas ni historial financiero local.
+- adapter ERP/contabilidad exclusivamente downstream que exporta solo movimientos finalizados de pago/reembolso mediante el mismo worker durable sin dar al ERP autoridad sobre reservas ni historial financiero local;
+- CSP/headers de seguridad globales, throttling persistente de autenticación, comprobaciones explícitas de Origin para Route Handlers autenticados por cookie y endpoints de health/readiness;
+- perfiles explícitos de readiness `demo|live` que fallan de forma segura si un despliegue live conserva capacidades demo o no dispone de infraestructura requerida.
 
 La validación E2E con credenciales Stripe/Redsys sigue pendiente hasta disponer de cuentas adecuadas. Los adapters están implementados, pero la capacidad productiva no se considera validada hasta probar TEST/LIVE.
 
-**La Fase 8 — Integraciones externas está COMPLETADA, incluyendo 8C-1 reservas, 8C-2 fulfilment de proveedores, 8C-3 CRM y 8C-4 ERP/contabilidad. La Fase 9 — Endurecimiento productivo es la siguiente.**
+**La Fase 8 — Integraciones externas está COMPLETADA. La Fase 9 — Endurecimiento productivo está EN PROGRESO: la Fase 9A de seguridad / operabilidad productiva está COMPLETADA y la Fase 9B de E2E críticos + concurrencia MongoDB es la siguiente.**
 
 ## Capacidades actuales
 
@@ -127,10 +129,20 @@ La validación E2E con credenciales Stripe/Redsys sigue pendiente hasta disponer
 
 - registro/sesiones persistentes de cliente;
 - autenticación separada Operator/Admin;
-- separación de sesiones;
+- separación de sesiones cliente/personal;
+- tokens de sesión opacos almacenados únicamente como hash SHA-256, con expiración TTL y revocación server-side;
+- cookies de sesión `HttpOnly`, `Secure` en producción, `SameSite=Lax` para cliente y `SameSite=Strict` para personal;
 - bloqueo por intentos repetidos;
-- cambio/recuperación de contraseña por SMTP;
+- throttling persistente MongoDB para login cliente/staff, registro y solicitudes de reset de contraseña;
+- buckets de rate limit con identificadores SHA-256, sin guardar email ni IP en claro;
+- throttling adicional por cliente solo cuando se habilita explícitamente la confianza en headers IP del proxy;
+- cambio/recuperación de contraseña por SMTP con respuestas que no revelan si la cuenta existe;
 - auditoría de autenticación;
+- Content Security Policy y headers HTTP defensivos globales;
+- HSTS y upgrade de requests inseguras en producción;
+- comprobación de Origin confiable para mutaciones en Route Handlers autenticados por cookie, manteniendo firma de proveedor para webhooks externos;
+- endpoints operativos `/api/health/live` y `/api/health/ready`;
+- contrato de readiness `KTRAVEL_DEPLOYMENT_PROFILE=demo|live`;
 - secretos PSP cifrados AES-256-GCM;
 - datos avanzados del viajero almacenados aparte y cifrados AES-256-GCM;
 - secretos de firma de integraciones salientes cifrados con clave AES-256-GCM dedicada;
@@ -342,6 +354,8 @@ npm run dev
 /operator/integrations/deliveries/[deliveryId] diagnóstico/replay Admin
 /operator/staff                        personal/permisos
 
+/api/health/live                       liveness del proceso
+/api/health/ready                      readiness de configuración/infraestructura
 /api/internal/integrations/process     worker programado server-only (POST)
 ```
 
@@ -350,6 +364,10 @@ npm run dev
 La plantilla completa vive en [`.env.example`](.env.example). Los secretos nunca deben usar `NEXT_PUBLIC_*`.
 
 ```text
+KTRAVEL_PUBLIC_URL=https://travel.kairoseth.com
+KTRAVEL_DEPLOYMENT_PROFILE=demo
+KTRAVEL_ALLOWED_BROWSER_ORIGINS=
+KTRAVEL_TRUST_PROXY_IP_HEADERS=false
 BOOKING_MODE=demo
 REST_BOOKING_BASE_URL=
 REST_BOOKING_BEARER_TOKEN=
@@ -379,6 +397,8 @@ INTEGRATION_WORKER_MIN_INTERVAL_SECONDS=60
 INTEGRATION_COMPLETED_RETENTION_DAYS=180
 ```
 
+`KTRAVEL_DEPLOYMENT_PROFILE=live` convierte readiness en un contrato productivo más estricto: capacidades demo, configuración HTTPS canónica inválida, MongoDB requerido no disponible o falta de autenticación del worker outbound hacen que `/api/health/ready` responda 503. `KTRAVEL_ALLOWED_BROWSER_ORIGINS` solo acepta orígenes exactos adicionales. Mantén `KTRAVEL_TRUST_PROXY_IP_HEADERS=false` salvo que el edge elimine headers de forwarding falsificables y escriba la IP real del cliente de forma confiable.
+
 `REST_BOOKING_BEARER_TOKEN`, `REST_SUPPLIER_FULFILMENT_BEARER_TOKEN`, `REST_CRM_BEARER_TOKEN` y `REST_ERP_ACCOUNTING_BEARER_TOKEN` son server-only y nunca deben usar `NEXT_PUBLIC_*`. Los endpoints REST de reservas, proveedores, CRM y ERP/contabilidad en producción deben usar HTTPS. Las tres claves maestras deben ser estables, de alta entropía y 32 bytes. `KTRAVEL_INTEGRATION_WORKER_TOKEN` es una credencial Bearer server-only independiente. No se deben rotar claves de cifrado sin un plan de migración/re-cifrado.
 
 ## Documentación
@@ -405,6 +425,7 @@ INTEGRATION_COMPLETED_RETENTION_DAYS=180
 - [`docs/REPORTING-EXPORTS.es.md`](docs/REPORTING-EXPORTS.es.md)
 - [`docs/OUTBOUND-INTEGRATIONS.es.md`](docs/OUTBOUND-INTEGRATIONS.es.md)
 - [`docs/INTEGRATION-OPERATIONS.es.md`](docs/INTEGRATION-OPERATIONS.es.md)
+- [`docs/PRODUCTION-SECURITY.es.md`](docs/PRODUCTION-SECURITY.es.md) / [`docs/PRODUCTION-SECURITY.md`](docs/PRODUCTION-SECURITY.md) — baseline 9A de HTTP, Origin/CSRF, rate limiting, sesiones y readiness.
 - [`docs/ADAPTER-GUIDE.md`](docs/ADAPTER-GUIDE.md)
 - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 - [`docs/PRODUCTION-CHECKLIST.md`](docs/PRODUCTION-CHECKLIST.md)
@@ -440,11 +461,12 @@ check:rest-booking-adapter
 check:supplier-fulfilment-adapter
 check:crm-sync-adapter
 check:erp-accounting-adapter
+check:production-security
 typecheck
 build
 ```
 
-CI realiza instalación limpia, invariantes, typecheck, build productivo, smoke HTTP y auditoría de dependencias.
+CI realiza instalación limpia, invariantes, typecheck, build productivo, smoke HTTP de headers/health/rechazo cross-origin y auditoría de dependencias.
 
 ## Estado del proyecto
 
@@ -473,27 +495,26 @@ CI realiza instalación limpia, invariantes, typecheck, build productivo, smoke 
 | Fase 8C-4 — ERP/contabilidad | **Completada** |
 | Fase 8C — Adapters de negocio | **Completada** |
 | Fase 8 — Integraciones externas | **Completada** |
-| Fase 9 — Endurecimiento productivo | **Siguiente** |
+| Fase 9A — Baseline de seguridad / operabilidad productiva | **Completada** |
+| Fase 9B — E2E críticos + validación de concurrencia MongoDB | **Siguiente** |
+| Fase 9 — Endurecimiento productivo | **En progreso** |
 
 ## Siguiente prioridad
 
-El siguiente bloque es la **Fase 9 — Endurecimiento productivo**.
+El siguiente bloque es la **Fase 9B — E2E críticos y validación de persistencia/concurrencia**.
 
-El core ya cubre ampliamente catálogo, reservas, operaciones, pagos, documentos, reporting e integraciones. La prioridad pasa de ampliar la superficie de proveedores a demostrar y endurecer el producto existente en condiciones productivas realistas.
+La Fase 9A ya estableció el baseline común de HTTP, mutaciones de navegador, control de abuso, sesiones y health/readiness. La prioridad pasa ahora a demostrar los flujos autoritativos de reserva/pago bajo condiciones realistas de navegador y concurrencia de persistencia, en lugar de ampliar superficie de proveedores.
 
-Dirección inicial de la Fase 9:
+Dirección inicial de 9B:
 
 - E2E navegador registro → reserva → paquete/servicios → pago → Operator;
-- tests MongoDB de transacciones/concurrencia para reservas, inventario y finalización de pagos;
-- tests de webhooks/idempotencia de pagos y contratos de adapters;
-- baseline central de seguridad productiva: CSP/security headers, revisión CSRF/origin, rate limiting y cookies/sesiones;
-- logs estructurados, health/readiness y visibilidad de fallos;
-- backup/restore, disaster recovery y recuperación/rotación de claves;
-- GDPR/privacidad/retención/exportación/eliminación y revisión regulatoria por mercado;
-- accesibilidad, rendimiento y revisión de índices de base de datos;
+- tests MongoDB de transacciones/concurrencia sobre inventario limitado de viajes/servicios/alojamientos y mutaciones de reserva;
+- tests de regresión de webhooks/idempotencia de pagos sin depender de credenciales LIVE;
+- E2E de pricing de viajeros/menores y modificaciones;
+- tests de regresión de contratos/integración de adapters;
 - E2E TEST/LIVE Stripe/Redsys con credenciales en cuanto existan cuentas proveedor adecuadas.
 
-Adapters opcionales de CMS/catálogo, SSO enterprise, PSP adicionales y contabilidad específica de jurisdicción pueden añadirse posteriormente cuando tengan justificación comercial, sin bloquear la Fase 9.
+Las siguientes partes de Fase 9 cubren observabilidad centralizada, revisión de auditoría privilegiada, recuperación/rotación de claves, backup/restore y disaster recovery, workflows GDPR/privacidad/regulación, accesibilidad, rendimiento y revisión de índices. Adapters opcionales de CMS/catálogo, SSO enterprise, PSP adicionales y contabilidad específica de jurisdicción pueden añadirse posteriormente cuando tengan justificación comercial.
 
 ## Principios
 
@@ -513,6 +534,7 @@ Adapters opcionales de CMS/catálogo, SSO enterprise, PSP adicionales y contabil
 - APIs de proveedores no pueden saltarse transiciones locales ni auto-publicar referencias;
 - CRM es downstream y no puede mutar reservas, pricing, inventario, proveedores ni ledger autoritativo;
 - ERP/contabilidad es downstream y no puede reescribir historial de pagos/reembolsos; la facturación legal no se infiere de datos fiscales incompletos;
+- CSP/headers, Origin checks, rate limiting y readiness permanecen como baseline permanente de seguridad productiva;
 - UX pública bilingüe y responsive;
 - integraciones propietarias fuera del core MIT cuando corresponda.
 
