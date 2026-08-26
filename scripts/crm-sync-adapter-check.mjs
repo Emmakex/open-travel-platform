@@ -34,7 +34,9 @@ assert.doesNotMatch(config, /NEXT_PUBLIC_CRM|NEXT_PUBLIC_REST_CRM/, "CRM secrets
 assert.match(outbox, /crmIntegrationDeliveryEndpointId/, "CRM must reuse the durable integration delivery queue");
 assert.match(outbox, /deliverCrmIntegrationEvent/, "integration worker must dispatch CRM deliveries");
 assert.match(outbox, /shouldQueueCrmIntegrationEvent/, "outbox must opt CRM deliveries in by event type/configuration");
-assert.match(outbox, /event\.aggregateType === "customer" && destinationIds\.length === 0\) return 0/, "CRM-only customer events must not be retained without a destination");
+assert.match(outbox, /event\.aggregateType === "customer"/, "CRM-only customer events must retain an explicit orphan-event guard");
+assert.match(outbox, /destinationIds\.length === 0/, "dedicated adapter events must not be retained without a destination");
+assert.match(outbox, /\) return 0;/, "orphan dedicated-adapter events must exit before persistence");
 assert.match(outbox, /integration_delivery_event_endpoint_unique/, "CRM deliveries must inherit event/destination idempotency");
 assert.match(outbox, /dead-letter/, "CRM deliveries must inherit dead-letter handling");
 
