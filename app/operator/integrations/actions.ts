@@ -25,7 +25,7 @@ function errorCode(error: unknown) {
     INTEGRATION_EVENTS_REQUIRED: "events-required",
     INTEGRATION_NOT_FOUND: "not-found",
     INTEGRATION_SECRET_REQUIRED: "secret-required",
-    INTEGRATION_SECRET_WEAK: "secret-weak"
+    INTEGRATION_SECRET_WEAK: "secret-required"
   };
   return mapping[code] ?? "save-failed";
 }
