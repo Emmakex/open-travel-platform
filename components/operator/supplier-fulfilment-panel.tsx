@@ -3,6 +3,7 @@ import {
   addSupplierFulfilmentNoteAction,
   saveSupplierFulfilmentAction
 } from "@/app/operator/fulfilment/actions";
+import { setSupplierReferenceDisclosureAction } from "@/app/operator/fulfilment/reference-actions";
 import type {
   SupplierFulfilmentComponent,
   SupplierFulfilmentEvent,
@@ -11,6 +12,7 @@ import type {
   SupplierFulfilmentStatus
 } from "@/domain/operations/types";
 import type { TravelLocale } from "@/domain/travel/types";
+import { listSupplierReferenceDisclosures } from "@/lib/customer-document-references";
 import { formatOperatorDate, formatOperatorMoney, tr } from "@/lib/operator-i18n";
 import { isSupplierFulfilmentOverdue, supplierFulfilmentDateKey } from "@/lib/supplier-fulfilment-rules";
 
@@ -68,7 +70,7 @@ function eventValue(
   return value;
 }
 
-export function SupplierFulfilmentPanel({
+export async function SupplierFulfilmentPanel({
   components,
   items,
   events,
@@ -100,9 +102,15 @@ export function SupplierFulfilmentPanel({
     "invalid-note": tr(locale, "Write an internal supplier note of up to 2,000 characters.", "Escribe una nota interna de proveedor de hasta 2.000 caracteres."),
     "invalid-fulfilment": tr(locale, "Review the supplier, status, cost and deadline before saving.", "Revisa proveedor, estado, coste y fecha límite antes de guardar."),
     "no-changes": tr(locale, "No supplier changes were detected.", "No se detectaron cambios del proveedor."),
-    "update-failed": tr(locale, "The supplier tracking change could not be saved.", "No se pudo guardar el cambio de seguimiento del proveedor.")
+    "update-failed": tr(locale, "The supplier tracking change could not be saved.", "No se pudo guardar el cambio de seguimiento del proveedor."),
+    "reference-disclosure-unavailable": tr(locale, "Customer voucher reference controls are unavailable in this deployment.", "Los controles de referencia para vouchers de cliente no están disponibles en este despliegue."),
+    "reference-required": tr(locale, "Save a supplier reference before allowing it on customer vouchers.", "Guarda una referencia de proveedor antes de permitirla en vouchers del cliente."),
+    "invalid-reference-disclosure": tr(locale, "The customer voucher reference setting is invalid.", "La configuración de referencia del voucher de cliente no es válida."),
+    "reference-disclosure-failed": tr(locale, "The customer voucher reference setting could not be saved.", "No se pudo guardar la configuración de referencia para el voucher del cliente.")
   };
   const itemByKey = new Map(items.map((item) => [item.componentKey, item]));
+  const disclosures = await listSupplierReferenceDisclosures(items.map((item) => item.id)).catch(() => []);
+  const disclosureByFulfilmentId = new Map(disclosures.map((item) => [item.fulfilmentId, item]));
   const today = supplierFulfilmentDateKey();
 
   return (
@@ -111,11 +119,12 @@ export function SupplierFulfilmentPanel({
       <h2>{tr(locale, "Supplier confirmations", "Confirmaciones de proveedores")}</h2>
       <p className={styles.lead}>{tr(
         locale,
-        "Track each operational component without changing the customer's booking price or payment ledger. Supplier references, costs and notes are staff-only.",
-        "Haz seguimiento de cada componente operativo sin modificar el precio de la reserva del cliente ni el historial de pagos. Las referencias, costes y notas de proveedor son solo internas."
+        "Track each operational component without changing the customer's booking price or payment ledger. Supplier costs and notes always remain staff-only. A supplier reference appears on customer vouchers only after explicit approval below.",
+        "Haz seguimiento de cada componente operativo sin modificar el precio de la reserva del cliente ni el historial de pagos. Los costes y notas del proveedor siempre son internos. Una referencia solo aparece en vouchers del cliente tras aprobarla explícitamente aquí."
       )}</p>
       {updated === "saved" ? <div className={styles.notice}>{tr(locale, "Supplier tracking updated.", "Seguimiento del proveedor actualizado.")}</div> : null}
       {updated === "note" ? <div className={styles.notice}>{tr(locale, "Supplier note added.", "Nota del proveedor añadida.")}</div> : null}
+      {updated === "reference-disclosure" ? <div className={styles.notice}>{tr(locale, "Customer voucher reference policy updated.", "Política de referencia para vouchers del cliente actualizada.")}</div> : null}
       {error && errors[error] ? <div className={styles.notice}>{errors[error]}</div> : null}
 
       <div className={styles.managementList}>
@@ -129,6 +138,12 @@ export function SupplierFulfilmentPanel({
             ...itemEvents.map((event) => ({ kind: "event" as const, at: event.occurredAt, event })),
             ...itemNotes.map((note) => ({ kind: "note" as const, at: note.createdAt, note }))
           ].sort((a, b) => b.at.localeCompare(a.at));
+          const disclosure = item ? disclosureByFulfilmentId.get(item.id) : undefined;
+          const referenceIsApproved = Boolean(
+            item?.supplierReference &&
+            disclosure?.visible === true &&
+            disclosure.approvedReference === item.supplierReference
+          );
 
           return (
             <article className={styles.editorSection} key={component.componentKey}>
@@ -185,6 +200,29 @@ export function SupplierFulfilmentPanel({
                 ) : null}
                 {writesEnabled && status !== "cancelled" ? <button className="button button-primary" type="submit">{tr(locale, "Save supplier tracking", "Guardar seguimiento")}</button> : null}
               </form>
+
+              {item?.supplierReference ? (
+                <div className={styles.editorForm}>
+                  <div className={styles.notice}>
+                    <strong>{tr(locale, "Customer voucher reference", "Referencia en voucher del cliente")}: {referenceIsApproved ? tr(locale, "APPROVED", "APROBADA") : tr(locale, "HIDDEN", "OCULTA")}</strong><br />
+                    {referenceIsApproved
+                      ? tr(locale, "This exact reference may be printed on customer-facing vouchers. If the supplier reference changes, this approval automatically becomes invalid.", "Esta referencia exacta puede imprimirse en vouchers orientados al cliente. Si cambia la referencia del proveedor, la aprobación queda invalidada automáticamente.")
+                      : tr(locale, "The reference remains internal. Approve it only after confirming that the locator is safe and useful for the customer.", "La referencia permanece interna. Apruébala solo después de confirmar que el localizador es seguro y útil para el cliente.")}
+                  </div>
+                  {writesEnabled ? (
+                    <form action={setSupplierReferenceDisclosureAction}>
+                      <input type="hidden" name="fulfilmentId" value={item.id} />
+                      <input type="hidden" name="visible" value={referenceIsApproved ? "0" : "1"} />
+                      <input type="hidden" name="returnTo" value={returnTo} />
+                      <button className="button button-secondary" type="submit">
+                        {referenceIsApproved
+                          ? tr(locale, "Hide from customer vouchers", "Ocultar en vouchers del cliente")
+                          : tr(locale, "Approve for customer vouchers", "Aprobar para vouchers del cliente")}
+                      </button>
+                    </form>
+                  ) : null}
+                </div>
+              ) : null}
 
               {item ? (
                 <form action={addSupplierFulfilmentNoteAction} className={styles.editorForm}>
