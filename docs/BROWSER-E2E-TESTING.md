@@ -19,7 +19,7 @@ The test does not inject session cookies or call repository methods to create th
 
 ## Runtime topology
 
-GitHub Actions runs a dedicated `browser-e2e` job with:
+GitHub Actions runs a dedicated `Browser E2E (non-blocking)` job with:
 
 - exact `@playwright/test` 1.62.1;
 - Chromium installed by Playwright;
@@ -34,6 +34,14 @@ GitHub Actions runs a dedicated `browser-e2e` job with:
 - `npm run build` followed by Playwright's `npm start` web server.
 
 This deliberately exercises the built production application instead of `next dev`.
+
+## CI policy
+
+The browser E2E job is currently **informational and non-blocking**. It always runs and remains visible in GitHub Actions, including its failure diagnostics, but a browser-only failure does not fail the overall CI workflow or block a merge.
+
+The following production gates remain blocking: static invariants, MongoDB booking concurrency/rollback, payment and webhook idempotency, TypeScript, production build, HTTP smoke tests and dependency audit.
+
+This policy lets the team keep the browser journey as a useful regression signal while it is being stabilized. It should only be promoted back to a blocking gate after the journey is consistently reliable in CI.
 
 ## Seed safety
 
