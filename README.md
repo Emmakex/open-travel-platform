@@ -53,20 +53,18 @@ The platform is well beyond the original catalogue/booking MVP. The implementati
 - permission-aware CSV/XLSX exports for reservations, services and customers;
 - payment reconciliation, outstanding-balance and revenue reporting;
 - audited fail-closed export of retained protected traveller data for legitimate operational use;
-- export audit metadata without persisting exported cell values;
 - currency-safe finance dashboards and reports that never aggregate different currencies together;
 - provider-neutral outbound reservation events with a transactional MongoDB outbox;
-- Admin-managed signed HTTPS webhooks with encrypted secrets, bounded retries, delivery history and dead-letter retention;
+- Admin-managed signed HTTPS webhooks with encrypted secrets, retries, delivery history and dead-letter retention;
 - SSRF/DNS-rebinding protections for configurable outbound webhook targets;
-- server-only scheduled integration delivery with durable worker locking and bounded execution;
-- Admin integration health metrics, event/delivery diagnostics and audited dead-letter replay;
-- bounded retention of completed successful integration history while preserving active/dead-letter work and replay audit;
-- a versioned generic REST `BookingRepository` adapter with server-only authentication, runtime validation, bounded transport behavior and idempotent mutation retries;
-- an optional provider-neutral supplier-fulfilment adapter with audited request/status/cancel synchronization, deterministic mutation idempotency and strict commercial/privacy boundaries.
+- server-only scheduled integration delivery with durable worker locking, replay and retention;
+- a versioned generic REST `BookingRepository` adapter with server-only authentication and idempotent mutations;
+- an optional provider-neutral supplier-fulfilment adapter with audited request/status/cancel synchronization;
+- a downstream-only CRM synchronization adapter that reuses the same durable integration worker and keeps customer/profile events out of generic webhook subscriptions.
 
 Stripe and Redsys credentialed end-to-end validation remains intentionally pending until suitable provider accounts are available. The adapters are implemented, but production payment capability is not considered validated until provider TEST/LIVE flows have been exercised.
 
-**Phase 8C — Business adapters is IN PROGRESS. Phase 8C-1 — Generic REST booking adapter and Phase 8C-2 — Supplier fulfilment adapter boundary are complete; Phase 8C-3 — CRM synchronization adapter is next.**
+**Phase 8C — Business adapters is IN PROGRESS. Phase 8C-1 — Generic REST booking adapter, Phase 8C-2 — Supplier fulfilment adapter boundary and Phase 8C-3 — CRM synchronization adapter are complete. Phase 8C-4 — ERP/accounting adapter is next.**
 
 ## Current capabilities
 
@@ -180,14 +178,14 @@ Stripe and Redsys credentialed end-to-end validation remains intentionally pendi
 - minimal OOXML XLSX generation with frozen header and autofilter;
 - private `no-store` + `nosniff` download responses;
 - export audit with actor, type, format, filters, columns, row count and timestamp but no exported cell values;
-- protected traveller-data export requires both Traveller data and Reservations capabilities, an active reservation and an explicit operational reason;
+- protected traveller-data export requires Traveller data + Reservations capabilities, an active reservation and an explicit operational reason;
 - protected traveller export is POST-only and fail-closed: persistent audit must succeed before sensitive bytes are returned;
 - financial metrics and revenue groups remain separated by currency.
 
 ### Outbound integrations
 
 - Admin-only `/operator/integrations` workspace;
-- versioned provider-neutral events for trip/service reservation creation and status changes;
+- versioned provider-neutral reservation events;
 - transactional outbox committed with the reservation mutation;
 - idempotent delivery records per event/endpoint pair;
 - HMAC-SHA256 signed HTTPS webhook reference adapter;
@@ -206,22 +204,45 @@ Stripe and Redsys credentialed end-to-end validation remains intentionally pendi
 
 ### Business adapters
 
+#### Generic REST booking
+
 - `BOOKING_MODE=rest` composes an external booking API behind the existing `BookingRepository` interface;
-- versioned booking `/v1` REST contract with `X-OTP-Contract-Version: 1`;
+- versioned `/v1` contract with `X-OTP-Contract-Version: 1`;
 - server-only Bearer authentication and production HTTPS enforcement;
-- redirect rejection, `no-store`, bounded timeout and bounded streamed response size;
-- runtime validation before external JSON can become booking-domain data;
+- redirect rejection, `no-store`, bounded timeout and streamed-response size;
+- runtime validation before external JSON becomes booking-domain data;
 - customer ownership and requested trip/departure scope verified after mapping;
-- booking mutations carry stable per-invocation `Idempotency-Key` values and use bounded transient retries;
-- `SUPPLIER_FULFILMENT_ADAPTER_MODE=rest` enables an external supplier adapter without replacing the local fulfilment store;
-- supplier REST v1 operations are explicit `request`, `status` and `cancel`; request must normalize to `requested` and cancel to `cancelled`;
-- supplier request/cancel mutations use deterministic idempotency keys and bounded transient retries;
-- external supplier responses are persistently audited before local application and then re-enter the existing `saveSupplierFulfilment()` transition boundary;
+- create/cancel mutations use stable idempotency keys and bounded transient retries.
+
+#### Supplier fulfilment
+
+- `SUPPLIER_FULFILMENT_ADAPTER_MODE=rest` enables an external adapter without replacing the local fulfilment store;
+- REST v1 operations are explicit `request`, `status` and `cancel`;
+- request normalizes only to `requested`; cancel only to `cancelled`; confirmation/rejection is synchronized through `status`;
+- request/cancel mutations use deterministic idempotency keys and bounded transient retries;
+- external responses are persistently audited before local application and re-enter `saveSupplierFulfilment()`;
+- invalid external transitions are recorded as conflicts and never forced;
 - external supplier payloads exclude customer totals, payment/refund ledger data, supplier costs, inventory instructions and protected traveller data;
-- external responses may update only normalized fulfilment status/reference while existing local supplier cost/currency are preserved;
-- supplier references returned externally remain internal until the separate explicit customer-voucher disclosure approval succeeds;
-- payment ledger, staff operations, traveller data, catalogue and outbound integrations remain independently composable capabilities;
-- provider-specific payloads must be normalized inside adapters instead of leaking into core domains.
+- local supplier cost/currency are preserved;
+- returned references remain internal until the separate voucher-disclosure approval succeeds.
+
+#### CRM synchronization
+
+- `CRM_SYNC_MODE=rest` enables a downstream-only provider-neutral `CrmSyncAdapter`;
+- REST v1 endpoints: `/v1/crm/contacts/upsert` and `/v1/crm/reservations/upsert`;
+- customer registration/profile updates enqueue `customer.created` / `customer.profile.updated` in the same MongoDB transaction as the customer write;
+- `customer.*` events are deliberately unavailable to generic webhook subscriptions;
+- CRM deliveries reuse the existing integration outbox, worker, retry/backoff, dead-letter, replay and health metrics through the virtual `crm-rest:primary` destination;
+- reservation events upsert the contact first and then the reservation;
+- event-derived `Idempotency-Key` values remain stable across transport retry, queue retry and dead-letter replay;
+- generic contact and reservation snapshots use explicit field allowlists;
+- reservation snapshots exclude prices, currency/payment terms, supplier data, inventory mutations, traveller arrays and protected post-purchase traveller fields;
+- CRM external IDs are stored separately in `travel_crm_sync_links`;
+- normalized sync outcomes are stored without contact PII in `travel_crm_sync_audit`;
+- Admin diagnostics are available at `/operator/integrations/crm`;
+- CRM cannot mutate local booking, pricing, inventory, supplier fulfilment or payment-ledger state.
+
+Provider-specific payloads must be normalized inside adapters instead of leaking into core domains.
 
 ## Architecture
 
@@ -257,21 +278,21 @@ destinations + trips + accommodation + services
 customer area ---------------------- staff/operator/admin
      |                                      |
 IdentityRepository                 Operations / RBAC / audit
-                                           |
-                     documents / reports / fulfilment / tasks
-                                           |
-                       SupplierFulfilmentAdapter
-                         /             \
-                    disabled         REST /v1
-                                           |
-                            transactional event outbox
-                                           |
-                            outbound integration adapters
-                                           |
-                         scheduled delivery worker
+     |                                      |
+customer/profile events      documents / reports / fulfilment / tasks
+     |                                      |
+     +---------------- transactional integration outbox ----------------+
+                                                                          |
+                                              signed webhooks / CRM REST / future adapters
+                                                                          |
+                                                     scheduled durable worker
+
+SupplierFulfilmentAdapter
+       /        \
+ disabled      REST /v1
 ```
 
-Provider-specific payloads stay inside adapters. Catalogue, booking, accommodation, identity, services, operations, documents, reporting, payment accounting and external integration delivery remain replaceable capability boundaries.
+Provider-specific payloads stay inside adapters. Catalogue, booking, accommodation, identity, services, operations, documents, reporting, payment accounting, supplier fulfilment and external integration delivery remain replaceable capability boundaries.
 
 ## Reservation and payment states are independent
 
@@ -340,7 +361,8 @@ A fresh clone can use the safe demo/read-only modes documented in `.env.example`
 /operator/fulfilment                   supplier fulfilment queue
 /operator/payments                     finance dashboard
 /operator/payments/providers           admin-only PSP configuration
-/operator/integrations                 admin-only outbound integrations
+/operator/integrations                 admin-only webhooks / integration queue
+/operator/integrations/crm             admin-only CRM sync status/audit
 /operator/integrations/events/[eventId] admin-only integration event diagnostics
 /operator/integrations/deliveries/[deliveryId] admin-only delivery/replay diagnostics
 /operator/staff                        staff and capability management
@@ -369,6 +391,11 @@ REST_SUPPLIER_FULFILMENT_BASE_URL=
 REST_SUPPLIER_FULFILMENT_BEARER_TOKEN=
 REST_SUPPLIER_FULFILMENT_TIMEOUT_MS=10000
 REST_SUPPLIER_FULFILMENT_MAX_RESPONSE_BYTES=262144
+CRM_SYNC_MODE=disabled
+REST_CRM_BASE_URL=
+REST_CRM_BEARER_TOKEN=
+REST_CRM_TIMEOUT_MS=10000
+REST_CRM_MAX_RESPONSE_BYTES=262144
 SMTP_HOST=smtp.hostinger.com
 SMTP_PORT=465
 SMTP_USER=
@@ -385,15 +412,16 @@ INTEGRATION_WORKER_MIN_INTERVAL_SECONDS=60
 INTEGRATION_COMPLETED_RETENTION_DAYS=180
 ```
 
-`REST_BOOKING_BEARER_TOKEN` and `REST_SUPPLIER_FULFILMENT_BEARER_TOKEN` are server-only and must never use `NEXT_PUBLIC_*` variables. Production REST booking and supplier endpoints must use HTTPS. `PAYMENT_SECRETS_KEY`, `TRAVELLER_DATA_KEY` and `INTEGRATION_SECRETS_KEY` should be stable high-entropy 32-byte keys. `KTRAVEL_INTEGRATION_WORKER_TOKEN` is a separate server-only Bearer credential and must contain at least 32 high-entropy characters. Do not rotate encryption keys without a migration/re-encryption plan. Stripe/Redsys and outbound endpoint credentials are managed from Admin. `NEXT_PUBLIC_*` variables are browser-visible and must never contain secrets.
+`REST_BOOKING_BEARER_TOKEN`, `REST_SUPPLIER_FULFILMENT_BEARER_TOKEN` and `REST_CRM_BEARER_TOKEN` are server-only and must never use `NEXT_PUBLIC_*` variables. Production REST booking, supplier and CRM targets must use HTTPS. `PAYMENT_SECRETS_KEY`, `TRAVELLER_DATA_KEY` and `INTEGRATION_SECRETS_KEY` should be stable high-entropy 32-byte keys. `KTRAVEL_INTEGRATION_WORKER_TOKEN` is a separate server-only Bearer credential and must contain at least 32 high-entropy characters. Do not rotate encryption keys without a migration/re-encryption plan. `NEXT_PUBLIC_*` variables are browser-visible and must never contain secrets.
 
 ## Documentation
 
 - [`ROADMAP.md`](ROADMAP.md) — current delivery status and next priorities.
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — capability and trust boundaries.
 - [`docs/BOOKING.md`](docs/BOOKING.md) — booking integrity and adapter rules.
-- [`docs/REST-BOOKING-ADAPTER.md`](docs/REST-BOOKING-ADAPTER.md) — generic external BookingRepository `/v1` contract, authentication, idempotency and validation.
-- [`docs/SUPPLIER-FULFILMENT-ADAPTER.md`](docs/SUPPLIER-FULFILMENT-ADAPTER.md) — external supplier request/status/cancel contract, audit-before-apply semantics and data boundaries.
+- [`docs/REST-BOOKING-ADAPTER.md`](docs/REST-BOOKING-ADAPTER.md) — generic external BookingRepository `/v1` contract.
+- [`docs/SUPPLIER-FULFILMENT-ADAPTER.md`](docs/SUPPLIER-FULFILMENT-ADAPTER.md) — supplier request/status/cancel contract and audit-before-apply boundary.
+- [`docs/CRM-SYNC-ADAPTER.md`](docs/CRM-SYNC-ADAPTER.md) — downstream CRM contract, privacy allowlists, one-queue design, idempotency and audit.
 - [`docs/OPERATIONS.md`](docs/OPERATIONS.md) — staff authorization and workflows.
 - [`docs/CATALOGUE-BACKOFFICE.md`](docs/CATALOGUE-BACKOFFICE.md) — persistent catalogue management.
 - [`docs/DEPARTURES.md`](docs/DEPARTURES.md) — departure inventory.
@@ -444,6 +472,7 @@ check:outbound-integrations
 check:integration-operations
 check:rest-booking-adapter
 check:supplier-fulfilment-adapter
+check:crm-sync-adapter
 typecheck
 build
 ```
@@ -466,36 +495,37 @@ CI performs a clean install, runs the invariant checks, type-checks, builds the 
 | Accommodation and package composition | Done |
 | Rich day-to-day Operator workflow | Done |
 | Granular staff permissions | Done |
-| Booking confirmation PDFs | Done |
-| Traveller manifests and rooming-list PDFs | Done |
-| Vouchers and printable reservation dossier | Done |
+| Booking/departure PDFs, vouchers and dossier | Done |
 | CSV/XLSX exports and reconciliation/reporting | Done |
 | Phase 7B — Documents, exports and reporting | **Complete** |
 | Phase 8A — Provider-neutral outbound integrations | **Complete** |
 | Phase 8B — Scheduled integration delivery, replay and observability | **Complete** |
 | Phase 8C-1 — Generic REST booking adapter | **Complete** |
 | Phase 8C-2 — Supplier fulfilment adapter boundary | **Complete** |
+| Phase 8C-3 — CRM synchronization adapter | **Complete** |
 | Phase 8C — Business adapters | **In progress** |
 
 Future work is tracked in **[ROADMAP.md](ROADMAP.md)** · **[ROADMAP.es.md](ROADMAP.es.md)**.
 
 ## Next development priority
 
-The next block is **Phase 8C-3 — CRM synchronization adapter**.
+The next block is **Phase 8C-4 — ERP/accounting adapter**.
 
-With booking persistence and supplier fulfilment now proven as independently replaceable provider-neutral boundaries, the next business-adapter slice should synchronize selected customer/reservation lifecycle data with CRM systems without making a CRM authoritative for booking inventory, pricing or payment accounting.
+The CRM slice proves that business adapters can share the durable integration worker without expanding the authority of external systems. The next slice should synchronize accounting-ready commercial records while preserving the provider-neutral payment ledger as the financial source of truth.
 
-Planned 8C-3 direction:
+Planned 8C-4 direction:
 
-- provider-neutral CRM synchronization interface and normalized contact/reservation lifecycle contract;
-- explicit outbound create/update semantics with idempotency and stable external references;
-- scoped data minimization and field allowlists;
-- no protected post-purchase traveller data in the generic CRM contract;
-- audited sync outcomes and operational retry/error translation;
-- provider-specific CRM authentication/payload mapping contained inside adapters;
-- booking, supplier fulfilment, payment ledger and inventory remain authoritative in their existing boundaries.
+- provider-neutral ERP/accounting adapter interface;
+- explicit contract for customers, invoice/receipt exports or journal-ready movements as appropriate;
+- accounting payloads derived from authoritative booking/payment snapshots, not raw provider documents;
+- exact currency and immutable source references;
+- deterministic idempotency and external-reference mapping;
+- audit/retry/dead-letter through the shared integration worker where appropriate;
+- no protected traveller data, supplier operational notes or authentication values;
+- ERP acknowledgements cannot rewrite booking/payment history automatically;
+- vendor-specific chart-of-accounts and tax mapping contained inside adapters.
 
-Later 8C candidates include ERP/accounting, CMS/catalogue sources, enterprise identity and additional payment providers when commercially useful.
+Later 8C candidates include CMS/catalogue sources, enterprise identity/SSO and additional payment providers when commercially useful.
 
 Credentialed Stripe/Redsys TEST/LIVE validation should be inserted as soon as suitable provider accounts are available and does not need to block Phase 8 work.
 
@@ -511,10 +541,12 @@ Credentialed Stripe/Redsys TEST/LIVE validation should be inserted as soon as su
 - inventory-controlled services remain independent from lightweight package supplements;
 - customer-safe documents exclude internal notes, protected traveller data and supplier costs;
 - sensitive exports are capability-gated, purpose-bound and persistently audited before delivery;
-- generic outbound events exclude protected traveller data and provider-specific payloads;
+- generic outbound webhook events exclude protected traveller data and provider-specific payloads;
+- CRM-only customer events are not available to generic webhook subscriptions;
 - scheduled integration execution remains server-authenticated, bounded and observable;
-- external booking APIs must satisfy runtime contract, ownership and idempotency boundaries before their data enters the core;
-- external supplier APIs cannot bypass local fulfilment transitions, rewrite commercial/payment data or auto-disclose supplier references to customers;
+- external booking APIs must satisfy runtime contract, ownership and idempotency boundaries before data enters the core;
+- external supplier APIs cannot bypass local fulfilment transitions or auto-disclose supplier references;
+- CRM adapters are downstream-only and cannot mutate authoritative booking, pricing, inventory, supplier or ledger state;
 - public UX is bilingual, responsive and free of internal development terminology;
 - proprietary Kairoseth/customer-specific integrations stay outside the MIT core when appropriate.
 
