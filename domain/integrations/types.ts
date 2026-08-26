@@ -1,8 +1,14 @@
-export type IntegrationEventType =
+export type WebhookIntegrationEventType =
   | "trip.reservation.created"
   | "trip.reservation.status.changed"
   | "service.reservation.created"
   | "service.reservation.status.changed";
+
+export type CrmIntegrationEventType =
+  | "customer.created"
+  | "customer.profile.updated";
+
+export type IntegrationEventType = WebhookIntegrationEventType | CrmIntegrationEventType;
 
 export type IntegrationDeliveryStatus =
   | "pending"
@@ -16,7 +22,7 @@ export type IntegrationEndpointSummary = {
   name: string;
   url: string;
   enabled: boolean;
-  subscribedEvents: IntegrationEventType[];
+  subscribedEvents: WebhookIntegrationEventType[];
   secretConfigured: boolean;
   createdAt: string;
   updatedAt?: string;
@@ -27,7 +33,7 @@ export type IntegrationEventEnvelope<TPayload extends Record<string, unknown> = 
   type: IntegrationEventType;
   version: 1;
   occurredAt: string;
-  aggregateType: "trip-reservation" | "service-reservation";
+  aggregateType: "customer" | "trip-reservation" | "service-reservation";
   aggregateId: string;
   payload: TPayload;
 };
@@ -80,4 +86,9 @@ export type ServiceReservationCreatedPayload = {
   currency: string;
   serviceDate?: string;
   createdAt: string;
+};
+
+export type CrmCustomerChangedPayload = {
+  customerId: string;
+  changedAt: string;
 };
