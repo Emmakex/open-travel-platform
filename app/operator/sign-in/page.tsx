@@ -22,6 +22,7 @@ export default async function OperatorSignInPage({ searchParams }: { searchParam
   const recoveryEnabled = identityConfig.staffAuthEnabled && isEmailDeliveryConfigured();
   const errors: Record<string, string> = {
     "invalid-credentials": tr(locale, "Sign in was not successful. Check your credentials. After repeated failures, staff access is temporarily locked for 15 minutes.", "No se ha podido iniciar sesión. Comprueba tus credenciales. Tras varios intentos fallidos, el acceso del personal se bloquea temporalmente durante 15 minutos."),
+    "rate-limited": tr(locale, "Too many staff sign-in attempts were made in a short period. Wait a few minutes before trying again.", "Se han realizado demasiados intentos de acceso del personal en poco tiempo. Espera unos minutos antes de volver a intentarlo."),
     "auth-disabled": tr(locale, "Persistent staff authentication is disabled in this deployment.", "La autenticación persistente del personal está desactivada en este despliegue."),
     forbidden: tr(locale, "The current account does not have operator access.", "La cuenta actual no tiene acceso de operador.")
   };
