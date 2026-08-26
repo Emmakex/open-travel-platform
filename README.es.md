@@ -4,7 +4,7 @@
 
 > Base open-source reutilizable para agencias, turoperadores y productos de reserva de viajes.
 
-Open Travel Platform es una plataforma clean-room construida con **Next.js + TypeScript + MongoDB** y organizada alrededor de límites explícitos de dominio, repositorios y adapters. Puede ejecutarse con datos demo para evaluación local o con catálogo, identidad, reservas, alojamiento, servicios, operaciones y pagos persistentes.
+Open Travel Platform es una plataforma clean-room construida con **Next.js + TypeScript + MongoDB** y organizada alrededor de límites explícitos de dominio, repositorios y adapters.
 
 La implementación comercial/de referencia oficial es **Kairoseth Travel**, desplegada en **[travel.kairoseth.com](https://travel.kairoseth.com)**.
 
@@ -23,131 +23,138 @@ Este repositorio es el **core open-source bajo licencia MIT**. Kairoseth Travel 
 
 La separación es intencional:
 
-- Open Travel Platform sigue siendo reutilizable, neutral respecto a proveedores y útil para otras agencias/desarrolladores;
-- Kairoseth Travel puede añadir hosting gestionado, soporte, servicios comerciales, integraciones privadas y capacidades específicas del despliegue;
+- Open Travel Platform sigue siendo reutilizable y neutral respecto a proveedores;
+- Kairoseth Travel puede añadir hosting gestionado, soporte, servicios comerciales e integraciones privadas;
 - datos de clientes, credenciales productivas e integraciones propietarias permanecen fuera del repositorio público.
 
 ## Posición actual
 
-La plataforma está muy por encima del MVP original de catálogo/reserva. La implementación actual incluye:
+La plataforma está muy por encima del MVP original de catálogo/reservas. La implementación actual incluye:
 
 - catálogo público y backoffice Operator bilingües;
 - persistencia MongoDB;
-- autenticación persistente de clientes/personal con RBAC y capacidades granulares;
-- salidas de viaje e inventario transaccional;
+- autenticación persistente cliente/personal con RBAC y capacidades granulares;
+- salidas e inventario transaccional;
 - viajeros, menores y pricing por edad;
 - actividades, transporte y protección de viaje independientes;
-- disponibilidad y reservas independientes de servicios;
-- ledger de pagos neutral, depósitos, cuotas y condiciones de pago;
-- adapters Stripe/Redsys detrás de una capa de checkout unificada;
-- datos post-compra de viajeros cifrados;
-- modificaciones de reserva con auditoría y reasignación segura de inventario;
-- alojamiento reutilizable, inventario de habitaciones, pricing estacional/ocupación y alojamiento transaccional dentro del viaje;
-- suplementos opcionales de paquete y modificaciones post-reserva de suplementos;
-- workflow avanzado de Operator con responsable, notas internas, prioridades, tags, tareas/seguimientos, fulfilment de proveedores y colas avanzadas;
-- permisos granulares para reservas, catálogo, finanzas, datos protegidos de viajeros, proveedores y tareas;
-- PDFs de confirmación para cliente y Operator;
-- manifiestos de viajeros y rooming lists PDF por salida.
+- disponibilidad y reservas de servicios;
+- ledger neutral de pagos, depósitos, cuotas y condiciones de pago;
+- adapters Stripe/Redsys detrás de checkout unificado;
+- datos post-compra del viajero cifrados;
+- modificaciones de reserva con reasignación segura de inventario y delta financiero;
+- alojamiento reutilizable, inventario de habitaciones y pricing estacional/ocupación;
+- alojamiento transaccional dentro de la reserva de viaje;
+- suplementos opcionales y modificaciones post-reserva;
+- workflow Operator con responsable, notas internas, prioridades, tags, tareas y fulfilment;
+- colas operativas avanzadas y permisos granulares;
+- PDFs de confirmación de reserva;
+- manifiestos de viajeros y rooming lists;
+- vouchers de alojamiento/servicios seguros para cliente;
+- expediente imprimible interno de Operator;
+- aprobación explícita y auditada de referencias proveedor antes de mostrarlas en vouchers de cliente.
 
-La validación end-to-end con credenciales Stripe/Redsys sigue pendiente hasta disponer de cuentas adecuadas. Los adapters y el checkout están implementados, pero la capacidad de pago productiva no se considera validada hasta probar TEST/LIVE con proveedores reales.
+La validación E2E con credenciales Stripe/Redsys sigue pendiente hasta disponer de cuentas adecuadas. Los adapters están implementados, pero la capacidad productiva no se considera validada hasta probar TEST/LIVE.
 
-**Fase actual de entrega: Fase 7B — Documentos, exportaciones y reporting. 7B-1 PDFs de confirmación y 7B-2 listas de viajeros/rooming lists están completadas. La siguiente prioridad es 7B-3 vouchers y expediente imprimible de reserva.**
+**Fase actual: Fase 7B — Documentos, exportaciones y reporting. 7B-1 confirmaciones, 7B-2 listas de viajeros/rooming lists y 7B-3 vouchers/expediente están completadas. La siguiente prioridad es 7B-4 exportaciones CSV/XLSX y reporting/conciliación.**
 
 ## Capacidades actuales
 
 ### Catálogo público y comercio
 
-- experiencia pública EN/ES;
+- experiencia EN/ES;
 - destinos y viajes localizados;
 - salidas públicas y disponibilidad en vivo;
-- catálogo público de alojamientos y detalle;
-- galerías generales y por habitación;
-- catálogos independientes de **Actividades**, **Transporte** y **Protección de viaje**;
-- detalle de servicios con disponibilidad y pricing;
+- catálogo de alojamientos, habitaciones y galerías;
+- catálogos independientes de Actividades, Transporte y Protección de viaje;
+- detalle de servicios con disponibilidad/pricing;
 - booking de viaje con viajeros, alojamiento y extras opcionales;
-- autenticación del cliente solo cuando la cuenta/reserva la requiere.
+- autenticación de cliente cuando cuenta/reserva la requiere.
 
 ### Backoffice de catálogo e inventario
 
 - gestión protegida Operator/Admin;
-- destinos, viajes, alojamientos, habitaciones y servicios independientes;
+- destinos, viajes, alojamientos, habitaciones y servicios;
 - biblioteca GridFS, portadas, galerías y puntos focales;
-- itinerarios estructurados multidioma;
-- salidas, capacidades e inventario del viaje;
-- inventario de alojamiento, ocupación, regímenes y tarifas;
-- reglas estacionales y por ocupación;
-- vínculo viaje ↔ alojamiento;
-- suplementos opcionales de paquete;
-- calendarios de disponibilidad/inventario de servicios;
+- itinerarios multidioma;
+- salidas, capacidades e inventario;
+- inventario de habitaciones, ocupación, regímenes y tarifas;
+- pricing estacional y por ocupación;
+- vínculos viaje ↔ alojamiento;
+- suplementos opcionales;
+- calendarios de disponibilidad de servicios;
 - ciclo draft/published;
-- requisitos post-compra del viajero configurables por producto.
+- requisitos post-compra por producto.
 
-### Reservas, viajeros y composición de paquete
+### Reservas, viajeros y paquetes
 
-- reservas persistentes de viaje y servicios independientes;
+- reservas persistentes de viaje/servicios;
 - pricing e inventario autoritativos en servidor;
 - viajero principal y fichas individuales;
-- bandas de edad, reglas de tutor y consumo de inventario configurables;
-- snapshots históricos de viajeros/pricing;
-- alojamiento reutilizable guardado transaccionalmente como snapshot dentro de la reserva;
-- suplementos opcionales guardados con el precio contratado;
-- workflows de confirmar/cancelar y auditoría;
-- correcciones de viajeros y cambios de salida como modificaciones explícitas;
+- bandas de edad, tutor y consumo de inventario configurables;
+- snapshots históricos;
+- alojamiento guardado transaccionalmente en la reserva;
+- suplementos guardados al precio contratado;
+- workflows confirmar/cancelar y auditoría;
+- correcciones de viajeros/cambios de salida como modificaciones explícitas;
 - modificaciones post-reserva de suplementos;
 - delta financiero sin reescribir movimientos históricos;
 - plazos configurables de cambio/cancelación.
 
 ### Workflow avanzado de Operator
 
-- asignación de responsable/operador;
-- notas internas fuera de cualquier superficie de cliente;
-- prioridad baja / normal / alta / urgente y tags normalizados;
+- asignación de responsable;
+- notas internas fuera de superficies cliente;
+- prioridades y tags;
 - timeline operativo;
-- tareas y seguimientos con responsable, vencimiento, estado y comentarios;
+- tareas/seguimientos;
 - fulfilment por componente de viaje/servicio/alojamiento;
-- estados de confirmación, plazos, referencias y costes internos opcionales de proveedor;
-- búsqueda, filtros, colas rápidas, orden y paginación avanzados;
+- estados, deadlines, referencias y costes internos opcionales;
+- búsqueda, filtros, colas, orden y paginación;
 - capacidades granulares server-side;
 - cambios de permisos auditados.
 
 ### Identidad y seguridad
 
-- registro y sesión persistentes de cliente;
+- registro/sesiones persistentes de cliente;
 - autenticación separada Operator/Admin;
-- separación de sesiones cliente/personal;
-- bloqueo tras intentos repetidos;
-- cambio y recuperación de contraseña;
-- emails SMTP de recuperación;
+- separación de sesiones;
+- bloqueo por intentos repetidos;
+- cambio/recuperación de contraseña por SMTP;
 - auditoría de autenticación;
-- secretos de pasarela cifrados con AES-256-GCM;
-- datos avanzados del viajero almacenados aparte y cifrados con AES-256-GCM;
-- configuración privilegiada y datos sensibles protegidos por capacidades server-side.
+- secretos PSP cifrados AES-256-GCM;
+- datos avanzados del viajero almacenados aparte y cifrados AES-256-GCM;
+- configuración privilegiada protegida por capacidades server-side.
 
 ### Pagos y finanzas
 
-- ledger de pagos/reembolsos neutral respecto al proveedor;
-- estado de reserva independiente del estado de pago;
+- ledger neutral de pagos/reembolsos;
+- estado de reserva independiente del pago;
 - unpaid / pending / partially paid / paid / partially refunded / refunded;
 - transferencia, efectivo y terminal externo;
-- reembolsos controlados y protecciones de conciliación;
-- Stripe Checkout con webhook firmado e idempotencia;
-- Redsys redirect con notificación de servidor firmada;
-- los retornos del navegador nunca confirman pagos;
+- reembolsos controlados;
+- webhooks Stripe firmados e idempotencia;
+- notificaciones Redsys firmadas;
+- retornos del navegador no autoritativos;
 - perfiles TEST/LIVE gestionados por Admin;
 - snapshots de pago completo, depósito y cuotas;
 - cálculo de saldo pendiente y próximo pago.
 
 ### Documentos
 
-- generación PDF reutilizable server-side con `pdf-lib`;
-- PDF de confirmación de reserva propia para cliente;
-- PDF protegido de confirmación para Operator;
-- render EN/ES;
-- información financiera solo cuando la capacidad del personal lo permite;
-- manifiestos de viajeros por salida;
-- rooming lists derivadas del snapshot de alojamiento;
-- endpoints PDF privados `no-store` y nombres de archivo seguros;
-- datos documentales protegidos del viajero, notas internas y costes de proveedor excluidos de renderers orientados al cliente.
+- generación PDF server-side con `pdf-lib`;
+- confirmaciones PDF para cliente/Operator;
+- manifiestos EN/ES y rooming lists por salida;
+- vouchers de alojamiento para reservas confirmadas elegibles;
+- vouchers de servicio para actividades, transporte y protección confirmados;
+- expediente consolidado interno para Operator;
+- versión/estado del documento y timestamp UTC;
+- datos financieros en documentos internos solo con permiso Finanzas;
+- sección de proveedores solo con permiso Proveedores;
+- referencia proveedor en voucher cliente solo tras aprobar explícitamente la referencia exacta actual;
+- cambiar el localizador invalida automáticamente la aprobación anterior;
+- aprobaciones de referencia guardadas separadamente y auditadas;
+- notas internas, costes proveedor y valores post-compra protegidos excluidos de renderers de cliente;
+- endpoints PDF privados `no-store` + `nosniff` y nombres seguros.
 
 ## Arquitectura
 
@@ -158,15 +165,13 @@ TravelRepository
       |
 destinos + viajes + alojamiento + servicios
       |
-      +---------------- salidas / inventario viaje
+      +---------------- salidas / inventario
       |                         |
       |                  BookingRepository
       |                         |
       |                   reservas viaje
       |                         |
-      |                 booking alojamiento
-      |                         |
-      |                inventario habitación
+      |                 alojamiento / habitaciones
       |
       +---------------- servicios independientes
                                 |
@@ -174,7 +179,7 @@ destinos + viajes + alojamiento + servicios
                                 |
                          PaymentRepository
                                 |
-                       ledger neutral
+                         ledger neutral
                           /             \
                      Stripe             Redsys
 
@@ -182,24 +187,8 @@ destinos + viajes + alojamiento + servicios
      |                                      |
 IdentityRepository                 Operations / RBAC / auditoría
                                            |
-                                 documentos / fulfilment / tareas
+                            documentos / fulfilment / tareas
 ```
-
-Los payloads específicos de proveedores permanecen dentro de adapters. Catálogo, booking, alojamiento, identidad, reservas de servicios, operaciones, documentos y pagos se mantienen como límites reemplazables.
-
-## Reserva y pago son estados independientes
-
-Una reserva es un registro comercial. Un pago es un movimiento financiero. Uno no reescribe silenciosamente al otro.
-
-Ejemplos:
-
-- una reserva puede estar `confirmed` y seguir `unpaid`;
-- una reserva puede estar `pending` y ya estar `paid`;
-- una cancelación puede seguir pagada hasta registrar un reembolso explícito;
-- una modificación puede aumentar el total y generar saldo pendiente;
-- una modificación puede reducir el total por debajo de lo pagado y generar revisión de reembolso.
-
-Consulta [`docs/PAYMENTS.md`](docs/PAYMENTS.md).
 
 ## Inicio rápido
 
@@ -213,114 +202,70 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Abre `http://localhost:3000`.
-
-Un clon nuevo puede utilizar los modos demo/read-only seguros documentados en `.env.example`. MongoDB, SMTP y pagos persistentes son integraciones opcionales.
-
 ## Rutas principales
 
 ```text
 /                                      inicio
 /destinations                          destinos
-/destinations/[slug]                   detalle destino
 /trips                                 viajes
-/trips/[slug]                          detalle viaje
-/trips/[slug]/book                     reserva viaje
 /accommodations                        alojamientos
-/accommodations/[slug]                 detalle alojamiento
-/services                              hub servicios
+/services                              hub de servicios
 /activities                            actividades
 /transport                             transporte
 /insurance                             protección de viaje
-/services/book/[type]/[slug]           reserva servicio independiente
 
-/account/sign-in                       login cliente
 /account                               Mi cuenta
 /account/reservations                  reservas de viaje
-/account/reservations/[id]             detalle reserva
 /account/services                      reservas de servicios
-/account/services/[id]                 detalle servicio
-/account/traveller-data/[targetType]/[id] datos post-compra del viajero
-/account/checkout/[targetType]/[id]    checkout online
-/account/security                      seguridad cliente
+/account/traveller-data/[targetType]/[id] datos post-compra
+/account/checkout/[targetType]/[id]    checkout
 
-/operator/sign-in                      login personal
-/operator                              dashboard operaciones
-/operator/reservations                 cola reservas viaje
-/operator/service-reservations         cola servicios
+/operator                              dashboard
+/operator/reservations                 reservas
+/operator/service-reservations         servicios
 /operator/customers                    clientes
 /operator/catalogue                    catálogo
-/operator/catalogue/accommodations     alojamientos
-/operator/media                        biblioteca multimedia
-/operator/documents                    workspace documentos de reserva/salida
-/operator/tasks                        tareas y seguimientos
-/operator/fulfilment                   cola de proveedores
+/operator/media                        multimedia
+/operator/documents                    documentos
+/operator/tasks                        tareas
+/operator/fulfilment                   proveedores
 /operator/payments                     finanzas
 /operator/payments/providers           PSP solo Admin
-/operator/security                     seguridad personal
-/operator/staff                        personal y capacidades
+/operator/staff                        personal/permisos
 ```
 
 ## Configuración
 
-La plantilla completa está en [`.env.example`](.env.example).
-
-```text
-KTRAVEL_PUBLIC_URL=https://travel.kairoseth.com
-
-MONGODB_URI=
-MONGODB_DB_NAME=ktravel
-
-IDENTITY_MODE=demo
-STAFF_AUTH_MODE=demo
-BOOKING_MODE=demo
-OPERATIONS_MODE=demo
-
-SMTP_HOST=smtp.hostinger.com
-SMTP_PORT=465
-SMTP_USER=
-SMTP_PASSWORD=
-SMTP_FROM_EMAIL=
-SMTP_FROM_NAME=Kairoseth Travel
-KTRAVEL_OPERATIONS_EMAILS=
-
-PAYMENT_SECRETS_KEY=
-TRAVELLER_DATA_KEY=
-```
-
-`PAYMENT_SECRETS_KEY` y `TRAVELLER_DATA_KEY` deben ser claves estables de alta entropía de 32 bytes. No deben rotarse sin plan de migración.
-
-Las credenciales Stripe/Redsys se gestionan desde Admin. Las variables `NEXT_PUBLIC_*` son visibles en navegador y nunca deben contener secretos.
+La plantilla completa vive en [`.env.example`](.env.example). Los secretos nunca deben usar `NEXT_PUBLIC_*`.
 
 ## Documentación
 
-- [`ROADMAP.es.md`](ROADMAP.es.md) — estado actual y siguientes prioridades.
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — límites de capacidades y confianza.
-- [`docs/BOOKING.md`](docs/BOOKING.md) — integridad de reservas y adapters.
-- [`docs/OPERATIONS.md`](docs/OPERATIONS.md) — autorización y workflows.
-- [`docs/CATALOGUE-BACKOFFICE.md`](docs/CATALOGUE-BACKOFFICE.md) — catálogo persistente.
-- [`docs/DEPARTURES.md`](docs/DEPARTURES.md) — inventario de salidas.
-- [`docs/MEDIA.md`](docs/MEDIA.md) — biblioteca multimedia.
-- [`docs/PAYMENTS.md`](docs/PAYMENTS.md) — ledger y contrato PSP.
-- [`docs/TRAVELLER-DATA.md`](docs/TRAVELLER-DATA.md) — datos post-compra.
-- [`docs/ACCOMMODATION.md`](docs/ACCOMMODATION.md) — alojamiento, ocupación, pricing e inventario.
-- [`docs/TRIP-PACKAGE-ADDONS.es.md`](docs/TRIP-PACKAGE-ADDONS.es.md) — suplementos y modificaciones.
-- [`docs/STAFF-PERMISSIONS.es.md`](docs/STAFF-PERMISSIONS.es.md) — capacidades granulares del personal.
-- [`docs/BOOKING-DOCUMENTS.es.md`](docs/BOOKING-DOCUMENTS.es.md) — PDFs de confirmación.
-- [`docs/DEPARTURE-DOCUMENTS.es.md`](docs/DEPARTURE-DOCUMENTS.es.md) — listas de viajeros y rooming lists.
-- [`docs/ADAPTER-GUIDE.md`](docs/ADAPTER-GUIDE.md) — nuevas integraciones.
-- [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — despliegue.
-- [`docs/PRODUCTION-CHECKLIST.md`](docs/PRODUCTION-CHECKLIST.md) — revisión productiva.
+- [`ROADMAP.es.md`](ROADMAP.es.md) — estado y prioridades.
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+- [`docs/BOOKING.md`](docs/BOOKING.md)
+- [`docs/OPERATIONS.md`](docs/OPERATIONS.md)
+- [`docs/CATALOGUE-BACKOFFICE.md`](docs/CATALOGUE-BACKOFFICE.md)
+- [`docs/DEPARTURES.md`](docs/DEPARTURES.md)
+- [`docs/MEDIA.md`](docs/MEDIA.md)
+- [`docs/PAYMENTS.md`](docs/PAYMENTS.md)
+- [`docs/TRAVELLER-DATA.md`](docs/TRAVELLER-DATA.md)
+- [`docs/ACCOMMODATION.md`](docs/ACCOMMODATION.md)
+- [`docs/TRIP-PACKAGE-ADDONS.es.md`](docs/TRIP-PACKAGE-ADDONS.es.md)
+- [`docs/STAFF-PERMISSIONS.es.md`](docs/STAFF-PERMISSIONS.es.md)
+- [`docs/BOOKING-DOCUMENTS.es.md`](docs/BOOKING-DOCUMENTS.es.md)
+- [`docs/DEPARTURE-DOCUMENTS.es.md`](docs/DEPARTURE-DOCUMENTS.es.md)
+- [`docs/VOUCHERS-DOSSIERS.es.md`](docs/VOUCHERS-DOSSIERS.es.md)
+- [`docs/ADAPTER-GUIDE.md`](docs/ADAPTER-GUIDE.md)
+- [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
+- [`docs/PRODUCTION-CHECKLIST.md`](docs/PRODUCTION-CHECKLIST.md)
 
 ## Quality gates
-
-La validación completa se ejecuta con:
 
 ```bash
 npm run verify
 ```
 
-Actualmente incluye:
+Incluye:
 
 ```text
 check:safety
@@ -337,11 +282,10 @@ check:operations-queue
 check:staff-permissions
 check:booking-documents
 check:departure-documents
+check:voucher-documents
 typecheck
 build
 ```
-
-CI hace instalación limpia, ejecuta invariantes, typecheck, build productivo, smoke validation y auditoría de dependencias.
 
 ## Estado del proyecto
 
@@ -349,48 +293,46 @@ CI hace instalación limpia, ejecuta invariantes, typecheck, build productivo, s
 |---|---|
 | Foundation, arquitectura y CI | Completado |
 | Catálogo bilingüe + backoffice/media MongoDB | Completado |
-| Identidad/seguridad persistente cliente/personal | Completado |
-| Reservas e inventario transaccional viaje/servicios | Completado |
-| Viajeros, menores y pricing por edad | Completado |
+| Identidad/seguridad cliente/personal | Completado |
+| Reservas e inventario transaccional | Completado |
+| Viajeros, menores y pricing | Completado |
 | Ledger neutral y condiciones de pago | Completado |
 | Checkout Stripe/Redsys | Implementado; E2E con credenciales pendiente |
 | Datos post-compra cifrados | Completado |
-| Modificaciones de reserva y delta financiero | Completado |
-| Alojamiento y composición de paquetes | Completado |
-| Operaciones diarias avanzadas de Operator | Completado |
-| Permisos granulares del personal | Completado |
-| PDFs de confirmación de reserva | Completado |
-| Manifiestos de viajeros y rooming lists PDF | Completado |
-| Vouchers y expediente imprimible de reserva | **Siguiente — Fase 7B-3** |
+| Modificaciones y delta financiero | Completado |
+| Alojamiento y paquetes | Completado |
+| Workflow avanzado Operator | Completado |
+| Permisos granulares | Completado |
+| PDFs de confirmación | Completado |
+| Manifiestos y rooming lists | Completado |
+| Vouchers y expediente imprimible | Completado |
+| CSV/XLSX y conciliación/reporting | **Siguiente — Fase 7B-4** |
 
-El trabajo futuro está en **[ROADMAP.md](ROADMAP.md)** · **[ROADMAP.es.md](ROADMAP.es.md)**.
+## Siguiente prioridad
 
-## Siguiente prioridad de desarrollo
+**Fase 7B-4 — Exportaciones CSV/XLSX y reporting/conciliación**:
 
-El siguiente bloque es **Fase 7B-3 — Vouchers y expediente imprimible de reserva**:
+- exportaciones de reservas y servicios;
+- exportaciones de clientes;
+- conciliación de pagos y saldos pendientes;
+- exportación segura/auditada de datos de viajeros para uso operativo legítimo;
+- ingresos por producto/servicio;
+- bases de dashboards operativos/comerciales.
 
-- vouchers de alojamiento;
-- vouchers de servicios independientes;
-- referencias de proveedor orientadas al cliente solo cuando estén configuradas explícitamente para divulgación;
-- expediente consolidado imprimible para Operator;
-- fecha/hora de generación y versión/estado explícitos;
-- invariantes permanentes de privacidad y PDF en CI.
+La validación TEST/LIVE de Stripe/Redsys se insertará cuando existan cuentas proveedor adecuadas y no bloquea 7B-4.
 
-Después de 7B-3, la Fase 7B-4 cubre exportaciones CSV/XLSX, conciliación de pagos, saldos pendientes y reporting operativo/comercial.
-
-## Principios del proyecto
+## Principios
 
 - implementación clean-room;
-- interfaces neutrales respecto a proveedores;
-- operaciones cliente/personal autorizadas server-side;
-- pricing, inventario, ownership y transiciones validados en servidor;
-- snapshots históricos preservan valores contratados de viajeros, alojamiento, paquete y finanzas;
-- estado de reserva separado del estado de pago;
-- datos avanzados de viajeros solo post-compra cuando son necesarios;
-- servicios con inventario independientes de suplementos ligeros;
-- documentos orientados al cliente excluyen notas internas, datos protegidos del viajero y costes de proveedor;
-- UX pública bilingüe, responsive y sin terminología interna;
-- integraciones propietarias Kairoseth/cliente fuera del core MIT cuando corresponda.
+- neutralidad respecto a proveedores;
+- autorización server-side;
+- pricing/inventario/transiciones validados en servidor;
+- snapshots históricos de valores contratados;
+- estado de reserva separado del pago;
+- datos avanzados solo post-compra cuando aplican;
+- documentos de cliente sin notas internas, datos protegidos ni costes proveedor;
+- UX pública bilingüe y responsive;
+- integraciones propietarias fuera del core MIT cuando corresponda.
 
 ## Licencia
 
