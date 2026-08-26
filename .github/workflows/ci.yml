@@ -97,6 +97,9 @@ jobs:
       - name: Supplier fulfilment adapter invariant check
         run: npm run check:supplier-fulfilment-adapter
 
+      - name: CRM synchronization adapter invariant check
+        run: npm run check:crm-sync-adapter
+
       - name: Type check
         run: npm run typecheck
 
