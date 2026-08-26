@@ -5,6 +5,7 @@ import { getLocale } from "@/lib/get-locale";
 import { formatOperatorDate, formatOperatorMoney, reservationStatusLabel, tr } from "@/lib/operator-i18n";
 import { getOperationsRepository } from "@/lib/operations-repository";
 import { requireStaffCapability } from "@/lib/require-staff-capability";
+import { listServiceReservationsForOperator } from "@/lib/service-reservations";
 import { hasStaffCapability } from "@/lib/staff-capabilities";
 import { getTravelRepository } from "@/lib/travel-repository";
 
@@ -17,9 +18,10 @@ export default async function OperatorDocumentsPage() {
   const locale = await getLocale();
   const identity = await requireStaffCapability("reservations");
   const canFinance = hasStaffCapability(identity, "finance");
-  const [reservations, trips] = await Promise.all([
+  const [reservations, trips, serviceReservations] = await Promise.all([
     getOperationsRepository().listReservations(),
-    getTravelRepository().listTrips()
+    getTravelRepository().listTrips(),
+    listServiceReservationsForOperator()
   ]);
   const tripById = new Map(trips.map((trip) => [trip.id, trip]));
   const departures = groupReservationsByDeparture(reservations);
@@ -32,14 +34,14 @@ export default async function OperatorDocumentsPage() {
           <h1>{tr(locale, "Travel documents", "Documentos de viaje")}</h1>
           <p className={styles.lead}>{tr(
             locale,
-            "Generate private booking confirmations and departure-level operational documents from the current reservation snapshots.",
-            "Genera confirmaciones privadas de reserva y documentos operativos por salida a partir de los snapshots actuales de las reservas."
+            "Generate private confirmations, customer-safe vouchers, departure documents and internal reservation dossiers from current reservation snapshots.",
+            "Genera confirmaciones privadas, vouchers seguros para cliente, documentos por salida y expedientes internos desde los snapshots actuales de las reservas."
           )}</p>
           <div className={styles.notice}>
             {tr(
               locale,
-              "Traveller and rooming lists use only basic booking data. Protected post-purchase traveller data, internal notes and supplier information are not exported in these documents.",
-              "Las listas de viajeros y rooming lists utilizan únicamente datos básicos de reserva. Los datos post-compra protegidos, notas internas e información de proveedores no se exportan en estos documentos."
+              "Customer vouchers never include supplier costs, internal notes or protected post-purchase traveller fields. Supplier references are included only after explicit approval of that exact reference in Supplier fulfilment.",
+              "Los vouchers del cliente nunca incluyen costes de proveedor, notas internas ni campos post-compra protegidos del viajero. Las referencias de proveedor solo se incluyen tras aprobar explícitamente esa referencia exacta en Gestión de proveedores."
             )}
           </div>
         </section>
@@ -66,58 +68,76 @@ export default async function OperatorDocumentsPage() {
                         {departure.returnDate ? ` → ${formatOperatorDate(`${departure.returnDate}T12:00:00Z`, locale)}` : ""}
                       </span>
                     </span>
-                    <span>
-                      {departure.reservationCount} {tr(locale, "bookings", "reservas")} · {departure.travellerCount} {tr(locale, "travellers", "viajeros")}
-                    </span>
-                    <a className="button button-secondary" href={`${base}/travellers`}>
-                      {tr(locale, "Traveller list", "Lista de viajeros")}
-                    </a>
-                    <a className="button button-secondary" href={`${base}/rooming-list`}>
-                      Rooming list
-                    </a>
+                    <span>{departure.reservationCount} {tr(locale, "bookings", "reservas")} · {departure.travellerCount} {tr(locale, "travellers", "viajeros")}</span>
+                    <a className="button button-secondary" href={`${base}/travellers`}>{tr(locale, "Traveller list", "Lista de viajeros")}</a>
+                    <a className="button button-secondary" href={`${base}/rooming-list`}>Rooming list</a>
                   </div>
                 );
               })}
             </div>
-          ) : (
-            <div className={styles.notice}>{tr(locale, "No active trip departures have reservations yet.", "Todavía no hay salidas activas con reservas.")}</div>
-          )}
+          ) : <div className={styles.notice}>{tr(locale, "No active trip departures have reservations yet.", "Todavía no hay salidas activas con reservas.")}</div>}
         </section>
 
         <section className={styles.panel} style={{ marginTop: "1rem" }}>
-          <div className="eyebrow">{tr(locale, "Reservation documents", "Documentos de reserva")}</div>
-          <h2>{tr(locale, "Booking confirmations", "Confirmaciones de reserva")}</h2>
+          <div className="eyebrow">{tr(locale, "Trip reservation documents", "Documentos de reservas de viaje")}</div>
+          <h2>{tr(locale, "Confirmations, vouchers and dossiers", "Confirmaciones, vouchers y expedientes")}</h2>
           <div className={styles.notice}>
             {canFinance
-              ? tr(locale, "Your Finance permission allows confirmation PDFs to include payment status, paid amount and outstanding balance.", "Tu permiso de Finanzas permite que las confirmaciones PDF incluyan estado de pago, importe pagado y saldo pendiente.")
-              : tr(locale, "Financial payment details are omitted from confirmation PDFs because this account does not have Finance permission.", "Los detalles financieros se omiten de las confirmaciones PDF porque esta cuenta no tiene permiso de Finanzas.")}
+              ? tr(locale, "Your Finance permission allows booking confirmations and internal dossiers to include payment summaries.", "Tu permiso de Finanzas permite que las confirmaciones y expedientes internos incluyan resúmenes de pago.")
+              : tr(locale, "Financial payment details are omitted because this account does not have Finance permission.", "Los datos financieros se omiten porque esta cuenta no tiene permiso de Finanzas.")}
           </div>
           {reservations.length ? (
             <div className={styles.managementList}>
               {reservations.map((reservation) => {
                 const trip = tripById.get(reservation.tripId);
+                const base = `/operator/reservations/${encodeURIComponent(reservation.id)}`;
+                const voucherAvailable = reservation.status === "confirmed" && Boolean(reservation.accommodationBookings?.length);
                 return (
                   <div className={styles.managementRow} key={reservation.id}>
                     <span>
                       <strong>{trip?.title ?? reservation.tripTitle ?? reservation.tripId}</strong>
-                      <span>
-                        {reservation.id} · {reservation.departureDate ? formatOperatorDate(`${reservation.departureDate}T12:00:00Z`, locale) : "—"} · {reservationStatusLabel(reservation.status, locale)} · {formatOperatorMoney(reservation.totalPrice, reservation.currency, locale)}
-                      </span>
+                      <span>{reservation.id} · {reservation.departureDate ? formatOperatorDate(`${reservation.departureDate}T12:00:00Z`, locale) : "—"} · {reservationStatusLabel(reservation.status, locale)} · {formatOperatorMoney(reservation.totalPrice, reservation.currency, locale)}</span>
                     </span>
-                    <a className="button button-secondary" href={`/operator/reservations/${encodeURIComponent(reservation.id)}/confirmation`}>
-                      {tr(locale, "Download confirmation", "Descargar confirmación")}
-                    </a>
+                    <a className="button button-secondary" href={`${base}/confirmation`}>{tr(locale, "Confirmation", "Confirmación")}</a>
+                    {voucherAvailable ? <a className="button button-secondary" href={`${base}/accommodation-voucher`}>{tr(locale, "Accommodation voucher", "Voucher alojamiento")}</a> : null}
+                    <a className="button button-secondary" href={`${base}/dossier`}>{tr(locale, "Operator dossier", "Expediente Operator")}</a>
                   </div>
                 );
               })}
             </div>
-          ) : (
-            <div className={styles.notice}>{tr(locale, "No trip reservations are available yet.", "Todavía no hay reservas de viaje disponibles.")}</div>
-          )}
+          ) : <div className={styles.notice}>{tr(locale, "No trip reservations are available yet.", "Todavía no hay reservas de viaje disponibles.")}</div>}
+        </section>
+
+        <section className={styles.panel} style={{ marginTop: "1rem" }}>
+          <div className="eyebrow">{tr(locale, "Service documents", "Documentos de servicios")}</div>
+          <h2>{tr(locale, "Independent service vouchers", "Vouchers de servicios independientes")}</h2>
+          <p className={styles.lead}>{tr(
+            locale,
+            "Confirmed activities, transport and travel-protection reservations can generate a customer-safe service voucher.",
+            "Las actividades, transportes y protecciones de viaje confirmadas pueden generar un voucher de servicio seguro para el cliente."
+          )}</p>
+          {serviceReservations.length ? (
+            <div className={styles.managementList}>
+              {serviceReservations.map((reservation) => (
+                <div className={styles.managementRow} key={reservation.id}>
+                  <span>
+                    <strong>{reservation.serviceTitle}</strong>
+                    <span>{reservation.id} · {reservation.serviceDate ? formatOperatorDate(`${reservation.serviceDate}T12:00:00Z`, locale) : "—"} · {reservationStatusLabel(reservation.status, locale)}</span>
+                  </span>
+                  {reservation.status === "confirmed" ? (
+                    <a className="button button-secondary" href={`/operator/service-reservations/${encodeURIComponent(reservation.id)}/voucher`}>
+                      {tr(locale, "Service voucher", "Voucher de servicio")}
+                    </a>
+                  ) : <span className={styles.badge}>{tr(locale, "Voucher available after confirmation", "Voucher disponible tras confirmar")}</span>}
+                </div>
+              ))}
+            </div>
+          ) : <div className={styles.notice}>{tr(locale, "No service reservations are available yet.", "Todavía no hay reservas de servicios disponibles.")}</div>}
         </section>
 
         <div className={styles.toolbar}>
           <Link className="button button-secondary" href="/operator/reservations">{tr(locale, "Reservation queue", "Cola de reservas")}</Link>
+          <Link className="button button-secondary" href="/operator/service-reservations">{tr(locale, "Service queue", "Cola de servicios")}</Link>
           <Link className="button button-secondary" href="/operator">{tr(locale, "← Operator dashboard", "← Panel de operador")}</Link>
         </div>
       </div>
