@@ -7,7 +7,12 @@ import {
 } from "node:crypto";
 import { promisify } from "node:util";
 import { authLockout, recordAuthAudit } from "@/lib/auth-security";
-import { getMongoDatabase } from "@/lib/mongodb";
+import {
+  createIntegrationEvent,
+  enqueueIntegrationEvent,
+  ensureIntegrationOutboxIndexes
+} from "@/lib/integration-outbox";
+import { getMongoClient, getMongoDatabase, getMongoDatabaseName } from "@/lib/mongodb";
 
 const scrypt = promisify(scryptCallback);
 const dummyPasswordSalt = "ktravel-customer-auth-dummy-salt-v1";
@@ -142,7 +147,9 @@ async function passwordMatches(password: string, salt: string, expectedHash: str
 
 export async function registerCustomer(input: RegisterCustomerInput) {
   await ensureAuthIndexes();
-  const database = await getMongoDatabase();
+  const client = await getMongoClient();
+  const database = client.db(getMongoDatabaseName());
+  await ensureIntegrationOutboxIndexes(database);
   const emailNormalized = normalizeEmail(input.email);
   const passwordSalt = randomBytes(16).toString("hex");
   const passwordHash = await derivePassword(input.password, passwordSalt);
@@ -162,9 +169,22 @@ export async function registerCustomer(input: RegisterCustomerInput) {
     status: "active",
     createdAt: now
   };
+  const occurredAt = now.toISOString();
+  const integrationEvent = createIntegrationEvent({
+    id: `intevt-customer-created-${user.id}`,
+    type: "customer.created",
+    occurredAt,
+    aggregateType: "customer",
+    aggregateId: user.id,
+    payload: { customerId: user.id, changedAt: occurredAt }
+  });
+  const session = client.startSession();
 
   try {
-    await database.collection<StoredCustomerUser>(customerUserCollectionName).insertOne(user);
+    await session.withTransaction(async () => {
+      await database.collection<StoredCustomerUser>(customerUserCollectionName).insertOne(user, { session });
+      await enqueueIntegrationEvent(database, session, integrationEvent);
+    });
   } catch (error) {
     if (error && typeof error === "object" && "code" in error && error.code === 11000) {
       const duplicate = new Error("A customer account already exists for this email.");
@@ -172,6 +192,8 @@ export async function registerCustomer(input: RegisterCustomerInput) {
       throw duplicate;
     }
     throw error;
+  } finally {
+    await session.endSession();
   }
 
   return user;
@@ -351,28 +373,47 @@ export async function changeCustomerPassword(userId: string, currentPassword: st
 
 export async function updateCustomerProfile(userId: string, input: UpdateCustomerProfileInput) {
   await ensureAuthIndexes();
-  const database = await getMongoDatabase();
+  const client = await getMongoClient();
+  const database = client.db(getMongoDatabaseName());
+  await ensureIntegrationOutboxIndexes(database);
   const firstName = input.firstName.trim();
   const lastName = input.lastName.trim();
   const now = new Date();
+  const occurredAt = now.toISOString();
+  const integrationEvent = createIntegrationEvent({
+    type: "customer.profile.updated",
+    occurredAt,
+    aggregateType: "customer",
+    aggregateId: userId,
+    payload: { customerId: userId, changedAt: occurredAt }
+  });
+  const session = client.startSession();
+  let updated: StoredCustomerUser | null = null;
 
-  const result = await database.collection<StoredCustomerUser>(customerUserCollectionName).findOneAndUpdate(
-    { id: userId, role: "customer", status: "active" },
-    {
-      $set: {
-        firstName,
-        lastName,
-        displayName: `${firstName} ${lastName}`.trim(),
-        phone: input.phone?.trim() || undefined,
-        country: input.country?.trim() || undefined,
-        preferredLocale: input.preferredLocale,
-        updatedAt: now
-      }
-    },
-    { returnDocument: "after" }
-  );
+  try {
+    await session.withTransaction(async () => {
+      updated = await database.collection<StoredCustomerUser>(customerUserCollectionName).findOneAndUpdate(
+        { id: userId, role: "customer", status: "active" },
+        {
+          $set: {
+            firstName,
+            lastName,
+            displayName: `${firstName} ${lastName}`.trim(),
+            phone: input.phone?.trim() || undefined,
+            country: input.country?.trim() || undefined,
+            preferredLocale: input.preferredLocale,
+            updatedAt: now
+          }
+        },
+        { returnDocument: "after", session }
+      );
+      if (updated) await enqueueIntegrationEvent(database, session, integrationEvent);
+    });
+  } finally {
+    await session.endSession();
+  }
 
-  return result ? toSafeCustomerUser(result) : null;
+  return updated ? toSafeCustomerUser(updated) : null;
 }
 
 export async function listCustomersForOperations() {
