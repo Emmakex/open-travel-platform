@@ -4,7 +4,11 @@ import {
   releaseAccommodationBookingInventory,
   reserveAccommodationBookingInventory
 } from "@/lib/accommodation-booking-inventory";
-import { createIntegrationEvent, enqueueIntegrationEvent } from "@/lib/integration-outbox";
+import {
+  createIntegrationEvent,
+  enqueueIntegrationEvent,
+  ensureIntegrationOutboxIndexes
+} from "@/lib/integration-outbox";
 import { travelDepartureCollectionName, listPublicMongoAvailability } from "@/lib/mongo-departures";
 import {
   ensureMongoReservationIndexes,
@@ -35,28 +39,25 @@ export class MongoBookingRepository implements BookingRepository {
     const client = await getMongoClient();
     const database = client.db(getMongoDatabaseName());
     await ensureMongoReservationIndexes(database);
-
-    return database
-      .collection<StoredReservation>(travelReservationCollectionName)
-      .find({ identityId })
-      .sort({ createdAt: -1 })
-      .toArray();
+    return database.collection<StoredReservation>(travelReservationCollectionName)
+      .find({ identityId }).sort({ createdAt: -1 }).toArray();
   }
 
   async getReservation(identityId: string, reservationId: string) {
     const client = await getMongoClient();
     const database = client.db(getMongoDatabaseName());
     await ensureMongoReservationIndexes(database);
-
-    return database
-      .collection<StoredReservation>(travelReservationCollectionName)
+    return database.collection<StoredReservation>(travelReservationCollectionName)
       .findOne({ id: reservationId, identityId });
   }
 
   async createReservation(input: CreateReservationInput) {
     const client = await getMongoClient();
     const database = client.db(getMongoDatabaseName());
-    await ensureMongoReservationIndexes(database);
+    await Promise.all([
+      ensureMongoReservationIndexes(database),
+      ensureIntegrationOutboxIndexes(database)
+    ]);
 
     const reservations = database.collection<StoredReservation>(travelReservationCollectionName);
     const departures = database.collection(travelDepartureCollectionName);
@@ -97,20 +98,11 @@ export class MongoBookingRepository implements BookingRepository {
             tripId: input.tripId,
             status: "open",
             departureDate: { $gte: today },
-            $expr: {
-              $gte: [
-                { $subtract: ["$capacity", "$reservedSpaces"] },
-                inventorySpaces
-              ]
-            }
+            $expr: { $gte: [{ $subtract: ["$capacity", "$reservedSpaces"] }, inventorySpaces] }
           },
-          {
-            $inc: { reservedSpaces: inventorySpaces },
-            $set: { updatedAt: new Date() }
-          },
+          { $inc: { reservedSpaces: inventorySpaces }, $set: { updatedAt: new Date() } },
           { session }
         );
-
         if (inventoryResult.modifiedCount !== 1) throw inventoryError();
         await reserveAccommodationBookingInventory(database, session, input.accommodationBookings ?? []);
         await reservations.insertOne(reservation, { session });
@@ -125,7 +117,10 @@ export class MongoBookingRepository implements BookingRepository {
   async cancelReservation(identityId: string, reservationId: string) {
     const client = await getMongoClient();
     const database = client.db(getMongoDatabaseName());
-    await ensureMongoReservationIndexes(database);
+    await Promise.all([
+      ensureMongoReservationIndexes(database),
+      ensureIntegrationOutboxIndexes(database)
+    ]);
 
     const reservations = database.collection<StoredReservation>(travelReservationCollectionName);
     const departures = database.collection(travelDepartureCollectionName);
@@ -135,10 +130,7 @@ export class MongoBookingRepository implements BookingRepository {
 
     try {
       await session.withTransaction(async () => {
-        const current = await reservations.findOne(
-          { id: reservationId, identityId },
-          { session }
-        );
+        const current = await reservations.findOne({ id: reservationId, identityId }, { session });
         if (!current || current.status !== "pending") return;
 
         const updatedAt = new Date().toISOString();
@@ -152,15 +144,8 @@ export class MongoBookingRepository implements BookingRepository {
         const inventorySpaces = current.inventorySpaces ?? current.partySize;
         if (inventorySpaces > 0) {
           const release = await departures.updateOne(
-            {
-              id: current.availabilityId,
-              tripId: current.tripId,
-              reservedSpaces: { $gte: inventorySpaces }
-            },
-            {
-              $inc: { reservedSpaces: -inventorySpaces },
-              $set: { updatedAt: new Date() }
-            },
+            { id: current.availabilityId, tripId: current.tripId, reservedSpaces: { $gte: inventorySpaces } },
+            { $inc: { reservedSpaces: -inventorySpaces }, $set: { updatedAt: new Date() } },
             { session }
           );
           if (release.modifiedCount !== 1) throw releaseError();
@@ -191,7 +176,6 @@ export class MongoBookingRepository implements BookingRepository {
             updatedAt
           }
         }));
-
         cancelled = { ...current, status: "cancelled", updatedAt };
       });
       return cancelled;
