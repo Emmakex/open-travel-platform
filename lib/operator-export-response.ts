@@ -5,14 +5,13 @@ import {
   safeExportFilename
 } from "@/lib/tabular-export";
 
-export function parseExportFormat(value: string | null): ExportFormat | null {
-  if (!value || value === "csv") return "csv";
-  if (value === "xlsx") return "xlsx";
-  return null;
-}
-
-export function operatorExportResponse<Row>(input: {
-  table: TabularExport<Row>;
+/**
+ * The HTTP response boundary is intentionally row-shape agnostic. Each report
+ * builder remains strongly typed; once a complete TabularExport reaches this
+ * function, serialization only needs the table's own value callbacks.
+ */
+export function operatorExportResponse(input: {
+  table: TabularExport<any>;
   format: ExportFormat;
   filename: string;
 }) {
