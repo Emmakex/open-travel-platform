@@ -26,6 +26,7 @@ export default async function SignInPage({ searchParams }: { searchParams: Promi
   const recoveryEnabled = identityConfig.customerAuthEnabled && isEmailDeliveryConfigured();
   const errors: Record<string, string> = {
     "invalid-credentials": isEs ? "No se ha podido iniciar sesión. Comprueba tus credenciales. Tras varios intentos fallidos, el acceso se bloquea temporalmente durante 15 minutos." : "Sign in was not successful. Check your credentials. After repeated failures, access is temporarily locked for 15 minutes.",
+    "rate-limited": isEs ? "Se han realizado demasiados intentos en poco tiempo. Espera unos minutos antes de volver a intentarlo." : "Too many attempts were made in a short period. Wait a few minutes before trying again.",
     "auth-disabled": isEs ? "El acceso de clientes está desactivado temporalmente." : "Customer sign in is temporarily disabled.",
     "registration-disabled": isEs ? "El registro de clientes está desactivado temporalmente." : "Customer registration is temporarily disabled."
   };
