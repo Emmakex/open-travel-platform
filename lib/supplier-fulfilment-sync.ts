@@ -88,14 +88,6 @@ async function ensureAuditIndexes() {
   return { database, audit };
 }
 
-async function markAuditOutcome(
-  audit: ReturnType<Awaited<typeof ensureAuditIndexes>["audit"] extends never ? never : never>,
-  _id: string,
-  _fields: Partial<SupplierFulfilmentAdapterAuditEvent>
-) {
-  // Placeholder overload target; implementation below is intentionally replaced by structural helper.
-}
-
 export async function listSupplierAdapterAuditForTarget(targetType: SupplierFulfilmentTargetType, targetId: string) {
   if (operationsConfig.mode !== "mongodb") return [] as SupplierFulfilmentAdapterAuditEvent[];
   const { audit } = await ensureAuditIndexes();
@@ -139,8 +131,8 @@ export async function performSupplierAdapterOperation(input: PerformSupplierAdap
     try {
       await audit.updateOne({ id: auditId }, { $set: fields });
     } catch {
-      // The fail-closed guarantee is the initial persisted response audit before local application.
-      // Outcome enrichment after that point is best-effort so a successful local apply is not reported as failed.
+      // The response audit is already persisted before local application.
+      // Outcome enrichment is best-effort so a successful local apply is not misreported as failed.
     }
   };
 
