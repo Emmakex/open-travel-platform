@@ -17,11 +17,11 @@ _Última actualización: 26 de agosto de 2026._
 
 El proyecto está muy por encima del MVP original de catálogo/reservas.
 
-Las bases completadas incluyen identidad persistente cliente/personal, RBAC, reservas de viajes/servicios, pricing por viajero, servicios independientes, email transaccional, contabilidad de pagos, PSP cifrados, checkout neutral, depósitos/cuotas, datos post-compra cifrados, modificaciones de reserva, alojamiento reutilizable, inventario transaccional de habitaciones, suplementos, operaciones avanzadas, permisos granulares, documentos de reserva/salida, vouchers seguros para cliente, expediente interno, exportaciones operativas CSV/XLSX, conciliación/reporting financiero y exportación auditada de datos protegidos de viajeros.
+Las bases completadas incluyen identidad persistente cliente/personal, RBAC, reservas de viajes/servicios, pricing por viajero, servicios independientes, email transaccional, contabilidad de pagos, PSP cifrados, checkout neutral, depósitos/cuotas, datos post-compra cifrados, modificaciones de reserva, alojamiento reutilizable, inventario transaccional de habitaciones, suplementos, operaciones avanzadas, permisos granulares, documentos de reserva/salida, vouchers seguros para cliente, expediente interno, exportaciones operativas CSV/XLSX, conciliación/reporting financiero, exportación auditada de datos protegidos de viajeros y la primera frontera neutral de integraciones salientes.
 
 La validación E2E con credenciales Stripe/Redsys continúa pendiente hasta disponer de cuentas proveedor adecuadas. Los adapters están implementados, pero la capacidad productiva no se considera validada hasta probar TEST/LIVE.
 
-**Las Fases 6B, 6C, 7A y 7B están completadas. La Fase 8 — Integraciones externas es la SIGUIENTE.**
+**Las Fases 6B, 6C, 7A, 7B y 8A están completadas. La Fase 8B — ejecución programada, replay y observabilidad de integraciones es la SIGUIENTE.**
 
 ---
 
@@ -255,22 +255,53 @@ Objetivo cumplido: proporcionar documentos operativos, exportaciones seguras y r
 
 ---
 
-# Fase 8 — Integraciones externas — SIGUIENTE
+# Fase 8 — Integraciones externas — EN CURSO
 
 Objetivo: conectar los despliegues con ecosistemas de negocio reales mediante adapters, manteniendo los payloads específicos de proveedores fuera de los dominios centrales.
 
-Candidatos:
+## 8A — Integraciones salientes neutrales respecto a proveedor — COMPLETADO
+
+- sobre versionado de eventos para creación y cambio de estado de reservas de viaje/servicio;
+- outbox transaccional MongoDB escrito en la misma transacción/sesión de la reserva;
+- una entrega durable e idempotente por `(eventId, endpointId)`;
+- configuración exclusiva de Admin en `/operator/integrations`;
+- suscripciones por endpoint y estado activo/inactivo;
+- `INTEGRATION_SECRETS_KEY` dedicada y secretos de firma cifrados AES-256-GCM;
+- adapter webhook HTTPS firmado HMAC-SHA256;
+- validación exclusivamente HTTPS, rechazo de credenciales/fragmentos y bloqueo de redes localhost/privadas/reservadas;
+- inspección de todas las respuestas DNS y revalidación DNS en cada entrega;
+- conexión al IP validado manteniendo TLS SNI y HTTP Host originales;
+- redirects no seguidos, timeout limitado y respuesta acotada;
+- leasing, recuperación tras caída, reintentos/backoff limitados y retención `dead-letter`;
+- historial durable por intento;
+- datos post-compra protegidos del viajero excluidos del contrato genérico;
+- procesador manual y limitado desde Admin como primera superficie de ejecución;
+- documentación EN/ES;
+- gate permanente `check:outbound-integrations` integrado en `npm run verify` y GitHub CI.
+
+## 8B — Ejecución programada, replay y observabilidad — SIGUIENTE
+
+- entry point scheduler/worker apto para el despliegue sin depender de una sesión de navegador;
+- autenticación server-only del worker y límites de frecuencia/lote;
+- replay/requeue seguro y auditado de dead-letter;
+- detalle Admin de eventos y entregas;
+- métricas de salud: pending, retrying, dead-letter, entrega vencida más antigua y tasa reciente de éxito/fallo;
+- política de retención para eventos/intentos completados conservando necesidades de auditoría;
+- diagnósticos operativos sin exponer secretos de firma ni datos protegidos de viajeros.
+
+## 8C — Adapters de negocio — PLANIFICADO
+
+Candidatos cuando la capa común de entrega tenga madurez operativa:
 
 - APIs de proveedores/reservas;
-- CRM;
+- sincronización CRM;
 - ERP/contabilidad;
-- webhooks salientes;
-- CMS/catálogo;
-- identidad enterprise;
-- adapter REST genérico;
-- PSP adicionales.
+- fuentes CMS/catálogo;
+- adapter REST genérico de reservas;
+- identidad enterprise cuando corresponda;
+- PSP adicionales cuando aporten valor comercial.
 
-Primer bloque recomendado: crear la frontera de eventos/integraciones salientes y un adapter de referencia antes de añadir integraciones específicas, resolviendo una sola vez reintentos, idempotencia, auditoría y gestión de secretos.
+Los payloads específicos de proveedor deben permanecer dentro de adapters y consumir la frontera versionada de eventos, sin filtrarse a los dominios de reserva.
 
 # Fase 9 — Hardening productivo
 
@@ -316,7 +347,9 @@ Primer bloque recomendado: crear la frontera de eventos/integraciones salientes 
 # Orden recomendado
 
 ```text
-8   Integraciones externas
+8B  Ejecución programada / replay / observabilidad
+ ↓
+8C  Adapters de negocio
  ↓
 9   Hardening productivo
  ↓
