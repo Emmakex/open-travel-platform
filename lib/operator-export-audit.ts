@@ -16,7 +16,7 @@ export type OperatorExportType =
   | "revenue"
   | "protected-travellers";
 
-type OperatorExportAuditRecord = {
+export type OperatorExportAuditRecord = {
   id: string;
   exportType: OperatorExportType;
   format: ExportFormat;
@@ -96,4 +96,19 @@ export async function recordOperatorExportAudit(input: {
   };
   await database.collection<OperatorExportAuditRecord>(operatorExportAuditCollectionName).insertOne(record);
   return record.id;
+}
+
+export async function listRecentOperatorExportAudit(input?: {
+  actorIdentityId?: string;
+  limit?: number;
+}) {
+  if (operationsConfig.mode !== "mongodb") return [] as OperatorExportAuditRecord[];
+  const database = await getMongoDatabase();
+  await ensureIndexes(database);
+  const limit = Math.max(1, Math.min(input?.limit ?? 30, 100));
+  return database.collection<OperatorExportAuditRecord>(operatorExportAuditCollectionName)
+    .find(input?.actorIdentityId ? { actorIdentityId: input.actorIdentityId } : {})
+    .sort({ occurredAt: -1 })
+    .limit(limit)
+    .toArray();
 }
