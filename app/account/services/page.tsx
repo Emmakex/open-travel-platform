@@ -23,7 +23,12 @@ export default async function AccountServicesPage() {
           {reservations.map((reservation) => (
             <div key={reservation.id}>
               <dt><Link className="text-link" href={`/account/services/${reservation.id}`}>{reservation.serviceTitle}</Link></dt>
-              <dd>{reservation.serviceType === "activity" ? t("Activity", "Actividad") : reservation.serviceType === "transport" ? t("Transport", "Transporte") : t("Insurance", "Seguro")} · {reservation.partySize} {t("travellers", "viajeros")} · {formatCurrency(reservation.totalPrice, reservation.currency, locale)} · {reservation.status === "pending" ? t("Pending", "Pendiente") : reservation.status === "confirmed" ? t("Confirmed", "Confirmada") : t("Cancelled", "Cancelada")}</dd>
+              <dd>
+                {reservation.serviceType === "activity" ? t("Activity", "Actividad") : reservation.serviceType === "transport" ? t("Transport", "Transporte") : t("Insurance", "Seguro")} · {reservation.partySize} {t("travellers", "viajeros")} · {formatCurrency(reservation.totalPrice, reservation.currency, locale)} · {reservation.status === "pending" ? t("Pending", "Pendiente") : reservation.status === "confirmed" ? t("Confirmed", "Confirmada") : t("Cancelled", "Cancelada")}
+                {reservation.status === "confirmed" ? (
+                  <><br /><a className="text-link" href={`/account/services/${encodeURIComponent(reservation.id)}/voucher`}>{t("Download service voucher", "Descargar voucher de servicio")}</a></>
+                ) : null}
+              </dd>
             </div>
           ))}
         </div>
