@@ -47,15 +47,18 @@ The platform is well beyond the original catalogue/booking MVP. The implementati
 - optional package supplements and post-booking supplement amendments;
 - rich Operator workflow with ownership, internal notes, priority, tags, tasks and supplier fulfilment;
 - advanced operational queues and granular Operator permissions;
-- booking-confirmation PDFs;
-- traveller manifests and rooming-list PDFs;
-- customer-safe accommodation/service vouchers;
-- an internal printable Operator reservation dossier;
-- explicitly approved and audited supplier-reference disclosure for customer vouchers.
+- booking-confirmation PDFs, traveller manifests and rooming-list PDFs;
+- customer-safe accommodation/service vouchers and an internal printable Operator dossier;
+- explicitly approved/audited supplier-reference disclosure for customer vouchers;
+- permission-aware CSV/XLSX exports for reservations, services and customers;
+- payment reconciliation, outstanding-balance and revenue reporting;
+- audited fail-closed export of retained protected traveller data for legitimate operational use;
+- export audit metadata without persisting exported cell values;
+- currency-safe finance dashboards and reports that never aggregate different currencies together.
 
 Stripe and Redsys credentialed end-to-end validation remains intentionally pending until suitable provider accounts are available. The adapters are implemented, but production payment capability is not considered validated until provider TEST/LIVE flows have been exercised.
 
-**Current delivery phase: Phase 7B — Documents, exports and reporting. 7B-1 booking confirmations, 7B-2 traveller/rooming lists and 7B-3 vouchers/reservation dossier are complete. Phase 7B-4 CSV/XLSX exports and reconciliation/reporting is next.**
+**Phase 7B — Documents, exports and reporting is complete: booking confirmations, traveller/rooming lists, vouchers/dossiers, CSV/XLSX exports, reconciliation and reporting are implemented. The next delivery phase is Phase 8 — External integrations.**
 
 ## Current capabilities
 
@@ -137,7 +140,8 @@ Stripe and Redsys credentialed end-to-end validation remains intentionally pendi
 - browser returns never trusted as payment confirmation;
 - Admin-managed TEST/LIVE provider profiles;
 - full-payment, deposit and installment snapshots;
-- outstanding-balance and next-payment calculations.
+- outstanding-balance and next-payment calculations;
+- finance dashboard totals grouped by currency, never cross-currency summed.
 
 ### Documents
 
@@ -152,9 +156,24 @@ Stripe and Redsys credentialed end-to-end validation remains intentionally pendi
 - supplier fulfilment section in the internal dossier only when Suppliers permission allows it;
 - supplier references on customer vouchers only after explicit approval of the exact current reference;
 - changing a supplier locator invalidates the previous customer-disclosure approval automatically;
-- supplier-reference approvals are stored separately and audited;
+- supplier-reference approvals stored separately and audited;
 - internal notes, supplier costs and protected post-purchase traveller values excluded from customer-safe renderers;
 - private `no-store` + `nosniff` PDF endpoints and safe filenames.
+
+### Reports and exports
+
+- protected `/operator/reports` workspace;
+- CSV/XLSX trip-reservation, service-reservation and customer exports;
+- server-side creation-date filters and bounded browser export sizes;
+- Finance-only reconciliation, active outstanding-balance/overdue-installment and revenue-by-product/service exports;
+- common typed tabular definitions used by CSV and XLSX renderers;
+- spreadsheet-formula injection mitigation for user-controlled text;
+- minimal OOXML XLSX generation with frozen header and autofilter;
+- private `no-store` + `nosniff` download responses;
+- export audit with actor, type, format, filters, columns, row count and timestamp but no exported cell values;
+- protected traveller-data export requires both Traveller data and Reservations capabilities, an active reservation and an explicit operational reason;
+- protected traveller export is POST-only and fail-closed: persistent audit must succeed before sensitive bytes are returned;
+- financial metrics and revenue groups remain separated by currency.
 
 ## Architecture
 
@@ -189,10 +208,10 @@ customer area ---------------------- staff/operator/admin
      |                                      |
 IdentityRepository                 Operations / RBAC / audit
                                            |
-                            documents / fulfilment / tasks
+                     documents / reports / fulfilment / tasks
 ```
 
-Provider-specific payloads stay inside adapters. Catalogue, booking, accommodation, identity, services, operations, documents and payment accounting remain replaceable capability boundaries.
+Provider-specific payloads stay inside adapters. Catalogue, booking, accommodation, identity, services, operations, documents, reporting and payment accounting remain replaceable capability boundaries.
 
 ## Reservation and payment states are independent
 
@@ -256,6 +275,7 @@ A fresh clone can use the safe demo/read-only modes documented in `.env.example`
 /operator/catalogue                    catalogue management
 /operator/media                        media library
 /operator/documents                    documents workspace
+/operator/reports                      reporting and CSV/XLSX exports
 /operator/tasks                        tasks and follow-ups
 /operator/fulfilment                   supplier fulfilment queue
 /operator/payments                     finance dashboard
@@ -305,6 +325,7 @@ TRAVELLER_DATA_KEY=
 - [`docs/BOOKING-DOCUMENTS.md`](docs/BOOKING-DOCUMENTS.md) — booking confirmation PDFs.
 - [`docs/DEPARTURE-DOCUMENTS.md`](docs/DEPARTURE-DOCUMENTS.md) — traveller and rooming-list PDFs.
 - [`docs/VOUCHERS-DOSSIERS.md`](docs/VOUCHERS-DOSSIERS.md) — vouchers, dossier and supplier-reference disclosure.
+- [`docs/REPORTING-EXPORTS.md`](docs/REPORTING-EXPORTS.md) — CSV/XLSX, finance reports and audited protected-data exports.
 - [`docs/ADAPTER-GUIDE.md`](docs/ADAPTER-GUIDE.md) — adding integrations.
 - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — deployment model.
 - [`docs/PRODUCTION-CHECKLIST.md`](docs/PRODUCTION-CHECKLIST.md) — production review.
@@ -335,6 +356,7 @@ check:staff-permissions
 check:booking-documents
 check:departure-documents
 check:voucher-documents
+check:reporting-exports
 typecheck
 build
 ```
@@ -360,22 +382,26 @@ CI performs a clean install, runs the invariant checks, type-checks, builds the 
 | Booking confirmation PDFs | Done |
 | Traveller manifests and rooming-list PDFs | Done |
 | Vouchers and printable reservation dossier | Done |
-| CSV/XLSX exports and reconciliation/reporting | **Next — Phase 7B-4** |
+| CSV/XLSX exports and reconciliation/reporting | Done |
+| Phase 7B — Documents, exports and reporting | **Complete** |
 
 Future work is tracked in **[ROADMAP.md](ROADMAP.md)** · **[ROADMAP.es.md](ROADMAP.es.md)**.
 
 ## Next development priority
 
-The next block is **Phase 7B-4 — CSV/XLSX exports and reconciliation/reporting**:
+The next block is **Phase 8 — External integrations**. The core should now connect to real business ecosystems through provider-neutral adapters without leaking provider payloads into core domains.
 
-- reservation and service exports;
-- customer exports;
-- payment reconciliation and outstanding-balance reports;
-- secure, audited traveller-data export for legitimate operational use;
-- revenue by product/service;
-- operational and commercial reporting/dashboard foundations.
+Initial adapter priorities are:
 
-Credentialed Stripe/Redsys TEST/LIVE validation should be inserted as soon as suitable provider accounts are available and does not block 7B-4.
+- supplier/booking APIs;
+- generic outbound webhooks;
+- CRM synchronization;
+- ERP/accounting integration;
+- CMS/catalogue sources;
+- generic REST booking adapter;
+- additional payment providers where commercially useful.
+
+Credentialed Stripe/Redsys TEST/LIVE validation should be inserted as soon as suitable provider accounts are available and does not need to block Phase 8 adapter work.
 
 ## Project principles
 
@@ -388,6 +414,7 @@ Credentialed Stripe/Redsys TEST/LIVE validation should be inserted as soon as su
 - advanced traveller data is collected only after purchase when required;
 - inventory-controlled services remain independent from lightweight package supplements;
 - customer-safe documents exclude internal notes, protected traveller data and supplier costs;
+- sensitive exports are capability-gated, purpose-bound and persistently audited before delivery;
 - public UX is bilingual, responsive and free of internal development terminology;
 - proprietary Kairoseth/customer-specific integrations stay outside the MIT core when appropriate.
 
