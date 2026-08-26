@@ -17,11 +17,11 @@ _Última actualización: 26 de agosto de 2026._
 
 El proyecto está muy por encima del MVP original de catálogo/reservas.
 
-Las bases completadas incluyen identidad persistente cliente/personal, RBAC, reservas de viajes/servicios, pricing por viajero, servicios independientes, email transaccional, contabilidad de pagos, PSP cifrados, checkout neutral, depósitos/cuotas, datos post-compra cifrados, modificaciones de reserva, alojamiento reutilizable, inventario transaccional de habitaciones, suplementos, operaciones avanzadas, permisos granulares, documentos de reserva/salida, vouchers seguros para cliente, expediente interno, exportaciones operativas CSV/XLSX, conciliación/reporting financiero, exportación auditada de datos protegidos de viajeros y la primera frontera neutral de integraciones salientes.
+Las bases completadas incluyen identidad persistente cliente/personal, RBAC, reservas de viajes/servicios, pricing por viajero, servicios independientes, email transaccional, contabilidad de pagos, PSP cifrados, checkout neutral, depósitos/cuotas, datos post-compra cifrados, modificaciones de reserva, alojamiento reutilizable, inventario transaccional de habitaciones, suplementos, operaciones avanzadas, permisos granulares, documentos de reserva/salida, vouchers seguros para cliente, expediente interno, exportaciones operativas CSV/XLSX, conciliación/reporting financiero, exportación auditada de datos protegidos de viajeros, eventos salientes neutrales respecto a proveedor y una operativa durable de integraciones con scheduler, replay, métricas de salud y retención.
 
 La validación E2E con credenciales Stripe/Redsys continúa pendiente hasta disponer de cuentas proveedor adecuadas. Los adapters están implementados, pero la capacidad productiva no se considera validada hasta probar TEST/LIVE.
 
-**Las Fases 6B, 6C, 7A, 7B y 8A están completadas. La Fase 8B — ejecución programada, replay y observabilidad de integraciones es la SIGUIENTE.**
+**Las Fases 6B, 6C, 7A, 7B, 8A y 8B están completadas. La Fase 8C — adapters de negocio es la SIGUIENTE.**
 
 ---
 
@@ -279,19 +279,26 @@ Objetivo: conectar los despliegues con ecosistemas de negocio reales mediante ad
 - documentación EN/ES;
 - gate permanente `check:outbound-integrations` integrado en `npm run verify` y GitHub CI.
 
-## 8B — Ejecución programada, replay y observabilidad — SIGUIENTE
+## 8B — Ejecución programada, replay y observabilidad — COMPLETADO
 
-- entry point scheduler/worker apto para el despliegue sin depender de una sesión de navegador;
-- autenticación server-only del worker y límites de frecuencia/lote;
-- replay/requeue seguro y auditado de dead-letter;
-- detalle Admin de eventos y entregas;
-- métricas de salud: pending, retrying, dead-letter, entrega vencida más antigua y tasa reciente de éxito/fallo;
-- política de retención para eventos/intentos completados conservando necesidades de auditoría;
-- diagnósticos operativos sin exponer secretos de firma ni datos protegidos de viajeros.
+- entry point server-only `POST /api/internal/integrations/process` sin dependencia de sesión de navegador;
+- autenticación Bearer dedicada con `KTRAVEL_INTEGRATION_WORKER_TOKEN`, comparación timing-safe y longitud mínima del secreto;
+- lease global durable del worker compartido por scheduler y ejecución manual Admin;
+- lote e intervalo mínimo limitados server-side, con `Retry-After` cuando existe contención/rate limiting;
+- replay de dead-letter seguro y exclusivo de Admin, reencolando la entrega y guardando la auditoría en una única transacción;
+- historial durable de intentos anteriores preservado en cada replay, iniciando un nuevo ciclo de reintentos limitado;
+- vistas Admin de detalle de evento y entrega con historial de intentos/replay;
+- métricas de salud para pending/retrying/dead-letter, entrega vencida más antigua y tasas de éxito/fallo de intentos de 24 horas;
+- política de retención de éxitos completados con lotes de limpieza limitados y auditoría agregada de retención;
+- dead-letter, trabajo activo y auditoría de replay manual excluidos de la limpieza automática del historial completado;
+- respuestas del scheduler privadas `no-store` + `nosniff` y diagnósticos sin exponer token del worker, secretos de firma ni valores protegidos del viajero;
+- configuración de despliegue para token, lote, intervalo mínimo y retención de historial completado;
+- documentación EN/ES de operativa de integraciones;
+- gate permanente `check:integration-operations` integrado en `npm run verify` y GitHub CI.
 
-## 8C — Adapters de negocio — PLANIFICADO
+## 8C — Adapters de negocio — SIGUIENTE
 
-Candidatos cuando la capa común de entrega tenga madurez operativa:
+La capa común de eventos/outbox/entrega ya tiene la madurez operativa necesaria para adapters concretos de negocio. Candidatos iniciales:
 
 - APIs de proveedores/reservas;
 - sincronización CRM;
@@ -347,8 +354,6 @@ Los payloads específicos de proveedor deben permanecer dentro de adapters y con
 # Orden recomendado
 
 ```text
-8B  Ejecución programada / replay / observabilidad
- ↓
 8C  Adapters de negocio
  ↓
 9   Hardening productivo
