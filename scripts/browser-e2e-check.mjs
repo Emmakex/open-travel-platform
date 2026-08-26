@@ -31,10 +31,12 @@ assert(journey.includes('goto("/operator/sign-in")'), "journey must authenticate
 assert(journey.includes('name: "Sign in to operations"'), "journey must submit persistent staff authentication");
 assert(journey.includes("/operator/reservations/"), "journey must verify the same reservation in Operator");
 assert(workflow.includes("browser-e2e:"), "CI must contain a dedicated browser E2E job");
+assert(workflow.includes("name: Browser E2E (non-blocking)"), "browser E2E must remain clearly identified as non-blocking");
+assert(workflow.includes("continue-on-error: true"), "browser E2E must remain non-blocking while it is informational");
 assert(workflow.includes("npx playwright install --with-deps chromium"), "CI must install the pinned Chromium runtime");
 assert(workflow.includes("npm run test:e2e:seed"), "CI must seed the disposable Mongo database before browser E2E");
 assert(workflow.includes("npm run test:e2e"), "CI must execute the Playwright journey");
 assert(workflow.includes("IDENTITY_MODE: mongodb") && workflow.includes("STAFF_AUTH_MODE: mongodb"), "browser E2E must use persistent customer and staff identity");
 assert(workflow.includes("BOOKING_MODE: mongodb") && workflow.includes("OPERATIONS_MODE: mongodb"), "browser E2E must use persistent booking and operations repositories");
 
-console.log("Persistent browser registration, booking and Operator E2E invariants passed.");
+console.log("Persistent browser registration, booking and Operator E2E invariants passed (informational CI check).");
