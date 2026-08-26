@@ -82,6 +82,9 @@ jobs:
       - name: Voucher and dossier document invariant check
         run: npm run check:voucher-documents
 
+      - name: Reporting and export invariant check
+        run: npm run check:reporting-exports
+
       - name: Type check
         run: npm run typecheck
 

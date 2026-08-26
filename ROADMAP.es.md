@@ -17,11 +17,11 @@ _Última actualización: 26 de agosto de 2026._
 
 El proyecto está muy por encima del MVP original de catálogo/reservas.
 
-Las bases completadas incluyen identidad persistente cliente/personal, RBAC, reservas de viajes/servicios, pricing por viajero, servicios independientes, email transaccional, contabilidad de pagos, PSP cifrados, checkout neutral, depósitos/cuotas, datos post-compra cifrados, modificaciones de reserva, alojamiento reutilizable, inventario transaccional de habitaciones, suplementos, operaciones avanzadas, permisos granulares, PDFs de confirmación, manifiestos, rooming lists, vouchers seguros para cliente y expediente interno de reserva.
+Las bases completadas incluyen identidad persistente cliente/personal, RBAC, reservas de viajes/servicios, pricing por viajero, servicios independientes, email transaccional, contabilidad de pagos, PSP cifrados, checkout neutral, depósitos/cuotas, datos post-compra cifrados, modificaciones de reserva, alojamiento reutilizable, inventario transaccional de habitaciones, suplementos, operaciones avanzadas, permisos granulares, documentos de reserva/salida, vouchers seguros para cliente, expediente interno, exportaciones operativas CSV/XLSX, conciliación/reporting financiero y exportación auditada de datos protegidos de viajeros.
 
 La validación E2E con credenciales Stripe/Redsys continúa pendiente hasta disponer de cuentas proveedor adecuadas. Los adapters están implementados, pero la capacidad productiva no se considera validada hasta probar TEST/LIVE.
 
-**Las Fases 6B, 6C y 7A están completadas. La Fase 7B — Documentos, exportaciones y reporting está EN CURSO: 7B-1, 7B-2 y 7B-3 están completadas. La Fase 7B-4 — CSV/XLSX, conciliación y reporting es el SIGUIENTE bloque.**
+**Las Fases 6B, 6C, 7A y 7B están completadas. La Fase 8 — Integraciones externas es la SIGUIENTE.**
 
 ---
 
@@ -195,9 +195,9 @@ La validación E2E con credenciales Stripe/Redsys continúa pendiente hasta disp
 
 ---
 
-# Fase 7B — Documentos, exportaciones y reporting — EN CURSO
+# Fase 7B — Documentos, exportaciones y reporting — COMPLETADO
 
-Objetivo: proporcionar documentos e informes operativos sin filtrar datos protegidos o exclusivamente internos.
+Objetivo cumplido: proporcionar documentos operativos, exportaciones seguras y reporting comercial/financiero sin filtrar datos protegidos o exclusivamente internos.
 
 ## 7B-1 — PDFs de confirmación — COMPLETADO
 
@@ -223,41 +223,41 @@ Objetivo: proporcionar documentos e informes operativos sin filtrar datos proteg
 - vouchers de servicio para actividades, transporte y protección confirmados;
 - descarga Operator autorizada del mismo voucher seguro para cliente;
 - expediente consolidado imprimible de Operator;
-- secciones de pago/proveedor cargadas solo cuando las capacidades del personal actual lo permiten;
+- secciones de pago/proveedor cargadas solo cuando las capacidades del personal lo permiten;
 - versión/estado y timestamp UTC explícitos;
-- referencias proveedor internas por defecto;
-- una referencia exacta debe aprobarse explícitamente por personal con capacidad Proveedores antes de mostrarse al cliente;
-- política de divulgación separada del fulfilment y auditada;
-- cambiar una referencia invalida automáticamente la aprobación anterior porque el valor aprobado debe coincidir exactamente con el actual;
+- referencias proveedor internas por defecto y divulgación de referencia exacta aprobada/auditada explícitamente;
+- cambiar una referencia invalida la aprobación anterior;
 - costes proveedor, notas internas y valores post-compra protegidos excluidos de vouchers de cliente;
-- propiedad del cliente y estado confirmado verificados server-side;
-- respuestas PDF `private, no-store` + `nosniff`;
-- invariante permanente `check:voucher-documents` integrada en `npm run verify` y GitHub CI.
+- respuestas privadas `no-store` + `nosniff`;
+- invariante permanente `check:voucher-documents`.
 
-## 7B-4 — CSV/XLSX, conciliación y reporting — SIGUIENTE
+## 7B-4 — CSV/XLSX, conciliación y reporting — COMPLETADO
 
-Objetivo: hacer exportables los datos operativos/comerciales sin debilitar permisos ni privacidad.
-
-Alcance previsto:
-
-- exportación de reservas de viaje;
-- exportación de reservas de servicios;
-- exportación de clientes;
-- formatos CSV y XLSX con contratos de columnas estables;
-- informe de conciliación de pagos;
-- informe de saldos pendientes y cuotas vencidas;
-- ingresos por viaje/producto/servicio;
-- filtros/rangos de fecha server-side para exportaciones grandes;
-- capacidad Finanzas requerida para columnas/informes financieros;
-- exportación segura y auditada de datos protegidos de viajeros solo para uso operativo legítimo y con capacidad Datos de viajeros;
-- ningún dato protegido del viajero en exportaciones ordinarias de clientes/reservas;
-- evento de auditoría de exportación con actor, tipo, filtros y timestamp sin persistir los valores sensibles exportados;
-- base de dashboards operativos/comerciales;
-- invariantes permanentes de privacidad/autorización de exportaciones.
+- workspace protegido `/operator/reports` con secciones según capacidades;
+- exportaciones de reservas de viaje, servicios y clientes en CSV/XLSX;
+- contratos de columnas estables y compartidos para ambos formatos;
+- filtros server-side por fecha de creación y normalización de rangos invertidos;
+- límites de descarga: 10.000 filas ordinarias y 500 viajeros protegidos por reserva seleccionada;
+- conciliación, saldos pendientes/cuotas vencidas e ingresos por producto/servicio solo con permiso Finanzas;
+- moneda incluida en las claves de agrupación financiera y totales de dashboard separados siempre por moneda;
+- dashboard de Pagos corregido para impedir sumas entre monedas diferentes;
+- mitigación de inyección de fórmulas CSV/spreadsheet para texto controlado por usuarios;
+- generador XLSX OOXML ligero con cabecera congelada y autofiltro;
+- respuestas privadas `no-store` + `nosniff` y nombres de archivo seguros;
+- auditoría persistente con actor/tipo/formato/filtros/columnas/número de filas/timestamp sin guardar valores de celdas exportadas;
+- exportación de datos post-compra protegidos separada de las exportaciones ordinarias;
+- export sensible exige permisos Datos de viajeros + Reservas, reserva activa y motivo operativo de 10–500 caracteres;
+- endpoint sensible exclusivamente POST para que motivo/objetivo no aparezcan en el historial de URL;
+- export sensible fail-closed: la auditoría persistente debe guardarse antes de devolver bytes CSV/XLSX descifrados;
+- los registros protegidos respetan almacenamiento cifrado y ventana de retención existentes;
+- invariante permanente `check:reporting-exports` integrada en `npm run verify` y GitHub CI;
+- documentación de seguridad de reporting/exportaciones EN/ES.
 
 ---
 
-# Fase 8 — Integraciones externas
+# Fase 8 — Integraciones externas — SIGUIENTE
+
+Objetivo: conectar los despliegues con ecosistemas de negocio reales mediante adapters, manteniendo los payloads específicos de proveedores fuera de los dominios centrales.
 
 Candidatos:
 
@@ -269,6 +269,8 @@ Candidatos:
 - identidad enterprise;
 - adapter REST genérico;
 - PSP adicionales.
+
+Primer bloque recomendado: crear la frontera de eventos/integraciones salientes y un adapter de referencia antes de añadir integraciones específicas, resolviendo una sola vez reintentos, idempotencia, auditoría y gestión de secretos.
 
 # Fase 9 — Hardening productivo
 
@@ -314,16 +316,14 @@ Candidatos:
 # Orden recomendado
 
 ```text
-7B-4  CSV/XLSX / conciliación / reporting
-  ↓
-8     Integraciones externas
-  ↓
-9     Hardening productivo
-  ↓
-10    Productización open-source / release
+8   Integraciones externas
+ ↓
+9   Hardening productivo
+ ↓
+10  Productización open-source / release
 ```
 
-La validación TEST Stripe/Redsys con credenciales se insertará cuando existan cuentas proveedor adecuadas y no bloquea 7B-4.
+La validación TEST Stripe/Redsys con credenciales se insertará cuando existan cuentas proveedor adecuadas y no necesita bloquear la Fase 8.
 
 El testing/security de Fase 9 debe continuar incrementalmente.
 

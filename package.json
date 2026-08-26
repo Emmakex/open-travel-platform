@@ -28,10 +28,12 @@
     "check:booking-documents": "node scripts/booking-document-check.mjs",
     "check:departure-documents": "node scripts/departure-document-check.mjs",
     "check:voucher-documents": "node scripts/voucher-dossier-check.mjs",
-    "verify": "npm run check:safety && npm run check:ux && npm run check:release && npm run check:amendments && npm run check:accommodation && npm run check:package-addons && npm run check:package-addon-amendments && npm run check:operations && npm run check:tasks && npm run check:fulfilment && npm run check:operations-queue && npm run check:staff-permissions && npm run check:booking-documents && npm run check:departure-documents && npm run check:voucher-documents && npm run typecheck && npm run build",
+    "check:reporting-exports": "node scripts/reporting-export-check.mjs",
+    "verify": "npm run check:safety && npm run check:ux && npm run check:release && npm run check:amendments && npm run check:accommodation && npm run check:package-addons && npm run check:package-addon-amendments && npm run check:operations && npm run check:tasks && npm run check:fulfilment && npm run check:operations-queue && npm run check:staff-permissions && npm run check:booking-documents && npm run check:departure-documents && npm run check:voucher-documents && npm run check:reporting-exports && npm run typecheck && npm run build",
     "check": "npm run verify"
   },
   "dependencies": {
+    "fflate": "0.8.3",
     "mongodb": "7.5.0",
     "next": "16.3.1",
     "pdf-lib": "1.17.1",

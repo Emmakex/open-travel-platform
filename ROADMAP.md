@@ -17,11 +17,11 @@ _Last updated: 26 August 2026._
 
 The project is well beyond the original catalogue/booking MVP.
 
-Completed foundations include persistent customer/staff identity, RBAC, trip/service reservations, traveller pricing, independent services, transactional email, payment accounting, encrypted PSP configuration, provider-neutral checkout adapters, deposits/installments, encrypted post-purchase traveller data, reservation amendments, reusable accommodation, transactional room inventory, package supplements, rich operations, granular staff permissions, booking-confirmation PDFs, traveller manifests, rooming-list PDFs, customer-safe accommodation/service vouchers and an internal reservation dossier.
+Completed foundations include persistent customer/staff identity, RBAC, trip/service reservations, traveller pricing, independent services, transactional email, payment accounting, encrypted PSP configuration, provider-neutral checkout adapters, deposits/installments, encrypted post-purchase traveller data, reservation amendments, reusable accommodation, transactional room inventory, package supplements, rich operations, granular staff permissions, booking/departure documents, customer-safe vouchers, an internal reservation dossier, CSV/XLSX operational exports, finance reconciliation/reporting and audited protected-traveller exports.
 
 Stripe/Redsys credentialed end-to-end validation remains pending until suitable provider accounts are available. The adapters are implemented, but production payment capability is not considered validated until TEST/LIVE provider flows are exercised.
 
-**Phases 6B, 6C and 7A are complete. Phase 7B — Documents, exports and reporting is IN PROGRESS: 7B-1, 7B-2 and 7B-3 are complete. Phase 7B-4 — CSV/XLSX exports and reconciliation/reporting is NEXT.**
+**Phases 6B, 6C, 7A and 7B are complete. Phase 8 — External integrations is NEXT.**
 
 ---
 
@@ -194,9 +194,9 @@ Stripe/Redsys credentialed end-to-end validation remains pending until suitable 
 
 ---
 
-# Phase 7B — Documents, exports and reporting — IN PROGRESS
+# Phase 7B — Documents, exports and reporting — COMPLETE
 
-Goal: provide travel-team operational documents and reporting without leaking protected or internal-only data.
+Goal achieved: provide travel-team operational documents, safe exports and commercial/finance reporting without leaking protected or internal-only data.
 
 ## 7B-1 — Booking confirmation PDFs — COMPLETE
 
@@ -222,41 +222,41 @@ Goal: provide travel-team operational documents and reporting without leaking pr
 - customer-safe service vouchers for confirmed activities, transport and travel protection;
 - authorized Operator download of the same customer-safe vouchers;
 - consolidated printable Operator reservation dossier;
-- dossier sections for payment and supplier fulfilment loaded only when the current staff capabilities allow them;
+- dossier payment/supplier sections loaded only when staff capabilities allow them;
 - explicit document version/status and UTC generated-at timestamp;
-- supplier references internal by default;
-- exact supplier reference must be explicitly approved by staff with Suppliers capability before customer disclosure;
-- disclosure policy stored separately from fulfilment and audited;
-- changing a supplier reference automatically invalidates the old approval because the approved value must exactly match the current value;
-- supplier costs, internal free-text notes and protected post-purchase traveller values excluded from customer vouchers;
-- customer ownership and confirmed-booking guards on customer routes;
-- private `no-store` + `nosniff` PDF responses;
-- permanent `check:voucher-documents` invariant wired into `npm run verify` and GitHub CI.
+- supplier references internal by default and exact-reference disclosure explicitly approved/audited;
+- changing a supplier reference invalidates the previous disclosure approval;
+- supplier costs, internal notes and protected post-purchase traveller values excluded from customer vouchers;
+- private `no-store` + `nosniff` responses;
+- permanent `check:voucher-documents` invariant.
 
-## 7B-4 — CSV/XLSX exports and reconciliation reports — NEXT
+## 7B-4 — CSV/XLSX exports and reconciliation/reporting — COMPLETE
 
-Goal: make operational and commercial data exportable without weakening permission/privacy boundaries.
-
-Planned scope:
-
-- reservation export;
-- independent-service reservation export;
-- customer export;
-- CSV and XLSX formats with stable column contracts;
-- payment reconciliation report;
-- outstanding-balance and overdue-installment report;
-- revenue by trip/product/service;
-- server-side filters/date ranges for large exports;
-- Finance capability required for financial columns/reports;
-- secure audited traveller-data export only for legitimate operational use and only with Traveller data capability;
-- no protected traveller fields in ordinary customer/reservation exports;
-- export audit event including actor, export type, filters and timestamp without persisting exported sensitive values;
-- operational/commercial reporting foundations and summary dashboards;
-- permanent export privacy/authorization CI invariants.
+- protected `/operator/reports` workspace with capability-aware sections;
+- trip-reservation, service-reservation and customer exports in CSV/XLSX;
+- stable shared tabular column contracts for both formats;
+- server-side creation-date filters with normalized reversed ranges;
+- bounded browser exports: 10,000 ordinary rows and 500 protected travellers per selected reservation;
+- Finance-only payment reconciliation, active outstanding-balance/overdue-installment and revenue-by-product/service reports;
+- currency included in financial grouping keys and dashboard totals kept separate by currency;
+- existing Payments dashboard corrected so currencies are never cross-summed;
+- CSV/spreadsheet formula-injection mitigation for user-controlled text;
+- minimal OOXML XLSX writer with frozen header row and autofilter;
+- private `no-store` + `nosniff` download responses and safe filenames;
+- persistent export audit records actor/type/format/filters/columns/row-count/timestamp without storing exported cell values;
+- protected post-purchase traveller export isolated from ordinary exports;
+- sensitive export requires Traveller data + Reservations capabilities, an active reservation and a 10–500 character operational reason;
+- sensitive endpoint is POST-only so purpose/target do not enter browser URL history;
+- sensitive export is fail-closed: persistent audit must succeed before decrypted CSV/XLSX bytes are returned;
+- protected records respect the existing encrypted store and retention window;
+- permanent `check:reporting-exports` invariant wired into `npm run verify` and GitHub CI;
+- EN/ES reporting/export security documentation.
 
 ---
 
-# Phase 8 — External integrations
+# Phase 8 — External integrations — NEXT
+
+Goal: connect deployments to real business ecosystems through adapters while keeping provider payloads out of the core domains.
 
 Candidate adapters:
 
@@ -268,6 +268,8 @@ Candidate adapters:
 - enterprise identity;
 - generic REST booking adapter;
 - payment providers beyond Stripe/Redsys.
+
+Recommended first slice: establish the outbound integration/event boundary and one reference adapter before adding vendor-specific integrations, so retries, idempotency, audit and secret handling are solved once.
 
 # Phase 9 — Production hardening
 
@@ -313,16 +315,14 @@ Candidate adapters:
 # Suggested delivery order
 
 ```text
-7B-4  CSV/XLSX exports / reconciliation / reporting
-  ↓
-8     External integrations
-  ↓
-9     Production hardening
-  ↓
-10    Open-source productisation / release
+8   External integrations
+ ↓
+9   Production hardening
+ ↓
+10  Open-source productisation / release
 ```
 
-Credentialed Stripe/Redsys TEST validation should be inserted as soon as provider accounts are available and does not block 7B-4.
+Credentialed Stripe/Redsys TEST validation should be inserted as soon as provider accounts are available and does not need to block Phase 8.
 
 Phase 9 testing/security work should continue incrementally rather than waiting until the end.
 
