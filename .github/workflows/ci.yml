@@ -107,6 +107,9 @@ jobs:
       - name: Production security invariant check
         run: npm run check:production-security
 
+      - name: MongoDB concurrency CI invariant check
+        run: npm run check:mongodb-concurrency
+
       - name: Type check
         run: npm run typecheck
 
