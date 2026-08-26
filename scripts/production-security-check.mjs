@@ -64,9 +64,22 @@ for (const [name, source] of [
 ]) {
   assert(source.includes("if (!browserMutationHasTrustedOrigin(request))"), `${name} must reject untrusted browser Origin`);
 }
-assert(mediaRoute.indexOf("if (!browserMutationHasTrustedOrigin(request))") < mediaRoute.indexOf("const identity = await getCatalogueIdentity()"), "media upload must reject cross-origin requests before identity resolution");
-assert(mediaDeleteRoute.indexOf("if (!browserMutationHasTrustedOrigin(request))") < mediaDeleteRoute.indexOf("if (!(await canManageMedia()))"), "media delete must reject cross-origin requests before identity resolution");
-assert(protectedExportRoute.indexOf("if (!browserMutationHasTrustedOrigin(request))") < protectedExportRoute.indexOf('requireStaffCapability("traveller-data")'), "protected export must reject cross-origin requests before staff capability resolution");
+
+const mediaPostStart = mediaRoute.indexOf("export async function POST");
+const mediaPostOrigin = mediaRoute.indexOf("if (!browserMutationHasTrustedOrigin(request))", mediaPostStart);
+const mediaPostIdentity = mediaRoute.indexOf("const identity = await getCatalogueIdentity()", mediaPostStart);
+assert(mediaPostStart >= 0 && mediaPostOrigin > mediaPostStart && mediaPostIdentity > mediaPostOrigin, "media upload must reject cross-origin requests before identity resolution");
+
+const mediaDeleteStart = mediaDeleteRoute.indexOf("export async function DELETE");
+const mediaDeleteOrigin = mediaDeleteRoute.indexOf("if (!browserMutationHasTrustedOrigin(request))", mediaDeleteStart);
+const mediaDeleteIdentity = mediaDeleteRoute.indexOf("if (!(await canManageMedia()))", mediaDeleteStart);
+assert(mediaDeleteStart >= 0 && mediaDeleteOrigin > mediaDeleteStart && mediaDeleteIdentity > mediaDeleteOrigin, "media delete must reject cross-origin requests before identity resolution");
+
+const protectedExportStart = protectedExportRoute.indexOf("export async function POST");
+const protectedExportOrigin = protectedExportRoute.indexOf("if (!browserMutationHasTrustedOrigin(request))", protectedExportStart);
+const protectedExportIdentity = protectedExportRoute.indexOf('requireStaffCapability("traveller-data")', protectedExportStart);
+assert(protectedExportStart >= 0 && protectedExportOrigin > protectedExportStart && protectedExportIdentity > protectedExportOrigin, "protected export must reject cross-origin requests before staff capability resolution");
+
 assert(!stripeWebhook.includes("browserMutationHasTrustedOrigin"), "Stripe webhook must remain provider-signature authenticated, not browser-origin authenticated");
 assert(!redsysWebhook.includes("browserMutationHasTrustedOrigin"), "Redsys callback must remain provider-signature authenticated, not browser-origin authenticated");
 assert(workerRoute.includes("authenticateIntegrationWorkerRequest"), "internal worker must retain Bearer authentication");
