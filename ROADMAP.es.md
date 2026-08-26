@@ -9,19 +9,19 @@ El roadmap mantiene alineados dos objetivos:
 1. conservar el core público portable, neutral respecto a proveedores y útil para otras agencias/desarrolladores;
 2. continuar endureciendo Kairoseth Travel hasta convertirlo en una plataforma turística completa sin acoplar el core a un PSP, proveedor, CRM, ERP, CMS o hosting concreto.
 
-_Última actualización: 25 de agosto de 2026._
+_Última actualización: 26 de agosto de 2026._
 
 ---
 
 # Posición actual
 
-El proyecto ya está muy por encima del MVP inicial de catálogo/reservas.
+El proyecto está muy por encima del MVP original de catálogo/reservas.
 
-Las bases completadas incluyen identidad persistente cliente/personal, RBAC, reservas de viajes/servicios, pricing por viajero, servicios independientes, email transaccional, contabilidad de pagos, configuración cifrada de PSP, checkout neutral respecto al proveedor, depósitos/cuotas, datos post-compra cifrados, modificaciones de reserva, alojamiento reutilizable, inventario transaccional de habitaciones, suplementos opcionales del paquete, responsable/notas de reserva, tareas y seguimientos internos, gestión de proveedores/fulfilment, colas operativas avanzadas, modificación post-reserva de suplementos, permisos granulares del personal y PDFs de confirmación de reserva orientados al cliente.
+Las bases completadas incluyen identidad persistente cliente/personal, RBAC, reservas de viajes/servicios, pricing por viajero, servicios independientes, email transaccional, contabilidad de pagos, PSP cifrados, checkout neutral, depósitos/cuotas, datos post-compra cifrados, modificaciones de reserva, alojamiento reutilizable, inventario transaccional de habitaciones, suplementos, operaciones avanzadas, permisos granulares, PDFs de confirmación, manifiestos, rooming lists, vouchers seguros para cliente y expediente interno de reserva.
 
-La validación E2E con credenciales Stripe/Redsys continúa pendiente hasta disponer de cuentas de proveedor adecuadas. Los adapters están implementados, pero la capacidad de pago productiva no se considera validada hasta probar TEST/LIVE.
+La validación E2E con credenciales Stripe/Redsys continúa pendiente hasta disponer de cuentas proveedor adecuadas. Los adapters están implementados, pero la capacidad productiva no se considera validada hasta probar TEST/LIVE.
 
-**Las Fases 6B, 6C y 7A están funcionalmente completadas. La Fase 7B — Documentos, exportaciones y reporting está EN CURSO: 7B-1 PDFs de confirmación de reserva está completado y el siguiente bloque es 7B-2 listas de viajeros/rooming lists.**
+**Las Fases 6B, 6C y 7A están completadas. La Fase 7B — Documentos, exportaciones y reporting está EN CURSO: 7B-1, 7B-2 y 7B-3 están completadas. La Fase 7B-4 — CSV/XLSX, conciliación y reporting es el SIGUIENTE bloque.**
 
 ---
 
@@ -31,451 +31,306 @@ La validación E2E con credenciales Stripe/Redsys continúa pendiente hasta disp
 
 - base Next.js / React / TypeScript;
 - adapters MongoDB;
-- quality gates CI y checks de release;
+- quality gates de CI/release;
 - experiencia pública/Operator EN/ES;
-- destinos y viajes;
-- biblioteca GridFS, portadas, galerías y puntos focales;
-- itinerarios multidioma;
+- destinos, viajes e itinerarios multidioma;
+- GridFS, portadas, galerías y puntos focales;
 - salidas, capacidad e inventario;
-- despliegue público en `travel.kairoseth.com`.
+- despliegue de referencia en `travel.kairoseth.com`.
 
 ## Identidad, RBAC y seguridad — COMPLETADO
 
-- registro/login persistente de clientes;
-- autenticación Operator/Admin;
-- sesiones separadas cliente/personal;
-- RBAC server-side;
-- bloqueo de cuenta;
-- cambio/recuperación de contraseña;
-- SMTP de recuperación;
+- autenticación persistente cliente/personal;
+- sesiones separadas;
+- RBAC y capacidades granulares server-side;
+- bloqueo, cambio/recuperación de contraseña y SMTP;
 - auditoría de autenticación.
 
 ## Operaciones de reserva y email — COMPLETADO
 
 - reservas persistentes de viajes;
-- ownership/pricing/inventario validados en servidor;
-- workflows confirmar/cancelar;
-- liberación transaccional de inventario;
-- cola de reservas Operator;
-- historial de cliente;
+- pricing/ownership/inventario autoritativos;
+- confirmar/cancelar y liberación transaccional;
+- vistas cliente/Operator;
 - auditoría operativa;
-- emails transaccionales.
+- email transaccional.
 
-## Fase 5A — Pagos neutrales respecto a proveedor — COMPLETADO
+## Fase 5A — Pagos neutrales — COMPLETADO
 
-- ledger de pagos/reembolsos;
-- estado de pago separado del estado de reserva;
-- unpaid / pending / partially paid / paid / partially refunded / refunded;
+- ledger de pagos/reembolsos separado del estado de reserva;
 - transferencia / efectivo / terminal externo;
-- reembolsos controlados;
-- protecciones de conciliación;
+- reembolsos controlados y conciliación;
 - visibilidad financiera Operator;
-- metadata provider/idempotency.
+- metadata provider/idempotencia.
 
 ## Fase 5B — Viajeros y pricing por edad — COMPLETADO
 
-- viajero principal e individuales;
-- fecha de nacimiento / nacionalidad;
-- bandas de edad configurables;
-- precio por viajero y por salida;
-- adulto responsable para menores;
-- consumo de plaza configurable por banda;
-- snapshots históricos de precio.
+- viajero principal/individuales;
+- nacimiento/nacionalidad;
+- bandas de edad y pricing por salida;
+- reglas de tutor para menores;
+- consumo de plazas configurable;
+- snapshots históricos.
 
-## Fase 5C — Catálogo independiente de servicios — COMPLETADO
+## Fase 5C — Catálogo de servicios — COMPLETADO
 
 - Actividades, Transporte y Protección de viaje;
 - catálogo/fichas públicas;
-- CRUD protegido;
+- CRUD Operator;
 - contenido multidioma;
-- precio por persona / reserva / unidad / edad.
+- pricing por persona/reserva/unidad/edad.
 
 ## Fase 5D — Disponibilidad e inventario de servicios — COMPLETADO
 
-- calendarios de actividad/transporte;
-- slots de fecha/hora;
-- capacidad/plazas reservadas;
-- inventario de unidades de transporte;
-- cierre seguro de slots;
+- calendarios y slots;
+- capacidad/plazas e inventario de unidades;
+- cierre seguro;
 - inventario separado del viaje.
 
 ## Fase 5E — Reservas independientes de servicios — COMPLETADO
 
-- actividad, transporte y protección;
-- vínculo opcional a viaje Kairoseth;
-- modo independiente para viajes externos;
+- reservas de actividad/transporte/protección;
+- vínculo opcional con viaje Kairoseth;
 - inventario transaccional;
-- área Mis servicios;
-- cola Operator;
-- pagos en el ledger común.
+- Mis servicios y cola Operator;
+- ledger común.
 
 ## Fase 5F — PSP y checkout unificado — IMPLEMENTADO
 
-- perfiles TEST/LIVE solo Admin;
-- adapters Stripe y Redsys;
-- secretos cifrados;
-- checkout unificado viajes/servicios;
-- webhooks Stripe firmados e idempotencia;
+- configuración TEST/LIVE solo Admin;
+- adapters Stripe/Redsys y secretos cifrados;
+- checkout viaje/servicio;
+- webhooks Stripe firmados + idempotencia;
 - notificaciones Redsys firmadas;
-- retornos de navegador no autoritativos;
-- E2E con credenciales pendiente de cuentas proveedor.
+- retornos del navegador no autoritativos;
+- E2E TEST/LIVE con credenciales pendiente.
 
-## Fase 5G — Depósitos, cuotas y condiciones de pago — COMPLETADO
+## Fase 5G — Depósitos, cuotas y condiciones — COMPLETADO
 
 - pago completo/depósito;
-- depósitos configurables;
-- cuotas y vencimientos;
-- snapshots de condiciones;
-- saldo pendiente y próximo pago;
-- calendario de pagos cliente;
-- gestión Operator;
-- compatibilidad con movimientos manuales/online.
+- depósitos/cuotas configurables;
+- snapshots y vencimientos;
+- saldo pendiente/próximo pago;
+- calendario cliente y gestión Operator.
 
-## Fase 6A — Datos post-compra de viajeros — COMPLETADO
+## Fase 6A — Datos post-compra seguros — COMPLETADO
 
-- presets por producto;
-- snapshot por reserva;
-- documento/residencia solo cuando aplica;
-- deadlines de edición;
-- cifrado AES-256-GCM;
-- almacenamiento separado;
+- presets y snapshot por reserva;
+- identidad/documento/residencia solo cuando aplica;
+- deadlines;
+- AES-256-GCM y almacenamiento separado;
 - retención TTL;
-- auditoría sin guardar valores sensibles;
-- visibilidad de completitud Operator;
-- sin subida estándar de DNI/pasaporte;
-- datos médicos excluidos del flujo estándar.
+- auditoría solo de nombres de campos;
+- visibilidad de completitud;
+- escaneos DNI/pasaporte y datos médicos fuera del flujo estándar.
 
-## Fase 6A.1 — UX/documentación de datos de viajeros — COMPLETADO
+## Fase 6A.1 — UX/documentación — COMPLETADO
 
-- estados No requerido / Pendiente / Completo;
-- tareas visibles para cliente;
-- completitud agregada/por viajero en Operator;
-- semántica de snapshot clara;
-- documentación EN/ES.
+- No requerido / Pendiente / Completo;
+- tareas visibles al cliente;
+- completitud agregada/por viajero;
+- semántica snapshot y guía EN/ES.
 
 ## Fase 6B — Modificaciones de reserva — COMPLETADO
 
-Objetivo cumplido: soportar cambios post-reserva sin destruir el historial original de reserva/pagos.
+- historial explícito actor/motivo/before/after/fecha;
+- correcciones controladas;
+- cambio atómico de salida;
+- recalculo de pricing/alojamiento;
+- delta financiero sin reescribir ledger;
+- revisión controlada de reembolso;
+- servicios vinculados;
+- deadlines y notificaciones guardados como snapshot.
 
-### 6B-1 — Modelo de modificaciones y correcciones de viajeros
+## Fase 6C — Alojamiento, suplementos y paquetes — COMPLETADO
 
-- colección separada `travel_reservation_amendments`;
-- cambios before/after;
-- actor, motivo y fecha;
-- correcciones controladas desde Operator;
-- historial financiero intacto.
-
-### 6B-2 — Cambio de salida e inventario atómico
-
-- selección de salida alternativa;
-- recalculo de edad/pricing en nueva fecha;
-- reserva primero nueva capacidad y después libera la antigua;
-- transacción/rollback MongoDB;
-- protección contra overselling;
-- historial con movimiento de inventario y delta de precio.
-
-### 6B-3 — Delta financiero
-
-- total actualizado después de modificación;
-- saldo adicional cuando aumenta el precio;
-- revisión de reembolso cuando baja por debajo de lo pagado;
-- sin reembolso automático;
-- movimientos del ledger nunca se reescriben;
-- límites server-side de reembolso.
-
-### 6B-4 — Servicios vinculados, notificaciones y plazos
-
-- servicios independientes vinculados al viaje;
-- servicios visibles desde la reserva principal;
-- cancelación controlada y liberación de inventario;
-- políticas de cambio/cancelación guardadas como snapshot;
-- deadlines cliente/personal aplicados server-side;
-- notificaciones configurables;
-- motivos internos nunca se envían al cliente.
-
-## Fase 6C — Alojamiento, suplementos y composición de paquetes — COMPLETADO
-
-Objetivo cumplido: evolucionar de viajes + servicios independientes hacia paquetes reutilizables con alojamiento transaccional.
-
-### 6C-1 — Base de alojamiento
-
-- dominio reutilizable de alojamiento;
-- tipos de habitación y límites de ocupación;
-- periodos de inventario;
-- catálogo público de alojamiento;
-- gestión Operator;
-- invariantes que evitan modificar reservas manualmente de forma insegura;
-- portada mediante biblioteca multimedia compartida.
-
-### 6C-2 — Vínculo con viajes y tarifas comerciales
-
-- alojamiento reutilizable en varios viajes;
-- múltiples estancias por viaje;
-- componente con alojamiento + habitación + día entrada + noches;
-- clasificación de habitación y régimen;
-- tarifa base por noche;
-- preview de coste por salida.
-
-### 6C-3 — Galerías, temporadas y pricing por ocupación
-
-- galería general del establecimiento;
-- galería independiente por habitación;
-- ajustes estacionales fijos/porcentuales;
-- suplemento individual;
-- ajustes de ocupación;
-- reglas de niño compartiendo;
-- pricing usando fecha real de salida;
-- test permanente de invariantes de pricing.
-
-### 6C-4 — Booking transaccional de alojamiento
-
-- distribución automática viajeros → habitaciones;
-- mínimo número válido de habitaciones;
-- ocupación según edades reales;
-- pricing autoritativo server-side;
-- alojamiento incluido guardado como snapshot sin doble cobro;
-- alojamiento opcional añadido al total;
-- inventario viaje + hotel reservado/liberado en misma transacción MongoDB;
-- snapshot visible para cliente/Operator;
-- cambios de salida recalculan y reasignan alojamiento.
-
-### Suplementos opcionales del paquete — COMPLETADO
-
-- extras sin inventario configurables por Operator;
-- contenido EN/ES;
-- cobro por reserva o por viajero seleccionado;
-- selección y total server-side;
-- snapshot de precio/cantidad/asignación de viajeros;
-- cambios de catálogo no alteran reservas históricas;
-- gate permanente de CI para suplementos.
-
-Las actividades/transporte con fecha o cupo siguen siendo reservas independientes y no suplementos ligeros.
+- alojamiento reutilizable y habitaciones;
+- inventario/ocupación;
+- catálogo público/Operator y galerías;
+- vínculo viaje ↔ alojamiento;
+- pricing estacional/ocupación;
+- asignación automática viajero → habitación;
+- inventario viaje + habitación transaccional;
+- alojamiento incluido/opcional;
+- reasignación en modificaciones;
+- suplementos y snapshots autoritativos.
 
 ---
 
-# Próximas prioridades
-
-## Fase 7A — Operaciones avanzadas — COMPLETADO
-
-Objetivo cumplido: convertir Operator en herramienta diaria completa para un equipo/agencia, no solo en backoffice de catálogo y estados.
+# Fase 7A — Operaciones avanzadas — COMPLETADO
 
 ### 7A-1 — Responsable, notas y prioridad — COMPLETADO
-
-- asignación de responsable/operador con validación server-side de personal activo;
-- notas internas separadas y nunca visibles al cliente;
-- prioridad baja / normal / alta / urgente;
-- tags normalizados;
-- timeline operativo;
-- auditoría de cambios de responsable/prioridad/tags;
-- invariante permanente de privacidad en rutas de cliente.
+- responsable, notas internas, prioridades, tags y timeline;
+- auditoría e invariante de privacidad.
 
 ### 7A-2 — Tareas y seguimientos — COMPLETADO
+- objetivos, responsable, vencimiento, estado, comentarios y dashboards;
+- cambios auditados.
 
-- tareas asociadas a reserva de viaje / reserva de servicio / cliente;
-- responsable y vencimiento;
-- estados abierta / en curso / completada / cancelada;
-- visibilidad vencidas/hoy/próximas;
-- dashboard global y vista Mis tareas;
-- comentarios de seguimiento append-only y auditoría de cambios;
-- validación server-side de objetivo y responsable;
-- gate permanente de CI para tareas y privacidad.
-
-### 7A-3 — Estado proveedor/fulfilment — COMPLETADO
-
-- confirmación de proveedor por componente de viaje/servicio/alojamiento;
-- claves de componentes reales resueltas server-side desde snapshots de reserva;
-- estados no solicitado / solicitado / confirmado / rechazado / cancelado;
-- referencia/localizador de proveedor;
-- coste interno opcional + moneda;
-- fecha límite de confirmación y visibilidad de vencidos;
-- notas de proveedor append-only y eventos de auditoría before/after;
-- cola global de proveedores;
-- métricas de atención de proveedores en dashboard;
-- costes/referencias solo internos y sin reescribir total cliente ni ledger;
-- límite preparado para futuras integraciones con APIs de proveedor.
+### 7A-3 — Proveedor/fulfilment — COMPLETADO
+- fulfilment por componente;
+- estado/referencia/coste/deadline;
+- notas, auditoría, cola global y métricas;
+- sin reescribir precio cliente ni ledger.
 
 ### 7A-4 — Búsqueda, filtros y colas — COMPLETADO
+- búsqueda libre;
+- filtros de reserva/pago/responsable/prioridad/tag/salida;
+- saldo/cuotas;
+- Mías / Requieren atención / Sin responsable;
+- orden y paginación.
 
-- búsqueda libre por referencia, cliente, viaje, viajeros, responsable y tags;
-- filtros por estado, responsable, prioridad, tag exacto, pago y rango de salida;
-- filtros de saldo pendiente y cuota vencida;
-- señales de atención por tareas, proveedores, pago o falta de responsable;
-- vistas rápidas Mías / Requieren atención / Sin responsable;
-- orden por salida, creación o prioridad;
-- paginación server-side de 20 registros conservando filtros;
-- gate permanente de CI para búsqueda/filtros/orden/paginación.
+### 7A-5 — Modificación de suplementos — COMPLETADO
+- añadir/quitar suplementos post-reserva;
+- cambiar viajeros;
+- preservar precios contratados;
+- snapshots exactos y delta financiero.
 
-Las vistas guardadas y acciones masivas quedan como extensiones futuras si aportan valor; no se ha añadido ninguna mutación masiva genérica insegura.
+### 7A-6 — Permisos granulares — COMPLETADO
+- Admin superusuario + matriz Operator;
+- reservas/catálogo/finanzas/datos viajeros/proveedores/tareas;
+- fronteras server-side de rutas/actions/datos;
+- auditoría transaccional;
+- invariante permanente CI.
 
-### 7A-5 — Modificación post-reserva de suplementos — COMPLETADO
+---
 
-- Operator puede añadir/quitar suplementos después de reservar;
-- puede cambiar la asignación de suplementos por viajero;
-- los suplementos ya contratados conservan su precio unitario snapshot;
-- los suplementos nuevos usan el precio actual del catálogo;
-- suplementos históricos desactivados pueden mantenerse/reducirse/quitarse, pero no ampliarse a viajeros nuevos;
-- reconstrucción autoritativa server-side y validación de viajeros;
-- historial de modificación conserva snapshots exactos before/after y delta de precio;
-- el motor financiero 6B muestra saldo adicional o revisión de reembolso sin reescribir el ledger;
-- condiciones de pago antiguas usan el fallback seguro ya existente;
-- se reutiliza la notificación configurada al cliente sin exponer el motivo interno;
-- gate permanente de CI para modificaciones de suplementos.
+# Fase 7B — Documentos, exportaciones y reporting — EN CURSO
 
-### 7A-6 — Permisos más granulares — COMPLETADO
+Objetivo: proporcionar documentos e informes operativos sin filtrar datos protegidos o exclusivamente internos.
 
-- Admin permanece como superusuario con acceso completo y los Operators pueden recibir capacidades explícitas más limitadas;
-- los Operators existentes sin asignación explícita conservan el perfil heredado hasta que un Admin guarde deliberadamente una matriz más restringida;
-- capacidades server-side separan reservas, catálogo, finanzas, datos protegidos de viajeros, gestión de proveedores y tareas;
-- layouts protegidos y server actions sensibles aplican las mismas fronteras de autorización;
-- dashboards, colas de reservas y workspaces solo consultan datos de finanzas, tareas, proveedores o viajeros cuando la cuenta actual tiene permiso;
-- las asignaciones explícitas se guardan en `travel_staff_capabilities`;
-- cada cambio real de permisos registra estado before/after, administrador responsable y fecha/hora en `travel_staff_capability_audit` dentro de la misma transacción MongoDB;
-- navegación y métricas de Operator muestran únicamente las áreas permitidas;
-- el gate permanente `check:staff-permissions` protege el modelo de capacidades y sus fronteras sensibles en CI.
+## 7B-1 — PDFs de confirmación — COMPLETADO
 
-## Fase 7B — Documentos, exportaciones y reporting — EN CURSO
+- capa `pdf-lib` reutilizable;
+- confirmaciones cliente/Operator;
+- EN/ES;
+- fechas, viajeros, alojamiento, suplementos y contacto;
+- finanzas solo cuando hay permiso;
+- endpoints privados `no-store` e invariante PDF.
 
-Objetivo: soportar documentos e informes habituales de operaciones turísticas.
+## 7B-2 — Listas de viajeros y rooming lists — COMPLETADO
 
-### 7B-1 — PDFs de confirmación de reserva — COMPLETADO
+- manifiestos por salida;
+- rooming lists desde snapshots de habitaciones;
+- rutas PDF Operator protegidas;
+- salida EN/ES;
+- sin datos post-compra protegidos, proveedores ni notas internas;
+- gate permanente `check:departure-documents`.
 
-- capa PDF server-side reutilizable mediante `pdf-lib`;
-- descarga de confirmación de reserva propia desde Mis reservas;
-- espacio protegido Documentos dentro de Operator;
-- confirmación EN/ES con fechas de viaje, nombres de viajeros, alojamiento y suplementos del paquete;
-- resumen de contacto del cliente y total actual de la reserva;
-- estado de pago/pagado/pendiente incluido para el cliente y solo para personal con permiso de Finanzas;
-- el renderer no incluye notas internas, referencias/costes de proveedor ni datos post-compra protegidos de viajeros;
-- endpoints privados `no-store`;
-- nombres de archivo seguros e invariante permanente que genera PDFs reales en CI.
+## 7B-3 — Vouchers y expediente imprimible — COMPLETADO
 
-### 7B-2 — Listas de viajeros y rooming lists — SIGUIENTE
-
-- manifiesto operativo de viajeros por reserva/salida;
-- rooming list derivada de la asignación de alojamiento guardada como snapshot;
-- formatos imprimibles/PDF;
-- acceso alineado con capacidades de Reservas y Datos de viajeros;
-- no exportar campos documentales protegidos salvo autorización explícita y auditada.
-
-### 7B-3 — Vouchers y expediente imprimible
-
-- vouchers de alojamiento/servicios;
-- referencias de proveedor orientadas al cliente solo cuando estén configuradas para poder divulgarse;
+- vouchers de alojamiento para reservas de viaje confirmadas con alojamiento;
+- vouchers de servicio para actividades, transporte y protección confirmados;
+- descarga Operator autorizada del mismo voucher seguro para cliente;
 - expediente consolidado imprimible de Operator;
-- fecha/hora y estado/versión del documento.
+- secciones de pago/proveedor cargadas solo cuando las capacidades del personal actual lo permiten;
+- versión/estado y timestamp UTC explícitos;
+- referencias proveedor internas por defecto;
+- una referencia exacta debe aprobarse explícitamente por personal con capacidad Proveedores antes de mostrarse al cliente;
+- política de divulgación separada del fulfilment y auditada;
+- cambiar una referencia invalida automáticamente la aprobación anterior porque el valor aprobado debe coincidir exactamente con el actual;
+- costes proveedor, notas internas y valores post-compra protegidos excluidos de vouchers de cliente;
+- propiedad del cliente y estado confirmado verificados server-side;
+- respuestas PDF `private, no-store` + `nosniff`;
+- invariante permanente `check:voucher-documents` integrada en `npm run verify` y GitHub CI.
 
-### 7B-4 — Exportaciones CSV/XLSX y reporting de conciliación
+## 7B-4 — CSV/XLSX, conciliación y reporting — SIGUIENTE
 
-- exportaciones de reservas/servicios;
-- exportaciones de clientes;
-- conciliación de pagos y saldos pendientes;
-- exportación segura y auditada de datos de viajeros para un uso operativo legítimo;
-- ingresos por producto/servicio;
-- dashboards operativos/comerciales.
+Objetivo: hacer exportables los datos operativos/comerciales sin debilitar permisos ni privacidad.
 
-## Fase 8 — Integraciones externas
+Alcance previsto:
 
-Objetivo: conectar despliegues con ecosistemas reales mediante adapters sin contaminar el core con payloads de proveedor.
+- exportación de reservas de viaje;
+- exportación de reservas de servicios;
+- exportación de clientes;
+- formatos CSV y XLSX con contratos de columnas estables;
+- informe de conciliación de pagos;
+- informe de saldos pendientes y cuotas vencidas;
+- ingresos por viaje/producto/servicio;
+- filtros/rangos de fecha server-side para exportaciones grandes;
+- capacidad Finanzas requerida para columnas/informes financieros;
+- exportación segura y auditada de datos protegidos de viajeros solo para uso operativo legítimo y con capacidad Datos de viajeros;
+- ningún dato protegido del viajero en exportaciones ordinarias de clientes/reservas;
+- evento de auditoría de exportación con actor, tipo, filtros y timestamp sin persistir los valores sensibles exportados;
+- base de dashboards operativos/comerciales;
+- invariantes permanentes de privacidad/autorización de exportaciones.
 
-- APIs proveedores/reservas;
+---
+
+# Fase 8 — Integraciones externas
+
+Candidatos:
+
+- APIs de proveedores/reservas;
 - CRM;
 - ERP/contabilidad;
 - webhooks salientes;
-- fuente CMS/catálogo;
+- CMS/catálogo;
 - identidad enterprise;
 - adapter REST genérico;
 - PSP adicionales.
 
-## Fase 9 — Hardening productivo
+# Fase 9 — Hardening productivo
 
 ### Testing
-
-- E2E navegador registro → reserva → alojamiento/extras → servicio → pago → Operator;
+- E2E registro → reserva → alojamiento/extras → servicio → pago → Operator;
 - integración MongoDB;
-- webhook/idempotencia;
+- webhooks/idempotencia;
 - viajeros/menores/pricing;
-- concurrencia de inventario viaje/servicio/habitación;
-- E2E de modificaciones/reasignación;
-- regresiones de accesibilidad;
-- performance budgets;
-- contract tests adapters.
+- concurrencia viaje/servicio/habitación;
+- modificaciones/reasignación;
+- accesibilidad/performance y contratos de adapters.
 
-### Seguridad
-
-- revisión CSRF;
-- rate limiting;
-- CSP/security headers;
-- cookies/sesiones;
+### Seguridad/privacidad
+- CSRF, rate limiting, CSP/security headers y cookies/sesiones;
 - scanning de dependencias/secretos;
-- auditoría de acciones privilegiadas;
-- recuperación/rotación de claves de pago/viajero;
-- backup/restore.
+- auditoría privilegiada;
+- recuperación/rotación de claves y backup/restore;
+- RGPD, términos, cookies, retención, exportación/borrado;
+- revisión normativa por mercado.
 
 ### Observabilidad/operaciones
-
-- logs estructurados;
-- reporting centralizado de errores;
+- logs estructurados y errores centralizados;
 - uptime/health;
-- fallos de webhook/pago;
-- backup/disaster recovery;
-- rollback;
+- fallos webhook/pago;
+- disaster recovery y rollback;
 - revisión de índices/rendimiento.
 
-### Privacidad/legal
+# Fase 10 — Productización open-source
 
-- política de privacidad y avisos RGPD específicos;
-- términos/condiciones de reserva;
-- cookies/consentimiento cuando aplique;
-- retención/borrado;
-- exportación/borrado de datos cliente;
-- datos legales configurables;
-- revisión de distribución de seguros si se comercializa protección;
-- revisión normativa por operador/mercado.
-
-## Fase 10 — Productización open-source
-
-- documentación productiva de entorno;
+- documentación productiva;
 - seed/setup limpio;
-- guía fresh clone;
-- adapters de referencia;
-- contratos de extensiones/plugins;
-- releases versionadas y migraciones;
-- templates issues/contribución;
-- documentación API/extensiones;
-- ejemplo Docker/self-host opcional;
-- política marca/trademark;
-- integraciones propietarias fuera del core MIT cuando corresponda.
+- instalación/despliegue fresh clone;
+- adapters de referencia y contratos de extensión;
+- releases/migraciones;
+- templates de contribución;
+- API/extensiones públicas;
+- Docker/self-host opcional;
+- política de marca;
+- adapters propietarios fuera del core MIT cuando corresponda.
 
 ---
 
 # Orden recomendado
 
 ```text
-7B  Documentos / exportaciones / reporting
- ↓
-8   Integraciones externas
- ↓
-9   Hardening productivo
- ↓
-10  Productización open-source / release
+7B-4  CSV/XLSX / conciliación / reporting
+  ↓
+8     Integraciones externas
+  ↓
+9     Hardening productivo
+  ↓
+10    Productización open-source / release
 ```
 
-La validación TEST Stripe/Redsys con credenciales debe insertarse en cuanto existan las cuentas proveedor necesarias; no bloquea 7B.
+La validación TEST Stripe/Redsys con credenciales se insertará cuando existan cuentas proveedor adecuadas y no bloquea 7B-4.
 
-Parte del testing/security de Fase 9 debe seguir realizándose incrementalmente, especialmente pagos, datos viajeros, modificaciones e inventario concurrente.
+El testing/security de Fase 9 debe continuar incrementalmente.
 
 ---
 
 # No-objetivos del core
 
-Open Travel Platform **no** debe quedar atado permanentemente a:
+Open Travel Platform no debe quedar ligado permanentemente a una sola pasarela, CMS, CRM/ERP, proveedor de reservas, identidad, hosting o infraestructura exclusiva de Kairoseth.
 
-- una sola pasarela;
-- un CMS;
-- un CRM/ERP;
-- un proveedor de reservas;
-- un proveedor de identidad;
-- un hosting;
-- infraestructura exclusiva de Kairoseth.
-
-El core público sigue bajo MIT y reutilizable. Kairoseth Travel puede construir hosting comercial, soporte, implementación, adapters premium/privados e integraciones específicas alrededor de ese core.
+El core público sigue bajo MIT y reutilizable. Kairoseth Travel puede añadir hosting comercial, soporte, adapters premium/privados e integraciones específicas alrededor del core.

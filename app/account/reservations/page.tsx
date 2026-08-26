@@ -40,6 +40,7 @@ export default async function ReservationsPage() {
                 const status = locale === "es"
                   ? reservation.status === "confirmed" ? "confirmada" : reservation.status === "cancelled" ? "cancelada" : "pendiente"
                   : reservation.status;
+                const accommodationVoucherAvailable = reservation.status === "confirmed" && Boolean(reservation.accommodationBookings?.length);
 
                 return (
                   <div key={reservation.id}>
@@ -52,6 +53,14 @@ export default async function ReservationsPage() {
                       <a className="text-link" href={`/account/reservations/${encodeURIComponent(reservation.id)}/confirmation`}>
                         {locale === "es" ? "Descargar confirmación PDF" : "Download confirmation PDF"}
                       </a>
+                      {accommodationVoucherAvailable ? (
+                        <>
+                          {" · "}
+                          <a className="text-link" href={`/account/reservations/${encodeURIComponent(reservation.id)}/accommodation-voucher`}>
+                            {locale === "es" ? "Descargar voucher de alojamiento" : "Download accommodation voucher"}
+                          </a>
+                        </>
+                      ) : null}
                     </dd>
                   </div>
                 );
