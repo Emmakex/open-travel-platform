@@ -57,11 +57,14 @@ La plataforma está muy por encima del MVP original de catálogo/reservas. La im
 - finanzas y reporting multimoneda sin sumar monedas diferentes entre sí;
 - eventos salientes neutrales para reservas con outbox transaccional MongoDB;
 - webhooks HTTPS firmados gestionados por Admin, secretos cifrados, reintentos limitados, historial de entregas y retención dead-letter;
-- protecciones SSRF/DNS rebinding para destinos webhook configurables.
+- protecciones SSRF/DNS rebinding para destinos webhook configurables;
+- ejecución programada server-only de integraciones con lock durable y límites de ejecución;
+- métricas de salud, diagnóstico de eventos/entregas y replay auditado de dead-letter desde Admin;
+- retención limitada del historial de integraciones completadas correctamente, preservando trabajo activo/dead-letter y auditoría de replay.
 
 La validación E2E con credenciales Stripe/Redsys sigue pendiente hasta disponer de cuentas adecuadas. Los adapters están implementados, pero la capacidad productiva no se considera validada hasta probar TEST/LIVE.
 
-**La Fase 8A — Integraciones salientes neutrales respecto a proveedor está completada. El siguiente bloque de entrega es la Fase 8B — ejecución programada, replay y observabilidad de integraciones.**
+**La Fase 8B — ejecución programada, replay y observabilidad de integraciones está completada. El siguiente bloque de entrega es la Fase 8C — adapters de negocio.**
 
 ## Capacidades actuales
 
@@ -190,9 +193,14 @@ La validación E2E con credenciales Stripe/Redsys sigue pendiente hasta disponer
 - destinos exclusivamente HTTPS, rechazo de redes privadas/locales/reservadas y revalidación DNS antes de entregar;
 - conexión al IP validado conservando el hostname original para TLS SNI y HTTP Host;
 - redirects desactivados, timeout y tamaño de respuesta limitados;
-- leasing de entregas, recuperación tras caída, reintentos/backoff, historial de intentos y dead-letter;
-- valores post-compra protegidos del viajero excluidos del contrato genérico;
-- procesador manual y limitado desde Admin, preparado para un scheduler del despliegue en Fase 8B.
+- leasing por entrega, recuperación tras caída, reintentos/backoff, historial de intentos y dead-letter;
+- entry point server-only `POST /api/internal/integrations/process` con autenticación Bearer;
+- lock global durable compartido por scheduler y ejecuciones manuales Admin;
+- límites server-side de lote/frecuencia y `Retry-After` ante ejecuciones solapadas/rate limiting;
+- métricas de salud y vistas Admin de detalle de evento/entrega;
+- reencolado auditado de dead-letter exclusivo de Admin conservando el historial previo de intentos;
+- retención limitada de historial de entregas exitosas antiguas con auditoría agregada de retención;
+- valores protegidos post-compra, secretos de firma y credenciales del worker excluidos de diagnósticos operativos.
 
 ## Arquitectura
 
@@ -230,6 +238,8 @@ IdentityRepository                 Operations / RBAC / auditoría
                               outbox transaccional
                                            |
                          adapters de integración saliente
+                                           |
+                         worker programado de entregas
 ```
 
 Los payloads específicos de proveedor permanecen dentro de adapters. Catálogo, reservas, alojamiento, identidad, servicios, operaciones, documentos, reporting, pagos e integraciones externas conservan fronteras reemplazables.
@@ -277,22 +287,30 @@ npm run dev
 /operator/payments                     finanzas
 /operator/payments/providers           PSP solo Admin
 /operator/integrations                 integraciones salientes solo Admin
+/operator/integrations/events/[eventId] diagnóstico Admin de eventos
+/operator/integrations/deliveries/[deliveryId] diagnóstico/replay Admin de entregas
 /operator/staff                        personal/permisos
+
+/api/internal/integrations/process     worker programado server-only (POST)
 ```
 
 ## Configuración
 
 La plantilla completa vive en [`.env.example`](.env.example). Los secretos nunca deben usar `NEXT_PUBLIC_*`.
 
-Claves maestras server-only relevantes:
+Configuración server-only relevante:
 
 ```text
 PAYMENT_SECRETS_KEY=
 TRAVELLER_DATA_KEY=
 INTEGRATION_SECRETS_KEY=
+KTRAVEL_INTEGRATION_WORKER_TOKEN=
+INTEGRATION_WORKER_BATCH_SIZE=10
+INTEGRATION_WORKER_MIN_INTERVAL_SECONDS=60
+INTEGRATION_COMPLETED_RETENTION_DAYS=180
 ```
 
-Deben ser claves estables de alta entropía y 32 bytes. No deben rotarse sin un plan de migración/re-cifrado.
+Las tres claves maestras deben ser estables, de alta entropía y 32 bytes. `KTRAVEL_INTEGRATION_WORKER_TOKEN` es una credencial Bearer server-only independiente y debe contener al menos 32 caracteres de alta entropía. Las claves de cifrado no deben rotarse sin un plan de migración/re-cifrado.
 
 ## Documentación
 
@@ -313,6 +331,7 @@ Deben ser claves estables de alta entropía y 32 bytes. No deben rotarse sin un 
 - [`docs/VOUCHERS-DOSSIERS.es.md`](docs/VOUCHERS-DOSSIERS.es.md)
 - [`docs/REPORTING-EXPORTS.es.md`](docs/REPORTING-EXPORTS.es.md)
 - [`docs/OUTBOUND-INTEGRATIONS.es.md`](docs/OUTBOUND-INTEGRATIONS.es.md)
+- [`docs/INTEGRATION-OPERATIONS.es.md`](docs/INTEGRATION-OPERATIONS.es.md)
 - [`docs/ADAPTER-GUIDE.md`](docs/ADAPTER-GUIDE.md)
 - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 - [`docs/PRODUCTION-CHECKLIST.md`](docs/PRODUCTION-CHECKLIST.md)
@@ -343,6 +362,7 @@ check:departure-documents
 check:voucher-documents
 check:reporting-exports
 check:outbound-integrations
+check:integration-operations
 typecheck
 build
 ```
@@ -369,21 +389,23 @@ build
 | CSV/XLSX y conciliación/reporting | Completado |
 | Fase 7B — Documentos, exportaciones y reporting | **Completada** |
 | Fase 8A — Integraciones salientes neutrales | **Completada** |
+| Fase 8B — Ejecución programada, replay y observabilidad | **Completada** |
 
 ## Siguiente prioridad
 
-El siguiente bloque es la **Fase 8B — ejecución programada, replay y observabilidad de integraciones**.
+El siguiente bloque es la **Fase 8C — adapters de negocio**.
 
-La frontera común de eventos/outbox/webhook ya existe. Ahora toca operar esta capa sin depender de una acción manual de Admin:
+La frontera de eventos/outbox/webhook y su worker operativo ya están implementados. 8C puede añadir adapters concretos sin introducir payloads de proveedor en los dominios de reserva. Candidatos iniciales:
 
-- entry point scheduler/worker con autenticación server-only;
-- límites de lote/frecuencia;
-- replay/requeue auditado de dead-letter;
-- detalle Admin de eventos y entregas;
-- métricas de salud de la cola y visibilidad de fallos;
-- reglas de retención del historial completado.
+- APIs de proveedores/reservas;
+- sincronización CRM;
+- integraciones ERP/contabilidad;
+- fuentes CMS/catálogo;
+- adapter REST genérico de reservas;
+- identidad enterprise cuando corresponda;
+- PSP adicionales cuando aporten valor comercial.
 
-Después, la Fase 8C podrá añadir adapters de proveedores/reservas, CRM, ERP/contabilidad, CMS y REST genérico sobre la misma frontera neutral.
+El mapping de payloads, autenticación y traducción de errores específicos de proveedor debe permanecer dentro de adapters, mientras el core conserva contratos neutrales y versionados.
 
 La validación TEST/LIVE de Stripe/Redsys se insertará cuando existan cuentas proveedor adecuadas y no necesita bloquear la Fase 8.
 
@@ -399,6 +421,7 @@ La validación TEST/LIVE de Stripe/Redsys se insertará cuando existan cuentas p
 - documentos de cliente sin notas internas, datos protegidos ni costes proveedor;
 - exportaciones sensibles limitadas por permisos, finalidad operativa y auditoría persistente antes de entregarse;
 - eventos salientes genéricos sin datos protegidos del viajero ni payloads específicos de proveedor;
+- ejecución programada de integraciones autenticada server-side, limitada y observable;
 - UX pública bilingüe y responsive;
 - integraciones propietarias fuera del core MIT cuando corresponda.
 
