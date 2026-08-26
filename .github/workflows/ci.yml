@@ -21,6 +21,7 @@ jobs:
       IDENTITY_MODE: disabled
       BOOKING_MODE: disabled
       OPERATIONS_MODE: disabled
+      KTRAVEL_DEPLOYMENT_PROFILE: demo
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -103,6 +104,9 @@ jobs:
       - name: ERP accounting adapter invariant check
         run: npm run check:erp-accounting-adapter
 
+      - name: Production security invariant check
+        run: npm run check:production-security
+
       - name: Type check
         run: npm run typecheck
 
@@ -117,7 +121,7 @@ jobs:
 
           ready=false
           for attempt in {1..30}; do
-            if curl -fsS http://127.0.0.1:3000/ > /dev/null; then
+            if curl -fsS http://127.0.0.1:3000/api/health/live > /dev/null; then
               ready=true
               break
             fi
@@ -138,9 +142,24 @@ jobs:
             /account/sign-in \
             /operator/sign-in \
             /account \
-            /operator; do
+            /operator \
+            /api/health/live \
+            /api/health/ready; do
             curl -fsSL "http://127.0.0.1:3000${path}" > /dev/null
           done
+
+          curl -fsSI http://127.0.0.1:3000/ > /tmp/security-headers.txt
+          grep -qi '^content-security-policy:' /tmp/security-headers.txt
+          grep -qi '^x-content-type-options: nosniff' /tmp/security-headers.txt
+          grep -qi '^x-frame-options: DENY' /tmp/security-headers.txt
+          grep -qi '^referrer-policy: strict-origin-when-cross-origin' /tmp/security-headers.txt
+
+          cross_origin_status=$(curl -sS -o /tmp/cross-origin.json -w '%{http_code}' \
+            -X POST \
+            -H 'Origin: https://attacker.invalid' \
+            http://127.0.0.1:3000/api/operator/media)
+          test "$cross_origin_status" = "403"
+          grep -q 'invalid-origin' /tmp/cross-origin.json
 
       - name: Dependency audit
         run: npm audit --audit-level=high
