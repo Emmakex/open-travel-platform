@@ -17,7 +17,7 @@ _Última actualización: 26 de agosto de 2026._
 
 La plataforma está muy por encima del MVP original de catálogo/reservas. Ya están implementadas identidad persistente, reservas/inventario transaccionales, pricing por viajero, alojamiento, servicios independientes, pagos, datos post-compra, modificaciones, workflow Operator avanzado, permisos granulares, documentos, reporting y la infraestructura común de integraciones.
 
-**La Fase 8C — Adapters de negocio está EN CURSO. 8C-1 adapter REST genérico de reservas, 8C-2 fulfilment de proveedores y 8C-3 sincronización CRM están COMPLETADAS. La Fase 8C-4 — adapter ERP/contabilidad es la SIGUIENTE.**
+**Las Fases 8A, 8B y 8C están COMPLETADAS. El roadmap core de integraciones externas de la Fase 8 está completado. La Fase 9 — Endurecimiento productivo es la SIGUIENTE.**
 
 La validación E2E TEST/LIVE con credenciales Stripe/Redsys sigue pendiente hasta disponer de cuentas proveedor adecuadas. Los adapters están implementados, pero la capacidad productiva de pagos no se considera validada hasta probar dichos flujos.
 
@@ -134,7 +134,7 @@ Los datos de proveedor no reescriben totales de cliente ni el ledger de pagos.
 
 ---
 
-# Fase 8 — Integraciones externas — EN CURSO
+# Fase 8 — Integraciones externas — COMPLETADO
 
 Objetivo: conectar sistemas reales mediante fronteras de adapters explícitas sin filtrar payloads específicos de vendors a dominios centrales.
 
@@ -159,7 +159,7 @@ Objetivo: conectar sistemas reales mediante fronteras de adapters explícitas si
 - retención de éxitos completados y auditoría de retención;
 - gate permanente `check:integration-operations`.
 
-## 8C — Adapters de negocio — EN CURSO
+## 8C — Adapters de negocio — COMPLETADO
 
 ### 8C-1 — Adapter REST genérico de reservas — COMPLETADO
 
@@ -199,33 +199,37 @@ Objetivo: conectar sistemas reales mediante fronteras de adapters explícitas si
 - diagnóstico Admin en `/operator/integrations/crm`;
 - gate permanente `check:crm-sync-adapter`.
 
-### 8C-4 — Adapter ERP/contabilidad — SIGUIENTE
+### 8C-4 — Adapter ERP/contabilidad — COMPLETADO
 
-Objetivo: sincronizar documentos/movimientos preparados para contabilidad sin permitir que el ERP reescriba estados de reserva ni el ledger neutral de pagos.
+- `ErpAccountingAdapter` neutral y exclusivamente downstream;
+- `ERP_ACCOUNTING_MODE=disabled|rest` con adapter REST v1 de upsert de movimientos;
+- solo los movimientos autoritativos `succeeded` de pago/reembolso del ledger local son elegibles;
+- la finalización del pago/reembolso y su trigger ERP se confirman en la misma transacción MongoDB;
+- se preservan importe, moneda, provider y referencia inmutable exactos del movimiento de origen;
+- IDs de evento deterministas e idempotency keys estables derivadas del evento;
+- los eventos financieros ERP no se exponen a webhooks genéricos ni son consumidos por CRM;
+- el mismo worker aporta retry/backoff, dead-letter, replay y métricas sin crear una segunda cola;
+- referencias externas separadas en `travel_erp_accounting_links`;
+- auditoría de acknowledgements en `travel_erp_accounting_audit` sin importes, moneda, referencia provider, PII ni cuerpos HTTP crudos;
+- diagnóstico Admin en `/operator/integrations/erp`;
+- el core genérico exporta movimientos preparados para contabilidad y no afirma generar facturas legales específicas de jurisdicción sin datos fiscales/de facturación autoritativos;
+- el mapping específico de plan contable/impuestos permanece dentro de adapters downstream;
+- gate permanente `check:erp-accounting-adapter`.
 
-Frontera prevista:
+### Adapters futuros opcionales
 
-- interfaz neutral ERP/contabilidad;
-- contrato explícito para clientes, facturas/recibos o movimientos contables según corresponda;
-- payload contable derivado de snapshots autoritativos de reserva/pago, nunca documentos crudos de proveedor;
-- moneda exacta y referencias de origen inmutables;
-- idempotencia determinista y mapping de IDs externos;
-- auditoría/retry/dead-letter mediante el worker de integraciones cuando aplique;
-- sin datos protegidos del viajero, notas operativas de proveedor ni valores de autenticación;
-- los acknowledgements del ERP no pueden modificar automáticamente historial de reservas/pagos;
-- mapping específico de plan contable/impuestos contenido en adapters.
-
-### Candidatos posteriores 8C
+Son extensiones y no bloquean el cierre de la frontera core de la Fase 8:
 
 - adapter de fuente CMS/catálogo;
 - identidad enterprise/SSO cuando aporte valor;
-- PSP adicionales cuando exista justificación comercial.
+- PSP adicionales cuando exista justificación comercial;
+- adapters de facturación específicos de vendor/jurisdicción después de modelar datos fiscales autoritativos.
 
 ---
 
-# Fase 9 — Endurecimiento productivo
+# Fase 9 — Endurecimiento productivo — SIGUIENTE
 
-Debe avanzar de forma incremental sin esperar a finalizar la Fase 8.
+La siguiente prioridad es endurecer para producción la superficie funcional ya construida.
 
 ### Testing
 - E2E navegador registro → reserva → paquete/servicios → pago → Operator;
@@ -250,6 +254,8 @@ Debe avanzar de forma incremental sin esperar a finalizar la Fase 8.
 - disaster recovery/rollback;
 - revisión de índices/rendimiento de base de datos.
 
+La validación TEST/LIVE Stripe/Redsys debe insertarse en cuanto existan cuentas proveedor adecuadas y sigue formando parte del endurecimiento productivo.
+
 ---
 
 # Fase 10 — Productización open-source
@@ -269,16 +275,14 @@ Debe avanzar de forma incremental sin esperar a finalizar la Fase 8.
 # Orden de entrega sugerido
 
 ```text
-8C-4  Adapter ERP/contabilidad
+9A    Baseline de seguridad / operabilidad productiva
   ↓
-8C    Adapters de negocio restantes según valor comercial
-  ↓
-9     Endurecimiento productivo
+9     Endurecimiento productivo y E2E con credenciales
   ↓
 10    Productización open-source / release
+  ↓
+adapters opcionales según necesidad comercial
 ```
-
-La validación TEST/LIVE Stripe/Redsys debe insertarse en cuanto existan cuentas proveedor adecuadas y no necesita bloquear la Fase 8.
 
 ---
 

@@ -8,7 +8,12 @@ export type CrmIntegrationEventType =
   | "customer.created"
   | "customer.profile.updated";
 
-export type IntegrationEventType = WebhookIntegrationEventType | CrmIntegrationEventType;
+export type ErpAccountingIntegrationEventType = "payment.transaction.succeeded";
+
+export type IntegrationEventType =
+  | WebhookIntegrationEventType
+  | CrmIntegrationEventType
+  | ErpAccountingIntegrationEventType;
 
 export type IntegrationDeliveryStatus =
   | "pending"
@@ -33,7 +38,7 @@ export type IntegrationEventEnvelope<TPayload extends Record<string, unknown> = 
   type: IntegrationEventType;
   version: 1;
   occurredAt: string;
-  aggregateType: "customer" | "trip-reservation" | "service-reservation";
+  aggregateType: "customer" | "trip-reservation" | "service-reservation" | "payment-transaction";
   aggregateId: string;
   payload: TPayload;
 };
@@ -91,4 +96,17 @@ export type ServiceReservationCreatedPayload = {
 export type CrmCustomerChangedPayload = {
   customerId: string;
   changedAt: string;
+};
+
+export type ErpPaymentTransactionSucceededPayload = {
+  transactionId: string;
+  targetType: "trip" | "service";
+  targetId: string;
+  movementType: "payment" | "refund";
+  amount: number;
+  currency: string;
+  provider: string;
+  method?: string;
+  providerReference?: string;
+  succeededAt: string;
 };

@@ -60,11 +60,12 @@ La plataforma está muy por encima del MVP original de catálogo/reservas. La im
 - worker de integraciones server-only con locking durable, replay y retención;
 - adapter REST genérico y versionado de `BookingRepository`;
 - adapter opcional y neutral de fulfilment de proveedores con sincronización auditada request/status/cancel;
-- adapter CRM exclusivamente downstream que reutiliza el mismo worker durable y mantiene los eventos de cliente/perfil fuera de las suscripciones webhook genéricas.
+- adapter CRM exclusivamente downstream que reutiliza el mismo worker durable y mantiene los eventos de cliente/perfil fuera de las suscripciones webhook genéricas;
+- adapter ERP/contabilidad exclusivamente downstream que exporta solo movimientos finalizados de pago/reembolso mediante el mismo worker durable sin dar al ERP autoridad sobre reservas ni historial financiero local.
 
 La validación E2E con credenciales Stripe/Redsys sigue pendiente hasta disponer de cuentas adecuadas. Los adapters están implementados, pero la capacidad productiva no se considera validada hasta probar TEST/LIVE.
 
-**La Fase 8C — Adapters de negocio está EN CURSO. La Fase 8C-1 — adapter REST genérico de reservas, la Fase 8C-2 — frontera de fulfilment de proveedores y la Fase 8C-3 — sincronización CRM están completadas. La Fase 8C-4 — adapter ERP/contabilidad es la siguiente.**
+**La Fase 8 — Integraciones externas está COMPLETADA, incluyendo 8C-1 reservas, 8C-2 fulfilment de proveedores, 8C-3 CRM y 8C-4 ERP/contabilidad. La Fase 9 — Endurecimiento productivo es la siguiente.**
 
 ## Capacidades actuales
 
@@ -148,7 +149,8 @@ La validación E2E con credenciales Stripe/Redsys sigue pendiente hasta disponer
 - perfiles TEST/LIVE gestionados por Admin;
 - snapshots de pago completo, depósito y cuotas;
 - cálculo de saldo pendiente y próximo pago;
-- totales financieros agrupados por moneda, nunca sumados entre monedas diferentes.
+- totales financieros agrupados por moneda, nunca sumados entre monedas diferentes;
+- movimientos finalizados `succeeded` pueden sincronizarse downstream con ERP/contabilidad sin cambiar la autoridad financiera local.
 
 ### Documentos
 
@@ -185,7 +187,7 @@ La validación E2E con credenciales Stripe/Redsys sigue pendiente hasta disponer
 
 - workspace `/operator/integrations` exclusivo de Admin;
 - eventos versionados neutrales de reservas;
-- outbox transaccional confirmado junto con la mutación de reserva;
+- outbox transaccional confirmado junto con la mutación de origen;
 - entregas idempotentes por evento/endpoint;
 - adapter webhook HTTPS firmado HMAC-SHA256;
 - secretos write-only cifrados con `INTEGRATION_SECRETS_KEY`;
@@ -199,7 +201,8 @@ La validación E2E con credenciales Stripe/Redsys sigue pendiente hasta disponer
 - métricas de salud y diagnóstico Admin de evento/entrega;
 - replay dead-letter auditado conservando historial;
 - retención limitada de éxitos antiguos;
-- valores protegidos, secretos de firma y credenciales del worker excluidos de diagnósticos.
+- valores protegidos, secretos de firma y credenciales del worker excluidos de diagnósticos;
+- CRM y ERP/contabilidad reutilizan la misma infraestructura como destinos virtuales aislados, sin crear colas separadas.
 
 ### Adapters de negocio
 
@@ -241,55 +244,54 @@ La validación E2E con credenciales Stripe/Redsys sigue pendiente hasta disponer
 - diagnóstico Admin en `/operator/integrations/crm`;
 - CRM no puede mutar reservas, pricing, inventario, fulfilment ni ledger local.
 
+#### Sincronización ERP / contabilidad
+
+- `ERP_ACCOUNTING_MODE=rest` activa un `ErpAccountingAdapter` neutral y exclusivamente downstream;
+- endpoint REST v1 `/v1/accounting/movements/upsert`;
+- solo movimientos locales autoritativos de pago/reembolso con estado `succeeded` son elegibles;
+- tanto un movimiento creado como `succeeded` como una transición `pending → succeeded` confirman el movimiento y su trigger ERP en la misma transacción MongoDB;
+- IDs de evento deterministas (`intevt-payment-{transactionId}-succeeded`) e idempotency keys derivadas del evento evitan duplicados downstream en retries/replay;
+- eventos ERP no están disponibles en webhooks genéricos ni son consumidos por CRM;
+- importe, moneda, provider, método/referencia y timestamp salen del movimiento inmutable del ledger local;
+- IDs externos se almacenan aparte en `travel_erp_accounting_links`;
+- `travel_erp_accounting_audit` guarda acknowledgements sin importe, moneda, referencia del provider, PII ni cuerpos HTTP crudos;
+- diagnóstico Admin en `/operator/integrations/erp`;
+- acknowledgements ERP no pueden mutar reservas, inventario ni historial de pagos/reembolsos;
+- el contrato genérico representa movimientos preparados para contabilidad, no facturas legales específicas de una jurisdicción; identidad fiscal, numeración y mapping tributario requieren modelado autoritativo separado y adapters de mercado/vendor.
+
 Los payloads específicos de proveedor deben normalizarse dentro de adapters y no filtrarse a dominios centrales.
 
 ## Arquitectura
 
 ```text
-Catálogo público
-      |
-TravelRepository
-      |
-destinos + viajes + alojamiento + servicios
-      |
-      +---------------- salidas / inventario
-      |                         |
-      |                  BookingRepository
-      |                  /      |       \
-      |               demo    MongoDB   REST /v1
-      |                         |
-      |                   reservas viaje
-      |                         |
-      |                 alojamiento / habitaciones
-      |
-      +---------------- servicios independientes
-                                |
-                    disponibilidad / reservas
-                                |
-                         PaymentRepository
-                                |
-                         ledger neutral
-                          /             \
-                     Stripe             Redsys
+Catálogo público / área cliente
+        |
+TravelRepository + IdentityRepository
+        |
+BookingRepository (demo / MongoDB / REST v1)
+        |
+reservas + inventario transaccional
+        |
+PaymentRepository → ledger neutral → Stripe / Redsys / manual
+        |                               |
+        |                       movimientos succeeded
+        |                               |
+eventos cliente/reserva                 |
+        |                               |
+        +--------- outbox transaccional de integraciones --------+
+                              |
+                        worker durable
+                  /             |              \
+            webhooks firmados  CRM REST      ERP/contabilidad REST
 
-área cliente ---------------------- staff/operator/admin
-     |                                      |
-IdentityRepository                 Operations / RBAC / auditoría
-     |                                      |
-eventos cliente/perfil      documentos / informes / fulfilment / tareas
-     |                                      |
-     +---------------- outbox transaccional de integraciones ----------------+
-                                                                             |
-                                        webhooks firmados / CRM REST / futuros adapters
-                                                                             |
-                                                    worker durable programado
-
-SupplierFulfilmentAdapter
-       /        \
- disabled      REST /v1
+Operator/Admin
+    |
+Operations / RBAC / auditoría / documentos / informes / tareas
+    |
+SupplierFulfilmentAdapter → disabled / REST v1
 ```
 
-Los payloads específicos de proveedor permanecen dentro de adapters. Catálogo, reservas, alojamiento, identidad, servicios, operaciones, documentos, reporting, pagos, fulfilment e integraciones mantienen fronteras reemplazables.
+Los payloads específicos permanecen dentro de adapters. Catálogo, reservas, alojamiento, identidad, servicios, operaciones, documentos, reporting, pagos, fulfilment, CRM y ERP/contabilidad mantienen fronteras explícitas y reemplazables.
 
 ## Inicio rápido
 
@@ -335,6 +337,7 @@ npm run dev
 /operator/payments/providers           PSP solo Admin
 /operator/integrations                 webhooks/cola solo Admin
 /operator/integrations/crm             estado/auditoría CRM solo Admin
+/operator/integrations/erp             estado/auditoría ERP/contabilidad solo Admin
 /operator/integrations/events/[eventId] diagnóstico Admin de eventos
 /operator/integrations/deliveries/[deliveryId] diagnóstico/replay Admin
 /operator/staff                        personal/permisos
@@ -362,6 +365,11 @@ REST_CRM_BASE_URL=
 REST_CRM_BEARER_TOKEN=
 REST_CRM_TIMEOUT_MS=10000
 REST_CRM_MAX_RESPONSE_BYTES=262144
+ERP_ACCOUNTING_MODE=disabled
+REST_ERP_ACCOUNTING_BASE_URL=
+REST_ERP_ACCOUNTING_BEARER_TOKEN=
+REST_ERP_ACCOUNTING_TIMEOUT_MS=10000
+REST_ERP_ACCOUNTING_MAX_RESPONSE_BYTES=262144
 PAYMENT_SECRETS_KEY=
 TRAVELLER_DATA_KEY=
 INTEGRATION_SECRETS_KEY=
@@ -371,16 +379,17 @@ INTEGRATION_WORKER_MIN_INTERVAL_SECONDS=60
 INTEGRATION_COMPLETED_RETENTION_DAYS=180
 ```
 
-`REST_BOOKING_BEARER_TOKEN`, `REST_SUPPLIER_FULFILMENT_BEARER_TOKEN` y `REST_CRM_BEARER_TOKEN` son server-only y nunca deben usar `NEXT_PUBLIC_*`. Los endpoints REST de reservas, proveedores y CRM en producción deben usar HTTPS. Las tres claves maestras deben ser estables, de alta entropía y 32 bytes. `KTRAVEL_INTEGRATION_WORKER_TOKEN` es una credencial Bearer server-only independiente. No se deben rotar claves de cifrado sin un plan de migración/re-cifrado.
+`REST_BOOKING_BEARER_TOKEN`, `REST_SUPPLIER_FULFILMENT_BEARER_TOKEN`, `REST_CRM_BEARER_TOKEN` y `REST_ERP_ACCOUNTING_BEARER_TOKEN` son server-only y nunca deben usar `NEXT_PUBLIC_*`. Los endpoints REST de reservas, proveedores, CRM y ERP/contabilidad en producción deben usar HTTPS. Las tres claves maestras deben ser estables, de alta entropía y 32 bytes. `KTRAVEL_INTEGRATION_WORKER_TOKEN` es una credencial Bearer server-only independiente. No se deben rotar claves de cifrado sin un plan de migración/re-cifrado.
 
 ## Documentación
 
 - [`ROADMAP.es.md`](ROADMAP.es.md) — estado y prioridades.
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — fronteras de capacidad/evento/confianza.
 - [`docs/BOOKING.md`](docs/BOOKING.md)
 - [`docs/REST-BOOKING-ADAPTER.es.md`](docs/REST-BOOKING-ADAPTER.es.md) — contrato REST genérico de `BookingRepository`.
 - [`docs/SUPPLIER-FULFILMENT-ADAPTER.es.md`](docs/SUPPLIER-FULFILMENT-ADAPTER.es.md) — request/status/cancel y auditoría antes de aplicar.
 - [`docs/CRM-SYNC-ADAPTER.es.md`](docs/CRM-SYNC-ADAPTER.es.md) — CRM downstream, allowlists, arquitectura de una sola cola, idempotencia y auditoría.
+- [`docs/ERP-ACCOUNTING-ADAPTER.es.md`](docs/ERP-ACCOUNTING-ADAPTER.es.md) — movimiento contable downstream, outbox transaccional de pagos, autoridad y separación de facturación fiscal.
 - [`docs/OPERATIONS.md`](docs/OPERATIONS.md)
 - [`docs/CATALOGUE-BACKOFFICE.md`](docs/CATALOGUE-BACKOFFICE.md)
 - [`docs/DEPARTURES.md`](docs/DEPARTURES.md)
@@ -430,6 +439,7 @@ check:integration-operations
 check:rest-booking-adapter
 check:supplier-fulfilment-adapter
 check:crm-sync-adapter
+check:erp-accounting-adapter
 typecheck
 build
 ```
@@ -460,29 +470,30 @@ CI realiza instalación limpia, invariantes, typecheck, build productivo, smoke 
 | Fase 8C-1 — Adapter REST genérico de reservas | **Completada** |
 | Fase 8C-2 — Fulfilment de proveedores | **Completada** |
 | Fase 8C-3 — Sincronización CRM | **Completada** |
-| Fase 8C — Adapters de negocio | **En curso** |
+| Fase 8C-4 — ERP/contabilidad | **Completada** |
+| Fase 8C — Adapters de negocio | **Completada** |
+| Fase 8 — Integraciones externas | **Completada** |
+| Fase 9 — Endurecimiento productivo | **Siguiente** |
 
 ## Siguiente prioridad
 
-El siguiente bloque es la **Fase 8C-4 — adapter ERP/contabilidad**.
+El siguiente bloque es la **Fase 9 — Endurecimiento productivo**.
 
-La fase CRM demuestra que varios adapters de negocio pueden compartir el worker durable sin ampliar la autoridad del sistema externo. El siguiente bloque debe sincronizar registros comerciales preparados para contabilidad manteniendo al ledger neutral de pagos como fuente financiera autoritativa.
+El core ya cubre ampliamente catálogo, reservas, operaciones, pagos, documentos, reporting e integraciones. La prioridad pasa de ampliar la superficie de proveedores a demostrar y endurecer el producto existente en condiciones productivas realistas.
 
-Dirección prevista:
+Dirección inicial de la Fase 9:
 
-- interfaz neutral ERP/contabilidad;
-- contrato explícito para clientes, facturas/recibos o movimientos listos para journal cuando corresponda;
-- payload contable derivado de snapshots autoritativos de reservas/pagos, no de objetos crudos del proveedor;
-- moneda exacta y referencias de origen inmutables;
-- idempotencia determinista y mapping de IDs externos;
-- auditoría/retry/dead-letter mediante el worker compartido cuando corresponda;
-- sin datos protegidos del viajero, notas operativas de proveedor ni credenciales;
-- los acknowledgements del ERP no pueden reescribir automáticamente historial de reservas/pagos;
-- mapping específico de plan contable/impuestos contenido dentro de adapters.
+- E2E navegador registro → reserva → paquete/servicios → pago → Operator;
+- tests MongoDB de transacciones/concurrencia para reservas, inventario y finalización de pagos;
+- tests de webhooks/idempotencia de pagos y contratos de adapters;
+- baseline central de seguridad productiva: CSP/security headers, revisión CSRF/origin, rate limiting y cookies/sesiones;
+- logs estructurados, health/readiness y visibilidad de fallos;
+- backup/restore, disaster recovery y recuperación/rotación de claves;
+- GDPR/privacidad/retención/exportación/eliminación y revisión regulatoria por mercado;
+- accesibilidad, rendimiento y revisión de índices de base de datos;
+- E2E TEST/LIVE Stripe/Redsys con credenciales en cuanto existan cuentas proveedor adecuadas.
 
-Después, 8C podrá añadir fuentes CMS/catálogo, identidad enterprise/SSO y PSP adicionales cuando aporten valor comercial.
-
-La validación TEST/LIVE Stripe/Redsys se insertará cuando existan cuentas adecuadas y no necesita bloquear la Fase 8.
+Adapters opcionales de CMS/catálogo, SSO enterprise, PSP adicionales y contabilidad específica de jurisdicción pueden añadirse posteriormente cuando tengan justificación comercial, sin bloquear la Fase 9.
 
 ## Principios
 
@@ -496,11 +507,12 @@ La validación TEST/LIVE Stripe/Redsys se insertará cuando existan cuentas adec
 - documentos cliente sin notas internas, datos protegidos ni costes proveedor;
 - exportaciones sensibles limitadas por permisos/finalidad y auditadas antes de entregarse;
 - webhooks genéricos sin datos protegidos ni payloads específicos;
-- eventos CRM de cliente no disponibles para webhooks genéricos;
+- eventos CRM de cliente y eventos financieros ERP no disponibles para webhooks genéricos;
 - ejecución programada autenticada server-side, limitada y observable;
 - APIs externos de reservas deben cumplir contrato runtime, ownership e idempotencia;
 - APIs de proveedores no pueden saltarse transiciones locales ni auto-publicar referencias;
 - CRM es downstream y no puede mutar reservas, pricing, inventario, proveedores ni ledger autoritativo;
+- ERP/contabilidad es downstream y no puede reescribir historial de pagos/reembolsos; la facturación legal no se infiere de datos fiscales incompletos;
 - UX pública bilingüe y responsive;
 - integraciones propietarias fuera del core MIT cuando corresponda.
 
