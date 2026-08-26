@@ -41,12 +41,9 @@ function normalizedIpv6(address: string) {
 function publicIpv6(address: string) {
   const value = normalizedIpv6(address);
   if (value === "::" || value === "::1") return false;
-  if (value.startsWith("fc") || value.startsWith("fd")) return false;
-  if (/^fe[89ab]/.test(value)) return false;
-  if (value.startsWith("ff")) return false;
+  if (value.startsWith("::ffff:")) return false;
+  if (!/^[23]/.test(value)) return false;
   if (value.startsWith("2001:db8:")) return false;
-  const mapped = value.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
-  if (mapped) return publicIpv4(mapped[1]);
   return true;
 }
 
