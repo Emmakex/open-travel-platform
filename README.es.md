@@ -47,15 +47,18 @@ La plataforma está muy por encima del MVP original de catálogo/reservas. La im
 - suplementos opcionales y modificaciones post-reserva;
 - workflow Operator con responsable, notas internas, prioridades, tags, tareas y fulfilment;
 - colas operativas avanzadas y permisos granulares;
-- PDFs de confirmación de reserva;
-- manifiestos de viajeros y rooming lists;
-- vouchers de alojamiento/servicios seguros para cliente;
-- expediente imprimible interno de Operator;
-- aprobación explícita y auditada de referencias proveedor antes de mostrarlas en vouchers de cliente.
+- PDFs de confirmación, manifiestos de viajeros y rooming lists;
+- vouchers de alojamiento/servicios seguros para cliente y expediente imprimible interno;
+- aprobación explícita/auditada de referencias proveedor antes de mostrarlas en vouchers de cliente;
+- exportaciones CSV/XLSX de reservas, servicios y clientes según permisos;
+- conciliación de pagos, saldos pendientes e ingresos por producto/servicio;
+- exportación fail-closed y auditada de datos protegidos del viajero para uso operativo legítimo;
+- auditoría de exportaciones sin persistir los valores de las celdas exportadas;
+- finanzas y reporting multimoneda sin sumar monedas diferentes entre sí.
 
 La validación E2E con credenciales Stripe/Redsys sigue pendiente hasta disponer de cuentas adecuadas. Los adapters están implementados, pero la capacidad productiva no se considera validada hasta probar TEST/LIVE.
 
-**Fase actual: Fase 7B — Documentos, exportaciones y reporting. 7B-1 confirmaciones, 7B-2 listas de viajeros/rooming lists y 7B-3 vouchers/expediente están completadas. La siguiente prioridad es 7B-4 exportaciones CSV/XLSX y reporting/conciliación.**
+**La Fase 7B — Documentos, exportaciones y reporting está completada: confirmaciones, listas de viajeros/rooming lists, vouchers/expedientes, CSV/XLSX, conciliación y reporting están implementados. La siguiente fase de entrega es la Fase 8 — Integraciones externas.**
 
 ## Capacidades actuales
 
@@ -137,7 +140,8 @@ La validación E2E con credenciales Stripe/Redsys sigue pendiente hasta disponer
 - retornos del navegador no autoritativos;
 - perfiles TEST/LIVE gestionados por Admin;
 - snapshots de pago completo, depósito y cuotas;
-- cálculo de saldo pendiente y próximo pago.
+- cálculo de saldo pendiente y próximo pago;
+- totales del dashboard financiero separados por moneda y nunca sumados entre monedas diferentes.
 
 ### Documentos
 
@@ -155,6 +159,21 @@ La validación E2E con credenciales Stripe/Redsys sigue pendiente hasta disponer
 - aprobaciones de referencia guardadas separadamente y auditadas;
 - notas internas, costes proveedor y valores post-compra protegidos excluidos de renderers de cliente;
 - endpoints PDF privados `no-store` + `nosniff` y nombres seguros.
+
+### Informes y exportaciones
+
+- workspace protegido `/operator/reports`;
+- exportaciones CSV/XLSX de reservas de viaje, reservas de servicios y clientes;
+- filtros server-side por fecha de creación y límites de tamaño para descargas desde navegador;
+- exportaciones de conciliación, saldos pendientes/cuotas vencidas e ingresos por producto/servicio solo con permiso Finanzas;
+- misma definición tipada de columnas para los renderers CSV y XLSX;
+- mitigación de inyección de fórmulas en datos controlados por usuarios;
+- XLSX OOXML ligero con cabecera congelada y autofiltro;
+- respuestas privadas `no-store` + `nosniff`;
+- auditoría con actor, tipo, formato, filtros, columnas, número de filas y timestamp, sin guardar valores exportados;
+- exportación de datos protegidos exige simultáneamente permisos Datos de viajeros + Reservas, una reserva activa y un motivo operativo explícito;
+- exportación protegida exclusivamente por POST y fail-closed: la auditoría persistente debe guardarse antes de devolver los bytes sensibles;
+- métricas financieras e ingresos agrupados siempre por moneda.
 
 ## Arquitectura
 
@@ -187,7 +206,7 @@ destinos + viajes + alojamiento + servicios
      |                                      |
 IdentityRepository                 Operations / RBAC / auditoría
                                            |
-                            documentos / fulfilment / tareas
+                       documentos / informes / fulfilment / tareas
 ```
 
 ## Inicio rápido
@@ -227,6 +246,7 @@ npm run dev
 /operator/catalogue                    catálogo
 /operator/media                        multimedia
 /operator/documents                    documentos
+/operator/reports                      informes y exportaciones CSV/XLSX
 /operator/tasks                        tareas
 /operator/fulfilment                   proveedores
 /operator/payments                     finanzas
@@ -255,6 +275,7 @@ La plantilla completa vive en [`.env.example`](.env.example). Los secretos nunca
 - [`docs/BOOKING-DOCUMENTS.es.md`](docs/BOOKING-DOCUMENTS.es.md)
 - [`docs/DEPARTURE-DOCUMENTS.es.md`](docs/DEPARTURE-DOCUMENTS.es.md)
 - [`docs/VOUCHERS-DOSSIERS.es.md`](docs/VOUCHERS-DOSSIERS.es.md)
+- [`docs/REPORTING-EXPORTS.es.md`](docs/REPORTING-EXPORTS.es.md)
 - [`docs/ADAPTER-GUIDE.md`](docs/ADAPTER-GUIDE.md)
 - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 - [`docs/PRODUCTION-CHECKLIST.md`](docs/PRODUCTION-CHECKLIST.md)
@@ -283,6 +304,7 @@ check:staff-permissions
 check:booking-documents
 check:departure-documents
 check:voucher-documents
+check:reporting-exports
 typecheck
 build
 ```
@@ -306,20 +328,24 @@ build
 | PDFs de confirmación | Completado |
 | Manifiestos y rooming lists | Completado |
 | Vouchers y expediente imprimible | Completado |
-| CSV/XLSX y conciliación/reporting | **Siguiente — Fase 7B-4** |
+| CSV/XLSX y conciliación/reporting | Completado |
+| Fase 7B — Documentos, exportaciones y reporting | **Completada** |
 
 ## Siguiente prioridad
 
-**Fase 7B-4 — Exportaciones CSV/XLSX y reporting/conciliación**:
+El siguiente bloque es la **Fase 8 — Integraciones externas**. El core debe conectarse ahora con ecosistemas de negocio reales mediante adapters neutrales, manteniendo los payloads específicos de cada proveedor fuera de los dominios centrales.
 
-- exportaciones de reservas y servicios;
-- exportaciones de clientes;
-- conciliación de pagos y saldos pendientes;
-- exportación segura/auditada de datos de viajeros para uso operativo legítimo;
-- ingresos por producto/servicio;
-- bases de dashboards operativos/comerciales.
+Prioridades iniciales:
 
-La validación TEST/LIVE de Stripe/Redsys se insertará cuando existan cuentas proveedor adecuadas y no bloquea 7B-4.
+- APIs de proveedores/reservas;
+- webhooks salientes genéricos;
+- sincronización CRM;
+- integración ERP/contabilidad;
+- fuentes CMS/catálogo;
+- adapter REST genérico de reservas;
+- PSP adicionales cuando aporten valor comercial.
+
+La validación TEST/LIVE de Stripe/Redsys se insertará cuando existan cuentas proveedor adecuadas y no necesita bloquear el trabajo de adapters de la Fase 8.
 
 ## Principios
 
@@ -331,6 +357,7 @@ La validación TEST/LIVE de Stripe/Redsys se insertará cuando existan cuentas p
 - estado de reserva separado del pago;
 - datos avanzados solo post-compra cuando aplican;
 - documentos de cliente sin notas internas, datos protegidos ni costes proveedor;
+- exportaciones sensibles limitadas por permisos, finalidad operativa y auditoría persistente antes de entregarse;
 - UX pública bilingüe y responsive;
 - integraciones propietarias fuera del core MIT cuando corresponda.
 
