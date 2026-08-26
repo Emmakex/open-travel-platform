@@ -229,11 +229,11 @@ export async function requeueDeadLetterDelivery(input: {
             status: "pending",
             attempts: 0,
             nextAttemptAt: occurredAt,
-            lastAttemptAt: undefined,
             updatedAt: occurredAt
           },
           $unset: {
             leaseUntil: "",
+            lastAttemptAt: "",
             lastError: "",
             responseStatus: "",
             deadLetteredAt: "",
