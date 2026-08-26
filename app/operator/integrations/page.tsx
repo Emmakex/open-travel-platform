@@ -135,8 +135,8 @@ export default async function OperatorIntegrationsPage({
           <h2>{tr(locale, "Server-only scheduled execution", "Ejecución programada server-only")}</h2>
           <p className={styles.lead}>{tr(
             locale,
-            "Deployments can POST to /api/internal/integrations/process with a server-only Bearer token. The route uses a durable worker lease and minimum interval so browser sessions are not required and overlapping schedulers are bounded.",
-            "Los despliegues pueden hacer POST a /api/internal/integrations/process con un Bearer token server-only. La ruta usa un lease durable y un intervalo mínimo para no depender de sesiones de navegador y limitar schedulers solapados."
+            "Deployments can POST to /api/internal/integrations/process with a server-only Bearer token. The route uses a durable worker lease and minimum interval so browser sessions are not required and overlapping schedulers are bounded; no delivery is claimed to run continuously unless the deployment actually invokes this worker on a schedule.",
+            "Los despliegues pueden hacer POST a /api/internal/integrations/process con un Bearer token server-only. La ruta usa un lease durable y un intervalo mínimo para no depender de sesiones de navegador y limitar schedulers solapados; no se afirma que ninguna entrega se ejecute continuamente salvo que el despliegue invoque realmente este worker mediante un scheduler."
           )}</p>
           <div className={styles.metrics}>
             <div className={styles.metric}><strong>{workerAuthReady ? tr(locale, "READY", "LISTO") : tr(locale, "NOT CONFIGURED", "SIN CONFIGURAR")}</strong><span>{tr(locale, "Worker authentication", "Autenticación del worker")}</span></div>
