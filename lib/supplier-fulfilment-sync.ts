@@ -67,6 +67,15 @@ function assertOperationAllowed(item: SupplierFulfilmentItem, operation: Supplie
   }
 }
 
+function assertOperationResult(operation: SupplierAdapterOperation, result: SupplierAdapterResult) {
+  if (operation === "request" && result.status !== "requested") {
+    throw syncError("SUPPLIER_ADAPTER_CONTRACT_INVALID", "A supplier request operation must return requested status.");
+  }
+  if (operation === "cancel" && result.status !== "cancelled") {
+    throw syncError("SUPPLIER_ADAPTER_CONTRACT_INVALID", "A supplier cancellation operation must return cancelled status.");
+  }
+}
+
 function idempotencyKey(item: SupplierFulfilmentItem, operation: SupplierAdapterOperation) {
   if (operation === "status") return undefined;
   const revision = item.updatedAt ?? item.createdAt;
@@ -145,6 +154,7 @@ export async function performSupplierAdapterOperation(input: PerformSupplierAdap
       requestId,
       idempotencyKey: idempotencyKey(item, input.operation)
     });
+    assertOperationResult(input.operation, result);
   } catch (error) {
     const failedAudit: SupplierFulfilmentAdapterAuditEvent = {
       ...baseAudit,
