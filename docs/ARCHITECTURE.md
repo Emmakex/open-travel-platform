@@ -1,187 +1,271 @@
 # Architecture
 
-Open Travel Platform uses small ports-and-adapters boundaries so product UI and domain code do not depend directly on one backend, identity provider, booking engine, CRM or travel vendor.
+Open Travel Platform uses explicit ports-and-adapters boundaries so catalogue, identity, booking, operations, payments and integrations can evolve independently without leaking one vendor's payloads or authority into core domains.
 
-## Current flows
+The public MIT core is designed to stay provider-neutral. Kairoseth Travel is the official hosted/reference implementation built on those same boundaries.
 
-### Catalogue
-
-```text
-Next.js pages/components
-        |
-        v
-TravelRepository
-        |
-        +--> DemoTravelRepository
-        |
-        +--> HttpTravelRepository
-        |
-        +--> MongoTravelRepository
-```
-
-`MongoTravelRepository` is a server-only durable catalogue adapter. It reads the same `Destination` and `Trip` domain shapes as the demo and HTTP adapters, so switching catalogue storage does not require page/component changes.
-
-### Identity and authorization
+## Capability map
 
 ```text
-Customer / staff routes
+Public / customer UI
         |
-        v
-IdentityRepository
+        +------------------------------+
+        |                              |
+        v                              v
+TravelRepository                IdentityRepository
+        |                              |
+ demo / HTTP / MongoDB          demo / MongoDB
         |
-        +--> DemoIdentityRepository
-        |
-        +--> Future Auth.js / OAuth / SSO / external identity adapter
-        |
-        v
-server-side role checks
-```
-
-### Customer booking
-
-```text
-Trip/account UI
-        |
-        v
-customer role check + server validation
+ catalogue + departures
         |
         v
 BookingRepository
+   /       |       \
+ demo    MongoDB    REST /v1
         |
-        +--> DemoBookingRepository
+ trip reservations + transactional inventory
         |
-        +--> Future booking engine / database / supplier adapter
-```
-
-### Staff operations
-
-```text
-/operator routes + actions
+ accommodation / package snapshots
+        |
+        +---------------- independent service reservations
         |
         v
-operator/admin role check
+PaymentRepository
         |
-        v
-OperationsRepository
+provider-neutral payment/refund ledger
         |
-        +--> DemoOperationsRepository
+   Stripe / Redsys / manual movements
         |
-        +--> Future CRM / ERP / booking backoffice adapter
+        +---------------- succeeded movement events --------+
+                                                             |
+Operator / Admin                                             |
+        |                                                    |
+Operations / RBAC / audit                                    |
+        |                                                    |
+        +-- documents / reports / tasks                      |
+        |                                                    |
+        +-- supplier fulfilment --> SupplierFulfilmentAdapter|
+        |                            disabled / REST v1       |
+        |                                                    |
+customer + reservation events                                |
+        |                                                    |
+        +---------- transactional integration outbox <-------+
+                              |
+                              v
+                    durable integration worker
+                       /        |         \
+             signed webhooks   CRM REST   ERP/accounting REST
+                               |          |
+                        downstream only   downstream only
 ```
 
-`BookingRepository` and `OperationsRepository` intentionally remain separate even though both interact with reservation records. Customer code should not receive administrative methods simply because it can create a booking.
-
-## Layers
+## Core layers
 
 ### `domain/`
-Pure TypeScript entities and value shapes. Domain files must not import Next.js, browser APIs, databases or vendor SDKs.
+
+Pure TypeScript entities and value shapes. Domain code must not depend on Next.js, browser APIs, MongoDB or vendor SDKs.
+
+Important domain distinctions are intentionally preserved:
+
+- reservation state is not payment state;
+- payment/refund movements are immutable financial history;
+- protected post-purchase traveller values live outside ordinary reservation/customer documents;
+- supplier fulfilment state does not rewrite customer totals;
+- external CRM/ERP acknowledgements do not become authoritative booking/payment state.
 
 ### `repositories/`
-Interfaces consumed by application code. They describe capabilities, not transport details. Current boundaries are travel, identity, booking and operations.
+
+Provider-neutral capability interfaces consumed by application code. Current boundaries include catalogue/travel, identity, booking, operations, payment accounting, supplier fulfilment, CRM synchronization and ERP/accounting synchronization.
+
+Application code should depend on these capabilities rather than one external API schema.
 
 ### `adapters/`
-Infrastructure implementations. Current travel adapters include the in-code demo catalogue, a generic HTTP catalogue adapter and a MongoDB catalogue adapter. Identity, booking and operations still use explicit fictional demo adapters in the starter.
 
-### `data/`
-Original, non-production demo fixtures such as catalogue, availability and fixed fictional identities. Demo data exists so forks can run immediately and safely. The protected operator catalogue screen can seed missing demo catalogue records into MongoDB without overwriting records that already exist.
+Infrastructure implementations behind the repository/capability contracts. Current examples include:
+
+- demo, HTTP and MongoDB catalogue adapters;
+- demo/MongoDB identity and booking capabilities;
+- generic REST `BookingRepository` v1;
+- MongoDB payment ledger;
+- Stripe and Redsys payment-provider adapters;
+- REST supplier-fulfilment adapter;
+- REST CRM synchronization adapter;
+- REST ERP/accounting movement adapter.
+
+Vendor-specific payloads must be normalized inside adapters and must not leak into the core domain model.
 
 ### `lib/`
-Application configuration, capability composition, MongoDB connection management, demo stores and shared authorization predicates. Security-sensitive server-only configuration lives here rather than in browser components.
+
+Capability composition, MongoDB connection/index management, authorization, security helpers, payment/integration orchestration, outbox/worker implementation and server-only configuration.
 
 ### `app/` and `components/`
-Next.js presentation layer and server actions. UI code consumes capability interfaces instead of hard-coded external URLs or provider SDKs.
 
-## Travel data modes
+Next.js presentation layer and server actions. Customer and Operator surfaces call trusted server-side capability boundaries rather than embedding provider credentials or authoritative rules in the browser.
 
-Public presentation/noindex behaviour can remain in demo mode while catalogue storage changes behind the server boundary:
+## Catalogue and data modes
 
-```text
-NEXT_PUBLIC_DATA_MODE=demo
-TRAVEL_DATA_MODE=demo
-```
-
-For the durable MongoDB catalogue:
+The catalogue can be independently composed through:
 
 ```text
-NEXT_PUBLIC_DATA_MODE=demo
-TRAVEL_DATA_MODE=mongodb
-MONGODB_URI=mongodb+srv://...
-MONGODB_DB_NAME=kairoseth_travel
+TRAVEL_DATA_MODE=demo | api | mongodb
 ```
 
-`MONGODB_URI` and related credentials are server-only and must never use a `NEXT_PUBLIC_*` prefix.
+MongoDB catalogue persistence uses stable public/domain IDs and removes MongoDB implementation details before entities cross the repository boundary.
 
-For an external read-only catalogue API:
+Browser-visible `NEXT_PUBLIC_*` variables must never contain credentials or privileged tokens.
+
+## Identity boundaries
+
+Customer and staff identities use separate sessions and authorization paths.
 
 ```text
-TRAVEL_DATA_MODE=api
-NEXT_PUBLIC_TRAVEL_API_URL=https://api.example.com
+IDENTITY_MODE=demo | mongodb | disabled
+STAFF_AUTH_MODE=demo | mongodb | disabled
 ```
 
-When `TRAVEL_DATA_MODE` is omitted, the repository mode falls back to `NEXT_PUBLIC_DATA_MODE` for backward compatibility. See `API-CONTRACT.md`.
+Privileged Operator/Admin actions are authorized server-side. Browser-supplied roles are never authoritative.
 
-## MongoDB catalogue collections
+## Booking boundaries
 
-The MongoDB adapter uses two collections:
+Booking is composed independently:
 
 ```text
-travel_destinations
-travel_trips
+BOOKING_MODE=demo | mongodb | rest | disabled
 ```
 
-Protected catalogue administration creates unique indexes for stable `id` and `slug` fields plus a `destinationId` index for trip relationships. MongoDB `_id` and internal timestamps are stripped before domain entities cross the repository boundary.
+The REST mode is a versioned generic adapter behind `BookingRepository`. External JSON must pass runtime contract validation plus local ownership/scope checks before it becomes booking-domain data.
 
-## Identity modes
+MongoDB booking writes use transactions where inventory/reservation integrity requires atomicity.
 
-Identity configuration is server-only.
+## Operations and supplier fulfilment
+
+Staff operations remain a separate capability from customer booking. Operators do not gain unrestricted booking/database methods simply because they can manage reservations.
+
+Supplier fulfilment keeps local workflow state authoritative while optionally synchronizing through `SupplierFulfilmentAdapter`:
 
 ```text
-IDENTITY_MODE=demo
-DEMO_IDENTITY_ENABLED=false
+SUPPLIER_FULFILMENT_ADAPTER_MODE=disabled | rest
 ```
 
-Development defaults to demo identity when `IDENTITY_MODE` is omitted. Production defaults to identity disabled. See `IDENTITY.md`.
+External supplier responses are audited before application and re-enter the local fulfilment transition boundary. External systems cannot force invalid transitions, overwrite local supplier costs/currency or auto-disclose supplier references to customers.
 
-## Booking modes
+## Payment accounting boundary
+
+`PaymentRepository` stores provider-neutral payment/refund movements separately from reservation state.
+
+A payment movement can be:
 
 ```text
-BOOKING_MODE=demo
-DEMO_BOOKING_ENABLED=false
+pending | succeeded | failed
 ```
 
-Development defaults to demo booking. Production defaults to booking disabled. Demo writes in production require explicit opt-in. See `BOOKING.md`.
+Only `succeeded` payment/refund movements are treated as finalized financial facts for the generic ERP/accounting sync.
 
-## Operations modes
+Stripe/Redsys browser returns are non-authoritative; signed server-side provider notifications finalize provider-backed movements.
+
+## Transactional integration outbox
+
+Outbound business integration events use one durable MongoDB outbox and delivery queue.
+
+Key properties:
+
+- event and related local mutation commit/rollback together when the source is MongoDB-backed;
+- unique delivery per `(eventId, endpointId)`;
+- at-least-once delivery semantics;
+- stable idempotency keys at adapter boundaries;
+- per-delivery lease and crash recovery;
+- bounded retry/backoff and dead-letter;
+- preserved attempt history and Admin replay;
+- shared scheduler/manual worker lock;
+- queue health and delivery diagnostics;
+- bounded retention for completed successful history.
+
+The platform does **not** create one queue per CRM/ERP/provider. Dedicated business adapters are virtual destinations on the same delivery infrastructure.
+
+## Event data surfaces
+
+Not every integration event is available to every destination.
+
+### Generic signed webhooks
+
+Generic Admin-configured webhooks receive only the explicitly safe reservation-event subset:
 
 ```text
-OPERATIONS_MODE=demo
-DEMO_OPERATIONS_ENABLED=false
+trip.reservation.created
+trip.reservation.status.changed
+service.reservation.created
+service.reservation.status.changed
 ```
 
-Development defaults to demo operations. Production defaults to operations disabled. Demo staff writes in production require explicit opt-in. See `OPERATIONS.md`.
+Protected post-purchase traveller values and provider-specific payloads are excluded.
+
+### CRM
+
+CRM-only customer triggers include:
+
+```text
+customer.created
+customer.profile.updated
+```
+
+These events are not selectable by generic webhooks. CRM receives allowlisted contact/reservation snapshots and is downstream-only: it cannot mutate booking, pricing, inventory, supplier fulfilment or payment-ledger state.
+
+Configuration:
+
+```text
+CRM_SYNC_MODE=disabled | rest
+```
+
+### ERP/accounting
+
+ERP/accounting receives only:
+
+```text
+payment.transaction.succeeded
+```
+
+The event is isolated from generic webhooks and CRM. The adapter reloads the authoritative local ledger movement before delivery and exports exact amount/currency/source reference values.
+
+Configuration:
+
+```text
+ERP_ACCOUNTING_MODE=disabled | rest
+```
+
+ERP acknowledgements persist only external-link/audit metadata and cannot rewrite the local ledger or reservation history.
+
+The generic ERP contract intentionally represents accounting-ready movements, not jurisdiction-specific statutory invoices. Legal invoicing requires authoritative fiscal/billing data and market-specific rules that must be modeled explicitly before such a capability can claim compliance.
 
 ## Trust boundaries
 
-Client-visible `NEXT_PUBLIC_*` variables must never contain credentials, secrets, private keys or privileged tokens.
+Current server-side security rules include:
 
-Private operations are validated on trusted server-side boundaries. Current rules include:
+- customer routes/actions require a resolved customer identity;
+- Operator actions require authorized staff identity and granular capabilities;
+- Admin-only configuration pages re-check Admin authority server-side;
+- booking totals, availability, ownership and state transitions are server validated;
+- payment state is finalized only by trusted server-side paths;
+- provider secrets and encryption keys remain server-only;
+- protected traveller data is encrypted separately and exposed only through purpose/capability-bound flows;
+- generic webhook URLs receive SSRF/DNS-rebinding protection and validated-IP delivery;
+- integration worker execution requires a separate server-only credential;
+- CRM/ERP REST credentials never use `NEXT_PUBLIC_*` variables;
+- external systems cannot silently expand their authority through response payloads.
 
-- customer routes/actions require a resolved `customer` identity;
-- operator routes/actions require a resolved `operator` or `admin` identity;
-- MongoDB credentials remain server-side;
-- protected catalogue seed actions require operator/admin identity;
-- browser-supplied role values are never authoritative;
-- booking totals are derived from trusted trip data;
-- availability, remaining capacity and identity ownership are checked server-side;
-- operational state transitions are revalidated server-side;
-- staff status changes emit a fictional audit event in demo mode.
+## Production-hardening boundary
 
-## Demo-store limitation
+With Phase 8 complete, the next architectural priority is Phase 9: strengthen the existing capabilities rather than expanding provider surface area by default.
 
-Cookie-backed demo stores exist to make a fresh clone useful with no database. They are intentionally browser-local, capped and fictional. They are not substitutes for durable multi-user storage, transactional inventory or audit infrastructure.
+Primary hardening areas are:
 
-MongoDB catalogue persistence solves durable destination/trip content only. Booking, customer identity and operations persistence remain separate capability migrations.
+- browser E2E and MongoDB concurrency testing;
+- CSP/security headers, CSRF/origin review and rate limiting;
+- cookie/session review and privileged-action audit coverage;
+- structured logs, health/readiness and centralized errors;
+- backup/restore, key recovery/rotation and disaster-recovery procedures;
+- dependency/secret scanning;
+- GDPR/privacy/retention/export/deletion workflows;
+- database/index/performance review;
+- credentialed Stripe/Redsys TEST/LIVE E2E when provider accounts are available.
 
-## Future boundaries
-
-Provider/payment/CRM integrations, notifications and broader administration should continue to be introduced as dedicated capabilities rather than leaking vendor-specific payloads across the application.
+Optional CMS, SSO, PSP and jurisdiction-specific accounting adapters should be added when commercially justified without weakening the capability boundaries above.
