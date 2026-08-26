@@ -17,11 +17,11 @@ _Last updated: 26 August 2026._
 
 The project is well beyond the original catalogue/booking MVP.
 
-Completed foundations include persistent customer/staff identity, RBAC, trip/service reservations, traveller pricing, independent services, transactional email, payment accounting, encrypted PSP configuration, provider-neutral checkout adapters, deposits/installments, encrypted post-purchase traveller data, reservation amendments, reusable accommodation, transactional room inventory, package supplements, rich operations, granular staff permissions, booking/departure documents, customer-safe vouchers, an internal reservation dossier, CSV/XLSX operational exports, finance reconciliation/reporting, audited protected-traveller exports and the first provider-neutral outbound integration boundary.
+Completed foundations include persistent customer/staff identity, RBAC, trip/service reservations, traveller pricing, independent services, transactional email, payment accounting, encrypted PSP configuration, provider-neutral checkout adapters, deposits/installments, encrypted post-purchase traveller data, reservation amendments, reusable accommodation, transactional room inventory, package supplements, rich operations, granular staff permissions, booking/departure documents, customer-safe vouchers, an internal reservation dossier, CSV/XLSX operational exports, finance reconciliation/reporting, audited protected-traveller exports, provider-neutral outbound integration events and durable scheduled integration operations with replay, health metrics and retention.
 
 Stripe/Redsys credentialed end-to-end validation remains pending until suitable provider accounts are available. The adapters are implemented, but production payment capability is not considered validated until TEST/LIVE provider flows are exercised.
 
-**Phases 6B, 6C, 7A, 7B and 8A are complete. Phase 8B — scheduled integration delivery, replay and observability is NEXT.**
+**Phases 6B, 6C, 7A, 7B, 8A and 8B are complete. Phase 8C — business adapters is NEXT.**
 
 ---
 
@@ -278,19 +278,26 @@ Goal: connect deployments to real business ecosystems through adapters while kee
 - EN/ES integration documentation;
 - permanent `check:outbound-integrations` gate wired into `npm run verify` and GitHub CI.
 
-## 8B — Scheduled delivery, replay and observability — NEXT
+## 8B — Scheduled delivery, replay and observability — COMPLETE
 
-- scheduler/worker entry point suitable for the deployment platform without relying on a logged-in browser session;
-- server-only worker authentication and rate/batch controls;
-- safe dead-letter replay/requeue controls with audit history;
-- delivery/event detail view for Admin;
-- queue health metrics: pending, retrying, dead-letter, oldest due delivery and recent success/failure rate;
-- retention policy for completed delivery attempts/events that preserves operational audit requirements;
-- health/operational diagnostics without exposing signing secrets or protected traveller values.
+- server-only `POST /api/internal/integrations/process` scheduler/worker entry point with no browser-session dependency;
+- dedicated `KTRAVEL_INTEGRATION_WORKER_TOKEN` Bearer authentication with timing-safe comparison and minimum secret length;
+- durable global worker lease shared by scheduler and manual Admin execution;
+- server-side bounded batch size and minimum execution interval with `Retry-After` on contention/rate limiting;
+- safe Admin-only dead-letter replay that atomically requeues the delivery and writes replay audit history;
+- prior durable attempt history preserved across replay while each replay starts a fresh bounded retry cycle;
+- Admin event detail and delivery detail views with attempt/replay history;
+- queue health metrics for pending/retrying/dead-letter, oldest due delivery and 24-hour attempt success/failure rates;
+- completed-success retention policy with bounded cleanup batches and aggregate retention audit metadata;
+- dead-letter, active work and manual replay audit excluded from automatic completed-history cleanup;
+- scheduler responses are private `no-store` + `nosniff` and diagnostics never expose worker/signing secrets or protected traveller values;
+- deployment settings for worker token, batch size, minimum interval and completed-history retention;
+- EN/ES integration-operations documentation;
+- permanent `check:integration-operations` gate wired into `npm run verify` and GitHub CI.
 
-## 8C — Business adapters — PLANNED
+## 8C — Business adapters — NEXT
 
-Candidate adapters after the common delivery layer is operationally mature:
+The common event/outbox/delivery layer is now operationally mature enough for concrete business adapters. Initial candidates:
 
 - supplier/booking APIs;
 - CRM synchronization;
@@ -300,7 +307,7 @@ Candidate adapters after the common delivery layer is operationally mature:
 - enterprise identity where appropriate;
 - additional payment providers when commercially useful.
 
-Vendor-specific payloads should remain inside adapters and consume the versioned event boundary rather than leaking into reservation domains.
+Vendor-specific payloads must remain inside adapters and consume the versioned event boundary rather than leaking into reservation domains.
 
 # Phase 9 — Production hardening
 
@@ -346,8 +353,6 @@ Vendor-specific payloads should remain inside adapters and consume the versioned
 # Suggested delivery order
 
 ```text
-8B  Scheduled integration delivery / replay / observability
- ↓
 8C  Business adapters
  ↓
 9   Production hardening
