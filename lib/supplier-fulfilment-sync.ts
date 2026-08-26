@@ -7,7 +7,10 @@ import {
   saveSupplierFulfilment,
   travelSupplierFulfilmentCollectionName
 } from "@/lib/supplier-fulfilment";
-import type { SupplierAdapterOperation } from "@/repositories/supplier-fulfilment-adapter";
+import type {
+  SupplierAdapterOperation,
+  SupplierAdapterResult
+} from "@/repositories/supplier-fulfilment-adapter";
 
 export const travelSupplierFulfilmentAdapterAuditCollectionName = "travel_supplier_fulfilment_adapter_audit";
 
@@ -85,6 +88,14 @@ async function ensureAuditIndexes() {
   return { database, audit };
 }
 
+async function markAuditOutcome(
+  audit: ReturnType<Awaited<typeof ensureAuditIndexes>["audit"] extends never ? never : never>,
+  _id: string,
+  _fields: Partial<SupplierFulfilmentAdapterAuditEvent>
+) {
+  // Placeholder overload target; implementation below is intentionally replaced by structural helper.
+}
+
 export async function listSupplierAdapterAuditForTarget(targetType: SupplierFulfilmentTargetType, targetId: string) {
   if (operationsConfig.mode !== "mongodb") return [] as SupplierFulfilmentAdapterAuditEvent[];
   const { audit } = await ensureAuditIndexes();
@@ -124,7 +135,16 @@ export async function performSupplierAdapterOperation(input: PerformSupplierAdap
     occurredAt
   };
 
-  let result;
+  const markOutcome = async (fields: Partial<SupplierFulfilmentAdapterAuditEvent>) => {
+    try {
+      await audit.updateOne({ id: auditId }, { $set: fields });
+    } catch {
+      // The fail-closed guarantee is the initial persisted response audit before local application.
+      // Outcome enrichment after that point is best-effort so a successful local apply is not reported as failed.
+    }
+  };
+
+  let result: SupplierAdapterResult;
   try {
     result = await adapter.execute({
       operation: input.operation,
@@ -134,26 +154,28 @@ export async function performSupplierAdapterOperation(input: PerformSupplierAdap
       idempotencyKey: idempotencyKey(item, input.operation)
     });
   } catch (error) {
+    const failedAudit: SupplierFulfilmentAdapterAuditEvent = {
+      ...baseAudit,
+      outcome: "failed",
+      errorCode: errorCode(error)
+    };
     try {
-      await audit.insertOne({
-        ...baseAudit,
-        outcome: "failed",
-        errorCode: errorCode(error)
-      });
+      await audit.insertOne(failedAudit);
     } catch {
       throw syncError("SUPPLIER_ADAPTER_AUDIT_FAILED", "Supplier adapter failed and its audit record could not be persisted.");
     }
     throw error;
   }
 
+  const receivedAudit: SupplierFulfilmentAdapterAuditEvent = {
+    ...baseAudit,
+    outcome: "received",
+    responseStatus: result.status,
+    ...(result.supplierReference ? { responseReference: result.supplierReference } : {}),
+    ...(result.providerMessage ? { providerMessage: result.providerMessage } : {})
+  };
   try {
-    await audit.insertOne({
-      ...baseAudit,
-      outcome: "received",
-      responseStatus: result.status,
-      ...(result.supplierReference ? { responseReference: result.supplierReference } : {}),
-      ...(result.providerMessage ? { providerMessage: result.providerMessage } : {})
-    });
+    await audit.insertOne(receivedAudit);
   } catch {
     throw syncError("SUPPLIER_ADAPTER_AUDIT_FAILED", "Supplier adapter response could not be audited, so it was not applied locally.");
   }
@@ -173,31 +195,19 @@ export async function performSupplierAdapterOperation(input: PerformSupplierAdap
       actorRole: input.actorRole,
       actorDisplayName: input.actorDisplayName
     });
-    await audit.updateOne(
-      { id: auditId },
-      { $set: { outcome: "applied", appliedAt: new Date().toISOString() } }
-    );
+    await markOutcome({ outcome: "applied", appliedAt: new Date().toISOString() });
     return saved ?? item;
   } catch (error) {
     const code = errorCode(error);
     if (code === "NO_CHANGES") {
-      await audit.updateOne(
-        { id: auditId },
-        { $set: { outcome: "no-change", appliedAt: new Date().toISOString() } }
-      );
+      await markOutcome({ outcome: "no-change", appliedAt: new Date().toISOString() });
       return item;
     }
     if (code === "INVALID_TRANSITION") {
-      await audit.updateOne(
-        { id: auditId },
-        { $set: { outcome: "conflict", errorCode: "SUPPLIER_ADAPTER_STATUS_CONFLICT" } }
-      );
+      await markOutcome({ outcome: "conflict", errorCode: "SUPPLIER_ADAPTER_STATUS_CONFLICT" });
       throw syncError("SUPPLIER_ADAPTER_STATUS_CONFLICT", "The external supplier status conflicts with the allowed local fulfilment transition.");
     }
-    await audit.updateOne(
-      { id: auditId },
-      { $set: { outcome: "failed", errorCode: code } }
-    );
+    await markOutcome({ outcome: "failed", errorCode: code });
     throw error;
   }
 }
