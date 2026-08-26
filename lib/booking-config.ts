@@ -1,9 +1,9 @@
-export type BookingMode = "demo" | "mongodb" | "disabled";
+export type BookingMode = "demo" | "mongodb" | "rest" | "disabled";
 
 const requestedMode = process.env.BOOKING_MODE;
 const defaultMode: BookingMode = process.env.NODE_ENV === "production" ? "disabled" : "demo";
 const mode: BookingMode =
-  requestedMode === "demo" || requestedMode === "mongodb" || requestedMode === "disabled"
+  requestedMode === "demo" || requestedMode === "mongodb" || requestedMode === "rest" || requestedMode === "disabled"
     ? requestedMode
     : defaultMode;
 
@@ -13,7 +13,7 @@ const demoWritesEnabled =
 
 export const bookingConfig = {
   mode,
-  writesEnabled: mode === "mongodb" || demoWritesEnabled,
+  writesEnabled: mode === "mongodb" || mode === "rest" || demoWritesEnabled,
   demoWritesEnabled
 } satisfies {
   mode: BookingMode;
