@@ -73,22 +73,24 @@ export async function processIntegrationDeliveriesAction() {
   });
   if (!claim.claimed) redirect("/operator/integrations?error=worker-busy");
 
+  let result: Awaited<ReturnType<typeof processIntegrationDeliveries>>;
   try {
-    const result = await processIntegrationDeliveries({ limit: 25 });
+    result = await processIntegrationDeliveries({ limit: 25 });
     await pruneCompletedIntegrationHistory();
     await finishIntegrationWorkerRun({ result });
-    const params = new URLSearchParams({
-      processed: String(result.processed),
-      succeeded: String(result.succeeded),
-      retried: String(result.retried),
-      dead: String(result.deadLettered)
-    });
-    redirect(`/operator/integrations?${params.toString()}`);
   } catch (error) {
     await releaseIntegrationWorkerLease();
     console.error("Admin integration delivery run failed", error);
     redirect("/operator/integrations?error=worker-failed");
   }
+
+  const params = new URLSearchParams({
+    processed: String(result.processed),
+    succeeded: String(result.succeeded),
+    retried: String(result.retried),
+    dead: String(result.deadLettered)
+  });
+  redirect(`/operator/integrations?${params.toString()}`);
 }
 
 export async function requeueIntegrationDeliveryAction(formData: FormData) {
