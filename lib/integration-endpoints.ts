@@ -139,9 +139,10 @@ export async function saveIntegrationEndpoint(input: {
   const rawSecret = input.rotateSecret
     ? generateIntegrationSigningSecret()
     : input.signingSecret?.trim() || "";
-  const signingSecret = rawSecret
-    ? encryptIntegrationSecret(rawSecret)
-    : current?.signingSecret;
+  if (rawSecret && rawSecret.length < 16) {
+    throw Object.assign(new Error("Webhook signing secret must contain at least 16 characters."), { code: "INTEGRATION_SECRET_WEAK" });
+  }
+  const signingSecret = rawSecret ? encryptIntegrationSecret(rawSecret) : current?.signingSecret;
   if (!signingSecret) {
     throw Object.assign(new Error("A signing secret is required."), { code: "INTEGRATION_SECRET_REQUIRED" });
   }
