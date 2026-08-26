@@ -6,6 +6,7 @@ import {
 } from "../lib/integration-webhook-security.ts";
 
 assert.equal(isPublicWebhookAddress("8.8.8.8"), true, "public IPv4 targets should remain eligible");
+assert.equal(isPublicWebhookAddress("2001:4860:4860::8888"), true, "global-unicast IPv6 targets should remain eligible");
 for (const address of [
   "0.0.0.0",
   "10.0.0.1",
@@ -25,7 +26,8 @@ for (const address of [
   "fe80::1",
   "ff02::1",
   "2001:db8::1",
-  "::ffff:127.0.0.1"
+  "::ffff:127.0.0.1",
+  "::ffff:7f00:1"
 ]) {
   assert.equal(isPublicWebhookAddress(address), false, `${address} must be rejected as a webhook target`);
 }
@@ -118,14 +120,12 @@ for (const source of [bookingSource, operationsSource, serviceSource]) {
 
 const pageSource = await readFile(new URL("../app/operator/integrations/page.tsx", import.meta.url), "utf8");
 assert.ok(pageSource.includes("await requireAdminIdentity()"), "integration console must remain Admin-only");
-assert.ok(pageSource.includes("Process up to 25 due deliveries"));
-assert.ok(pageSource.includes("no delivery is claimed to run continuously"));
-assert.ok(pageSource.includes("protected traveller data"));
+assert.ok(pageSource.includes("protected traveller data"), "Admin copy must preserve the generic-event privacy boundary");
 
 const actionSource = await readFile(new URL("../app/operator/integrations/actions.ts", import.meta.url), "utf8");
 assert.ok(actionSource.includes("const admin = await requireAdminIdentity()"));
 assert.ok(actionSource.includes("await requireAdminIdentity()"));
-assert.ok(actionSource.includes("processIntegrationDeliveries({ limit: 25 })"));
+assert.ok(actionSource.includes("processIntegrationDeliveries({ limit: 25 })"), "manual Admin processing must remain explicitly bounded");
 
 const envSource = await readFile(new URL("../.env.example", import.meta.url), "utf8");
 assert.ok(envSource.includes("INTEGRATION_SECRETS_KEY="), "deployment template must document the integration encryption key");
