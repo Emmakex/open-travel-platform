@@ -5,7 +5,7 @@ async function source(path) {
   return readFile(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-const [types, endpoints, outbox, customerAuth, config, restAdapter, crmSync, contract, env] = await Promise.all([
+const [types, endpoints, outbox, customerAuth, config, restAdapter, crmSync, contract, env, page, docsEn, docsEs] = await Promise.all([
   source("domain/integrations/types.ts"),
   source("lib/integration-endpoints.ts"),
   source("lib/integration-outbox.ts"),
@@ -14,7 +14,10 @@ const [types, endpoints, outbox, customerAuth, config, restAdapter, crmSync, con
   source("adapters/rest-crm-sync-adapter.ts"),
   source("lib/crm-sync.ts"),
   source("repositories/crm-sync-adapter.ts"),
-  source(".env.example")
+  source(".env.example"),
+  source("app/operator/integrations/crm/page.tsx"),
+  source("docs/CRM-SYNC-ADAPTER.md"),
+  source("docs/CRM-SYNC-ADAPTER.es.md")
 ]);
 
 assert.match(types, /"customer\.created"/, "CRM customer creation event must exist");
@@ -31,6 +34,7 @@ assert.doesNotMatch(config, /NEXT_PUBLIC_CRM|NEXT_PUBLIC_REST_CRM/, "CRM secrets
 assert.match(outbox, /crmIntegrationDeliveryEndpointId/, "CRM must reuse the durable integration delivery queue");
 assert.match(outbox, /deliverCrmIntegrationEvent/, "integration worker must dispatch CRM deliveries");
 assert.match(outbox, /shouldQueueCrmIntegrationEvent/, "outbox must opt CRM deliveries in by event type/configuration");
+assert.match(outbox, /event\.aggregateType === "customer" && destinationIds\.length === 0\) return 0/, "CRM-only customer events must not be retained without a destination");
 assert.match(outbox, /integration_delivery_event_endpoint_unique/, "CRM deliveries must inherit event/destination idempotency");
 assert.match(outbox, /dead-letter/, "CRM deliveries must inherit dead-letter handling");
 
@@ -97,5 +101,12 @@ for (const variable of [
 ]) {
   assert.ok(env.includes(variable), `.env.example must document ${variable}`);
 }
+
+assert.match(page, /requireAdminIdentity/, "CRM diagnostics must be Admin-only");
+assert.match(page, /Contact names, email, phone, raw HTTP bodies and bearer credentials are not stored/, "CRM Admin UI must communicate audit privacy");
+assert.match(docsEn, /downstream-only/i, "English CRM docs must document downstream-only authority");
+assert.match(docsEn, /does \*\*not\*\* create a second background queue/i, "English CRM docs must document one-queue architecture");
+assert.match(docsEs, /solo downstream/i, "Spanish CRM docs must document downstream-only authority");
+assert.match(docsEs, /No.*crea una segunda cola/is, "Spanish CRM docs must document one-queue architecture");
 
 console.log("CRM synchronization adapter invariants passed.");
