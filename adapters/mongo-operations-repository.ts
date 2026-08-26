@@ -2,7 +2,11 @@ import { randomUUID } from "node:crypto";
 import type { Reservation, ReservationStatus } from "@/domain/booking/types";
 import type { ReservationStatusUpdate } from "@/domain/operations/types";
 import { releaseAccommodationBookingInventory } from "@/lib/accommodation-booking-inventory";
-import { createIntegrationEvent, enqueueIntegrationEvent } from "@/lib/integration-outbox";
+import {
+  createIntegrationEvent,
+  enqueueIntegrationEvent,
+  ensureIntegrationOutboxIndexes
+} from "@/lib/integration-outbox";
 import { travelDepartureCollectionName } from "@/lib/mongo-departures";
 import {
   ensureMongoReservationIndexes,
@@ -60,7 +64,10 @@ export class MongoOperationsRepository implements OperationsRepository {
   async updateReservationStatus(input: ReservationStatusUpdate) {
     const client = await getMongoClient();
     const database = client.db(getMongoDatabaseName());
-    await ensureMongoReservationIndexes(database);
+    await Promise.all([
+      ensureMongoReservationIndexes(database),
+      ensureIntegrationOutboxIndexes(database)
+    ]);
 
     const reservations = database.collection<StoredReservation>(travelReservationCollectionName);
     const audit = database.collection<StoredOperationsAuditEvent>(travelOperationsAuditCollectionName);
