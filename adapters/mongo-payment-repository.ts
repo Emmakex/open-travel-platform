@@ -38,6 +38,22 @@ function paymentError(code: string, message: string) {
   return error;
 }
 
+function mongoCode(error: unknown) {
+  return error && typeof error === "object" && "code" in error
+    ? Number((error as { code?: unknown }).code)
+    : undefined;
+}
+
+function sameProviderMovement(
+  existing: PaymentTransaction,
+  input: CreatePaymentTransactionInput
+) {
+  return existing.reservationId === input.reservationId &&
+    existing.type === input.type &&
+    existing.amount === input.amount &&
+    existing.currency === input.currency;
+}
+
 function money(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
@@ -207,12 +223,7 @@ export class MongoPaymentRepository implements PaymentRepository {
             providerReference: input.providerReference
           }, { session });
           if (existing) {
-            if (
-              existing.reservationId === input.reservationId &&
-              existing.type === input.type &&
-              existing.amount === input.amount &&
-              existing.currency === input.currency
-            ) {
+            if (sameProviderMovement(existing, input)) {
               result = existing;
               return;
             }
@@ -266,12 +277,22 @@ export class MongoPaymentRepository implements PaymentRepository {
         }
         result = transaction;
       });
-
-      if (!result) throw paymentError("PAYMENT_TRANSACTION_FAILED", "Payment transaction could not be stored.");
-      return result;
+    } catch (error) {
+      if (mongoCode(error) === 11000 && input.providerReference) {
+        const existing = await payments.findOne({
+          provider: input.provider,
+          providerReference: input.providerReference
+        });
+        if (existing && sameProviderMovement(existing, input)) return existing;
+        throw paymentError("PAYMENT_REFERENCE_CONFLICT", "Provider payment reference is already in use.");
+      }
+      throw error;
     } finally {
       await session.endSession();
     }
+
+    if (!result) throw paymentError("PAYMENT_TRANSACTION_FAILED", "Payment transaction could not be stored.");
+    return result;
   }
 
   async updateTransaction(input: UpdatePaymentTransactionInput) {
@@ -333,10 +354,15 @@ export class MongoPaymentRepository implements PaymentRepository {
         }
         result = update;
       });
-
-      return result;
+    } catch (error) {
+      if (mongoCode(error) === 11000 && input.providerReference) {
+        throw paymentError("PAYMENT_REFERENCE_CONFLICT", "Provider payment reference is already in use.");
+      }
+      throw error;
     } finally {
       await session.endSession();
     }
+
+    return result;
   }
 }
