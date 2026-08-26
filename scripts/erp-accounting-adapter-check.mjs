@@ -5,7 +5,22 @@ async function source(path) {
   return readFile(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-const [types, endpoints, outbox, paymentRepository, config, restAdapter, sync, contract, env] = await Promise.all([
+const [
+  types,
+  endpoints,
+  outbox,
+  paymentRepository,
+  config,
+  restAdapter,
+  sync,
+  contract,
+  crmSync,
+  env,
+  layout,
+  page,
+  docsEn,
+  docsEs
+] = await Promise.all([
   source("domain/integrations/types.ts"),
   source("lib/integration-endpoints.ts"),
   source("lib/integration-outbox.ts"),
@@ -14,13 +29,19 @@ const [types, endpoints, outbox, paymentRepository, config, restAdapter, sync, c
   source("adapters/rest-erp-accounting-adapter.ts"),
   source("lib/erp-accounting-sync.ts"),
   source("repositories/erp-accounting-adapter.ts"),
-  source(".env.example")
+  source("lib/crm-sync.ts"),
+  source(".env.example"),
+  source("app/operator/integrations/layout.tsx"),
+  source("app/operator/integrations/erp/page.tsx"),
+  source("docs/ERP-ACCOUNTING-ADAPTER.md"),
+  source("docs/ERP-ACCOUNTING-ADAPTER.es.md")
 ]);
 
 assert.match(types, /"payment\.transaction\.succeeded"/, "ERP succeeded-payment event must exist");
 assert.match(types, /ErpAccountingIntegrationEventType/, "ERP accounting event subset must remain explicit");
 assert.match(types, /"payment-transaction"/, "integration aggregates must support payment transactions");
 assert.doesNotMatch(endpoints, /payment\.transaction\.succeeded/, "generic webhook subscriptions must not expose ERP financial events");
+assert.doesNotMatch(crmSync, /payment\.transaction\.succeeded/, "CRM dispatcher must not consume ERP financial events");
 
 assert.match(config, /ERP_ACCOUNTING_MODE/, "ERP/accounting mode must be explicit");
 assert.match(config, /requestedMode === "rest" \? "rest" : "disabled"/, "ERP/accounting sync must default fail-safe to disabled");
@@ -32,6 +53,7 @@ assert.match(outbox, /erpAccountingDeliveryEndpointId/, "ERP/accounting must reu
 assert.match(outbox, /deliverErpAccountingEvent/, "integration worker must dispatch ERP/accounting deliveries");
 assert.match(outbox, /shouldQueueErpAccountingEvent/, "outbox must opt ERP deliveries in by event type/configuration");
 assert.match(outbox, /event\.aggregateType === "payment-transaction"/, "disabled ERP mode must not retain ERP-only orphan events");
+assert.match(outbox, /destinationIds\.length === 0/, "ERP orphan guard must require zero configured destinations");
 assert.match(outbox, /integration_delivery_event_endpoint_unique/, "ERP deliveries must inherit event/destination idempotency");
 assert.match(outbox, /dead-letter/, "ERP deliveries must inherit dead-letter handling");
 
@@ -104,5 +126,16 @@ for (const variable of [
 ]) {
   assert.ok(env.includes(variable), `.env.example must document ${variable}`);
 }
+
+assert.match(layout, /\/operator\/integrations\/erp/, "Integrations navigation must expose the Admin ERP diagnostics page");
+assert.match(page, /requireAdminIdentity/, "ERP/accounting diagnostics must be Admin-only");
+assert.match(page, /Only succeeded payment and refund movements/, "ERP Admin UI must state final-movement authority");
+assert.match(page, /Financial amounts, currency, provider references, customer PII, raw HTTP bodies and bearer credentials are not stored/, "ERP Admin UI must communicate audit minimization");
+assert.match(docsEn, /accounting-ready payment ledger movements/i, "English ERP docs must document movement-only scope");
+assert.match(docsEn, /same MongoDB transaction/i, "English ERP docs must document transactional outbox semantics");
+assert.match(docsEn, /not jurisdiction-specific legal invoices/i, "English ERP docs must not overclaim fiscal invoicing");
+assert.match(docsEs, /movimientos del ledger preparados para contabilidad/i, "Spanish ERP docs must document movement-only scope");
+assert.match(docsEs, /misma transacción MongoDB/i, "Spanish ERP docs must document transactional outbox semantics");
+assert.match(docsEs, /no facturas legales específicas de una jurisdicción/i, "Spanish ERP docs must not overclaim fiscal invoicing");
 
 console.log("ERP/accounting adapter invariants passed.");
