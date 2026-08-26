@@ -72,6 +72,8 @@ assert.match(sync, /supplierCost: item\.supplierCost/, "external responses must 
 assert.match(sync, /supplierCurrency: item\.supplierCurrency/, "external responses must preserve local supplier cost currency");
 assert.match(sync, /saveSupplierFulfilment\(/, "external responses must re-enter the existing local fulfilment boundary");
 assert.match(sync, /SUPPLIER_ADAPTER_STATUS_CONFLICT/, "external status conflicts must fail without forcing a local transition");
+assert.match(sync, /operation === "request" && result\.status !== "requested"/, "request operations must normalize to requested before later status sync");
+assert.match(sync, /operation === "cancel" && result\.status !== "cancelled"/, "cancel operations must normalize to cancelled");
 
 const auditInsert = sync.indexOf("await audit.insertOne(receivedAudit)");
 const localApply = sync.indexOf("const saved = await saveSupplierFulfilment");
@@ -96,7 +98,7 @@ for (const variable of [
 }
 
 assert.match(docsEn, /does \*\*not\*\* own customer prices, payment accounting, supplier costs, inventory, traveller records or protected post-purchase data/i, "English docs must state supplier adapter non-ownership boundaries");
-assert.match(docsEn, /persisted.*before local application|persisted.*before.*applied locally/is, "English docs must document audit-before-apply semantics");
+assert.match(docsEn, /only after that audit succeeds, the response is passed to the existing `saveSupplierFulfilment\(\)` boundary/i, "English docs must document audit-before-apply semantics");
 assert.match(docsEs, /No.*controla precios de cliente, contabilidad de pagos, costes del proveedor, inventario, viajeros ni datos post-compra protegidos/is, "Spanish docs must state supplier adapter non-ownership boundaries");
 
 console.log("Supplier fulfilment adapter invariant passed.");
