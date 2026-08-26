@@ -113,6 +113,9 @@ jobs:
       - name: Payment idempotency invariant check
         run: npm run check:payment-idempotency
 
+      - name: Traveller pricing and amendment invariant check
+        run: npm run check:traveller-amendment-validation
+
       - name: Browser E2E invariant check
         run: npm run check:browser-e2e
 
@@ -239,6 +242,11 @@ jobs:
           REST_ERP_ACCOUNTING_BASE_URL: https://erp.invalid/
           REST_ERP_ACCOUNTING_BEARER_TOKEN: ci-payment-idempotency-token
         run: npm run test:mongodb-payment-idempotency
+
+      - name: Traveller pricing and amendment MongoDB test
+        env:
+          OPERATIONS_MODE: mongodb
+        run: npm run test:mongodb-traveller-amendments
 
       - name: MongoDB diagnostics on failure
         if: failure()
