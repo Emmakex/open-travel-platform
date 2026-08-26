@@ -17,11 +17,11 @@ _Last updated: 26 August 2026._
 
 The project is well beyond the original catalogue/booking MVP.
 
-Completed foundations include persistent customer/staff identity, RBAC, trip/service reservations, traveller pricing, independent services, transactional email, payment accounting, encrypted PSP configuration, provider-neutral checkout adapters, deposits/installments, encrypted post-purchase traveller data, reservation amendments, reusable accommodation, transactional room inventory, optional package supplements, reservation ownership/notes, tasks/follow-ups, supplier fulfilment, advanced operational queues, post-booking package-supplement amendments, granular staff permissions, booking-confirmation PDFs, traveller manifests and rooming-list PDFs.
+Completed foundations include persistent customer/staff identity, RBAC, trip/service reservations, traveller pricing, independent services, transactional email, payment accounting, encrypted PSP configuration, provider-neutral checkout adapters, deposits/installments, encrypted post-purchase traveller data, reservation amendments, reusable accommodation, transactional room inventory, package supplements, rich operations, granular staff permissions, booking-confirmation PDFs, traveller manifests, rooming-list PDFs, customer-safe accommodation/service vouchers and an internal reservation dossier.
 
-Stripe/Redsys credentialed end-to-end validation remains intentionally pending until suitable provider accounts are available. The adapters are implemented, but production payment capability is not considered validated until TEST/LIVE provider flows are exercised.
+Stripe/Redsys credentialed end-to-end validation remains pending until suitable provider accounts are available. The adapters are implemented, but production payment capability is not considered validated until TEST/LIVE provider flows are exercised.
 
-**Phases 6B, 6C and 7A are functionally complete. Phase 7B — Documents, exports and reporting is IN PROGRESS: 7B-1 booking confirmation PDFs and 7B-2 traveller/rooming lists are complete. 7B-3 vouchers and printable reservation dossier is NEXT.**
+**Phases 6B, 6C and 7A are complete. Phase 7B — Documents, exports and reporting is IN PROGRESS: 7B-1, 7B-2 and 7B-3 are complete. Phase 7B-4 — CSV/XLSX exports and reconciliation/reporting is NEXT.**
 
 ---
 
@@ -29,39 +29,35 @@ Stripe/Redsys credentialed end-to-end validation remains intentionally pending u
 
 ## Foundation and catalogue — COMPLETE
 
-- Next.js / React / TypeScript application foundation;
+- Next.js / React / TypeScript foundation;
 - MongoDB capability adapters;
-- CI quality gates and release checks;
+- CI/release quality gates;
 - bilingual EN/ES public and Operator experience;
-- destinations and trips;
-- GridFS media library, covers, galleries and focal points;
-- structured multilingual itineraries;
+- destinations, trips and structured multilingual itineraries;
+- GridFS media, covers, galleries and focal points;
 - departures, capacity and live inventory;
 - public reference deployment at `travel.kairoseth.com`.
 
 ## Identity, RBAC and account security — COMPLETE
 
-- persistent customer registration/sign-in;
-- persistent staff Operator/Admin authentication;
+- persistent customer and staff authentication;
 - separate customer/staff sessions;
-- server-side RBAC and account lockout;
-- password change/recovery with SMTP delivery;
+- server-side RBAC and granular capabilities;
+- lockout, password change/recovery and SMTP delivery;
 - authentication audit events.
 
 ## Reservation operations and email foundation — COMPLETE
 
 - persistent trip reservations;
 - server-authoritative pricing/ownership/inventory;
-- confirm/cancel workflows;
-- transactional inventory release;
-- customer and Operator reservation views;
+- confirm/cancel workflows and transactional inventory release;
+- customer/Operator reservation views;
 - operational audit trail;
 - transactional reservation email.
 
 ## Phase 5A — Provider-neutral payments — COMPLETE
 
-- provider-neutral payment/refund ledger;
-- payment state independent from reservation state;
+- payment/refund ledger separated from reservation state;
 - manual bank transfer / cash / external terminal;
 - controlled refunds and reconciliation protections;
 - Operator finance visibility;
@@ -69,11 +65,11 @@ Stripe/Redsys credentialed end-to-end validation remains intentionally pending u
 
 ## Phase 5B — Traveller and age pricing — COMPLETE
 
-- lead and individual travellers;
+- lead/individual travellers;
 - date of birth / nationality;
 - configurable age bands and per-departure pricing;
-- guardian requirement for minors;
-- configurable seat consumption by age band;
+- guardian rules for minors;
+- configurable seat consumption;
 - historical traveller/pricing snapshots.
 
 ## Phase 5C — Independent service catalogue — COMPLETE
@@ -86,8 +82,7 @@ Stripe/Redsys credentialed end-to-end validation remains intentionally pending u
 
 ## Phase 5D — Service availability and inventory — COMPLETE
 
-- activity/transport availability calendars;
-- date/time slots;
+- activity/transport calendars and slots;
 - capacity/reserved-space and unit inventory;
 - safe slot closing;
 - service inventory separated from trip inventory.
@@ -96,192 +91,172 @@ Stripe/Redsys credentialed end-to-end validation remains intentionally pending u
 
 - activity, transport and protection reservations;
 - optional relation to a Kairoseth trip;
-- independent mode for externally booked trips;
 - transactional service inventory;
-- customer My services and Operator service queue;
-- service payments in the common ledger.
+- customer My services and Operator queue;
+- common payment ledger.
 
 ## Phase 5F — Payment providers and unified checkout — IMPLEMENTED
 
 - Admin-only TEST/LIVE provider configuration;
-- Stripe and Redsys adapters;
-- encrypted provider secrets;
-- unified checkout for trip/service reservations;
+- Stripe/Redsys adapters and encrypted secrets;
+- unified trip/service checkout;
 - signed Stripe webhooks + idempotency;
-- signed Redsys server notifications;
-- browser returns are non-authoritative;
-- credentialed TEST/LIVE E2E remains pending provider accounts.
+- signed Redsys notifications;
+- browser returns non-authoritative;
+- credentialed TEST/LIVE E2E pending provider accounts.
 
 ## Phase 5G — Deposits, installments and payment terms — COMPLETE
 
 - full-payment/deposit policies;
-- configurable deposits and installments;
+- configurable deposits/installments;
 - payment-term snapshots and due dates;
 - outstanding-balance / next-payment calculation;
-- customer payment schedule and Operator management.
+- customer schedule and Operator management.
 
 ## Phase 6A — Secure post-purchase traveller data — COMPLETE
 
 - requirement presets and reservation snapshots;
 - advanced identity/document/residence fields only when required;
-- customer editing deadlines;
+- customer deadlines;
 - AES-256-GCM encryption and separate sensitive-data storage;
 - TTL retention/deletion;
 - field-name-only audit history;
 - Operator completion visibility;
-- passport/DNI scans and health data excluded from the standard flow.
+- passport/DNI scan and health data excluded from the standard flow.
 
 ## Phase 6A.1 — Traveller-data UX/documentation — COMPLETE
 
-- clear Not required / Pending / Complete states;
+- Not required / Pending / Complete states;
 - customer task visibility;
 - aggregate/per-traveller Operator completion;
-- explicit snapshot semantics;
-- EN/ES documentation and test guidance.
+- snapshot semantics and EN/ES guidance.
 
 ## Phase 6B — Reservation amendments — COMPLETE
 
-- explicit amendment history with actor, reason, before/after and timestamp;
+- explicit amendment history with actor/reason/before/after/timestamp;
 - controlled traveller corrections;
-- atomic departure changes that reserve new capacity before releasing old capacity;
-- traveller pricing and accommodation reallocation recalculated for the new date;
+- atomic departure changes;
+- traveller pricing/accommodation reallocation on new date;
 - financial delta without rewriting historical ledger movements;
-- controlled refund-review state instead of automatic refund;
-- linked-service visibility/cancellation;
-- snapshotted modification/cancellation deadlines and configured customer notifications.
+- controlled refund-review state;
+- linked-service handling;
+- snapshotted change/cancellation deadlines and notifications.
 
 ## Phase 6C — Accommodation, supplements and package composition — COMPLETE
 
-- reusable accommodation domain and room types;
+- reusable accommodation and room types;
 - room inventory and occupancy limits;
-- public/Operator accommodation catalogue;
-- property and room galleries;
-- trip ↔ accommodation links and package reference rates;
-- seasonal and occupancy pricing;
+- public/Operator accommodation catalogue and galleries;
+- trip ↔ accommodation links;
+- seasonal/occupancy pricing;
 - automatic traveller-to-room allocation;
 - transactional trip + room inventory;
-- included vs optional accommodation accounting;
-- accommodation reallocation on departure amendments;
-- optional non-inventory package supplements;
-- server-authoritative supplement pricing/snapshots.
+- included/optional accommodation accounting;
+- accommodation reallocation during amendments;
+- package supplements and server-authoritative snapshots.
 
 ---
 
-# Operations maturity
-
-## Phase 7A — Rich operations workflow — COMPLETE
-
-Goal achieved: make Operator suitable for day-to-day travel operations rather than only catalogue and reservation-state management.
+# Phase 7A — Rich operations workflow — COMPLETE
 
 ### 7A-1 — Reservation ownership, notes and priorities — COMPLETE
-
-- owner/operator assignment;
-- internal notes never exposed to customers;
-- low / normal / high / urgent priority;
-- normalized tags and operational timeline;
-- audited changes and permanent privacy invariant.
+- owner assignment, internal notes, priority, tags and operational timeline;
+- audited changes and customer privacy invariant.
 
 ### 7A-2 — Tasks and follow-ups — COMPLETE
-
-- tasks attached to trip reservation / service reservation / customer;
-- assignee, due date and status;
-- overdue/today/upcoming views;
-- global dashboard and My tasks;
-- append-only comments and audited task changes.
+- task targets, assignee, due date, status, comments and dashboard views;
+- audited changes.
 
 ### 7A-3 — Supplier/fulfilment tracking — COMPLETE
-
 - fulfilment per trip/service/accommodation component;
-- not requested / requested / confirmed / rejected / cancelled states;
-- supplier reference/localizer;
-- optional internal supplier cost + currency;
-- confirmation deadline and overdue visibility;
-- append-only notes/audit events;
-- global supplier queue and attention metrics;
-- supplier data does not rewrite customer totals or payment ledger.
+- supplier status/reference/cost/deadline;
+- notes, audit, global queue and attention metrics;
+- supplier data does not rewrite customer totals or ledger.
 
 ### 7A-4 — Search, filters and operational queues — COMPLETE
-
-- free-text search across reservation/customer/trip/traveller/owner/tag data;
-- reservation/payment/owner/priority/tag/departure filters;
-- outstanding-balance and overdue-installment filters;
-- Mine / Needs attention / Unassigned quick views;
-- sorting and server-rendered pagination;
-- permanent CI invariant.
+- free-text search, reservation/payment/owner/priority/tag/departure filters;
+- balance/installment filters;
+- Mine / Needs attention / Unassigned views;
+- sorting and server-rendered pagination.
 
 ### 7A-5 — Package amendment workflow — COMPLETE
-
-- add/remove package supplements after booking;
-- change per-traveller assignments;
-- preserve contracted prices for existing supplements;
-- use current catalogue price only for newly added supplements;
-- exact before/after supplement snapshots;
-- financial delta handled by the existing 6B settlement model;
-- customer notification without exposing internal reason.
+- add/remove supplements post-booking;
+- traveller assignment changes;
+- contracted-price preservation;
+- exact before/after snapshots and financial delta.
 
 ### 7A-6 — Granular staff permissions — COMPLETE
-
-- Admin full-access superuser;
-- explicit narrower Operator capability matrix;
-- legacy Operators preserve the role profile until explicitly restricted;
-- capabilities separate reservations, catalogue, finance, protected traveller data, supplier fulfilment and tasks;
-- route/action/data-loading authorization uses the same server-side boundaries;
-- permission changes stored and audited transactionally;
-- permanent `check:staff-permissions` CI invariant.
+- Admin superuser + narrower Operator matrix;
+- reservations/catalogue/finance/traveller-data/suppliers/tasks capabilities;
+- server-authoritative route/action/data boundaries;
+- transactional permission audit;
+- permanent CI invariant.
 
 ---
 
 # Phase 7B — Documents, exports and reporting — IN PROGRESS
 
-Goal: support operational documents and reports commonly required by travel teams without leaking protected or internal-only data.
+Goal: provide travel-team operational documents and reporting without leaking protected or internal-only data.
 
 ## 7B-1 — Booking confirmation PDFs — COMPLETE
 
-- reusable server-side PDF layer using `pdf-lib`;
-- customer-owned booking confirmation download;
-- protected Operator Documents workspace;
-- EN/ES confirmation with trip dates, traveller names, accommodation and package supplements;
-- contact summary and current reservation total;
-- payment details for the customer and only for staff with Finance permission;
-- no internal notes, supplier references/costs or protected traveller data in the renderer;
-- private `no-store` endpoints;
-- safe filenames and real-PDF CI invariant.
+- reusable `pdf-lib` document layer;
+- customer and Operator confirmations;
+- EN/ES rendering;
+- trip dates, travellers, accommodation, package supplements and contact summary;
+- finance details only when permitted;
+- private `no-store` endpoints and permanent PDF invariant.
 
 ## 7B-2 — Traveller lists and rooming lists — COMPLETE
 
-- operational traveller manifest grouped by departure/reservation;
-- rooming list derived from snapshotted accommodation allocation;
-- protected PDF routes from the Operator Documents workspace;
+- departure traveller manifests;
+- rooming lists from snapshotted room allocations;
+- protected Operator PDF routes;
 - EN/ES printable output;
-- access controlled by server-side staff capabilities;
-- only ordinary booking/traveller snapshot data is included;
-- protected post-purchase document fields, supplier data and internal notes are excluded;
-- private `no-store` responses and safe filenames;
-- permanent `check:departure-documents` CI invariant.
+- protected post-purchase fields, supplier data and internal notes excluded;
+- permanent `check:departure-documents` gate.
 
-## 7B-3 — Vouchers and printable reservation dossier — NEXT
+## 7B-3 — Vouchers and printable reservation dossier — COMPLETE
 
-- accommodation vouchers;
-- independent-service vouchers;
-- customer-facing supplier-safe references only where explicitly configured for disclosure;
+- customer-safe accommodation vouchers for confirmed trip reservations with accommodation;
+- customer-safe service vouchers for confirmed activities, transport and travel protection;
+- authorized Operator download of the same customer-safe vouchers;
 - consolidated printable Operator reservation dossier;
-- explicit generated-at timestamp and document version/status;
-- privacy/authorization boundaries and permanent PDF invariants.
+- dossier sections for payment and supplier fulfilment loaded only when the current staff capabilities allow them;
+- explicit document version/status and UTC generated-at timestamp;
+- supplier references internal by default;
+- exact supplier reference must be explicitly approved by staff with Suppliers capability before customer disclosure;
+- disclosure policy stored separately from fulfilment and audited;
+- changing a supplier reference automatically invalidates the old approval because the approved value must exactly match the current value;
+- supplier costs, internal free-text notes and protected post-purchase traveller values excluded from customer vouchers;
+- customer ownership and confirmed-booking guards on customer routes;
+- private `no-store` + `nosniff` PDF responses;
+- permanent `check:voucher-documents` invariant wired into `npm run verify` and GitHub CI.
 
-## 7B-4 — CSV/XLSX exports and reconciliation reports
+## 7B-4 — CSV/XLSX exports and reconciliation reports — NEXT
 
-- reservation/service exports;
-- customer exports;
-- payment/reconciliation and outstanding-balance reports;
-- secure audited traveller-data export for legitimate operational use;
-- revenue by product/service;
-- operational/commercial dashboards.
+Goal: make operational and commercial data exportable without weakening permission/privacy boundaries.
+
+Planned scope:
+
+- reservation export;
+- independent-service reservation export;
+- customer export;
+- CSV and XLSX formats with stable column contracts;
+- payment reconciliation report;
+- outstanding-balance and overdue-installment report;
+- revenue by trip/product/service;
+- server-side filters/date ranges for large exports;
+- Finance capability required for financial columns/reports;
+- secure audited traveller-data export only for legitimate operational use and only with Traveller data capability;
+- no protected traveller fields in ordinary customer/reservation exports;
+- export audit event including actor, export type, filters and timestamp without persisting exported sensitive values;
+- operational/commercial reporting foundations and summary dashboards;
+- permanent export privacy/authorization CI invariants.
 
 ---
 
 # Phase 8 — External integrations
-
-Goal: connect deployments to real business ecosystems through adapters while keeping provider payloads out of the core domain.
 
 Candidate adapters:
 
@@ -290,77 +265,71 @@ Candidate adapters:
 - ERP/accounting;
 - generic outbound webhooks;
 - CMS/catalogue source;
-- enterprise identity example;
+- enterprise identity;
 - generic REST booking adapter;
 - payment providers beyond Stripe/Redsys.
 
 # Phase 9 — Production hardening
 
-Testing:
-
+### Testing
 - browser E2E registration → booking → accommodation/extras → service → payment → Operator;
 - MongoDB integration tests;
 - payment webhook/idempotency tests;
 - traveller/minor pricing tests;
 - trip/service/room inventory concurrency tests;
 - amendment/reallocation E2E;
-- accessibility regression checks and performance budgets;
-- adapter contract tests.
+- accessibility/performance and adapter contract tests.
 
-Security and privacy:
-
-- CSRF review, rate limiting and CSP/security headers;
-- cookie/session review;
+### Security/privacy
+- CSRF, rate limiting, CSP/security headers and cookie/session review;
 - dependency/secret scanning;
 - privileged-action audit review;
-- payment/traveller-data key recovery and rotation procedures;
-- backup/restore testing;
-- privacy policy, GDPR notices, booking terms, cookie policy, retention/deletion and customer export/deletion workflow;
-- insurance-distribution and regulatory review per market where applicable.
+- key recovery/rotation and backup/restore procedures;
+- GDPR/privacy/booking/cookie/retention/export/deletion workflows;
+- regulatory review per market.
 
-Observability and operations:
-
-- structured logs and centralized error reporting;
+### Observability/operations
+- structured logs and centralized errors;
 - uptime/health monitoring;
 - webhook/payment failure visibility;
-- backup/disaster-recovery and rollback procedures;
+- disaster recovery and rollback;
 - database index/performance review.
 
 # Phase 10 — Open-source productisation
 
-- production-ready environment documentation;
-- clean demo seed/setup flow;
+- production environment docs;
+- clean demo seed/setup;
 - fresh-clone install/deployment guide;
-- reference adapters and extension/plugin contracts;
-- versioned releases and migration notes;
-- issue/contribution templates;
-- public API/extension documentation;
+- reference adapters and extension contracts;
+- versioned releases/migrations;
+- contribution templates;
+- public API/extension docs;
 - optional Docker/self-host example;
 - trademark/branding policy;
-- proprietary Kairoseth/customer adapters remain outside the MIT core when appropriate.
+- proprietary Kairoseth/customer adapters outside the MIT core when appropriate.
 
 ---
 
 # Suggested delivery order
 
 ```text
-7B  Documents / exports / reporting
- ↓
-8   External integrations
- ↓
-9   Production hardening
- ↓
-10  Open-source productisation / release
+7B-4  CSV/XLSX exports / reconciliation / reporting
+  ↓
+8     External integrations
+  ↓
+9     Production hardening
+  ↓
+10    Open-source productisation / release
 ```
 
-Credentialed Stripe/Redsys TEST validation should be inserted as soon as provider accounts are available and does not need to block 7B.
+Credentialed Stripe/Redsys TEST validation should be inserted as soon as provider accounts are available and does not block 7B-4.
 
-Phase 9 testing/security work should continue incrementally rather than waiting until the end, especially for payments, traveller data, amendments and concurrent inventory.
+Phase 9 testing/security work should continue incrementally rather than waiting until the end.
 
 ---
 
 # Core non-goals
 
-Open Travel Platform should **not** become permanently tied to one payment gateway, CMS, CRM/ERP, booking supplier, authentication vendor, hosting platform or Kairoseth-only infrastructure.
+Open Travel Platform must not become permanently tied to one payment gateway, CMS, CRM/ERP, booking supplier, authentication vendor, hosting platform or Kairoseth-only infrastructure.
 
-The public core remains MIT licensed and reusable. Kairoseth Travel can build commercial hosting, support, implementation, premium/private adapters and customer-specific integrations around that core.
+The public core remains MIT licensed and reusable. Kairoseth Travel can build commercial hosting, support, premium/private adapters and customer-specific integrations around that core.
