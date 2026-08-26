@@ -71,12 +71,12 @@ export function createIntegrationEvent(input: Omit<IntegrationEventEnvelope, "id
   };
 }
 
+/** Call ensureIntegrationOutboxIndexes(database) before opening the transaction. */
 export async function enqueueIntegrationEvent(
   database: Db,
   session: ClientSession,
   event: IntegrationEventEnvelope
 ) {
-  await ensureIntegrationOutboxIndexes(database);
   const endpoints = await database.collection<StoredEndpointSubscription>(integrationEndpointCollectionName)
     .find({ enabled: true, subscribedEvents: event.type }, { session })
     .project<{ id: string }>({ id: 1 })
