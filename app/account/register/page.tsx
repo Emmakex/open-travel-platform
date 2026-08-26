@@ -37,7 +37,10 @@ export default async function RegisterPage({
       : "Check the form fields. Passwords must contain at least 10 characters.",
     "email-exists": isEs
       ? "Ya existe una cuenta con este correo. Puedes iniciar sesión."
-      : "An account already exists for this email. You can sign in instead."
+      : "An account already exists for this email. You can sign in instead.",
+    "rate-limited": isEs
+      ? "Se han realizado demasiados intentos de registro en poco tiempo. Espera antes de volver a intentarlo."
+      : "Too many registration attempts were made in a short period. Wait before trying again."
   };
 
   return (
