@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { CreateReservationInput } from "@/domain/booking/types";
+import type { AvailabilityWindow, CreateReservationInput, Reservation } from "@/domain/booking/types";
 import {
   parseAvailabilityEnvelope,
   parseReservationEnvelope,
@@ -70,6 +70,33 @@ function parseJson(text: string) {
   }
 }
 
+function assertAvailabilityTrip(items: AvailabilityWindow[], tripId: string) {
+  if (items.some((item) => item.tripId !== tripId)) {
+    throw adapterError("REST_BOOKING_SCOPE_MISMATCH", "The external booking API returned availability outside the requested trip scope.");
+  }
+  return items;
+}
+
+function assertReservationIdentity(reservation: Reservation, identityId: string) {
+  if (reservation.identityId !== identityId) {
+    throw adapterError("REST_BOOKING_SCOPE_MISMATCH", "The external booking API returned a reservation outside the requested customer scope.");
+  }
+  return reservation;
+}
+
+function assertReservationListIdentity(reservations: Reservation[], identityId: string) {
+  reservations.forEach((reservation) => assertReservationIdentity(reservation, identityId));
+  return reservations;
+}
+
+function assertCreatedReservation(reservation: Reservation, input: CreateReservationInput) {
+  assertReservationIdentity(reservation, input.identityId);
+  if (reservation.tripId !== input.tripId || reservation.availabilityId !== input.availabilityId) {
+    throw adapterError("REST_BOOKING_SCOPE_MISMATCH", "The external booking API returned a reservation for a different trip or departure.");
+  }
+  return reservation;
+}
+
 type RequestOptions<T> = {
   method?: "GET" | "POST";
   body?: unknown;
@@ -111,6 +138,10 @@ async function requestBookingApi<T>(path: string, options: RequestOptions<T>): P
         throw mapHttpError(response.status);
       }
 
+      const contentType = response.headers.get("content-type")?.toLowerCase() ?? "";
+      if (!contentType.includes("application/json")) {
+        throw adapterError("REST_BOOKING_CONTRACT_INVALID", "The external booking API must return application/json.");
+      }
       const responseVersion = response.headers.get(restBookingContractHeader);
       if (responseVersion !== restBookingContractVersion) {
         throw adapterError("REST_BOOKING_CONTRACT_VERSION", `The external booking API must return ${restBookingContractHeader}: ${restBookingContractVersion}.`);
@@ -138,21 +169,22 @@ export class RestBookingRepository implements BookingRepository {
     const result = await requestBookingApi(`v1/availability?tripId=${encodeURIComponent(tripId)}`, {
       parse: parseAvailabilityEnvelope
     });
-    return result ?? [];
+    return assertAvailabilityTrip(result ?? [], tripId);
   }
 
   async listReservations(identityId: string) {
     const result = await requestBookingApi(`v1/customers/${encodeURIComponent(identityId)}/reservations`, {
       parse: parseReservationsEnvelope
     });
-    return result ?? [];
+    return assertReservationListIdentity(result ?? [], identityId);
   }
 
   async getReservation(identityId: string, reservationId: string) {
-    return requestBookingApi(
+    const reservation = await requestBookingApi(
       `v1/customers/${encodeURIComponent(identityId)}/reservations/${encodeURIComponent(reservationId)}`,
       { parse: (value) => parseReservationEnvelope(value), allowNotFound: true }
     );
+    return reservation ? assertReservationIdentity(reservation, identityId) : null;
   }
 
   async createReservation(input: CreateReservationInput) {
@@ -163,11 +195,11 @@ export class RestBookingRepository implements BookingRepository {
       mutating: true
     });
     if (!reservation) throw adapterError("REST_BOOKING_CONTRACT_INVALID", "The external booking API did not return the created reservation.");
-    return reservation;
+    return assertCreatedReservation(reservation, input);
   }
 
   async cancelReservation(identityId: string, reservationId: string) {
-    return requestBookingApi(
+    const reservation = await requestBookingApi(
       `v1/customers/${encodeURIComponent(identityId)}/reservations/${encodeURIComponent(reservationId)}/cancel`,
       {
         method: "POST",
@@ -177,5 +209,6 @@ export class RestBookingRepository implements BookingRepository {
         mutating: true
       }
     );
+    return reservation ? assertReservationIdentity(reservation, identityId) : null;
   }
 }
