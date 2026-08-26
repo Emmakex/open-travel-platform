@@ -19,6 +19,16 @@ export const metadata = {
   description: "Provider-neutral reservation payment ledger."
 };
 
+type CurrencyMetrics = {
+  currency: string;
+  paid: number;
+  refunded: number;
+  net: number;
+  outstanding: number;
+  overdueAmount: number;
+  overdueReservations: number;
+};
+
 export default async function OperatorPaymentsPage() {
   const locale = await getLocale();
   const identity = await requireOperationsIdentity();
@@ -37,24 +47,34 @@ export default async function OperatorPaymentsPage() {
     ])
   );
 
-  const paid = Object.values(summaries).reduce((sum, item) => sum + item.paidAmount, 0);
-  const refunded = Object.values(summaries).reduce((sum, item) => sum + item.refundedAmount, 0);
-  const net = Object.values(summaries).reduce((sum, item) => sum + item.netPaidAmount, 0);
-  const outstanding = reservations.reduce((sum, reservation) => {
-    if (reservation.status === "cancelled") return sum;
-    return sum + (summaries[reservation.id]?.outstandingAmount ?? 0);
-  }, 0);
-  const overdueAmount = reservations.reduce((sum, reservation) => {
-    if (reservation.status === "cancelled") return sum;
-    return sum + schedules[reservation.id].installments
-      .filter((item) => item.state === "overdue")
-      .reduce((subtotal, item) => subtotal + item.outstandingAmount, 0);
-  }, 0);
-  const overdueReservations = reservations.filter((reservation) =>
-    reservation.status !== "cancelled" &&
-    schedules[reservation.id].installments.some((item) => item.state === "overdue")
-  ).length;
-  const defaultCurrency = reservations[0]?.currency ?? "EUR";
+  const metricsByCurrency = new Map<string, CurrencyMetrics>();
+  for (const reservation of reservations) {
+    const summary = summaries[reservation.id];
+    if (!summary) continue;
+    const schedule = schedules[reservation.id];
+    const overdueAmount = reservation.status === "cancelled"
+      ? 0
+      : schedule.installments
+          .filter((item) => item.state === "overdue")
+          .reduce((subtotal, item) => subtotal + item.outstandingAmount, 0);
+    const current = metricsByCurrency.get(summary.currency) ?? {
+      currency: summary.currency,
+      paid: 0,
+      refunded: 0,
+      net: 0,
+      outstanding: 0,
+      overdueAmount: 0,
+      overdueReservations: 0
+    };
+    current.paid += summary.paidAmount;
+    current.refunded += summary.refundedAmount;
+    current.net += summary.netPaidAmount;
+    current.outstanding += reservation.status === "cancelled" ? 0 : summary.outstandingAmount;
+    current.overdueAmount += overdueAmount;
+    if (overdueAmount > 0) current.overdueReservations += 1;
+    metricsByCurrency.set(summary.currency, current);
+  }
+  const currencyMetrics = [...metricsByCurrency.values()].sort((a, b) => a.currency.localeCompare(b.currency));
 
   return (
     <main className="section">
@@ -69,18 +89,27 @@ export default async function OperatorPaymentsPage() {
               "Un registro independiente del proveedor para pagos y reembolsos, junto con el calendario esperado de depósitos y cuotas de cada reserva de viaje."
             )}
           </p>
+          <div className={styles.notice}>{tr(
+            locale,
+            "Financial totals are separated by currency. Amounts in different currencies are never added together.",
+            "Los totales financieros se separan por moneda. Los importes de monedas distintas nunca se suman entre sí."
+          )}</div>
 
-          <div className={styles.metrics}>
-            <div className={styles.metric}><strong>{formatOperatorMoney(paid, defaultCurrency, locale, 2)}</strong><span>{tr(locale, "Gross paid", "Cobrado bruto")}</span></div>
-            <div className={styles.metric}><strong>{formatOperatorMoney(net, defaultCurrency, locale, 2)}</strong><span>{tr(locale, "Net collected", "Cobrado neto")}</span></div>
-            <div className={styles.metric}><strong>{formatOperatorMoney(outstanding, defaultCurrency, locale, 2)}</strong><span>{tr(locale, "Active outstanding", "Pendiente activo")}</span></div>
-            <div className={styles.metric}><strong>{formatOperatorMoney(overdueAmount, defaultCurrency, locale, 2)}</strong><span>{tr(locale, `Overdue · ${overdueReservations} reservations`, `Vencido · ${overdueReservations} reservas`)}</span></div>
-          </div>
-          <p className={styles.muted}>
-            {tr(locale, "Refunded", "Reembolsado")}: {formatOperatorMoney(refunded, defaultCurrency, locale, 2)}
-          </p>
+          {currencyMetrics.length ? currencyMetrics.map((metrics) => (
+            <div key={metrics.currency} style={{ marginTop: "1rem" }}>
+              <div className="eyebrow">{metrics.currency}</div>
+              <div className={styles.metrics}>
+                <div className={styles.metric}><strong>{formatOperatorMoney(metrics.paid, metrics.currency, locale, 2)}</strong><span>{tr(locale, "Gross paid", "Cobrado bruto")}</span></div>
+                <div className={styles.metric}><strong>{formatOperatorMoney(metrics.net, metrics.currency, locale, 2)}</strong><span>{tr(locale, "Net collected", "Cobrado neto")}</span></div>
+                <div className={styles.metric}><strong>{formatOperatorMoney(metrics.outstanding, metrics.currency, locale, 2)}</strong><span>{tr(locale, "Active outstanding", "Pendiente activo")}</span></div>
+                <div className={styles.metric}><strong>{formatOperatorMoney(metrics.overdueAmount, metrics.currency, locale, 2)}</strong><span>{tr(locale, `Overdue · ${metrics.overdueReservations} reservations`, `Vencido · ${metrics.overdueReservations} reservas`)}</span></div>
+              </div>
+              <p className={styles.muted}>{tr(locale, "Refunded", "Reembolsado")}: {formatOperatorMoney(metrics.refunded, metrics.currency, locale, 2)}</p>
+            </div>
+          )) : <div className={styles.notice}>{tr(locale, "No reservation payment totals are available yet.", "Todavía no hay totales de pago de reservas disponibles.")}</div>}
 
           <div className={styles.actions}>
+            <Link className="button button-primary" href="/operator/reports">{tr(locale, "Reports and exports", "Informes y exportaciones")}</Link>
             <Link className="button button-secondary" href="/operator">{tr(locale, "← Operator dashboard", "← Panel de operador")}</Link>
             <Link className="button button-secondary" href="/operator/reservations">{tr(locale, "Reservation queue", "Cola de reservas")}</Link>
             {identity.role === "admin" ? (
