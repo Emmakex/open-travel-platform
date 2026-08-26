@@ -113,6 +113,9 @@ jobs:
       - name: Payment idempotency invariant check
         run: npm run check:payment-idempotency
 
+      - name: Browser E2E invariant check
+        run: npm run check:browser-e2e
+
       - name: Type check
         run: npm run typecheck
 
@@ -244,3 +247,98 @@ jobs:
       - name: Stop MongoDB test container
         if: always()
         run: docker rm -f otp-mongo-rs || true
+
+  browser-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      MONGODB_URI: mongodb://127.0.0.1:27017/?replicaSet=rs0
+      MONGODB_DB_NAME: ktravel_ci_e2e_${{ github.run_id }}_${{ github.run_attempt }}
+      KTRAVEL_PUBLIC_URL: http://localhost:3000
+      KTRAVEL_DEPLOYMENT_PROFILE: demo
+      NEXT_PUBLIC_DATA_MODE: demo
+      TRAVEL_DATA_MODE: mongodb
+      IDENTITY_MODE: mongodb
+      STAFF_AUTH_MODE: mongodb
+      BOOKING_MODE: mongodb
+      OPERATIONS_MODE: mongodb
+      PAYMENT_LEDGER_MODE: mongodb
+      DEMO_IDENTITY_ENABLED: false
+      DEMO_BOOKING_ENABLED: false
+      DEMO_OPERATIONS_ENABLED: false
+      CRM_SYNC_MODE: disabled
+      ERP_ACCOUNTING_MODE: disabled
+      SUPPLIER_FULFILMENT_ADAPTER_MODE: disabled
+      KTRAVEL_BOOTSTRAP_ADMIN_EMAIL: browser-e2e-admin@example.test
+      KTRAVEL_BOOTSTRAP_ADMIN_PASSWORD: Browser-E2E-Admin-2026
+      KTRAVEL_BOOTSTRAP_ADMIN_NAME: Browser E2E Admin
+      PLAYWRIGHT_BASE_URL: http://localhost:3000
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Resolve dependency lock
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+
+      - name: Clean install from resolved lock
+        run: npm ci --no-fund
+
+      - name: Install pinned Chromium runtime
+        run: npx playwright install --with-deps chromium
+
+      - name: Start MongoDB 8.0 replica set
+        run: |
+          docker run --rm -d \
+            --name otp-mongo-e2e \
+            -p 27017:27017 \
+            mongo:8.0.29 \
+            --replSet rs0 \
+            --bind_ip_all
+
+          reachable=false
+          for attempt in {1..30}; do
+            if docker exec otp-mongo-e2e mongosh --quiet --eval 'db.adminCommand({ ping: 1 }).ok' 2>/dev/null | grep -q 1; then
+              reachable=true
+              break
+            fi
+            sleep 1
+          done
+          test "$reachable" = "true"
+
+          docker exec otp-mongo-e2e mongosh --quiet --eval \
+            'rs.initiate({_id:"rs0",members:[{_id:0,host:"127.0.0.1:27017"}]})'
+
+          primary=false
+          for attempt in {1..30}; do
+            if docker exec otp-mongo-e2e mongosh --quiet --eval 'db.hello().isWritablePrimary' 2>/dev/null | grep -q true; then
+              primary=true
+              break
+            fi
+            sleep 1
+          done
+          test "$primary" = "true"
+
+      - name: Seed persistent browser E2E data
+        run: npm run test:e2e:seed
+
+      - name: Build persistent production application
+        run: npm run build
+
+      - name: Chromium persistent booking journey
+        run: npm run test:e2e
+
+      - name: Browser E2E diagnostics on failure
+        if: failure()
+        run: |
+          find test-results -maxdepth 4 -type f -print 2>/dev/null || true
+          docker logs otp-mongo-e2e || true
+
+      - name: Stop MongoDB E2E container
+        if: always()
+        run: docker rm -f otp-mongo-e2e || true
