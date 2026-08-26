@@ -1,7 +1,10 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import type { Db } from "mongodb";
 import type { UserRole } from "@/domain/identity/types";
-import type { IntegrationEndpointSummary, IntegrationEventType } from "@/domain/integrations/types";
+import type {
+  IntegrationEndpointSummary,
+  WebhookIntegrationEventType
+} from "@/domain/integrations/types";
 import { getMongoDatabase } from "@/lib/mongodb";
 import {
   decryptIntegrationSecret,
@@ -14,7 +17,7 @@ import { validateIntegrationWebhookUrl } from "@/lib/integration-webhook-securit
 export const integrationEndpointCollectionName = "travel_integration_endpoints";
 export const integrationEndpointAuditCollectionName = "travel_integration_endpoint_audit";
 
-export const integrationEventTypes: IntegrationEventType[] = [
+export const integrationEventTypes: WebhookIntegrationEventType[] = [
   "trip.reservation.created",
   "trip.reservation.status.changed",
   "service.reservation.created",
@@ -26,7 +29,7 @@ type StoredIntegrationEndpoint = {
   name: string;
   url: string;
   enabled: boolean;
-  subscribedEvents: IntegrationEventType[];
+  subscribedEvents: WebhookIntegrationEventType[];
   signingSecret: EncryptedIntegrationSecret;
   createdAt: string;
   createdBy: string;
@@ -41,7 +44,7 @@ type IntegrationEndpointAuditEvent = {
   actorIdentityId: string;
   actorRole: UserRole;
   enabled?: boolean;
-  subscribedEvents?: IntegrationEventType[];
+  subscribedEvents?: WebhookIntegrationEventType[];
   occurredAt: string;
 };
 
@@ -73,7 +76,7 @@ function summary(endpoint: StoredIntegrationEndpoint): IntegrationEndpointSummar
 
 function normalizeSubscriptions(values: string[]) {
   const valid = new Set(integrationEventTypes);
-  return [...new Set(values.filter((value): value is IntegrationEventType => valid.has(value as IntegrationEventType)))];
+  return [...new Set(values.filter((value): value is WebhookIntegrationEventType => valid.has(value as WebhookIntegrationEventType)))];
 }
 
 export function generateIntegrationSigningSecret() {
