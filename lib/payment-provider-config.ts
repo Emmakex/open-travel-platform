@@ -1,21 +1,17 @@
-import {
-  createCipheriv,
-  createDecipheriv,
-  randomBytes
-} from "node:crypto";
 import type { Db } from "mongodb";
 import type { UserRole } from "@/domain/identity/types";
+import {
+  decryptVersionedValue,
+  encryptVersionedValue,
+  isEncryptionKeyringConfigured,
+  type VersionedEncryptedValue
+} from "@/lib/encryption-keyring";
 import { getMongoClient, getMongoDatabase, getMongoDatabaseName } from "@/lib/mongodb";
 
 export type PaymentProviderId = "stripe" | "redsys";
 export type PaymentEnvironment = "test" | "live";
 
-type EncryptedSecret = {
-  version: 1;
-  iv: string;
-  tag: string;
-  value: string;
-};
+type EncryptedSecret = VersionedEncryptedValue;
 
 type StripeEnvironmentConfig = {
   publishableKey?: string;
@@ -112,68 +108,26 @@ const REDSYS_PAYMENT_URLS: Record<PaymentEnvironment, string> = {
   live: "https://sis.redsys.es/sis/realizarPago"
 };
 
+const paymentKeyring = {
+  keyVariable: "PAYMENT_SECRETS_KEY",
+  keyIdVariable: "PAYMENT_SECRETS_KEY_ID",
+  previousKeysVariable: "PAYMENT_SECRETS_PREVIOUS_KEYS"
+} as const;
+
 function paymentProviderLabel(provider: PaymentProviderId) {
   return paymentProviderDefinitions.find((item) => item.id === provider)?.label ?? provider;
 }
 
-function parseEncryptionKey() {
-  const raw = process.env.PAYMENT_SECRETS_KEY?.trim();
-  if (!raw) return null;
-
-  if (/^[a-f0-9]{64}$/i.test(raw)) {
-    return Buffer.from(raw, "hex");
-  }
-
-  try {
-    const decoded = Buffer.from(raw, "base64");
-    if (decoded.length === 32) return decoded;
-  } catch {
-    return null;
-  }
-
-  return null;
-}
-
 export function isPaymentSecretEncryptionConfigured() {
-  return Boolean(parseEncryptionKey());
-}
-
-function encryptionKey() {
-  const key = parseEncryptionKey();
-  if (!key) {
-    throw new Error(
-      "PAYMENT_SECRETS_KEY must be a 32-byte base64 value or a 64-character hexadecimal value."
-    );
-  }
-  return key;
+  return isEncryptionKeyringConfigured(paymentKeyring);
 }
 
 function encryptSecret(value: string): EncryptedSecret {
-  const iv = randomBytes(12);
-  const cipher = createCipheriv("aes-256-gcm", encryptionKey(), iv);
-  const encrypted = Buffer.concat([cipher.update(value, "utf8"), cipher.final()]);
-  const tag = cipher.getAuthTag();
-  return {
-    version: 1,
-    iv: iv.toString("base64"),
-    tag: tag.toString("base64"),
-    value: encrypted.toString("base64")
-  };
+  return encryptVersionedValue(value, paymentKeyring);
 }
 
 function decryptSecret(secret?: EncryptedSecret) {
-  if (!secret) return "";
-  const decipher = createDecipheriv(
-    "aes-256-gcm",
-    encryptionKey(),
-    Buffer.from(secret.iv, "base64")
-  );
-  decipher.setAuthTag(Buffer.from(secret.tag, "base64"));
-  const decrypted = Buffer.concat([
-    decipher.update(Buffer.from(secret.value, "base64")),
-    decipher.final()
-  ]);
-  return decrypted.toString("utf8");
+  return secret ? decryptVersionedValue(secret, paymentKeyring) : "";
 }
 
 async function ensurePaymentProviderIndexes(database: Db) {
