@@ -142,6 +142,10 @@ export function decryptVersionedValue(secret: VersionedEncryptedValue, config: E
     return decryptWithKey(secret, key);
   }
 
+  if (secret.version !== 1) {
+    throw new Error(`Unsupported encrypted value version: ${String((secret as { version?: unknown }).version)}.`);
+  }
+
   const candidates = [keyring.currentKey, ...keyring.previousKeys.values()];
   let lastError: unknown;
   for (const key of candidates) {
