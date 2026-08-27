@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { getProductionReadiness } from "@/lib/production-readiness";
+import { reportOperationalFailure } from "@/lib/failure-reporting";
 import {
   correlationHeaders,
-  emitOperationalLog,
   getRequestCorrelationId
 } from "@/lib/observability";
+import { getProductionReadiness } from "@/lib/production-readiness";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,8 +15,8 @@ export async function GET(request: Request) {
   try {
     const readiness = await getProductionReadiness();
     if (!readiness.ready) {
-      emitOperationalLog({
-        level: "warn",
+      await reportOperationalFailure({
+        severity: "warning",
         event: "health.readiness.not-ready",
         component: "health-readiness",
         correlationId,
@@ -39,8 +39,8 @@ export async function GET(request: Request) {
       }
     );
   } catch (error) {
-    emitOperationalLog({
-      level: "error",
+    await reportOperationalFailure({
+      severity: "error",
       event: "health.readiness.failed",
       component: "health-readiness",
       correlationId,

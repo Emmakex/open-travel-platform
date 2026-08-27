@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { reportOperationalFailure } from "@/lib/failure-reporting";
 import {
   claimIntegrationWorkerRun,
   finishIntegrationWorkerRun,
@@ -44,8 +45,8 @@ export async function POST(request: Request) {
   const startedAt = Date.now();
 
   if (!isIntegrationWorkerAuthConfigured()) {
-    emitOperationalLog({
-      level: "warn",
+    await reportOperationalFailure({
+      severity: "warning",
       event: "integration.worker.unavailable",
       component: "integration-worker",
       correlationId,
@@ -103,8 +104,8 @@ export async function POST(request: Request) {
     return json({ ok: true, limit, result, retention, health }, correlationId);
   } catch (error) {
     await releaseIntegrationWorkerLease();
-    emitOperationalLog({
-      level: "error",
+    await reportOperationalFailure({
+      severity: "error",
       event: "integration.worker.failed",
       component: "integration-worker",
       correlationId,

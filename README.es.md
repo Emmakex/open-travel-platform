@@ -63,11 +63,14 @@ La plataforma está muy por encima del MVP original de catálogo/reservas. La im
 - adapter CRM exclusivamente downstream que reutiliza el mismo worker durable y mantiene los eventos de cliente/perfil fuera de las suscripciones webhook genéricas;
 - adapter ERP/contabilidad exclusivamente downstream que exporta solo movimientos finalizados de pago/reembolso mediante el mismo worker durable sin dar al ERP autoridad sobre reservas ni historial financiero local;
 - CSP/headers de seguridad globales, throttling persistente de autenticación, comprobaciones explícitas de Origin para Route Handlers autenticados por cookie y endpoints de health/readiness;
-- perfiles explícitos de readiness `demo|live` que fallan de forma segura si un despliegue live conserva capacidades demo o no dispone de infraestructura requerida.
+- perfiles explícitos de readiness `demo|live` que fallan de forma segura si un despliegue live conserva capacidades demo o no dispone de infraestructura requerida;
+- validación determinista con MongoDB real de concurrencia/idempotencia/modificaciones y tests HTTP locales reales de contratos de adapters;
+- logs operativos JSON estructurados y neutrales con correlación validada mediante `X-Request-Id` y redacción central de datos sensibles;
+- transporte centralizado opcional de fallos con allowlist externa estricta, fingerprints SHA-256 estables para agrupación y entrega best-effort de un solo intento.
 
 La validación E2E con credenciales Stripe/Redsys sigue pendiente hasta disponer de cuentas adecuadas. Los adapters están implementados, pero la capacidad productiva no se considera validada hasta probar TEST/LIVE.
 
-**La Fase 8 — Integraciones externas está COMPLETADA. La Fase 9 — Endurecimiento productivo está EN PROGRESO: la Fase 9A de seguridad / operabilidad productiva está COMPLETADA y la Fase 9B de E2E críticos + concurrencia MongoDB es la siguiente.**
+**La Fase 8 — Integraciones externas está COMPLETADA. La Fase 9 — Endurecimiento productivo está EN PROGRESO: la Fase 9A y el baseline core de la Fase 9B están COMPLETADOS; la Fase 9C está EN PROGRESO con 9C-1 observabilidad estructurada y 9C-2 visibilidad centralizada de fallos COMPLETADAS. La Fase 9C-3 — monitorización externa de uptime/readiness y routing de alertas accionables es la SIGUIENTE.**
 
 ## Capacidades actuales
 
@@ -125,7 +128,7 @@ La validación E2E con credenciales Stripe/Redsys sigue pendiente hasta disponer
 - capacidades granulares server-side;
 - cambios de permisos auditados.
 
-### Identidad y seguridad
+### Identidad, seguridad y observabilidad operativa
 
 - registro/sesiones persistentes de cliente;
 - autenticación separada Operator/Admin;
@@ -146,7 +149,12 @@ La validación E2E con credenciales Stripe/Redsys sigue pendiente hasta disponer
 - secretos PSP cifrados AES-256-GCM;
 - datos avanzados del viajero almacenados aparte y cifrados AES-256-GCM;
 - secretos de firma de integraciones salientes cifrados con clave AES-256-GCM dedicada;
-- configuración privilegiada protegida por capacidades server-side.
+- configuración privilegiada protegida por capacidades server-side;
+- logs operativos JSON versionados en stdout/stderr con correlación segura de requests;
+- excepciones genéricas limitadas a tipo/código seguros, nunca `message` ni `stack`;
+- `FailureTransport` neutral opcional para eventos operativos `warning`, `error` y `critical`;
+- payloads externos de fallo con allowlist explícita que excluye credenciales, datos cliente/viajero, referencias de proveedor, payloads raw y valores monetarios;
+- caídas del collector nunca cambian la autoridad de reservas/pagos/integraciones/readiness y nunca disparan retries automáticos.
 
 ### Pagos y finanzas
 
@@ -296,6 +304,10 @@ eventos cliente/reserva                 |
                   /             |              \
             webhooks firmados  CRM REST      ERP/contabilidad REST
 
+Fallos operativos
+        |
+logs JSON estructurados → FailureTransport REST opcional → stack de monitorización del despliegue
+
 Operator/Admin
     |
 Operations / RBAC / auditoría / documentos / informes / tareas
@@ -303,7 +315,7 @@ Operations / RBAC / auditoría / documentos / informes / tareas
 SupplierFulfilmentAdapter → disabled / REST v1
 ```
 
-Los payloads específicos permanecen dentro de adapters. Catálogo, reservas, alojamiento, identidad, servicios, operaciones, documentos, reporting, pagos, fulfilment, CRM y ERP/contabilidad mantienen fronteras explícitas y reemplazables.
+Los payloads específicos permanecen dentro de adapters. Catálogo, reservas, alojamiento, identidad, servicios, operaciones, documentos, reporting, pagos, fulfilment, CRM, ERP/contabilidad y transporte de fallos mantienen fronteras explícitas y reemplazables.
 
 ## Inicio rápido
 
@@ -388,6 +400,11 @@ REST_ERP_ACCOUNTING_BASE_URL=
 REST_ERP_ACCOUNTING_BEARER_TOKEN=
 REST_ERP_ACCOUNTING_TIMEOUT_MS=10000
 REST_ERP_ACCOUNTING_MAX_RESPONSE_BYTES=262144
+FAILURE_TRANSPORT_MODE=disabled
+REST_FAILURE_TRANSPORT_URL=
+REST_FAILURE_TRANSPORT_BEARER_TOKEN=
+REST_FAILURE_TRANSPORT_TIMEOUT_MS=3000
+REST_FAILURE_TRANSPORT_MAX_RESPONSE_BYTES=65536
 PAYMENT_SECRETS_KEY=
 TRAVELLER_DATA_KEY=
 INTEGRATION_SECRETS_KEY=
@@ -399,7 +416,7 @@ INTEGRATION_COMPLETED_RETENTION_DAYS=180
 
 `KTRAVEL_DEPLOYMENT_PROFILE=live` convierte readiness en un contrato productivo más estricto: capacidades demo, configuración HTTPS canónica inválida, MongoDB requerido no disponible o falta de autenticación del worker outbound hacen que `/api/health/ready` responda 503. `KTRAVEL_ALLOWED_BROWSER_ORIGINS` solo acepta orígenes exactos adicionales. Mantén `KTRAVEL_TRUST_PROXY_IP_HEADERS=false` salvo que el edge elimine headers de forwarding falsificables y escriba la IP real del cliente de forma confiable.
 
-`REST_BOOKING_BEARER_TOKEN`, `REST_SUPPLIER_FULFILMENT_BEARER_TOKEN`, `REST_CRM_BEARER_TOKEN` y `REST_ERP_ACCOUNTING_BEARER_TOKEN` son server-only y nunca deben usar `NEXT_PUBLIC_*`. Los endpoints REST de reservas, proveedores, CRM y ERP/contabilidad en producción deben usar HTTPS. Las tres claves maestras deben ser estables, de alta entropía y 32 bytes. `KTRAVEL_INTEGRATION_WORKER_TOKEN` es una credencial Bearer server-only independiente. No se deben rotar claves de cifrado sin un plan de migración/re-cifrado.
+`REST_BOOKING_BEARER_TOKEN`, `REST_SUPPLIER_FULFILMENT_BEARER_TOKEN`, `REST_CRM_BEARER_TOKEN`, `REST_ERP_ACCOUNTING_BEARER_TOKEN` y `REST_FAILURE_TRANSPORT_BEARER_TOKEN` son server-only y nunca deben usar `NEXT_PUBLIC_*`. Los endpoints REST de reservas, proveedores, CRM, ERP/contabilidad y collector de fallos en producción deben usar HTTPS. Las tres claves maestras deben ser estables, de alta entropía y 32 bytes. `KTRAVEL_INTEGRATION_WORKER_TOKEN` es una credencial Bearer server-only independiente. No se deben rotar claves de cifrado sin un plan de migración/re-cifrado.
 
 ## Documentación
 
@@ -426,6 +443,8 @@ INTEGRATION_COMPLETED_RETENTION_DAYS=180
 - [`docs/OUTBOUND-INTEGRATIONS.es.md`](docs/OUTBOUND-INTEGRATIONS.es.md)
 - [`docs/INTEGRATION-OPERATIONS.es.md`](docs/INTEGRATION-OPERATIONS.es.md)
 - [`docs/PRODUCTION-SECURITY.es.md`](docs/PRODUCTION-SECURITY.es.md) / [`docs/PRODUCTION-SECURITY.md`](docs/PRODUCTION-SECURITY.md) — baseline 9A de HTTP, Origin/CSRF, rate limiting, sesiones y readiness.
+- [`docs/OBSERVABILITY.es.md`](docs/OBSERVABILITY.es.md) / [`docs/OBSERVABILITY.md`](docs/OBSERVABILITY.md) — logging estructurado, correlación de requests y frontera de redacción.
+- [`docs/FAILURE-TRANSPORT.es.md`](docs/FAILURE-TRANSPORT.es.md) / [`docs/FAILURE-TRANSPORT.md`](docs/FAILURE-TRANSPORT.md) — entrega centralizada neutral de fallos, severidad, allowlists y semántica best-effort.
 - [`docs/ADAPTER-GUIDE.md`](docs/ADAPTER-GUIDE.md)
 - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 - [`docs/PRODUCTION-CHECKLIST.md`](docs/PRODUCTION-CHECKLIST.md)
@@ -462,11 +481,18 @@ check:supplier-fulfilment-adapter
 check:crm-sync-adapter
 check:erp-accounting-adapter
 check:production-security
+check:mongodb-concurrency
+check:payment-idempotency
+check:traveller-amendment-validation
+check:adapter-contract-validation
+check:observability
+check:failure-transport
+check:browser-e2e
 typecheck
 build
 ```
 
-CI realiza instalación limpia, invariantes, typecheck, build productivo, smoke HTTP de headers/health/rechazo cross-origin y auditoría de dependencias.
+CI realiza instalación limpia, invariantes, typecheck, build productivo, smoke HTTP de headers/health/rechazo cross-origin y auditoría de dependencias. La validación bloqueante ejecuta además `test:rest-adapter-contracts`, `test:observability` y `test:failure-transport`; un job con replica set MongoDB 8 real prueba concurrencia/rollback de reservas, idempotencia de pagos/webhooks y modificaciones de viajeros. Chromium Browser E2E permanece en un job independiente informativo/no bloqueante.
 
 ## Estado del proyecto
 
@@ -496,25 +522,28 @@ CI realiza instalación limpia, invariantes, typecheck, build productivo, smoke 
 | Fase 8C — Adapters de negocio | **Completada** |
 | Fase 8 — Integraciones externas | **Completada** |
 | Fase 9A — Baseline de seguridad / operabilidad productiva | **Completada** |
-| Fase 9B — E2E críticos + validación de concurrencia MongoDB | **Siguiente** |
+| Fase 9B — Baseline crítico de persistencia/concurrencia/contratos | **Completada** |
+| Fase 9C-1 — Observabilidad operativa estructurada | **Completada** |
+| Fase 9C-2 — Transporte centralizado de visibilidad de fallos | **Completada** |
+| Fase 9C-3 — Monitorización externa uptime/readiness + routing de alertas | **Siguiente** |
+| Fase 9C — Observabilidad, recuperación y auditoría privilegiada | **En progreso** |
 | Fase 9 — Endurecimiento productivo | **En progreso** |
 
 ## Siguiente prioridad
 
-El siguiente bloque es la **Fase 9B — E2E críticos y validación de persistencia/concurrencia**.
+El siguiente bloque es la **Fase 9C-3 — Monitorización externa de uptime/readiness y routing de alertas accionables**.
 
-La Fase 9A ya estableció el baseline común de HTTP, mutaciones de navegador, control de abuso, sesiones y health/readiness. La prioridad pasa ahora a demostrar los flujos autoritativos de reserva/pago bajo condiciones realistas de navegador y concurrencia de persistencia, en lugar de ampliar superficie de proveedores.
+La Fase 9C-1 estableció logs operativos estructurados seguros y correlación de requests. La Fase 9C-2 añadió un transporte neutral y best-effort de fallos que puede alimentar el stack de monitorización de cada despliegue sin convertir ese stack en autoridad de reservas/pagos. La siguiente prioridad es definir el contrato de monitorización externa alrededor de `/api/health/live`, `/api/health/ready` y los eventos de fallo normalizados.
 
-Dirección inicial de 9B:
+Dirección inicial de 9C-3:
 
-- E2E navegador registro → reserva → paquete/servicios → pago → Operator;
-- tests MongoDB de transacciones/concurrencia sobre inventario limitado de viajes/servicios/alojamientos y mutaciones de reserva;
-- tests de regresión de webhooks/idempotencia de pagos sin depender de credenciales LIVE;
-- E2E de pricing de viajeros/menores y modificaciones;
-- tests de regresión de contratos/integración de adapters;
-- E2E TEST/LIVE Stripe/Redsys con credenciales en cuanto existan cuentas proveedor adecuadas.
+- definir comportamiento exacto de probes externos de liveness/readiness y ventanas recomendadas de polling/timeout;
+- definir reglas accionables de severidad/escalado para degradación de readiness y fingerprints de fallo normalizados;
+- documentar routing/runbooks neutrales para que cada despliegue pueda usar Grafana/Alertmanager, Sentry, Datadog u otra plataforma sin acoplarla al core MIT;
+- mantener infraestructura de monitorización fuera de la autoridad de la aplicación y sin datos protegidos de cliente/viajero;
+- añadir invariantes deterministas de configuración/runbook cuando protejan materialmente el contrato productivo.
 
-Las siguientes partes de Fase 9 cubren observabilidad centralizada, revisión de auditoría privilegiada, recuperación/rotación de claves, backup/restore y disaster recovery, workflows GDPR/privacidad/regulación, accesibilidad, rendimiento y revisión de índices. Adapters opcionales de CMS/catálogo, SSO enterprise, PSP adicionales y contabilidad específica de jurisdicción pueden añadirse posteriormente cuando tengan justificación comercial.
+Las siguientes partes de 9C cubrirán revisión de auditoría privilegiada, recuperación/rotación de claves, drills MongoDB de backup/restore y disaster recovery, rollback y revisión de índices/rendimiento. La Fase 9D cubrirá después GDPR/privacidad/regulación, accesibilidad y rendimiento. El E2E TEST/LIVE Stripe/Redsys con credenciales sigue pendiente y debe incorporarse en cuanto existan cuentas proveedor adecuadas.
 
 ## Principios
 
@@ -535,6 +564,8 @@ Las siguientes partes de Fase 9 cubren observabilidad centralizada, revisión de
 - CRM es downstream y no puede mutar reservas, pricing, inventario, proveedores ni ledger autoritativo;
 - ERP/contabilidad es downstream y no puede reescribir historial de pagos/reembolsos; la facturación legal no se infiere de datos fiscales incompletos;
 - CSP/headers, Origin checks, rate limiting y readiness permanecen como baseline permanente de seguridad productiva;
+- observabilidad/failure transport no pueden filtrar PII, secretos, payloads raw, referencias provider ni valores monetarios en el canal genérico;
+- la monitorización externa nunca se convierte en dependencia autoritativa ni en requisito de readiness por sí misma;
 - UX pública bilingüe y responsive;
 - integraciones propietarias fuera del core MIT cuando corresponda.
 

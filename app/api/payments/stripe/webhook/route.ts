@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { reportOperationalFailure } from "@/lib/failure-reporting";
 import {
   claimPaymentWebhookEvent,
   finalizeCheckoutOrder,
@@ -75,8 +76,8 @@ export async function POST(request: Request) {
 
     const credentials = await getActivePaymentProviderCredentials("stripe");
     if (!credentials || credentials.provider !== "stripe" || credentials.environment !== order.environment) {
-      emitOperationalLog({
-        level: "error",
+      await reportOperationalFailure({
+        severity: "error",
         event: "payment.webhook.unavailable",
         component: "payment-webhook",
         correlationId,
@@ -145,8 +146,8 @@ export async function POST(request: Request) {
     });
     return json({ received: true }, correlationId);
   } catch (error) {
-    emitOperationalLog({
-      level: "error",
+    await reportOperationalFailure({
+      severity: "error",
       event: "payment.webhook.failed",
       component: "payment-webhook",
       correlationId,

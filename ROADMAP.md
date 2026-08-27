@@ -17,9 +17,9 @@ _Last updated: 27 August 2026._
 
 The platform is well beyond the original catalogue/booking MVP. Persistent identity, transactional reservations/inventory, traveller pricing, accommodation, independent services, payments, post-purchase traveller data, amendments, rich Operator workflows, granular permissions, documents, reporting and the common integration infrastructure are already implemented.
 
-**Phase 8 is COMPLETE. Phase 9 — Production hardening is IN PROGRESS: Phase 9A production security / operability baseline and Phase 9B critical persistence/concurrency/contract validation baseline are COMPLETE. Phase 9C — Observability, recovery and privileged audit hardening is NEXT.**
+**Phase 8 is COMPLETE. Phase 9 — Production hardening is IN PROGRESS: Phase 9A production security / operability baseline and Phase 9B critical persistence/concurrency/contract validation baseline are COMPLETE. Phase 9C is IN PROGRESS: 9C-1 structured operational observability and 9C-2 centralized failure visibility transport are COMPLETE; 9C-3 external uptime/readiness monitoring and actionable alert routing is NEXT.**
 
-Credentialed Stripe/Redsys TEST/LIVE end-to-end validation remains pending until suitable provider accounts are available. That provider-dependent validation should be inserted as soon as credentials exist, but it no longer blocks progress into Phase 9C. Browser E2E remains an informational/non-blocking CI signal by explicit project policy; the blocking gates are deterministic security, TypeScript/build/smoke, MongoDB concurrency/idempotency/amendment tests and local HTTP adapter contract validation.
+Credentialed Stripe/Redsys TEST/LIVE end-to-end validation remains pending until suitable provider accounts are available. That provider-dependent validation should be inserted as soon as credentials exist, but it does not block Phase 9C. Browser E2E remains an informational/non-blocking CI signal by explicit project policy; the blocking gates are deterministic security, TypeScript/build/smoke, MongoDB concurrency/idempotency/amendment tests, local HTTP adapter contracts, structured-log redaction/correlation and real-local-HTTP failure-transport validation.
 
 ---
 
@@ -282,7 +282,7 @@ The priority is to harden the already broad product surface for real production 
 - non-transient 4xx responses are not retried;
 - Booking ownership/trip/departure scope mismatches fail closed;
 - Supplier/CRM/ERP outbound allowlists prevent commercial/protected fields from leaking;
-- Supplier, CRM and ERP now reject non-JSON successful responses consistently with Booking;
+- Supplier, CRM and ERP reject non-JSON successful responses consistently with Booking;
 - permanent blocking `check:adapter-contract-validation` plus `test:rest-adapter-contracts` CI gates.
 
 ### Provider-credential validation — DEFERRED EXTERNAL DEPENDENCY
@@ -290,13 +290,43 @@ The priority is to harden the already broad product surface for real production 
 - it should be inserted immediately when suitable provider accounts/credentials are available;
 - lack of provider credentials does not block Phase 9C work.
 
-## 9C — Observability, recovery and privileged audit hardening — NEXT
+## 9C — Observability, recovery and privileged audit hardening — IN PROGRESS
 
-- structured logs and centralized error reporting;
-- external uptime/readiness monitoring and actionable alerts;
-- payment/integration failure visibility;
+### 9C-1 — Structured operational observability — COMPLETE
+- provider-neutral JSON-line logging to stdout/stderr with schema version, service, event, component and severity;
+- validated inbound `X-Request-Id` correlation with server-generated UUID fallback;
+- central sensitive-key redaction covering credentials, customer/contact/traveller data, raw payloads, card values, provider references and monetary fields;
+- generic exceptions expose only safe error type/code, never `message` or `stack`;
+- integration worker, Stripe, Redsys and readiness surfaces instrumented;
+- blocking `check:observability` and dynamic `test:observability` gates;
+- EN/ES observability documentation.
+
+### 9C-2 — Centralized failure visibility transport — COMPLETE
+- provider-neutral `FailureTransport` with `disabled|rest` composition;
+- exact trusted REST collector, HTTPS required in production, optional server-only Bearer auth, redirect rejection, `no-store`, bounded timeout and response size;
+- normalized `warning|error|critical` events with deterministic SHA-256 grouping fingerprint;
+- fingerprints group equivalent failures but are not idempotency keys: each occurrence is delivered once;
+- outbound payload first reuses the shared sanitizer and then applies a stricter explicit field allowlist plus safe-token validation;
+- customer/contact/traveller data, credentials, signatures, raw bodies, provider references and monetary values are excluded from the generic failure channel;
+- correlation IDs are independently revalidated before external delivery;
+- Stripe/Redsys provider-environment failures, worker failures and degraded/failed readiness can be elevated when configured;
+- malformed callbacks, invalid provider signatures, duplicates and routine worker rate limiting remain local logs to avoid alert noise;
+- transport is monitoring-only, best-effort and non-authoritative: no automatic retries, no recursive self-reporting and no effect on booking/payment/integration/readiness authority;
+- collector availability is deliberately not a readiness dependency;
+- real local HTTP validation proves auth, contract version, allowlists, redaction, stable grouping and single-attempt behavior;
+- blocking `check:failure-transport` and `test:failure-transport` gates plus EN/ES documentation and `.env.example` contract.
+
+### 9C-3 — External uptime/readiness monitoring + actionable alert routing — NEXT
+- define exact external probe behavior for `/api/health/live` and `/api/health/ready`;
+- define recommended poll intervals, timeouts and consecutive-failure/recovery thresholds;
+- map readiness degradation and normalized failure fingerprints to actionable severity/escalation rules;
+- define provider-neutral alert-routing/runbook guidance for Grafana/Alertmanager, Sentry, Datadog or equivalent deployment tooling without vendor SDK coupling in the MIT core;
+- keep monitoring outside application authority and outside protected customer/traveller data;
+- add deterministic configuration/runbook invariants where they protect the production contract.
+
+### Remaining 9C hardening after 9C-3
 - privileged-action audit review;
-- key recovery/rotation procedures;
+- encryption-key recovery/rotation/re-encryption procedures;
 - MongoDB backup/restore drills, disaster recovery and rollback;
 - database index/performance review.
 
@@ -332,7 +362,13 @@ Credentialed Stripe/Redsys TEST/LIVE validation remains a production-hardening r
   ↓
 9B    Critical persistence/concurrency/contract validation — COMPLETE
   ↓
-9C    Observability / recovery / privileged audit — NEXT
+9C-1  Structured operational observability — COMPLETE
+  ↓
+9C-2  Centralized failure visibility transport — COMPLETE
+  ↓
+9C-3  External uptime/readiness monitoring + alert routing — NEXT
+  ↓
+9C    Recovery / privileged audit / database hardening
   ↓
 9D    Privacy / regulatory / accessibility / performance
   ↓
@@ -345,6 +381,6 @@ optional adapters driven by commercial need
 
 # Core non-goals
 
-Open Travel Platform must not become permanently tied to one payment gateway, CMS, CRM/ERP, booking supplier, identity vendor, hosting platform or Kairoseth-only infrastructure.
+Open Travel Platform must not become permanently tied to one payment gateway, CMS, CRM/ERP, booking supplier, identity vendor, monitoring vendor, hosting platform or Kairoseth-only infrastructure.
 
 The public core remains MIT licensed and reusable. Kairoseth Travel can add hosted/commercial services, premium/private adapters and customer-specific integrations around that core.

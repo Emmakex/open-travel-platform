@@ -9,6 +9,7 @@ const assert = (condition, message) => {
 
 const packageJson = JSON.parse(read("package.json"));
 const observability = read("lib/observability.ts");
+const failureReporting = read("lib/failure-reporting.ts");
 const test = read("tests/observability.ts");
 const worker = read("app/api/internal/integrations/process/route.ts");
 const stripe = read("app/api/payments/stripe/webhook/route.ts");
@@ -34,6 +35,10 @@ assert(!observability.includes("error.message"), "generic operational logs must 
 assert(!observability.includes("error.stack"), "generic operational logs must never serialize error.stack");
 assert(observability.includes("console.error(line)") && observability.includes("console.warn(line)") && observability.includes("console.info(line)"), "central logger must emit one JSON line to standard streams");
 assert(observability.includes("Logging must never turn an operational failure into a secondary failure"), "logger must remain fail-safe");
+assert(
+  failureReporting.includes("emitOperationalLog") && failureReporting.includes("reportOperationalFailure"),
+  "centralized failure reporting must preserve the structured local log boundary"
+);
 
 for (const [name, route] of [
   ["integration worker", worker],
@@ -43,7 +48,10 @@ for (const [name, route] of [
 ]) {
   assert(route.includes("getRequestCorrelationId"), `${name} must derive a safe request correlation ID`);
   assert(route.includes("correlationHeaders"), `${name} must return X-Request-Id to callers`);
-  assert(route.includes("emitOperationalLog"), `${name} must use the structured observability boundary`);
+  assert(
+    route.includes("emitOperationalLog") || route.includes("reportOperationalFailure"),
+    `${name} must use a centralized structured observability boundary`
+  );
 }
 assert(!worker.includes("console.error("), "integration worker must not log raw Error objects directly");
 assert(stripe.includes('event: "payment.webhook.failed"'), "Stripe failures must expose a normalized operational event");

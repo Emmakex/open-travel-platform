@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { reportOperationalFailure } from "@/lib/failure-reporting";
 import {
   claimPaymentWebhookEvent,
   finalizeCheckoutOrder,
@@ -70,8 +71,8 @@ export async function POST(request: Request) {
 
     const credentials = await getActivePaymentProviderCredentials("redsys");
     if (!credentials || credentials.provider !== "redsys" || credentials.environment !== order.environment) {
-      emitOperationalLog({
-        level: "error",
+      await reportOperationalFailure({
+        severity: "error",
         event: "payment.notification.unavailable",
         component: "payment-webhook",
         correlationId,
@@ -137,8 +138,8 @@ export async function POST(request: Request) {
     });
     return text("OK", correlationId);
   } catch (error) {
-    emitOperationalLog({
-      level: "error",
+    await reportOperationalFailure({
+      severity: "error",
       event: "payment.notification.failed",
       component: "payment-webhook",
       correlationId,

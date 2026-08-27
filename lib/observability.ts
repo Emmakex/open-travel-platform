@@ -18,7 +18,7 @@ const schemaVersion = 1;
 const maximumTextLength = 240;
 const requestIdPattern = /^[A-Za-z0-9._:-]{8,128}$/;
 const safeTokenPattern = /^[A-Za-z0-9._:-]{1,120}$/;
-const sensitiveKeyPattern = /(?:authorization|cookie|password|secret|token|signature|email|phone|address|passport|dni|document|health|traveller|raw|body|payload|card|pan|cvv|customer|reference)/i;
+const sensitiveKeyPattern = /(?:authorization|cookie|password|secret|token|signature|email|phone|address|passport|dni|document|health|traveller|raw|body|payload|card|pan|cvv|customer|reference|amount|currency|price|cost)/i;
 
 function normalizeText(value: string) {
   const normalized = value.trim().replace(/\s+/g, " ");
@@ -26,13 +26,19 @@ function normalizeText(value: string) {
   return normalized.slice(0, maximumTextLength);
 }
 
-function safeToken(value: unknown) {
+export function safeOperationalToken(value: unknown) {
   if (typeof value !== "string") return undefined;
   const normalized = value.trim();
   return safeTokenPattern.test(normalized) ? normalized : undefined;
 }
 
-function safeFields(fields: OperationalLogFields | undefined) {
+export function sanitizeOperationalCorrelationId(value: unknown) {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim();
+  return requestIdPattern.test(normalized) ? normalized : undefined;
+}
+
+export function sanitizeOperationalFields(fields: OperationalLogFields | undefined) {
   if (!fields) return undefined;
   const output: Record<string, OperationalLogScalar> = {};
 
@@ -53,10 +59,10 @@ function safeFields(fields: OperationalLogFields | undefined) {
   return Object.keys(output).length ? output : undefined;
 }
 
-function safeError(error: unknown) {
+export function describeOperationalError(error: unknown) {
   if (!error || typeof error !== "object") return undefined;
-  const errorType = error instanceof Error ? safeToken(error.name) : undefined;
-  const code = "code" in error ? safeToken((error as { code?: unknown }).code) : undefined;
+  const errorType = error instanceof Error ? safeOperationalToken(error.name) : undefined;
+  const code = "code" in error ? safeOperationalToken((error as { code?: unknown }).code) : undefined;
   if (!errorType && !code) return undefined;
   return {
     ...(errorType ? { errorType } : {}),
@@ -65,9 +71,7 @@ function safeError(error: unknown) {
 }
 
 export function getRequestCorrelationId(request: Request) {
-  const provided = request.headers.get("x-request-id")?.trim() ?? "";
-  if (requestIdPattern.test(provided)) return provided;
-  return `req-${randomUUID()}`;
+  return sanitizeOperationalCorrelationId(request.headers.get("x-request-id")) ?? `req-${randomUUID()}`;
 }
 
 export function correlationHeaders(correlationId: string): HeadersInit {
@@ -76,10 +80,11 @@ export function correlationHeaders(correlationId: string): HeadersInit {
 
 export function emitOperationalLog(input: OperationalLogInput) {
   try {
-    const event = safeToken(input.event) ?? "operational-event";
-    const component = safeToken(input.component) ?? "unknown";
-    const fields = safeFields(input.fields);
-    const error = safeError(input.error);
+    const event = safeOperationalToken(input.event) ?? "operational-event";
+    const component = safeOperationalToken(input.component) ?? "unknown";
+    const correlationId = sanitizeOperationalCorrelationId(input.correlationId);
+    const fields = sanitizeOperationalFields(input.fields);
+    const error = describeOperationalError(input.error);
     const record = {
       schemaVersion,
       timestamp: new Date().toISOString(),
@@ -87,9 +92,7 @@ export function emitOperationalLog(input: OperationalLogInput) {
       level: input.level,
       event,
       component,
-      ...(input.correlationId && requestIdPattern.test(input.correlationId)
-        ? { correlationId: input.correlationId }
-        : {}),
+      ...(correlationId ? { correlationId } : {}),
       ...(fields ? { fields } : {}),
       ...(error ? error : {})
     };
