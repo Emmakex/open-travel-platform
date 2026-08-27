@@ -40,6 +40,20 @@ Un test dedicado en Chromium valida el contrato global estable:
 
 Estos checks son intencionadamente pequeños y deterministas para poder bloquear CI. No sustituyen una auditoría completa de accesibilidad.
 
+## Slice de formularios de autenticación cliente
+
+Las superficies de login, registro, recuperación de contraseña y restablecimiento de contraseña del cliente usan ahora relaciones programáticas explícitas para instrucciones y feedback devuelto por el servidor:
+
+- los labels visibles siguen siendo el nombre accesible de cada control;
+- ayudas y resúmenes de error tienen IDs estables referenciados mediante `aria-describedby`;
+- solo los campos realmente afectados por un fallo de validación devuelto exponen `aria-invalid="true"`, evitando marcar indiscriminadamente todos los controles;
+- los errores que requieren atención inmediata usan `role="alert"`, mientras que confirmaciones de recuperación/restablecimiento usan regiones `role="status"` con anuncio educado;
+- tras un error devuelto, el foco inicial se mueve al primer campo inválido accionable para que usuarios de teclado/lector de pantalla no tengan que redescubrir el formulario;
+- las instrucciones de contraseña siguen asociadas programáticamente incluso cuando existe un error;
+- los campos inválidos incorporan una señal visual adicional de borde/forma, además del estado semántico, para no depender únicamente del color.
+
+Un test bloqueante dedicado en Chromium ejecuta estos formularios con autenticación persistente de cliente habilitada sobre MongoDB desechable. Verifica nombres accesibles, `aria-invalid`, `aria-describedby`, foco tras errores devueltos, regiones de error asertivas y regiones de éxito/estado educadas.
+
 ## Gate de revisión manual
 
 Antes de afirmar que una release está preparada en accesibilidad, revisar manualmente journeys representativos EN/ES, incluyendo como mínimo:
@@ -66,6 +80,6 @@ Para cada journey revisar:
 
 ## Alcance y riesgo residual
 
-Este primer slice 9D-4 establece el contrato transversal de teclado/foco/movimiento/reflow. Los formularios y regiones dinámicas de cada feature todavía requieren revisión y correcciones específicas en slices posteriores de accesibilidad.
+El baseline global de accesibilidad y el primer slice de formularios de autenticación cliente están implementados. Traveller Data/privacidad, interacciones de reserva/pago, formularios Operator, regiones dinámicas específicas de features, revisión de contraste/contenido y journeys manuales con tecnologías de apoyo siguen pendientes antes de poder cerrar 9D-4.
 
 Un build verde automático nunca debe presentarse como prueba de que se cumplen todos los success criteria WCAG ni todas las obligaciones de la Ley 11/2023. El alcance jurídico del despliegue, servicios de terceros, calidad de contenido y findings manuales con tecnologías de apoyo siguen siendo inputs separados de release.
