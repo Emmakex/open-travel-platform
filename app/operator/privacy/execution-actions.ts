@@ -3,9 +3,9 @@
 import { redirect } from "next/navigation";
 import {
   approvePrivacyExportByAdmin,
-  executePrivacyErasureByAdmin,
   executePrivacyRestrictionByAdmin
 } from "@/lib/privacy-execution";
+import { executePrivacyErasureWithSecondaryByAdmin } from "@/lib/privacy-erasure-runner";
 import { requireAdminIdentity } from "@/lib/require-admin-identity";
 
 function value(formData: FormData, key: string) {
@@ -32,7 +32,8 @@ function mapError(error: unknown) {
     PRIVACY_ERASURE_NOT_APPLICABLE: "erasure-not-applicable",
     PRIVACY_ERASURE_RETENTION_BLOCK: "retention-block",
     PRIVACY_IDENTITY_NOT_FOUND: "identity-not-found",
-    PRIVACY_EXECUTION_REQUIRES_OFFLINE_MIGRATION: "offline-required"
+    PRIVACY_EXECUTION_REQUIRES_OFFLINE_MIGRATION: "offline-required",
+    PRIVACY_ERASURE_EXECUTION_FAILED: "execution-failed"
   };
   return known[code];
 }
@@ -73,7 +74,7 @@ export async function executePrivacyErasureAction(formData: FormData) {
     redirect(`/operator/privacy?executionError=confirmation-required&request=${encodeURIComponent(id)}`);
   }
   try {
-    await executePrivacyErasureByAdmin({ requestId: id, actorId: admin.id });
+    await executePrivacyErasureWithSecondaryByAdmin({ requestId: id, actorId: admin.id });
     redirect(`/operator/privacy?execution=erasure-applied&request=${encodeURIComponent(id)}`);
   } catch (error) {
     const mapped = mapError(error);
