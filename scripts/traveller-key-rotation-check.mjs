@@ -62,7 +62,7 @@ for (const [name, text] of [["English", docs], ["Spanish", docsEs]]) {
   assert(lower.includes("traveller_data_key_id"), `${name} documentation must cover the traveller key ID`);
   assert(lower.includes("remaining"), `${name} documentation must require migration inventory to reach remaining=0`);
   assert(lower.includes("ttl"), `${name} documentation must describe TTL preservation`);
-  assert(lower.includes("rollback"), `${name} documentation must describe batch rollback`);
+  assert(lower.includes("rollback") || lower.includes("rolls back"), `${name} documentation must describe batch rollback`);
 }
 
 console.log("Traveller-data key rotation invariants passed.");
