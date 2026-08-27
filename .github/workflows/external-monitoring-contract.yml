@@ -35,7 +35,10 @@ jobs:
           node-version: 24
           package-manager-cache: false
 
-      - name: Clean install
+      - name: Resolve dependency lock
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+
+      - name: Clean install from resolved lock
         run: npm ci --no-fund
 
       - name: External monitoring invariant check
