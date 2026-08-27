@@ -128,6 +128,12 @@ jobs:
       - name: Structured observability test
         run: npm run test:observability
 
+      - name: Failure transport invariant check
+        run: npm run check:failure-transport
+
+      - name: Failure transport integration test
+        run: npm run test:failure-transport
+
       - name: Browser E2E invariant check
         run: npm run check:browser-e2e
 
