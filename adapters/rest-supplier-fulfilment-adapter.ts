@@ -119,6 +119,11 @@ async function executeRestCommand(command: SupplierAdapterCommand): Promise<Supp
         throw mapHttpError(response.status);
       }
 
+      const contentType = response.headers.get("content-type")?.toLowerCase() ?? "";
+      if (!contentType.includes("application/json")) {
+        throw adapterError("SUPPLIER_ADAPTER_CONTRACT_INVALID", "The supplier API must return application/json.");
+      }
+
       const responseVersion = response.headers.get(supplierFulfilmentContractHeader);
       if (responseVersion !== supplierFulfilmentContractVersion) {
         throw adapterError(

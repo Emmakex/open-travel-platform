@@ -9,7 +9,7 @@ El roadmap mantiene alineados dos objetivos:
 1. conservar el core público portable, neutral respecto a proveedores y útil para otras agencias/desarrolladores;
 2. continuar endureciendo Kairoseth Travel sin acoplar el core a un PSP, proveedor, CRM, ERP, CMS, vendor de identidad o hosting concreto.
 
-_Última actualización: 26 de agosto de 2026._
+_Última actualización: 27 de agosto de 2026._
 
 ---
 
@@ -17,9 +17,9 @@ _Última actualización: 26 de agosto de 2026._
 
 La plataforma está muy por encima del MVP original de catálogo/reservas. Ya están implementadas identidad persistente, reservas/inventario transaccionales, pricing por viajero, alojamiento, servicios independientes, pagos, datos post-compra, modificaciones, workflow Operator avanzado, permisos granulares, documentos, reporting y la infraestructura común de integraciones.
 
-**La Fase 8 está COMPLETADA. La Fase 9 — Endurecimiento productivo está EN PROGRESO: la Fase 9A de seguridad / operabilidad productiva está COMPLETADA y la Fase 9B de E2E críticos + validación de concurrencia MongoDB es la SIGUIENTE.**
+**La Fase 8 está COMPLETADA. La Fase 9 — Endurecimiento productivo está EN PROGRESO: la Fase 9A de seguridad / operabilidad productiva y el baseline crítico de validación de persistencia/concurrencia/contratos de la Fase 9B están COMPLETADOS. La Fase 9C — Observabilidad, recuperación y endurecimiento de auditoría privilegiada es la SIGUIENTE.**
 
-La validación E2E TEST/LIVE con credenciales Stripe/Redsys sigue pendiente hasta disponer de cuentas proveedor adecuadas. Los adapters están implementados, pero la capacidad productiva de pagos no se considera validada hasta probar dichos flujos.
+La validación E2E TEST/LIVE con credenciales Stripe/Redsys sigue pendiente hasta disponer de cuentas proveedor adecuadas. Esa validación dependiente del proveedor debe incorporarse en cuanto existan credenciales, pero ya no bloquea el avance hacia la Fase 9C. El Browser E2E permanece como señal CI informativa/no bloqueante por política explícita del proyecto; los gates bloqueantes son seguridad determinista, TypeScript/build/smoke, concurrencia/idempotencia/modificaciones sobre MongoDB real y validación local HTTP de contratos de adapters.
 
 ---
 
@@ -248,16 +248,49 @@ La prioridad es endurecer para producción la amplia superficie funcional ya con
 - guía de seguridad productiva EN/ES más guía de despliegue/checklist modernizados;
 - gate permanente `check:production-security` y smoke CI de headers, health y rechazo de mutaciones con Origin externo.
 
-## 9B — E2E críticos y validación de persistencia/concurrencia — SIGUIENTE
+## 9B — E2E críticos y validación de persistencia/concurrencia — COMPLETADO (baseline core)
 
-- E2E navegador registro → reserva → paquete/servicios → pago → Operator;
-- tests de integración/concurrencia MongoDB sobre inventario limitado y mutaciones de reserva;
-- tests de webhooks/idempotencia de pagos;
-- E2E de pricing de viajeros/menores y modificaciones;
-- tests de contratos/integración de adapters;
-- E2E Stripe/Redsys TEST/LIVE con credenciales en cuanto existan cuentas proveedor adecuadas.
+### 9B-1 — Journey persistente de navegador — IMPLEMENTADO / INFORMATIVO
+- existe el flujo registro → reserva → cuenta cliente → Operator en Playwright/Chromium;
+- seed/build/journey persistentes sobre MongoDB corren en un job CI independiente;
+- `Browser E2E (non-blocking)` es intencionadamente informativo y conserva diagnóstico sin bloquear entregas.
 
-## 9C — Observabilidad, recuperación y endurecimiento de auditoría privilegiada
+### 9B-2 — Concurrencia / rollback de reservas MongoDB — COMPLETADO
+- replica set local desechable MongoDB 8 en CI;
+- carrera concurrente de reservas demuestra que nunca se sobrevende capacidad;
+- rollback transaccional cubre un fallo posterior de inventario;
+- cancelación duplicada libera inventario y emite el cambio de estado una sola vez.
+
+### 9B-3 — Idempotencia de pagos y webhooks — COMPLETADO
+- validación real MongoDB de finalización/idempotencia de pagos;
+- entregas duplicadas del proveedor/webhook no duplican movimientos autoritativos;
+- el trigger ERP transaccional permanece consistente con movimientos finalizados del ledger.
+
+### 9B-4 — Pricing de viajeros/menores y modificaciones — COMPLETADO
+- validación exacta de edad en fecha de salida, incluyendo 17 → 18 en la nueva salida;
+- requisitos de tutor y snapshots de pricing/inventario child/adult;
+- movimiento atómico de inventario en cambio de salida y delta de precio explícito;
+- los movimientos históricos de pago permanecen inmutables;
+- correcciones de identidad del viajero no provocan repricing accidental;
+- capacidad insuficiente en destino demuestra rollback transaccional total.
+
+### 9B-5 — Validación de contratos/integración de adapters REST — COMPLETADO
+- servidor HTTP local real sobre puerto localhost efímero; sin mock de `fetch`;
+- adapters Booking, Supplier fulfilment, CRM y ERP/contabilidad ejercitados mediante su transporte real;
+- Bearer auth, headers de versión, MIME JSON, respuestas acotadas y protecciones de redirects/timeout preservadas;
+- fallos transitorios reintentan como máximo una vez con idempotency keys estables;
+- respuestas 4xx no transitorias no se reintentan;
+- mismatches de ownership/trip/departure en Booking fallan cerrados;
+- allowlists salientes de Supplier/CRM/ERP impiden filtrar campos comerciales/protegidos;
+- Supplier, CRM y ERP rechazan ahora respuestas exitosas no JSON de forma consistente con Booking;
+- gates bloqueantes permanentes `check:adapter-contract-validation` y `test:rest-adapter-contracts`.
+
+### Validación con credenciales de proveedor — DEPENDENCIA EXTERNA DIFERIDA
+- E2E Stripe/Redsys TEST/LIVE con credenciales sigue siendo necesario antes de afirmar validación productiva completa de esos proveedores;
+- debe insertarse inmediatamente cuando existan cuentas/credenciales adecuadas;
+- la ausencia de credenciales no bloquea el trabajo de la Fase 9C.
+
+## 9C — Observabilidad, recuperación y endurecimiento de auditoría privilegiada — SIGUIENTE
 
 - logs estructurados y errores centralizados;
 - monitorización externa de uptime/readiness y alertas accionables;
@@ -297,9 +330,9 @@ La validación TEST/LIVE Stripe/Redsys con credenciales sigue siendo requisito d
 ```text
 9A    Baseline de seguridad / operabilidad productiva — COMPLETADO
   ↓
-9B    E2E críticos + validación de concurrencia MongoDB — SIGUIENTE
+9B    Validación crítica de persistencia/concurrencia/contratos — COMPLETADO
   ↓
-9C    Observabilidad / recuperación / auditoría privilegiada
+9C    Observabilidad / recuperación / auditoría privilegiada — SIGUIENTE
   ↓
 9D    Privacidad / regulación / accesibilidad / rendimiento
   ↓

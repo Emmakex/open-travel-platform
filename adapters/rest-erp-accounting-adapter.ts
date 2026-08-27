@@ -138,6 +138,11 @@ async function postMovement(command: ErpAccountingSyncCommand): Promise<ErpAccou
         throw mapHttpError(response.status);
       }
 
+      const contentType = response.headers.get("content-type")?.toLowerCase() ?? "";
+      if (!contentType.includes("application/json")) {
+        throw accountingError("ERP_ACCOUNTING_CONTRACT_INVALID", "The ERP/accounting API must return application/json.");
+      }
+
       if (response.headers.get(erpAccountingContractHeader) !== erpAccountingContractVersion) {
         throw accountingError(
           "ERP_ACCOUNTING_CONTRACT_VERSION",

@@ -138,6 +138,11 @@ async function postUpsert<TSnapshot>(
         throw mapHttpError(response.status);
       }
 
+      const contentType = response.headers.get("content-type")?.toLowerCase() ?? "";
+      if (!contentType.includes("application/json")) {
+        throw crmError("CRM_SYNC_CONTRACT_INVALID", "The CRM API must return application/json.");
+      }
+
       if (response.headers.get(crmContractHeader) !== crmContractVersion) {
         throw crmError(
           "CRM_SYNC_CONTRACT_VERSION",

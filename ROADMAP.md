@@ -9,7 +9,7 @@ The roadmap keeps two goals aligned:
 1. keep the public core portable, provider-neutral and useful to other agencies/developers;
 2. keep hardening Kairoseth Travel without coupling the core to one PSP, supplier, CRM, ERP, CMS, identity vendor or hosting provider.
 
-_Last updated: 26 August 2026._
+_Last updated: 27 August 2026._
 
 ---
 
@@ -17,9 +17,9 @@ _Last updated: 26 August 2026._
 
 The platform is well beyond the original catalogue/booking MVP. Persistent identity, transactional reservations/inventory, traveller pricing, accommodation, independent services, payments, post-purchase traveller data, amendments, rich Operator workflows, granular permissions, documents, reporting and the common integration infrastructure are already implemented.
 
-**Phase 8 is COMPLETE. Phase 9 — Production hardening is IN PROGRESS: Phase 9A production security / operability baseline is COMPLETE, and Phase 9B critical E2E + MongoDB concurrency validation is NEXT.**
+**Phase 8 is COMPLETE. Phase 9 — Production hardening is IN PROGRESS: Phase 9A production security / operability baseline and Phase 9B critical persistence/concurrency/contract validation baseline are COMPLETE. Phase 9C — Observability, recovery and privileged audit hardening is NEXT.**
 
-Stripe/Redsys credentialed TEST/LIVE end-to-end validation remains pending until suitable provider accounts are available. The adapters are implemented, but production payment capability is not considered validated until those provider flows have been exercised.
+Credentialed Stripe/Redsys TEST/LIVE end-to-end validation remains pending until suitable provider accounts are available. That provider-dependent validation should be inserted as soon as credentials exist, but it no longer blocks progress into Phase 9C. Browser E2E remains an informational/non-blocking CI signal by explicit project policy; the blocking gates are deterministic security, TypeScript/build/smoke, MongoDB concurrency/idempotency/amendment tests and local HTTP adapter contract validation.
 
 ---
 
@@ -248,16 +248,49 @@ The priority is to harden the already broad product surface for real production 
 - production security guide EN/ES plus modernized deployment guide/checklist;
 - permanent `check:production-security` gate and CI smoke checks for headers, health and foreign-Origin mutation rejection.
 
-## 9B — Critical E2E and persistence/concurrency validation — NEXT
+## 9B — Critical E2E and persistence/concurrency validation — COMPLETE (core baseline)
 
-- browser E2E registration → booking → package/services → payment → Operator;
-- MongoDB integration/concurrency tests around constrained inventory and reservation mutations;
-- payment webhook/idempotency tests;
-- traveller/minor pricing and amendment E2E;
-- adapter contract/integration tests;
-- credentialed Stripe/Redsys TEST/LIVE E2E as soon as suitable provider accounts are available.
+### 9B-1 — Persistent browser journey — IMPLEMENTED / INFORMATIONAL
+- registration → booking → customer account → Operator journey exists in Playwright/Chromium;
+- persistent MongoDB-backed seed/build/journey runs in its own CI job;
+- `Browser E2E (non-blocking)` is intentionally informational and retains diagnostics without blocking delivery.
 
-## 9C — Observability, recovery and privileged audit hardening
+### 9B-2 — MongoDB booking concurrency / rollback — COMPLETE
+- disposable local MongoDB 8 replica set in CI;
+- concurrent booking race proves capacity is never oversold;
+- transactional rollback covers downstream inventory failure;
+- duplicate cancellation releases inventory and emits status change exactly once.
+
+### 9B-3 — Payment and webhook idempotency — COMPLETE
+- real MongoDB payment finalization/idempotency validation;
+- duplicate provider/webhook delivery does not duplicate authoritative movements;
+- transactional ERP trigger behavior remains consistent with finalized ledger movements.
+
+### 9B-4 — Traveller/minor pricing and amendments — COMPLETE
+- exact age-at-departure boundary validation, including 17 → 18 on the new departure date;
+- guardian requirements and child/adult pricing/inventory snapshots;
+- atomic departure amendment inventory movement and explicit price delta;
+- historical payment movements remain immutable;
+- traveller corrections do not trigger unintended repricing;
+- insufficient target capacity proves full transaction rollback.
+
+### 9B-5 — REST adapter contract/integration validation — COMPLETE
+- real local HTTP server on ephemeral localhost port; no mocked `fetch`;
+- Booking, Supplier fulfilment, CRM and ERP/accounting adapters exercised through their real transport code;
+- Bearer auth, contract-version headers, JSON MIME, bounded responses and redirect/timeout protections retained;
+- transient failures retry at most once with stable idempotency keys;
+- non-transient 4xx responses are not retried;
+- Booking ownership/trip/departure scope mismatches fail closed;
+- Supplier/CRM/ERP outbound allowlists prevent commercial/protected fields from leaking;
+- Supplier, CRM and ERP now reject non-JSON successful responses consistently with Booking;
+- permanent blocking `check:adapter-contract-validation` plus `test:rest-adapter-contracts` CI gates.
+
+### Provider-credential validation — DEFERRED EXTERNAL DEPENDENCY
+- credentialed Stripe/Redsys TEST/LIVE E2E remains required before claiming those providers fully production-validated;
+- it should be inserted immediately when suitable provider accounts/credentials are available;
+- lack of provider credentials does not block Phase 9C work.
+
+## 9C — Observability, recovery and privileged audit hardening — NEXT
 
 - structured logs and centralized error reporting;
 - external uptime/readiness monitoring and actionable alerts;
@@ -297,9 +330,9 @@ Credentialed Stripe/Redsys TEST/LIVE validation remains a production-hardening r
 ```text
 9A    Production security / operability baseline — COMPLETE
   ↓
-9B    Critical E2E + MongoDB concurrency validation — NEXT
+9B    Critical persistence/concurrency/contract validation — COMPLETE
   ↓
-9C    Observability / recovery / privileged audit
+9C    Observability / recovery / privileged audit — NEXT
   ↓
 9D    Privacy / regulatory / accessibility / performance
   ↓
