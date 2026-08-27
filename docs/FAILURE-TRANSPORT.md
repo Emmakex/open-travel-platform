@@ -16,7 +16,7 @@ To enable the reference REST transport:
 FAILURE_TRANSPORT_MODE=rest
 REST_FAILURE_TRANSPORT_URL=https://monitoring.example.com/open-travel/failures
 REST_FAILURE_TRANSPORT_BEARER_TOKEN=
-REST_FAILURE_TRANSPORT_TIMEOUT_MS=1500
+REST_FAILURE_TRANSPORT_TIMEOUT_MS=3000
 REST_FAILURE_TRANSPORT_MAX_RESPONSE_BYTES=65536
 ```
 
@@ -68,7 +68,9 @@ Invalid provider signatures, malformed callbacks, duplicate webhook deliveries a
 
 ## Privacy boundary
 
-The failure transport reuses the same sanitizer as structured operational logging. Generic failure events exclude fields whose names indicate credentials/tokens/signatures/cookies, raw bodies/payloads, customer/contact identifiers, email/phone/address, traveller/passport/DNI/document/health data, card data, provider references and monetary amount/currency/price/cost values.
+The external failure payload is stricter than the local structured log. It first reuses the same central sanitizer and then applies an explicit field allowlist. Only a small set of operational keys such as `provider`, `reason`, `eventType`, `durationMs`, `retrySeconds`, `status`, `attempt`, `limit`, `profile` and `mode` can leave the core. String values must also satisfy the safe-token grammar.
+
+Generic failure events therefore exclude credentials/tokens/signatures/cookies, raw bodies/payloads, customer/contact identifiers, email/phone/address, traveller/passport/DNI/document/health data, card data, provider references, monetary amount/currency/price/cost values and arbitrary diagnostic fields that were not explicitly allowlisted. The correlation ID is independently revalidated before delivery.
 
 Exception `message` and `stack` are never serialized. Only a safe exception type and stable safe error code may be emitted. Vendor-specific monitoring enrichments that need more data must live outside the generic core and must define their own lawful purpose and retention policy.
 
@@ -100,6 +102,6 @@ npm run check:failure-transport
 npm run test:failure-transport
 ```
 
-The dynamic test uses real local Node HTTP transport and validates authentication, contract headers, stable fingerprinting, sensitive-data exclusion, single-attempt delivery and best-effort failure behavior.
+The dynamic test uses real local Node HTTP transport and validates authentication, contract headers, stable fingerprinting, strict field allowlists, correlation validation, sensitive-data exclusion, single-attempt delivery and best-effort failure behavior.
 
 Browser E2E remains an informational/non-blocking signal by project policy; the failure-transport checks are deterministic blocking gates.
