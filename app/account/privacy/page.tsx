@@ -6,7 +6,7 @@ import { listPrivacyRequestsForCustomer, privacyRightTypes, type PrivacyRequestS
 import { requireCustomerIdentity } from "@/lib/require-customer-identity";
 
 export const metadata = {
-  title: "Privacy rights | Kairoseth Travel",
+  title: "Privacy rights",
   description: "Submit and track authenticated privacy-rights requests."
 };
 
