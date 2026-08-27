@@ -4,8 +4,10 @@ import {
   describeOperationalError,
   emitOperationalLog,
   safeOperationalToken,
+  sanitizeOperationalCorrelationId,
   sanitizeOperationalFields,
-  type OperationalLogFields
+  type OperationalLogFields,
+  type OperationalLogScalar
 } from "@/lib/observability";
 import type { FailureSeverity, FailureTransportEvent } from "@/repositories/failure-transport";
 
@@ -17,6 +19,36 @@ export type OperationalFailureInput = {
   fields?: OperationalLogFields;
   error?: unknown;
 };
+
+const failureFieldAllowlist = new Set([
+  "provider",
+  "reason",
+  "eventType",
+  "durationMs",
+  "retrySeconds",
+  "status",
+  "attempt",
+  "limit",
+  "profile",
+  "mode"
+]);
+
+function sanitizeFailureFields(fields: OperationalLogFields | undefined) {
+  const sanitized = sanitizeOperationalFields(fields);
+  if (!sanitized) return undefined;
+
+  const output: Record<string, OperationalLogScalar> = {};
+  for (const [key, value] of Object.entries(sanitized)) {
+    if (!failureFieldAllowlist.has(key)) continue;
+    if (typeof value === "string") {
+      const safeValue = safeOperationalToken(value);
+      if (safeValue) output[key] = safeValue;
+      continue;
+    }
+    output[key] = value;
+  }
+  return Object.keys(output).length ? output : undefined;
+}
 
 function fingerprintFor(input: {
   event: string;
@@ -32,7 +64,8 @@ function fingerprintFor(input: {
 export function buildFailureTransportEvent(input: OperationalFailureInput): FailureTransportEvent {
   const event = safeOperationalToken(input.event) ?? "operational-failure";
   const component = safeOperationalToken(input.component) ?? "unknown";
-  const fields = sanitizeOperationalFields(input.fields);
+  const correlationId = sanitizeOperationalCorrelationId(input.correlationId);
+  const fields = sanitizeFailureFields(input.fields);
   const error = describeOperationalError(input.error);
   const fingerprint = fingerprintFor({
     event,
@@ -47,7 +80,7 @@ export function buildFailureTransportEvent(input: OperationalFailureInput): Fail
     event,
     component,
     severity: input.severity,
-    ...(input.correlationId ? { correlationId: input.correlationId } : {}),
+    ...(correlationId ? { correlationId } : {}),
     fingerprint,
     ...(fields ? { fields } : {}),
     ...(error ?? {})
