@@ -120,8 +120,14 @@ export async function POST(request: Request) {
       return text("OK", correlationId);
     }
 
-    const outcome = isSuccessfulRedsysResponse(notification.response) ? "paid" : "failed";
-    await finalizeCheckoutOrder(order.id, outcome, notification.order);
+    let outcome: "paid" | "failed";
+    if (isSuccessfulRedsysResponse(notification.response)) {
+      await finalizeCheckoutOrder(order.id, "paid", notification.order);
+      outcome = "paid";
+    } else {
+      await finalizeCheckoutOrder(order.id, "failed", notification.order);
+      outcome = "failed";
+    }
     emitOperationalLog({
       level: "info",
       event: "payment.notification.processed",
