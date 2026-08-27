@@ -45,15 +45,19 @@ export default async function CheckoutReturnPage({ searchParams }: {
     : order.status === "failed"
       ? t("The payment was not completed. Return to the reservation when you are ready to try again.", "El pago no se ha completado. Vuelve a la reserva cuando quieras intentarlo de nuevo.")
       : t("The payment is still being confirmed. Please do not pay again while this status is pending.", "El pago todavía se está confirmando. No vuelvas a pagar mientras este estado siga pendiente.");
+  const liveRole = order.status === "failed" ? "alert" : "status";
+  const liveMode = order.status === "failed" ? "assertive" : "polite";
 
   return (
     <main className="section">
       <div className={`container ${styles.shell}`}>
         <section className={styles.panel}>
           <div className="eyebrow">{t("Payment status", "Estado del pago")}</div>
-          <h1>{title}</h1>
-          <p className={styles.lead}>{message}</p>
-          <dl className={styles.profileList}>
+          <div id="checkout-return-status" role={liveRole} aria-live={liveMode} aria-atomic="true">
+            <h1>{title}</h1>
+            <p className={styles.lead}>{message}</p>
+          </div>
+          <dl className={styles.profileList} aria-label={t("Payment result details", "Detalles del resultado del pago")}>
             <div><dt>{t("Reservation", "Reserva")}</dt><dd>{order.targetLabel}</dd></div>
             <div><dt>{t("Amount", "Importe")}</dt><dd>{new Intl.NumberFormat(locale === "es" ? "es-ES" : "en-GB", { style: "currency", currency: order.currency }).format(order.amount)}</dd></div>
             <div><dt>{t("Payment reference", "Referencia del pago")}</dt><dd>{order.id}</dd></div>
