@@ -92,8 +92,12 @@ async function ensureIndexes(database: Db) {
       { unique: true, name: "traveller_data_reservation_traveller_unique" }
     ),
     data.createIndex(
-      { identityId: 1, targetType: 1, reservationId: 1 },
-      { name: "traveller_data_customer_reservation" }
+      { identityId: 1, targetType: 1, reservationId: 1, retentionUntil: 1 },
+      { name: "traveller_data_customer_reservation_retained" }
+    ),
+    data.createIndex(
+      { targetType: 1, reservationId: 1, retentionUntil: 1 },
+      { name: "traveller_data_operator_reservation_retained" }
     ),
     data.createIndex(
       { retentionUntil: 1 },
@@ -151,28 +155,26 @@ export async function reencryptTravellerDataBatch(input?: {
       migrated = 0;
       const records = await collection
         .find(travellerPayloadNeedsRotation(currentKeyId), { session })
-        .sort({ id: 1 })
+        .sort({ retentionUntil: 1, id: 1 })
         .limit(limit)
         .toArray();
       scanned = records.length;
 
       for (const record of records) {
-        const plaintext = decryptPayload(record.payload);
-        const nextPayload = encryptPayload(plaintext);
+        const plaintext = decryptVersionedValue(record.payload, travellerDataKeyring);
+        const nextPayload = encryptVersionedValue(plaintext, travellerDataKeyring);
         if (nextPayload.version !== 2 || nextPayload.keyId !== currentKeyId) {
-          throw new Error("Traveller data re-encryption did not produce ciphertext for the current key ID.");
+          throw new Error("Traveller-data re-encryption did not produce ciphertext for the current key ID.");
         }
-
         const result = await collection.updateOne(
           { id: record.id, payload: record.payload },
           { $set: { payload: nextPayload } },
           { session }
         );
         if (result.modifiedCount !== 1) {
-          throw Object.assign(
-            new Error("Traveller data changed while the encryption migration was running; retry the batch."),
-            { code: "TRAVELLER_DATA_REENCRYPTION_CONFLICT" }
-          );
+          throw Object.assign(new Error("Traveller data changed concurrently during re-encryption."), {
+            code: "TRAVELLER_DATA_REENCRYPTION_CONFLICT"
+          });
         }
         migrated += 1;
       }
