@@ -60,11 +60,18 @@ assert(workflow.includes("Observability invariant check"), "blocking CI must run
 assert(workflow.includes("Structured observability test"), "blocking CI must run dynamic observability test");
 assert(workflow.includes("npm run check:observability") && workflow.includes("npm run test:observability"), "CI must execute both observability gates");
 
-for (const [name, text] of [["English", docs], ["Spanish", docsEs]]) {
-  assert(text.includes("X-Request-Id"), `${name} observability docs must explain request correlation`);
-  assert(text.toLowerCase().includes("stdout/stderr"), `${name} observability docs must describe provider-neutral collection`);
-  assert(text.includes("error") && text.toLowerCase().includes("stack"), `${name} observability docs must document error redaction`);
-  assert(text.toLowerCase().includes("browser e2e") && text.toLowerCase().includes("non-blocking"), `${name} docs must preserve browser E2E policy`);
-}
+assert(docs.includes("X-Request-Id"), "English observability docs must explain request correlation");
+assert(docs.toLowerCase().includes("stdout/stderr"), "English observability docs must describe provider-neutral collection");
+assert(docs.toLowerCase().includes("error") && docs.toLowerCase().includes("stack"), "English observability docs must document error redaction");
+assert(docs.toLowerCase().includes("browser e2e") && docs.toLowerCase().includes("non-blocking"), "English docs must preserve browser E2E policy");
+
+assert(docsEs.includes("X-Request-Id"), "Spanish observability docs must explain request correlation");
+assert(docsEs.toLowerCase().includes("stdout/stderr"), "Spanish observability docs must describe provider-neutral collection");
+assert(docsEs.toLowerCase().includes("error") && docsEs.toLowerCase().includes("stack"), "Spanish observability docs must document error redaction");
+assert(
+  docsEs.toLowerCase().includes("browser e2e") &&
+    (docsEs.toLowerCase().includes("no bloqueante") || docsEs.toLowerCase().includes("non-blocking")),
+  "Spanish docs must preserve browser E2E policy"
+);
 
 console.log("Structured operational observability invariants passed.");
