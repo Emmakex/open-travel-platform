@@ -11,7 +11,7 @@ import {
 import { requireAdminIdentity } from "@/lib/require-admin-identity";
 
 export const metadata = {
-  title: "Privacy rights | Kairoseth Travel",
+  title: "Privacy rights",
   description: "Admin-only privacy-rights request review and deadline tracking."
 };
 
@@ -89,8 +89,8 @@ export default async function OperatorPrivacyPage({
           <h1>{tr(locale, "Privacy-rights operations", "Gestión de derechos de privacidad")}</h1>
           <p className={styles.lead}>{tr(
             locale,
-            "Track authenticated data-subject requests, identity-verification needs, response deadlines and erasure retention review. This console records the case workflow; it does not automatically erase or export business records in Phase 9D-1.",
-            "Gestiona solicitudes autenticadas, necesidades de verificación de identidad, plazos de respuesta y revisión de retención para supresión. Esta consola registra el expediente; en la Fase 9D-1 no borra ni exporta automáticamente registros de negocio."
+            "Track authenticated data-subject requests, identity-verification needs, response deadlines and erasure retention review. This console records the case workflow and does not automatically erase or export business records.",
+            "Gestiona solicitudes autenticadas, necesidades de verificación de identidad, plazos de respuesta y revisión de retención para supresión. Esta consola registra el expediente y no borra ni exporta automáticamente registros de negocio."
           )}</p>
           <div className={styles.notice}>{tr(
             locale,
