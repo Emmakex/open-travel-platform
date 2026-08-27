@@ -5,7 +5,7 @@ import {
 } from "node:crypto";
 import type { Db } from "mongodb";
 import type { UserRole } from "@/domain/identity/types";
-import { getMongoDatabase } from "@/lib/mongodb";
+import { getMongoClient, getMongoDatabase, getMongoDatabaseName } from "@/lib/mongodb";
 
 export type PaymentProviderId = "stripe" | "redsys";
 export type PaymentEnvironment = "test" | "live";
@@ -311,36 +311,60 @@ export async function saveStripeProvider(input: SaveStripeProviderInput) {
     throw new Error("The Stripe webhook signing secret must start with whsec_.");
   }
 
-  const providers = await collection();
-  const current = await providers.findOne({ provider: "stripe" });
-  const existing = environmentConfig<StripeEnvironmentConfig>(current, input.environment) ?? {};
-  const environmentConfigValue: StripeEnvironmentConfig = {
-    ...(publishableKey ? { publishableKey } : {}),
-    ...(!input.clearApiKey && existing.apiKey ? { apiKey: existing.apiKey } : {}),
-    ...(!input.clearWebhookSecret && existing.webhookSecret ? { webhookSecret: existing.webhookSecret } : {}),
-    ...(apiKey ? { apiKey: encryptSecret(apiKey) } : {}),
-    ...(webhookSecret ? { webhookSecret: encryptSecret(webhookSecret) } : {})
-  };
+  const client = await getMongoClient();
+  const database = client.db(getMongoDatabaseName());
+  await ensurePaymentProviderIndexes(database);
+  const providers = database.collection<StoredPaymentProviderSettings>(paymentProviderSettingsCollectionName);
+  const audit = database.collection<PaymentProviderAuditEvent>(paymentProviderAuditCollectionName);
+  const session = client.startSession();
 
-  const next: StoredPaymentProviderSettings = {
-    provider: "stripe",
-    enabled: input.enabled,
-    activeEnvironment: input.activeEnvironment,
-    environments: {
-      ...(current?.environments ?? {}),
-      [input.environment]: environmentConfigValue
-    },
-    updatedAt: new Date().toISOString(),
-    updatedBy: input.actorIdentityId
-  };
+  try {
+    await session.withTransaction(async () => {
+      const current = await providers.findOne({ provider: "stripe" }, { session });
+      const existing = environmentConfig<StripeEnvironmentConfig>(current, input.environment) ?? {};
+      const environmentConfigValue: StripeEnvironmentConfig = {
+        ...(publishableKey ? { publishableKey } : {}),
+        ...(!input.clearApiKey && existing.apiKey ? { apiKey: existing.apiKey } : {}),
+        ...(!input.clearWebhookSecret && existing.webhookSecret ? { webhookSecret: existing.webhookSecret } : {}),
+        ...(apiKey ? { apiKey: encryptSecret(apiKey) } : {}),
+        ...(webhookSecret ? { webhookSecret: encryptSecret(webhookSecret) } : {})
+      };
 
-  const activeConfig = next.environments[next.activeEnvironment] as StripeEnvironmentConfig | undefined;
-  if (next.enabled && !stripeConfigured(activeConfig)) {
-    throw new Error(`Configure all required Stripe ${next.activeEnvironment} credentials before enabling the provider.`);
+      const next: StoredPaymentProviderSettings = {
+        provider: "stripe",
+        enabled: input.enabled,
+        activeEnvironment: input.activeEnvironment,
+        environments: {
+          ...(current?.environments ?? {}),
+          [input.environment]: environmentConfigValue
+        },
+        updatedAt: new Date().toISOString(),
+        updatedBy: input.actorIdentityId
+      };
+
+      const activeConfig = next.environments[next.activeEnvironment] as StripeEnvironmentConfig | undefined;
+      if (next.enabled && !stripeConfigured(activeConfig)) {
+        throw new Error(`Configure all required Stripe ${next.activeEnvironment} credentials before enabling the provider.`);
+      }
+
+      await providers.replaceOne({ provider: "stripe" }, next, { upsert: true, session });
+      await audit.insertOne(
+        {
+          provider: next.provider,
+          environment: input.environment,
+          action: "settings_updated",
+          enabled: next.enabled,
+          actorIdentityId: input.actorIdentityId,
+          actorRole: input.actorRole,
+          createdAt: new Date().toISOString()
+        },
+        { session }
+      );
+    });
+  } finally {
+    await session.endSession();
   }
 
-  await providers.replaceOne({ provider: "stripe" }, next, { upsert: true });
-  await auditProviderUpdate(next, input.environment, input.actorIdentityId, input.actorRole);
   return getPaymentProviderSummary("stripe");
 }
 
@@ -372,55 +396,60 @@ export async function saveRedsysProvider(input: SaveRedsysProviderInput) {
     throw new Error("Redsys terminal must contain between 1 and 3 digits.");
   }
 
-  const providers = await collection();
-  const current = await providers.findOne({ provider: "redsys" });
-  const existing = environmentConfig<RedsysEnvironmentConfig>(current, input.environment) ?? {};
-  const environmentConfigValue: RedsysEnvironmentConfig = {
-    ...(merchantCode ? { merchantCode } : {}),
-    ...(terminal ? { terminal: terminal.padStart(3, "0") } : {}),
-    ...(!input.clearSigningKey && existing.signingKey ? { signingKey: existing.signingKey } : {}),
-    ...(signingKey ? { signingKey: encryptSecret(signingKey) } : {})
-  };
+  const client = await getMongoClient();
+  const database = client.db(getMongoDatabaseName());
+  await ensurePaymentProviderIndexes(database);
+  const providers = database.collection<StoredPaymentProviderSettings>(paymentProviderSettingsCollectionName);
+  const audit = database.collection<PaymentProviderAuditEvent>(paymentProviderAuditCollectionName);
+  const session = client.startSession();
 
-  const next: StoredPaymentProviderSettings = {
-    provider: "redsys",
-    enabled: input.enabled,
-    activeEnvironment: input.activeEnvironment,
-    environments: {
-      ...(current?.environments ?? {}),
-      [input.environment]: environmentConfigValue
-    },
-    updatedAt: new Date().toISOString(),
-    updatedBy: input.actorIdentityId
-  };
+  try {
+    await session.withTransaction(async () => {
+      const current = await providers.findOne({ provider: "redsys" }, { session });
+      const existing = environmentConfig<RedsysEnvironmentConfig>(current, input.environment) ?? {};
+      const environmentConfigValue: RedsysEnvironmentConfig = {
+        ...(merchantCode ? { merchantCode } : {}),
+        ...(terminal ? { terminal: terminal.padStart(3, "0") } : {}),
+        ...(!input.clearSigningKey && existing.signingKey ? { signingKey: existing.signingKey } : {}),
+        ...(signingKey ? { signingKey: encryptSecret(signingKey) } : {})
+      };
 
-  const activeConfig = next.environments[next.activeEnvironment] as RedsysEnvironmentConfig | undefined;
-  if (next.enabled && !redsysConfigured(activeConfig)) {
-    throw new Error(`Configure all required Redsys ${next.activeEnvironment} credentials before enabling the provider.`);
+      const next: StoredPaymentProviderSettings = {
+        provider: "redsys",
+        enabled: input.enabled,
+        activeEnvironment: input.activeEnvironment,
+        environments: {
+          ...(current?.environments ?? {}),
+          [input.environment]: environmentConfigValue
+        },
+        updatedAt: new Date().toISOString(),
+        updatedBy: input.actorIdentityId
+      };
+
+      const activeConfig = next.environments[next.activeEnvironment] as RedsysEnvironmentConfig | undefined;
+      if (next.enabled && !redsysConfigured(activeConfig)) {
+        throw new Error(`Configure all required Redsys ${next.activeEnvironment} credentials before enabling the provider.`);
+      }
+
+      await providers.replaceOne({ provider: "redsys" }, next, { upsert: true, session });
+      await audit.insertOne(
+        {
+          provider: next.provider,
+          environment: input.environment,
+          action: "settings_updated",
+          enabled: next.enabled,
+          actorIdentityId: input.actorIdentityId,
+          actorRole: input.actorRole,
+          createdAt: new Date().toISOString()
+        },
+        { session }
+      );
+    });
+  } finally {
+    await session.endSession();
   }
 
-  await providers.replaceOne({ provider: "redsys" }, next, { upsert: true });
-  await auditProviderUpdate(next, input.environment, input.actorIdentityId, input.actorRole);
   return getPaymentProviderSummary("redsys");
-}
-
-async function auditProviderUpdate(
-  settings: StoredPaymentProviderSettings,
-  environment: PaymentEnvironment,
-  actorIdentityId: string,
-  actorRole: UserRole
-) {
-  const database = await getMongoDatabase();
-  await ensurePaymentProviderIndexes(database);
-  await database.collection<PaymentProviderAuditEvent>(paymentProviderAuditCollectionName).insertOne({
-    provider: settings.provider,
-    environment,
-    action: "settings_updated",
-    enabled: settings.enabled,
-    actorIdentityId,
-    actorRole,
-    createdAt: new Date().toISOString()
-  });
 }
 
 export async function getActivePaymentProviderCredentials(
