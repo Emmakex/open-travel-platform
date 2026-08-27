@@ -34,7 +34,7 @@ export default async function RedsysCheckoutBridgePage({
         <section className={styles.panel}>
           <div className="eyebrow">Redsys · {order.environment === "test" ? t("TEST", "PRUEBAS") : t("LIVE", "PRODUCCIÓN")}</div>
           <h1>{t("Redirecting to secure payment", "Redirigiendo al pago seguro")}</h1>
-          <p className={styles.lead}>
+          <p id="redsys-handoff-status" className={styles.lead} role="status" aria-live="polite">
             {t(
               "You are being redirected to the bank payment page. If the redirect does not start automatically, use the button below.",
               "Te estamos redirigiendo a la página de pago del banco. Si la redirección no comienza automáticamente, utiliza el botón inferior."
