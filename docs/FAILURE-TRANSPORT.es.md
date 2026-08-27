@@ -16,7 +16,7 @@ Para activar el transporte REST de referencia:
 FAILURE_TRANSPORT_MODE=rest
 REST_FAILURE_TRANSPORT_URL=https://monitoring.example.com/open-travel/failures
 REST_FAILURE_TRANSPORT_BEARER_TOKEN=
-REST_FAILURE_TRANSPORT_TIMEOUT_MS=1500
+REST_FAILURE_TRANSPORT_TIMEOUT_MS=3000
 REST_FAILURE_TRANSPORT_MAX_RESPONSE_BYTES=65536
 ```
 
@@ -68,7 +68,9 @@ Firmas de proveedor inválidas, callbacks malformados, webhooks duplicados y rat
 
 ## Frontera de privacidad
 
-El transporte reutiliza exactamente el mismo sanitizador del logging operativo estructurado. Los eventos genéricos excluyen campos cuyos nombres indiquen credenciales/tokens/firmas/cookies, bodies/payloads raw, identificadores de cliente/contacto, email/teléfono/dirección, datos de viajero/pasaporte/DNI/documento/salud, datos de tarjeta, referencias de proveedor y valores monetarios de importe/moneda/precio/coste.
+El payload externo es más estricto que el log local. Primero reutiliza el sanitizador central y después aplica una allowlist explícita de campos. Solo pueden salir del core unas pocas claves operativas como `provider`, `reason`, `eventType`, `durationMs`, `retrySeconds`, `status`, `attempt`, `limit`, `profile` y `mode`. Los valores string deben cumplir además la gramática de token seguro.
+
+Por tanto, los eventos genéricos excluyen credenciales/tokens/firmas/cookies, bodies/payloads raw, identificadores de cliente/contacto, email/teléfono/dirección, datos de viajero/pasaporte/DNI/documento/salud, datos de tarjeta, referencias de proveedor, valores monetarios de importe/moneda/precio/coste y campos diagnósticos arbitrarios que no estén expresamente permitidos. El correlation ID se vuelve a validar de forma independiente antes de la entrega.
 
 Nunca se serializan `message` ni `stack` de una excepción. Solo puede emitirse un tipo de excepción seguro y un código de error estable y seguro. Cualquier enriquecimiento específico de un proveedor de monitorización que necesite más datos debe vivir fuera del core genérico y definir su propia finalidad legítima y política de retención.
 
@@ -100,6 +102,6 @@ npm run check:failure-transport
 npm run test:failure-transport
 ```
 
-La prueba dinámica usa transporte HTTP local real de Node y valida autenticación, headers de contrato, fingerprint estable, exclusión de datos sensibles, entrega de un solo intento y comportamiento best-effort ante fallo.
+La prueba dinámica usa transporte HTTP local real de Node y valida autenticación, headers de contrato, fingerprint estable, allowlist estricta de campos, validación de correlación, exclusión de datos sensibles, entrega de un solo intento y comportamiento best-effort ante fallo.
 
 Browser E2E permanece como señal informativa/no bloqueante por política explícita del proyecto; los checks de failure transport son gates deterministas y bloqueantes.
