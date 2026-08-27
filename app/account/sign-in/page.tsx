@@ -31,26 +31,28 @@ export default async function SignInPage({ searchParams }: { searchParams: Promi
     "registration-disabled": isEs ? "El registro de clientes está desactivado temporalmente." : "Customer registration is temporarily disabled."
   };
   const nextQuery = next ? `?next=${encodeURIComponent(next)}` : "";
+  const errorMessage = error ? errors[error] : undefined;
+  const invalidCredentials = error === "invalid-credentials";
 
   return (
     <main className="section"><div className={`container ${styles.shell}`}><section className={styles.panel}>
       <div className="eyebrow">{isEs ? "Cuenta de cliente" : "Customer account"}</div>
       <h1>{isEs ? "Accede a tus viajes." : "Welcome back."}</h1>
       <p className={styles.lead}>{next ? (isEs ? "Inicia sesión para continuar con tu reserva del servicio." : "Sign in to continue your service booking.") : (isEs ? "Consulta tus reservas, fechas y detalles de viaje desde tu cuenta." : "Review your reservations, departure dates and travel details from your account.")}</p>
-      {reset === "success" ? <div className={styles.notice}>{isEs ? "Tu contraseña se ha restablecido. Ya puedes iniciar sesión con la nueva contraseña." : "Your password has been reset. You can now sign in with the new password."}</div> : null}
-      {error && errors[error] ? <div className={styles.notice}>{errors[error]}</div> : null}
-      {demo === "disabled" ? <div className={styles.notice}>{isEs ? "El acceso temporal está desactivado." : "Temporary customer access is disabled."}</div> : null}
+      {reset === "success" ? <div id="sign-in-status" className={styles.notice} role="status" aria-live="polite">{isEs ? "Tu contraseña se ha restablecido. Ya puedes iniciar sesión con la nueva contraseña." : "Your password has been reset. You can now sign in with the new password."}</div> : null}
+      {errorMessage ? <div id="sign-in-error" className={styles.notice} role="alert" aria-live="assertive">{errorMessage}</div> : null}
+      {demo === "disabled" ? <div id="demo-status" className={styles.notice} role="status" aria-live="polite">{isEs ? "El acceso temporal está desactivado." : "Temporary customer access is disabled."}</div> : null}
 
       {identityConfig.customerAuthEnabled ? (
-        <form action={signInCustomerAction} className={styles.authForm}>
+        <form action={signInCustomerAction} className={styles.authForm} aria-describedby={errorMessage ? "sign-in-error" : undefined}>
           <input type="hidden" name="next" value={next} />
-          <label className={styles.field}><span>Email</span><input name="email" type="email" autoComplete="email" required /></label>
-          <label className={styles.field}><span>{isEs ? "Contraseña" : "Password"}</span><input name="password" type="password" autoComplete="current-password" required /></label>
+          <label className={styles.field} htmlFor="customer-sign-in-email"><span>Email</span><input id="customer-sign-in-email" name="email" type="email" autoComplete="email" required aria-invalid={invalidCredentials || undefined} aria-describedby={invalidCredentials ? "sign-in-error" : undefined} autoFocus={invalidCredentials} /></label>
+          <label className={styles.field} htmlFor="customer-sign-in-password"><span>{isEs ? "Contraseña" : "Password"}</span><input id="customer-sign-in-password" name="password" type="password" autoComplete="current-password" required aria-invalid={invalidCredentials || undefined} aria-describedby={invalidCredentials ? "sign-in-error" : undefined} /></label>
           <button className="button button-primary" type="submit">{isEs ? "Iniciar sesión" : "Sign in"}</button>
         </form>
       ) : identityConfig.demoSessionEnabled ? (
         <form action={startDemoSession}><button className="button button-primary" type="submit">{isEs ? "Iniciar acceso temporal" : "Start temporary customer access"}</button></form>
-      ) : <div className={styles.notice}>{isEs ? "El acceso de clientes no está disponible." : "Customer access is unavailable."}</div>}
+      ) : <div className={styles.notice} role="status">{isEs ? "El acceso de clientes no está disponible." : "Customer access is unavailable."}</div>}
 
       {recoveryEnabled ? <p><Link className="text-link" href="/account/forgot-password">{isEs ? "¿Has olvidado tu contraseña? →" : "Forgot your password? →"}</Link></p> : null}
       {identityConfig.customerAuthEnabled ? <div className={styles.authFooter}><span>{isEs ? "¿Aún no tienes cuenta?" : "New to Kairoseth Travel?"}</span>{" "}<Link className="text-link" href={`/account/register${nextQuery}`}>{isEs ? "Crear cuenta →" : "Create account →"}</Link></div> : null}

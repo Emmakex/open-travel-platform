@@ -18,6 +18,8 @@ export default async function ForgotPasswordPage({
   const { sent, error } = await searchParams;
   const isEs = locale === "es";
   const configured = isEmailDeliveryConfigured();
+  const deliveryUnavailable = error === "delivery-unavailable" || !configured;
+  const deliveryFailed = error === "delivery-failed";
 
   return (
     <main className="section">
@@ -25,29 +27,29 @@ export default async function ForgotPasswordPage({
         <section className={styles.panel}>
           <div className="eyebrow">{isEs ? "Seguridad de cuenta" : "Account security"}</div>
           <h1>{isEs ? "Restablece tu contraseña." : "Reset your password."}</h1>
-          <p className={styles.lead}>
+          <p className={styles.lead} id="password-recovery-help">
             {isEs
               ? "Introduce tu correo. Si existe una cuenta activa, enviaremos un enlace de un solo uso válido durante 30 minutos."
               : "Enter your email. If an active account exists, we will send a single-use link valid for 30 minutes."}
           </p>
 
           {sent === "1" ? (
-            <div className={styles.notice}>
+            <div id="password-recovery-status" className={styles.notice} role="status" aria-live="polite">
               {isEs
                 ? "Si existe una cuenta para ese correo, recibirás un enlace de recuperación en unos minutos."
                 : "If an account exists for that email, a recovery link will arrive shortly."}
             </div>
           ) : null}
 
-          {error === "delivery-unavailable" || !configured ? (
-            <div className={styles.notice}>
+          {deliveryUnavailable ? (
+            <div id="password-recovery-error" className={styles.notice} role="alert" aria-live="assertive">
               {isEs
                 ? "La recuperación por correo no está disponible temporalmente."
                 : "Email password recovery is temporarily unavailable."}
             </div>
           ) : null}
-          {error === "delivery-failed" ? (
-            <div className={styles.notice}>
+          {deliveryFailed ? (
+            <div id="password-recovery-error" className={styles.notice} role="alert" aria-live="assertive">
               {isEs
                 ? "No pudimos enviar el correo. Inténtalo de nuevo en unos minutos."
                 : "We could not send the email. Please try again in a few minutes."}
@@ -55,10 +57,10 @@ export default async function ForgotPasswordPage({
           ) : null}
 
           {configured ? (
-            <form action={requestCustomerPasswordResetAction} className={styles.authForm}>
-              <label className={styles.field}>
+            <form action={requestCustomerPasswordResetAction} className={styles.authForm} aria-describedby={`password-recovery-help${deliveryFailed ? " password-recovery-error" : ""}`}>
+              <label className={styles.field} htmlFor="password-recovery-email">
                 <span>Email</span>
-                <input name="email" type="email" autoComplete="email" required />
+                <input id="password-recovery-email" name="email" type="email" autoComplete="email" required aria-invalid={deliveryFailed || undefined} aria-describedby={deliveryFailed ? "password-recovery-error" : "password-recovery-help"} autoFocus={deliveryFailed} />
               </label>
               <button className="button button-primary" type="submit">
                 {isEs ? "Enviar enlace de recuperación" : "Send recovery link"}
