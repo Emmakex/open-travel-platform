@@ -41,6 +41,19 @@ export type PrivacyExecutionRecord = {
   updatedAt: Date;
 };
 
+export type PrivacyRestrictionExecutionResult = {
+  identityId: string;
+  appliedAt: Date;
+};
+
+export type PrivacyErasureExecutionResult = {
+  identityId: string;
+  pseudonym: string;
+  appliedAt: Date;
+  trips: number;
+  services: number;
+};
+
 const terminalStatuses = new Set(["completed", "declined", "withdrawn"]);
 const maxRecordsPerBusinessStore = 500;
 
@@ -167,12 +180,14 @@ async function loadOwnedBusinessRecords(database: Db, identityId: string, sessio
   return { trips, services };
 }
 
-export async function executePrivacyRestrictionByAdmin(input: { requestId: string; actorId: string }) {
+export async function executePrivacyRestrictionByAdmin(
+  input: { requestId: string; actorId: string }
+): Promise<PrivacyRestrictionExecutionResult | null> {
   const client = await getMongoClient();
   const database = client.db(getMongoDatabaseName());
   await ensurePrivacyExecutionIndexes(database);
   const session = client.startSession();
-  let result: { identityId: string; appliedAt: Date } | null = null;
+  let result: PrivacyRestrictionExecutionResult | null = null;
 
   try {
     await session.withTransaction(async () => {
@@ -216,12 +231,14 @@ export async function executePrivacyRestrictionByAdmin(input: { requestId: strin
   return result;
 }
 
-export async function executePrivacyErasureByAdmin(input: { requestId: string; actorId: string }) {
+export async function executePrivacyErasureByAdmin(
+  input: { requestId: string; actorId: string }
+): Promise<PrivacyErasureExecutionResult | null> {
   const client = await getMongoClient();
   const database = client.db(getMongoDatabaseName());
   await ensurePrivacyExecutionIndexes(database);
   const session = client.startSession();
-  let result: { identityId: string; pseudonym: string; appliedAt: Date; trips: number; services: number } | null = null;
+  let result: PrivacyErasureExecutionResult | null = null;
 
   try {
     await session.withTransaction(async () => {
