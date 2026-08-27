@@ -42,8 +42,8 @@ test.describe("accessible customer authentication forms", () => {
     await expect(alert).toHaveAttribute("role", "alert");
     await expect(alert).toHaveAttribute("aria-live", "assertive");
 
-    const password = page.getByLabel(/New password|Nueva contraseña/i);
-    const confirmation = page.getByLabel(/Confirm new password|Repite la nueva contraseña/i);
+    const password = page.locator("#reset-password");
+    const confirmation = page.locator("#reset-password-confirmation");
     await expect(password).toBeFocused();
     await expect(password).toHaveAttribute("aria-invalid", "true");
     await expect(confirmation).toHaveAttribute("aria-invalid", "true");
