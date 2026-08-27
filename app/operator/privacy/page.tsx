@@ -1,6 +1,11 @@
 import Link from "next/link";
 import styles from "@/app/operator/operator.module.css";
 import { reviewPrivacyRequestAction } from "@/app/operator/privacy/actions";
+import {
+  approvePrivacyExportAction,
+  executePrivacyErasureAction,
+  executePrivacyRestrictionAction
+} from "@/app/operator/privacy/execution-actions";
 import { getLocale } from "@/lib/get-locale";
 import {
   listPrivacyRequestsForAdmin,
@@ -12,7 +17,7 @@ import { requireAdminIdentity } from "@/lib/require-admin-identity";
 
 export const metadata = {
   title: "Privacy rights",
-  description: "Admin-only privacy-rights request review and deadline tracking."
+  description: "Admin-only privacy-rights request review and controlled execution."
 };
 
 function tr(locale: "en" | "es", en: string, es: string) {
@@ -57,7 +62,13 @@ const terminal = new Set<PrivacyRequestStatus>(["completed", "declined", "withdr
 export default async function OperatorPrivacyPage({
   searchParams
 }: {
-  searchParams: Promise<{ updated?: string; error?: string; request?: string }>;
+  searchParams: Promise<{
+    updated?: string;
+    error?: string;
+    request?: string;
+    execution?: string;
+    executionError?: string;
+  }>;
 }) {
   const [locale, query] = await Promise.all([getLocale(), searchParams]);
   await requireAdminIdentity();
@@ -80,6 +91,24 @@ export default async function OperatorPrivacyPage({
     conflict: tr(locale, "The request changed concurrently. Reload and review the current state.", "La solicitud cambió de forma concurrente. Recarga y revisa el estado actual."),
     terminal: tr(locale, "The request is already closed and cannot be modified.", "La solicitud ya está cerrada y no puede modificarse.")
   };
+  const executionErrors: Record<string, string> = {
+    "invalid-request": tr(locale, "Invalid privacy request identifier.", "Identificador de solicitud no válido."),
+    "not-found": tr(locale, "Privacy request not found.", "No se ha encontrado la solicitud."),
+    terminal: tr(locale, "This privacy case is already closed.", "Este expediente de privacidad ya está cerrado."),
+    "not-ready": tr(locale, "Move the verified case to Action pending before executing it.", "Mueve el expediente verificado a Acción pendiente antes de ejecutarlo."),
+    "export-not-applicable": tr(locale, "Only access and portability cases can approve a customer export.", "Solo los casos de acceso y portabilidad permiten aprobar una exportación."),
+    "restriction-not-applicable": tr(locale, "This action is available only for restriction cases.", "Esta acción solo está disponible para casos de limitación."),
+    "erasure-not-applicable": tr(locale, "This action is available only for erasure cases.", "Esta acción solo está disponible para casos de supresión."),
+    "retention-block": tr(locale, "Erasure remains blocked until retention review is Clear.", "La supresión permanece bloqueada hasta que la revisión de retención esté en Clear."),
+    "identity-not-found": tr(locale, "The customer identity no longer exists.", "La identidad del cliente ya no existe."),
+    "offline-required": tr(locale, "This account exceeds the bounded online execution limit and needs the offline migration runbook.", "Esta cuenta supera el límite de ejecución online y necesita el procedimiento de migración offline."),
+    "confirmation-required": tr(locale, "Confirm the irreversible action before executing it.", "Confirma la acción irreversible antes de ejecutarla.")
+  };
+  const executionMessages: Record<string, string> = {
+    "export-approved": tr(locale, "Customer export approved. The authenticated customer can now download it from the privacy page.", "Exportación aprobada. El cliente autenticado ya puede descargarla desde su página de privacidad."),
+    "restriction-applied": tr(locale, "Processing restriction applied: customer sign-in sessions were revoked and the account was disabled.", "Limitación aplicada: se revocaron las sesiones del cliente y se deshabilitó la cuenta."),
+    "erasure-applied": tr(locale, "Controlled erasure applied. Direct account/traveller identifiers were removed or pseudonymised while structural business records were preserved.", "Supresión controlada aplicada. Los identificadores directos de cuenta/viajeros se eliminaron o seudonimizaron preservando la estructura de los registros de negocio.")
+  };
 
   return (
     <main className="section">
@@ -89,16 +118,18 @@ export default async function OperatorPrivacyPage({
           <h1>{tr(locale, "Privacy-rights operations", "Gestión de derechos de privacidad")}</h1>
           <p className={styles.lead}>{tr(
             locale,
-            "Track authenticated data-subject requests, identity-verification needs, response deadlines and erasure retention review. This console records the case workflow and does not automatically erase or export business records.",
-            "Gestiona solicitudes autenticadas, necesidades de verificación de identidad, plazos de respuesta y revisión de retención para supresión. Esta consola registra el expediente y no borra ni exporta automáticamente registros de negocio."
+            "Track authenticated data-subject requests, identity verification, response deadlines, release approval and controlled restriction or erasure execution.",
+            "Gestiona solicitudes autenticadas, verificación de identidad, plazos, aprobación de entrega y ejecución controlada de limitación o supresión."
           )}</p>
           <div className={styles.notice}>{tr(
             locale,
-            "Closing an erasure case as completed is fail-closed until retention review is resolved. Closing any staff-reviewed case requires a structured outcome. Deadline extensions require a structured complexity or request-volume reason.",
-            "Cerrar una supresión como completada falla de forma segura hasta resolver la revisión de retención. Cerrar cualquier expediente revisado por staff exige un resultado estructurado. Las prórrogas requieren un motivo estructurado de complejidad o volumen de solicitudes."
+            "Execution is intentionally fail-closed. Exports require a verified case in Action pending. Erasure additionally requires retention review to be Clear and an explicit irreversible-action confirmation.",
+            "La ejecución falla de forma segura por defecto. Las exportaciones requieren un expediente verificado en Acción pendiente. La supresión exige además retención en Clear y una confirmación explícita de acción irreversible."
           )}</div>
           {query.updated ? <div className={styles.notice}>{tr(locale, "Privacy case updated.", "Expediente de privacidad actualizado.")}</div> : null}
           {query.error && errors[query.error] ? <div className={styles.notice}>{errors[query.error]}</div> : null}
+          {query.execution && executionMessages[query.execution] ? <div className={styles.notice}>{executionMessages[query.execution]}</div> : null}
+          {query.executionError && executionErrors[query.executionError] ? <div className={styles.notice}>{executionErrors[query.executionError]}</div> : null}
           <div className={styles.actions}>
             <Link className="button button-secondary" href="/operator">{tr(locale, "← Operator dashboard", "← Panel de operador")}</Link>
           </div>
@@ -118,6 +149,7 @@ export default async function OperatorPrivacyPage({
             {requests.map((request) => {
               const deadline = request.extendedDueAt ?? request.dueAt;
               const isOverdue = !terminal.has(request.status) && deadline.getTime() < now;
+              const executable = request.status === "action-pending";
               return (
                 <article className={styles.panel} key={request.id} style={{ borderRadius: "16px", padding: "1rem" }}>
                   <div className={styles.sectionHeaderCompact}>
@@ -200,6 +232,43 @@ export default async function OperatorPrivacyPage({
                         <button className="button" type="submit">{tr(locale, "Apply review", "Aplicar revisión")}</button>
                       </div>
                     </form>
+                  ) : null}
+
+                  {executable && (request.type === "access" || request.type === "portability") ? (
+                    <form action={approvePrivacyExportAction} style={{ marginTop: "1rem" }}>
+                      <input type="hidden" name="requestId" value={request.id} />
+                      <button className="button button-secondary" type="submit">
+                        {tr(locale, "Approve customer JSON export", "Aprobar exportación JSON del cliente")}
+                      </button>
+                    </form>
+                  ) : null}
+
+                  {executable && request.type === "restriction" ? (
+                    <form action={executePrivacyRestrictionAction} className={styles.editorForm} style={{ marginTop: "1rem" }}>
+                      <input type="hidden" name="requestId" value={request.id} />
+                      <label className={styles.field}>
+                        <span>{tr(locale, "Confirm restriction", "Confirmar limitación")}</span>
+                        <span><input type="checkbox" name="confirm" value="restrict" required /> {tr(locale, "Disable the account and revoke active customer sessions.", "Deshabilitar la cuenta y revocar las sesiones activas del cliente.")}</span>
+                      </label>
+                      <button className="button button-secondary" type="submit">{tr(locale, "Apply restriction", "Aplicar limitación")}</button>
+                    </form>
+                  ) : null}
+
+                  {executable && request.type === "erasure" ? (
+                    <div className={styles.notice} style={{ marginTop: "1rem" }}>
+                      {request.retentionState !== "clear" ? (
+                        <p>{tr(locale, "Erasure execution is locked until retention review is Clear.", "La ejecución de supresión está bloqueada hasta que la revisión de retención esté en Clear.")}</p>
+                      ) : (
+                        <form action={executePrivacyErasureAction} className={styles.editorForm}>
+                          <input type="hidden" name="requestId" value={request.id} />
+                          <label className={styles.field}>
+                            <span>{tr(locale, "Irreversible confirmation", "Confirmación irreversible")}</span>
+                            <span><input type="checkbox" name="confirm" value="erase" required /> {tr(locale, "Anonymise direct account/traveller identifiers, revoke sessions and remove active protected traveller payloads.", "Anonimizar identificadores directos de cuenta/viajeros, revocar sesiones y eliminar los datos protegidos de viajeros activos.")}</span>
+                          </label>
+                          <button className="button" type="submit">{tr(locale, "Execute controlled erasure", "Ejecutar supresión controlada")}</button>
+                        </form>
+                      )}
+                    </div>
                   ) : null}
                 </article>
               );
