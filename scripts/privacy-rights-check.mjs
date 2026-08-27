@@ -9,6 +9,7 @@ const assert = (condition, message) => {
 
 const rights = read("lib/privacy-rights.ts");
 const inventory = read("lib/privacy-data-inventory.ts");
+const accountPage = read("app/account/page.tsx");
 const customerActions = read("app/account/privacy/actions.ts");
 const customerPage = read("app/account/privacy/page.tsx");
 const adminActions = read("app/operator/privacy/actions.ts");
@@ -33,6 +34,7 @@ assert(rights.includes("PRIVACY_OUTCOME_REQUIRED"), "staff closure must require 
 assert(rights.includes("PRIVACY_REQUEST_TERMINAL"), "terminal cases must reject further mutation");
 assert(!rights.includes("deleteMany({ identityId"), "Phase 9D-1 must not implement automatic personal-data erasure");
 
+assert(accountPage.includes('href="/account/privacy"'), "customer account must expose an accessible privacy-rights entry point");
 assert(customerActions.includes("requireCustomerIdentity"), "customer privacy mutations must require authenticated customer identity");
 assert(adminActions.includes("requireAdminIdentity"), "privacy review mutations must remain Admin-only");
 assert(adminPage.includes("requireAdminIdentity"), "privacy operations console must remain Admin-only");
