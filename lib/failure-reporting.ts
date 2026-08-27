@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { getOperationalAlertRouting } from "@/lib/alert-routing";
 import { getFailureTransport } from "@/lib/failure-transport";
 import {
   describeOperationalError,
@@ -30,7 +31,10 @@ const failureFieldAllowlist = new Set([
   "attempt",
   "limit",
   "profile",
-  "mode"
+  "mode",
+  "alertRoute",
+  "runbook",
+  "escalation"
 ]);
 
 function sanitizeFailureFields(fields: OperationalLogFields | undefined) {
@@ -65,7 +69,17 @@ export function buildFailureTransportEvent(input: OperationalFailureInput): Fail
   const event = safeOperationalToken(input.event) ?? "operational-failure";
   const component = safeOperationalToken(input.component) ?? "unknown";
   const correlationId = sanitizeOperationalCorrelationId(input.correlationId);
-  const fields = sanitizeFailureFields(input.fields);
+  const routing = getOperationalAlertRouting({
+    event,
+    component,
+    severity: input.severity
+  });
+  const fields = sanitizeFailureFields({
+    ...input.fields,
+    alertRoute: routing.route,
+    runbook: routing.runbook,
+    escalation: routing.escalation
+  });
   const error = describeOperationalError(input.error);
   const fingerprint = fingerprintFor({
     event,
