@@ -4,8 +4,10 @@ test.describe("accessible customer authentication forms", () => {
   test("sign-in associates invalid credentials with both fields and moves focus", async ({ page }) => {
     await page.goto("/account/sign-in?error=invalid-credentials");
 
-    const alert = page.getByRole("alert");
+    const alert = page.locator("#sign-in-error");
     await expect(alert).toBeVisible();
+    await expect(alert).toHaveAttribute("role", "alert");
+    await expect(alert).toHaveAttribute("aria-live", "assertive");
 
     const email = page.getByLabel("Email");
     const password = page.getByLabel(/Password|Contraseña/i);
@@ -19,8 +21,10 @@ test.describe("accessible customer authentication forms", () => {
   test("registration exposes email-exists feedback and preserves password help", async ({ page }) => {
     await page.goto("/account/register?error=email-exists");
 
-    const alert = page.getByRole("alert");
+    const alert = page.locator("#registration-error");
     await expect(alert).toBeVisible();
+    await expect(alert).toHaveAttribute("role", "alert");
+    await expect(alert).toHaveAttribute("aria-live", "assertive");
 
     const email = page.getByLabel("Email");
     const password = page.getByLabel(/Password|Contraseña/i);
@@ -33,7 +37,11 @@ test.describe("accessible customer authentication forms", () => {
   test("password reset exposes instructions and validation error relationships", async ({ page }) => {
     await page.goto("/account/reset-password?token=test-token&error=validation");
 
-    await expect(page.getByRole("alert")).toBeVisible();
+    const alert = page.locator("#reset-password-error");
+    await expect(alert).toBeVisible();
+    await expect(alert).toHaveAttribute("role", "alert");
+    await expect(alert).toHaveAttribute("aria-live", "assertive");
+
     const password = page.getByLabel(/New password|Nueva contraseña/i);
     const confirmation = page.getByLabel(/Confirm new password|Repite la nueva contraseña/i);
     await expect(password).toBeFocused();
@@ -46,11 +54,17 @@ test.describe("accessible customer authentication forms", () => {
 
   test("password recovery distinguishes polite success from assertive delivery failure", async ({ page }) => {
     await page.goto("/account/forgot-password?sent=1");
-    await expect(page.getByRole("status")).toBeVisible();
+    const success = page.locator("#password-recovery-status");
+    await expect(success).toBeVisible();
+    await expect(success).toHaveAttribute("role", "status");
+    await expect(success).toHaveAttribute("aria-live", "polite");
     await expect(page.getByLabel("Email")).toHaveAttribute("aria-describedby", "password-recovery-help");
 
     await page.goto("/account/forgot-password?error=delivery-failed");
-    await expect(page.getByRole("alert")).toBeVisible();
+    const alert = page.locator("#password-recovery-error");
+    await expect(alert).toBeVisible();
+    await expect(alert).toHaveAttribute("role", "alert");
+    await expect(alert).toHaveAttribute("aria-live", "assertive");
     const email = page.getByLabel("Email");
     await expect(email).toBeFocused();
     await expect(email).toHaveAttribute("aria-invalid", "true");
@@ -59,8 +73,9 @@ test.describe("accessible customer authentication forms", () => {
 
   test("password reset success is exposed as a polite status on sign-in", async ({ page }) => {
     await page.goto("/account/sign-in?reset=success");
-    const status = page.getByRole("status");
+    const status = page.locator("#sign-in-status");
     await expect(status).toBeVisible();
+    await expect(status).toHaveAttribute("role", "status");
     await expect(status).toHaveAttribute("aria-live", "polite");
   });
 });
