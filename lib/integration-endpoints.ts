@@ -5,7 +5,7 @@ import type {
   IntegrationEndpointSummary,
   WebhookIntegrationEventType
 } from "@/domain/integrations/types";
-import { getMongoDatabase } from "@/lib/mongodb";
+import { getMongoClient, getMongoDatabase, getMongoDatabaseName } from "@/lib/mongodb";
 import {
   decryptIntegrationSecret,
   encryptIntegrationSecret,
@@ -133,49 +133,74 @@ export async function saveIntegrationEndpoint(input: {
     throw Object.assign(new Error("Select at least one integration event."), { code: "INTEGRATION_EVENTS_REQUIRED" });
   }
 
-  const database = await getMongoDatabase();
+  const client = await getMongoClient();
+  const database = client.db(getMongoDatabaseName());
   await ensureIntegrationEndpointIndexes(database);
   const endpoints = database.collection<StoredIntegrationEndpoint>(integrationEndpointCollectionName);
-  const current = input.endpointId ? await endpoints.findOne({ id: input.endpointId }) : null;
-  if (input.endpointId && !current) throw Object.assign(new Error("Integration endpoint not found."), { code: "INTEGRATION_NOT_FOUND" });
+  const audit = database.collection<IntegrationEndpointAuditEvent>(integrationEndpointAuditCollectionName);
+  const session = client.startSession();
+  let result: { summary: IntegrationEndpointSummary; generatedSecret?: string } | undefined;
 
-  const rawSecret = input.rotateSecret
-    ? generateIntegrationSigningSecret()
-    : input.signingSecret?.trim() || "";
-  if (rawSecret && rawSecret.length < 16) {
-    throw Object.assign(new Error("Webhook signing secret must contain at least 16 characters."), { code: "INTEGRATION_SECRET_WEAK" });
-  }
-  const signingSecret = rawSecret ? encryptIntegrationSecret(rawSecret) : current?.signingSecret;
-  if (!signingSecret) {
-    throw Object.assign(new Error("A signing secret is required."), { code: "INTEGRATION_SECRET_REQUIRED" });
+  try {
+    await session.withTransaction(async () => {
+      const current = input.endpointId
+        ? await endpoints.findOne({ id: input.endpointId }, { session })
+        : null;
+      if (input.endpointId && !current) {
+        throw Object.assign(new Error("Integration endpoint not found."), { code: "INTEGRATION_NOT_FOUND" });
+      }
+
+      const rawSecret = input.rotateSecret
+        ? generateIntegrationSigningSecret()
+        : input.signingSecret?.trim() || "";
+      if (rawSecret && rawSecret.length < 16) {
+        throw Object.assign(new Error("Webhook signing secret must contain at least 16 characters."), { code: "INTEGRATION_SECRET_WEAK" });
+      }
+      const signingSecret = rawSecret ? encryptIntegrationSecret(rawSecret) : current?.signingSecret;
+      if (!signingSecret) {
+        throw Object.assign(new Error("A signing secret is required."), { code: "INTEGRATION_SECRET_REQUIRED" });
+      }
+
+      const now = new Date().toISOString();
+      const id = current?.id ?? `int-${randomUUID()}`;
+      const next: StoredIntegrationEndpoint = {
+        id,
+        name,
+        url: normalizedUrl,
+        enabled: input.enabled,
+        subscribedEvents,
+        signingSecret,
+        createdAt: current?.createdAt ?? now,
+        createdBy: current?.createdBy ?? input.actorIdentityId,
+        updatedAt: current ? now : undefined,
+        updatedBy: current ? input.actorIdentityId : undefined
+      };
+
+      await endpoints.replaceOne({ id }, next, { upsert: true, session });
+      await audit.insertOne(
+        {
+          id: `inta-${randomUUID()}`,
+          endpointId: id,
+          action: current ? "updated" : "created",
+          actorIdentityId: input.actorIdentityId,
+          actorRole: input.actorRole,
+          enabled: next.enabled,
+          subscribedEvents: next.subscribedEvents,
+          occurredAt: now
+        },
+        { session }
+      );
+      result = {
+        summary: summary(next),
+        generatedSecret: input.rotateSecret ? rawSecret : undefined
+      };
+    });
+  } finally {
+    await session.endSession();
   }
 
-  const now = new Date().toISOString();
-  const id = current?.id ?? `int-${randomUUID()}`;
-  const next: StoredIntegrationEndpoint = {
-    id,
-    name,
-    url: normalizedUrl,
-    enabled: input.enabled,
-    subscribedEvents,
-    signingSecret,
-    createdAt: current?.createdAt ?? now,
-    createdBy: current?.createdBy ?? input.actorIdentityId,
-    updatedAt: current ? now : undefined,
-    updatedBy: current ? input.actorIdentityId : undefined
-  };
-  await endpoints.replaceOne({ id }, next, { upsert: true });
-  await database.collection<IntegrationEndpointAuditEvent>(integrationEndpointAuditCollectionName).insertOne({
-    id: `inta-${randomUUID()}`,
-    endpointId: id,
-    action: current ? "updated" : "created",
-    actorIdentityId: input.actorIdentityId,
-    actorRole: input.actorRole,
-    enabled: next.enabled,
-    subscribedEvents: next.subscribedEvents,
-    occurredAt: now
-  });
-  return { summary: summary(next), generatedSecret: input.rotateSecret ? rawSecret : undefined };
+  if (!result) throw new Error("Integration endpoint transaction completed without a result.");
+  return result;
 }
 
 export async function deleteIntegrationEndpoint(input: {
@@ -183,19 +208,36 @@ export async function deleteIntegrationEndpoint(input: {
   actorIdentityId: string;
   actorRole: UserRole;
 }) {
-  const database = await getMongoDatabase();
+  const client = await getMongoClient();
+  const database = client.db(getMongoDatabaseName());
   await ensureIntegrationEndpointIndexes(database);
-  const current = await database.collection<StoredIntegrationEndpoint>(integrationEndpointCollectionName)
-    .findOne({ id: input.endpointId });
-  if (!current) return false;
-  await database.collection<StoredIntegrationEndpoint>(integrationEndpointCollectionName).deleteOne({ id: current.id });
-  await database.collection<IntegrationEndpointAuditEvent>(integrationEndpointAuditCollectionName).insertOne({
-    id: `inta-${randomUUID()}`,
-    endpointId: current.id,
-    action: "deleted",
-    actorIdentityId: input.actorIdentityId,
-    actorRole: input.actorRole,
-    occurredAt: new Date().toISOString()
-  });
-  return true;
+  const endpoints = database.collection<StoredIntegrationEndpoint>(integrationEndpointCollectionName);
+  const audit = database.collection<IntegrationEndpointAuditEvent>(integrationEndpointAuditCollectionName);
+  const session = client.startSession();
+  let changed = false;
+
+  try {
+    await session.withTransaction(async () => {
+      const current = await endpoints.findOne({ id: input.endpointId }, { session });
+      if (!current) return;
+      const occurredAt = new Date().toISOString();
+      await endpoints.deleteOne({ id: current.id }, { session });
+      await audit.insertOne(
+        {
+          id: `inta-${randomUUID()}`,
+          endpointId: current.id,
+          action: "deleted",
+          actorIdentityId: input.actorIdentityId,
+          actorRole: input.actorRole,
+          occurredAt
+        },
+        { session }
+      );
+      changed = true;
+    });
+  } finally {
+    await session.endSession();
+  }
+
+  return changed;
 }
