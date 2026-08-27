@@ -1,4 +1,4 @@
-import { createCipheriv, createDecipheriv, randomBytes, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import type { Db } from "mongodb";
 import type { ReservationTraveller } from "@/domain/booking/types";
 import type { PaymentTargetType } from "@/domain/payment/types";
@@ -10,18 +10,20 @@ import type {
   TravellerRequirementsProfile,
   TravellerSex
 } from "@/domain/traveller/types";
-import { getMongoDatabase } from "@/lib/mongodb";
+import {
+  currentEncryptionKeyId,
+  decryptVersionedValue,
+  encryptVersionedValue,
+  isEncryptionKeyringConfigured,
+  type VersionedEncryptedValue
+} from "@/lib/encryption-keyring";
+import { getMongoClient, getMongoDatabase, getMongoDatabaseName } from "@/lib/mongodb";
 import { travellerFieldsForReservationTraveller } from "@/lib/traveller-requirements";
 
 export const travellerDataCollectionName = "travel_traveller_details";
 export const travellerDataAuditCollectionName = "travel_traveller_data_audit";
 
-type EncryptedTravellerPayload = {
-  version: 1;
-  iv: string;
-  tag: string;
-  value: string;
-};
+type EncryptedTravellerPayload = VersionedEncryptedValue;
 
 type StoredTravellerDataRecord = {
   id: string;
@@ -56,53 +58,29 @@ export type TravellerDataCompletion = {
   complete: boolean;
 };
 
-function parseEncryptionKey() {
-  const raw = process.env.TRAVELLER_DATA_KEY?.trim();
-  if (!raw) return null;
-  if (/^[a-f0-9]{64}$/i.test(raw)) return Buffer.from(raw, "hex");
-  try {
-    const value = Buffer.from(raw, "base64");
-    return value.length === 32 ? value : null;
-  } catch {
-    return null;
-  }
-}
+export type TravellerDataEncryptionMigrationResult = {
+  currentKeyId: string;
+  scanned: number;
+  migrated: number;
+  remaining: number;
+};
+
+const travellerDataKeyring = {
+  keyVariable: "TRAVELLER_DATA_KEY",
+  keyIdVariable: "TRAVELLER_DATA_KEY_ID",
+  previousKeysVariable: "TRAVELLER_DATA_PREVIOUS_KEYS"
+} as const;
 
 export function isTravellerDataEncryptionConfigured() {
-  return Boolean(parseEncryptionKey());
-}
-
-function encryptionKey() {
-  const key = parseEncryptionKey();
-  if (!key) {
-    throw new Error("TRAVELLER_DATA_KEY must be a 32-byte base64 value or a 64-character hexadecimal value.");
-  }
-  return key;
+  return isEncryptionKeyringConfigured(travellerDataKeyring);
 }
 
 function encryptPayload(data: TravellerPostPurchaseData): EncryptedTravellerPayload {
-  const iv = randomBytes(12);
-  const cipher = createCipheriv("aes-256-gcm", encryptionKey(), iv);
-  const encrypted = Buffer.concat([
-    cipher.update(JSON.stringify(data), "utf8"),
-    cipher.final()
-  ]);
-  return {
-    version: 1,
-    iv: iv.toString("base64"),
-    tag: cipher.getAuthTag().toString("base64"),
-    value: encrypted.toString("base64")
-  };
+  return encryptVersionedValue(JSON.stringify(data), travellerDataKeyring);
 }
 
 function decryptPayload(payload: EncryptedTravellerPayload): TravellerPostPurchaseData {
-  const decipher = createDecipheriv("aes-256-gcm", encryptionKey(), Buffer.from(payload.iv, "base64"));
-  decipher.setAuthTag(Buffer.from(payload.tag, "base64"));
-  const decrypted = Buffer.concat([
-    decipher.update(Buffer.from(payload.value, "base64")),
-    decipher.final()
-  ]);
-  return JSON.parse(decrypted.toString("utf8")) as TravellerPostPurchaseData;
+  return JSON.parse(decryptVersionedValue(payload, travellerDataKeyring)) as TravellerPostPurchaseData;
 }
 
 async function ensureIndexes(database: Db) {
@@ -121,6 +99,10 @@ async function ensureIndexes(database: Db) {
       { retentionUntil: 1 },
       { expireAfterSeconds: 0, name: "traveller_data_retention_ttl" }
     ),
+    data.createIndex(
+      { retentionUntil: 1, "payload.version": 1, "payload.keyId": 1 },
+      { name: "traveller_data_encryption_rotation" }
+    ),
     audit.createIndex({ reservationId: 1, occurredAt: -1 }, { name: "traveller_data_audit_reservation" }),
     audit.createIndex({ occurredAt: -1 }, { name: "traveller_data_audit_occurred" })
   ]);
@@ -131,6 +113,76 @@ function retentionUntil(endDate: string | undefined, retentionDays: number) {
     ? Date.parse(`${endDate}T23:59:59.999Z`)
     : Date.now();
   return new Date(base + Math.max(0, retentionDays) * 86400000);
+}
+
+function travellerPayloadNeedsRotation(currentKeyId: string) {
+  return {
+    retentionUntil: { $gt: new Date() },
+    $or: [
+      { "payload.version": { $ne: 2 } },
+      { "payload.keyId": { $ne: currentKeyId } }
+    ]
+  };
+}
+
+export async function reencryptTravellerDataBatch(input?: {
+  limit?: number;
+}): Promise<TravellerDataEncryptionMigrationResult> {
+  const currentKeyId = currentEncryptionKeyId(travellerDataKeyring);
+  if (!currentKeyId) {
+    throw Object.assign(
+      new Error("TRAVELLER_DATA_KEY_ID is required before traveller-data re-encryption can run."),
+      { code: "TRAVELLER_DATA_KEY_ID_REQUIRED" }
+    );
+  }
+
+  const limit = Math.max(1, Math.min(100, Math.floor(input?.limit ?? 25)));
+  const client = await getMongoClient();
+  const database = client.db(getMongoDatabaseName());
+  await ensureIndexes(database);
+  const collection = database.collection<StoredTravellerDataRecord>(travellerDataCollectionName);
+  const session = client.startSession();
+  let scanned = 0;
+  let migrated = 0;
+
+  try {
+    await session.withTransaction(async () => {
+      scanned = 0;
+      migrated = 0;
+      const records = await collection
+        .find(travellerPayloadNeedsRotation(currentKeyId), { session })
+        .sort({ id: 1 })
+        .limit(limit)
+        .toArray();
+      scanned = records.length;
+
+      for (const record of records) {
+        const plaintext = decryptPayload(record.payload);
+        const nextPayload = encryptPayload(plaintext);
+        if (nextPayload.version !== 2 || nextPayload.keyId !== currentKeyId) {
+          throw new Error("Traveller data re-encryption did not produce ciphertext for the current key ID.");
+        }
+
+        const result = await collection.updateOne(
+          { id: record.id, payload: record.payload },
+          { $set: { payload: nextPayload } },
+          { session }
+        );
+        if (result.modifiedCount !== 1) {
+          throw Object.assign(
+            new Error("Traveller data changed while the encryption migration was running; retry the batch."),
+            { code: "TRAVELLER_DATA_REENCRYPTION_CONFLICT" }
+          );
+        }
+        migrated += 1;
+      }
+    });
+  } finally {
+    await session.endSession();
+  }
+
+  const remaining = await collection.countDocuments(travellerPayloadNeedsRotation(currentKeyId));
+  return { currentKeyId, scanned, migrated, remaining };
 }
 
 const documentTypes = new Set<TravellerDocumentType>(["passport", "dni", "tie", "national-id", "other"]);
