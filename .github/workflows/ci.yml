@@ -122,6 +122,12 @@ jobs:
       - name: REST adapter contract integration test
         run: npm run test:rest-adapter-contracts
 
+      - name: Observability invariant check
+        run: npm run check:observability
+
+      - name: Structured observability test
+        run: npm run test:observability
+
       - name: Browser E2E invariant check
         run: npm run check:browser-e2e
 
