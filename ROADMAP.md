@@ -17,9 +17,9 @@ _Last updated: 27 August 2026._
 
 The platform is well beyond the original catalogue/booking MVP. Persistent identity, transactional reservations/inventory, traveller pricing, accommodation, independent services, payments, post-purchase traveller data, amendments, rich Operator workflows, granular permissions, documents, reporting and the common integration infrastructure are already implemented.
 
-**Phase 8 is COMPLETE. Phase 9 — Production hardening is IN PROGRESS: Phase 9A production security / operability baseline, Phase 9B critical persistence/concurrency/contract validation baseline and Phase 9C observability/recovery/privileged-audit hardening are COMPLETE. Phase 9D privacy, regulatory, accessibility and performance readiness is NEXT.**
+**Phase 8 is COMPLETE. Phase 9 — Production hardening is IN PROGRESS: Phase 9A production security / operability baseline, Phase 9B critical persistence/concurrency/contract validation baseline and Phase 9C observability/recovery/privileged-audit hardening are COMPLETE. Phase 9D is IN PROGRESS: 9D-1 privacy-rights workflow, 9D-2 access/portability/restriction/controlled erasure and 9D-3 regulatory retention-policy baseline are COMPLETE. Phase 9D-4 accessibility readiness is NEXT.**
 
-Credentialed Stripe/Redsys TEST/LIVE end-to-end validation remains pending until suitable provider accounts are available. That provider-dependent validation should be inserted as soon as credentials exist, but it does not block Phase 9D. Browser E2E remains an informational/non-blocking CI signal by explicit project policy; blocking gates cover deterministic security, TypeScript/build/smoke, MongoDB concurrency/idempotency/amendments, local HTTP adapter contracts, structured observability/failure transport, privileged audit rollback, encryption-key rotation, MongoDB recovery and real MongoDB query-plan validation.
+Credentialed Stripe/Redsys TEST/LIVE end-to-end validation remains pending until suitable provider accounts are available. That provider-dependent validation should be inserted as soon as credentials exist, but it does not block Phase 9D. Browser E2E remains an informational/non-blocking CI signal by explicit project policy; blocking gates cover deterministic security, TypeScript/build/smoke, MongoDB concurrency/idempotency/amendments, local HTTP adapter contracts, structured observability/failure transport, privileged audit rollback, encryption-key rotation, MongoDB recovery, real MongoDB query-plan validation and privacy/retention invariants.
 
 ---
 
@@ -361,12 +361,47 @@ The priority is to harden the already broad product surface for real production 
 - Atlas Query Profiler/Performance Advisor follow-up and safe index-lifecycle guidance documented EN/ES;
 - permanent `check:mongodb-index-performance` plus real MongoDB query-plan gate.
 
-## 9D — Privacy, regulatory, accessibility and performance readiness — NEXT
+## 9D — Privacy, regulatory, accessibility and performance readiness — IN PROGRESS
 
-- GDPR/privacy/booking/cookie/retention/export/deletion workflows;
-- market-specific travel/payment/consumer/fiscal review;
-- accessibility review;
-- performance/load review of customer and Operator critical paths.
+### 9D-1 — Privacy-rights request and retention-review foundation — COMPLETE
+- authenticated customer requests for access, rectification, erasure, restriction, objection and portability;
+- customer tracking plus Admin-only privacy console;
+- one open request per customer/right, bounded deadlines/extensions and transactional request/audit persistence;
+- explicit retention review before erasure closure;
+- technical personal-data inventory separating exportable/customer data from credentials, security internals and review-bound stores;
+- real MongoDB validation for duplicate guards, deadlines, rollback and terminal immutability.
+
+### 9D-2 — Access/portability, restriction and controlled erasure — COMPLETE
+- Admin-approved authenticated JSON exports for access and portability;
+- portability is deliberately narrower than access and excludes payment/accounting/privacy-case/staff-audit internals;
+- protected Traveller Data export fails closed when required encryption keys are unavailable;
+- restriction disables the customer account and revokes sessions without deleting business records;
+- erasure requires explicit Admin confirmation and a clear retention review;
+- account/reservation/traveller identity is anonymised or pseudonymised while booking, inventory and authoritative financial structure are preserved;
+- destructive online execution is bounded, transactional where authoritative and retry-safe across secondary cleanup;
+- blocking static invariants plus real MongoDB privacy-execution validation.
+
+### 9D-3 — Regulatory retention-policy baseline — COMPLETE
+- 1:1 retention policy registry for every personal-data inventory area;
+- explicit `ttl`, `case-review`, `business-record-review` and `security-review` strategies with operational ownership;
+- documented holds override expiry eligibility;
+- evaluator can only return `retain`, `review-required` or `eligible-for-expiry`, never an automatic delete instruction;
+- business records such as bookings/payments/audits remain review-driven rather than being assigned a universal statutory database TTL;
+- EN/ES deployment guidance references official GDPR, Spanish commercial/tax and EU/Spanish package-travel/consumer sources without claiming legal certification;
+- blocking `check:privacy-retention-policy`, unit test and dedicated CI workflow.
+
+### 9D-4 — Accessibility readiness — NEXT
+- audit public booking, account and Operator critical paths against WCAG 2.2 AA-oriented criteria;
+- keyboard operation, focus order/visibility, semantic landmarks, labels, form errors and status messaging;
+- contrast, zoom/reflow and mobile/touch behavior;
+- automated checks plus explicit manual review where automation cannot establish conformance;
+- document residual accessibility risks rather than claiming certification from automated tests alone.
+
+### 9D-5 — Performance/load readiness — AFTER 9D-4
+- establish repeatable performance/load baselines for customer booking/account and Operator critical paths;
+- validate server latency, concurrency/resource behavior and bounded failure under representative load;
+- build on the completed MongoDB query-plan/index baseline rather than adding speculative indexes;
+- document capacity assumptions and production follow-up thresholds.
 
 Credentialed Stripe/Redsys TEST/LIVE validation remains a production-hardening requirement and should be inserted immediately when provider accounts are available.
 
@@ -409,7 +444,15 @@ Credentialed Stripe/Redsys TEST/LIVE validation remains a production-hardening r
   ↓
 9C-8  MongoDB index/query-plan hardening — COMPLETE
   ↓
-9D    Privacy / regulatory / accessibility / performance — NEXT
+9D-1  Privacy-rights + retention-review foundation — COMPLETE
+  ↓
+9D-2  Access/portability + restriction + controlled erasure — COMPLETE
+  ↓
+9D-3  Regulatory retention-policy baseline — COMPLETE
+  ↓
+9D-4  Accessibility readiness — NEXT
+  ↓
+9D-5  Performance/load readiness
   ↓
 10    Open-source productisation / release
   ↓
