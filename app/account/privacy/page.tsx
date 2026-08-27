@@ -71,6 +71,8 @@ export default async function AccountPrivacyPage({
     "invalid-request": tr(locale, "The request identifier is invalid.", "El identificador de la solicitud no es válido."),
     "request-unavailable": tr(locale, "That request cannot be withdrawn because it is closed or unavailable.", "Esa solicitud no puede retirarse porque ya está cerrada o no está disponible.")
   };
+  const errorMessage = query.error ? errors[query.error] : undefined;
+  const invalidType = query.error === "invalid-type";
 
   return (
     <main className="section">
@@ -88,17 +90,17 @@ export default async function AccountPrivacyPage({
             "Requests are reviewed individually. We may ask for additional identity verification when necessary. An erasure request does not automatically delete booking, payment or audit records when a retention review shows they must remain available for another applicable purpose or obligation.",
             "Las solicitudes se revisan individualmente. Podemos pedir verificación adicional de identidad cuando sea necesario. Una solicitud de supresión no elimina automáticamente reservas, pagos o auditorías cuando la revisión de retención determine que deben conservarse por otra finalidad u obligación aplicable."
           )}</div>
-          {query.created ? <div className={styles.notice}><strong>{tr(locale, "Request received.", "Solicitud recibida.")}</strong> {tr(locale, "You can track it below.", "Puedes seguirla a continuación.")}</div> : null}
-          {query.withdrawn ? <div className={styles.notice}>{tr(locale, "Request withdrawn.", "Solicitud retirada.")}</div> : null}
-          {query.error && errors[query.error] ? <div className={styles.notice}>{errors[query.error]}</div> : null}
+          {query.created ? <div id="privacy-request-status" className={styles.notice} role="status" aria-live="polite"><strong>{tr(locale, "Request received.", "Solicitud recibida.")}</strong> {tr(locale, "You can track it below.", "Puedes seguirla a continuación.")}</div> : null}
+          {query.withdrawn ? <div id="privacy-withdraw-status" className={styles.notice} role="status" aria-live="polite">{tr(locale, "Request withdrawn.", "Solicitud retirada.")}</div> : null}
+          {errorMessage ? <div id="privacy-request-error" className={styles.notice} role="alert" aria-live="assertive">{errorMessage}</div> : null}
 
-          <form action={createPrivacyRequestAction} className={styles.form}>
-            <label className={styles.field}>
+          <form action={createPrivacyRequestAction} className={styles.form} aria-describedby={`privacy-right-help${errorMessage ? " privacy-request-error" : ""}`}>
+            <label className={styles.field} htmlFor="privacy-right-type">
               <span>{tr(locale, "Right to exercise", "Derecho que quieres ejercer")}</span>
-              <select name="type" required defaultValue="access">
+              <select id="privacy-right-type" name="type" required defaultValue="access" aria-invalid={invalidType || undefined} aria-describedby={`privacy-right-help${invalidType ? " privacy-request-error" : ""}`} autoFocus={invalidType}>
                 {privacyRightTypes.map((type) => <option key={type} value={type}>{rightLabel(locale, type)}</option>)}
               </select>
-              <small>{tr(locale, "Only one open request of the same type is kept at a time; completed requests remain in your history.", "Solo se mantiene una solicitud abierta del mismo tipo a la vez; las solicitudes cerradas permanecen en tu historial.")}</small>
+              <small id="privacy-right-help">{tr(locale, "Only one open request of the same type is kept at a time; completed requests remain in your history.", "Solo se mantiene una solicitud abierta del mismo tipo a la vez; las solicitudes cerradas permanecen en tu historial.")}</small>
             </label>
             <div className={styles.actions}>
               <button className="button" type="submit">{tr(locale, "Submit request", "Enviar solicitud")}</button>
@@ -116,9 +118,10 @@ export default async function AccountPrivacyPage({
               const deadline = request.extendedDueAt ?? request.dueAt;
               const execution = executionByRequest.get(request.id);
               const exportReady = (request.type === "access" || request.type === "portability") && execution?.exportApproved;
+              const right = rightLabel(locale, request.type);
               return (
                 <div key={request.id}>
-                  <dt>{rightLabel(locale, request.type)}</dt>
+                  <dt>{right}</dt>
                   <dd>
                     <div>{statusLabel(locale, request.status)}</div>
                     <small>{tr(locale, "Received", "Recibida")}: {formatDate(locale, request.receivedAt)} · {tr(locale, "Current response deadline", "Plazo de respuesta actual")}: {formatDate(locale, deadline)}</small>
@@ -126,18 +129,18 @@ export default async function AccountPrivacyPage({
                     {request.type === "erasure" && request.retentionState === "hold" ? <div><small>{tr(locale, "Retention review: some data must remain retained; the final outcome will explain the applicable case status.", "Revisión de retención: algunos datos deben conservarse; el resultado final reflejará el estado aplicable del expediente.")}</small></div> : null}
                     {exportReady ? (
                       <div style={{ marginTop: "0.65rem" }}>
-                        <a className="button" href={`/api/account/privacy/requests/${encodeURIComponent(request.id)}/export`}>
+                        <a className="button" href={`/api/account/privacy/requests/${encodeURIComponent(request.id)}/export`} aria-label={tr(locale, `Download approved JSON for ${right}`, `Descargar JSON aprobado de ${right}`)}>
                           {tr(locale, "Download approved JSON", "Descargar JSON aprobado")}
                         </a>
                       </div>
                     ) : null}
                     {(request.type === "access" || request.type === "portability") && request.status === "action-pending" && !exportReady ? (
-                      <div><small>{tr(locale, "Your export is being prepared and will appear here after release approval.", "Tu exportación se está preparando y aparecerá aquí cuando se apruebe su entrega.")}</small></div>
+                      <div role="status"><small>{tr(locale, "Your export is being prepared and will appear here after release approval.", "Tu exportación se está preparando y aparecerá aquí cuando se apruebe su entrega.")}</small></div>
                     ) : null}
                     {!terminal.has(request.status) ? (
                       <form action={withdrawPrivacyRequestAction} style={{ marginTop: "0.65rem" }}>
                         <input type="hidden" name="requestId" value={request.id} />
-                        <button className="button button-secondary" type="submit">{tr(locale, "Withdraw request", "Retirar solicitud")}</button>
+                        <button className="button button-secondary" type="submit" aria-label={tr(locale, `Withdraw ${right} request`, `Retirar solicitud de ${right}`)}>{tr(locale, "Withdraw request", "Retirar solicitud")}</button>
                       </form>
                     ) : null}
                   </dd>
