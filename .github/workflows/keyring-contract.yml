@@ -1,0 +1,54 @@
+name: Keyring contract
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: keyring-contract-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      NEXT_PUBLIC_DATA_MODE: demo
+      TRAVEL_DATA_MODE: disabled
+      IDENTITY_MODE: disabled
+      STAFF_AUTH_MODE: disabled
+      BOOKING_MODE: disabled
+      OPERATIONS_MODE: disabled
+      PAYMENT_LEDGER_MODE: disabled
+      KTRAVEL_DEPLOYMENT_PROFILE: demo
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Resolve dependency lock
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+
+      - name: Clean install from resolved lock
+        run: npm ci --no-fund
+
+      - name: Keyring invariant check
+        run: npm run check:encryption-keyring
+
+      - name: Keyring compatibility test
+        run: npm run test:encryption-keyring
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Production build
+        run: npm run build
