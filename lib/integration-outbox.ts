@@ -71,7 +71,11 @@ export async function ensureIntegrationOutboxIndexes(database: Db) {
     database.collection<IntegrationDelivery>(integrationDeliveryCollectionName)
       .createIndex({ eventId: 1, endpointId: 1 }, { unique: true, name: "integration_delivery_event_endpoint_unique" }),
     database.collection<IntegrationDelivery>(integrationDeliveryCollectionName)
-      .createIndex({ status: 1, nextAttemptAt: 1, leaseUntil: 1 }, { name: "integration_delivery_queue" }),
+      .createIndex({ status: 1, nextAttemptAt: 1, createdAt: 1 }, { name: "integration_delivery_due_queue" }),
+    database.collection<IntegrationDelivery>(integrationDeliveryCollectionName)
+      .createIndex({ status: 1, leaseUntil: 1, nextAttemptAt: 1, createdAt: 1 }, { name: "integration_delivery_expired_lease" }),
+    database.collection<IntegrationDelivery>(integrationDeliveryCollectionName)
+      .createIndex({ createdAt: -1 }, { name: "integration_delivery_recent" }),
     database.collection<IntegrationDeliveryAttempt>(integrationDeliveryAttemptCollectionName)
       .createIndex({ deliveryId: 1, occurredAt: -1 }, { name: "integration_delivery_attempt_history" })
   ]);
