@@ -30,6 +30,12 @@ function baseUrl(type: PaymentTargetType | null, reservationId: string) {
     : "/account";
 }
 
+function travellerErrorUrl(returnTo: string, error: string, travellerId: string, field?: string) {
+  const query = new URLSearchParams({ error, traveller: travellerId });
+  if (field) query.set("field", field);
+  return `${returnTo}?${query.toString()}`;
+}
+
 export async function savePostPurchaseTravellerDataAction(formData: FormData) {
   const identity = await requireCustomerIdentity();
   const type = targetType(value(formData, "targetType"));
@@ -55,8 +61,14 @@ export async function savePostPurchaseTravellerDataAction(formData: FormData) {
   const requiredFields = travellerFieldsForReservationTraveller(context.requirements, traveller);
   const raw: Record<string, string> = {};
   for (const field of requiredFields) raw[field] = value(formData, field);
+
+  const invalidField = requiredFields.find((field) =>
+    !normalizeTravellerPostPurchaseData({ [field]: raw[field] }, [field], context.startDate)
+  );
+  if (invalidField) redirect(travellerErrorUrl(returnTo, "validation", travellerId, invalidField));
+
   const normalized = normalizeTravellerPostPurchaseData(raw, requiredFields, context.startDate);
-  if (!normalized) redirect(`${returnTo}?error=validation`);
+  if (!normalized) redirect(travellerErrorUrl(returnTo, "validation", travellerId));
 
   try {
     await saveTravellerDataForCustomer({
@@ -70,7 +82,7 @@ export async function savePostPurchaseTravellerDataAction(formData: FormData) {
     });
   } catch (error) {
     console.error("Traveller data save failed", { reservationId, travellerId, error });
-    redirect(`${returnTo}?error=save`);
+    redirect(travellerErrorUrl(returnTo, "save", travellerId));
   }
 
   redirect(`${returnTo}?saved=${encodeURIComponent(travellerId)}`);
