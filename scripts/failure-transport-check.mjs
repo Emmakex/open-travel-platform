@@ -48,6 +48,12 @@ assert(adapter.includes('headers.set("Authorization", `Bearer ${config.bearerTok
 
 assert(reporting.includes('createHash("sha256")'), "failure grouping fingerprint must use SHA-256");
 assert(reporting.includes("sanitizeOperationalFields") && reporting.includes("describeOperationalError"), "failure transport must reuse the structured-log sanitizer");
+assert(reporting.includes("sanitizeOperationalCorrelationId"), "failure transport must independently revalidate correlation IDs");
+assert(reporting.includes("failureFieldAllowlist") && reporting.includes("failureFieldAllowlist.has(key)"), "external failure fields must use an explicit allowlist");
+for (const allowedField of ["provider", "reason", "eventType", "durationMs", "profile", "mode"]) {
+  assert(reporting.includes(`"${allowedField}"`), `failure field allowlist must include ${allowedField}`);
+}
+assert(reporting.includes("safeOperationalToken(value)"), "allowlisted string values must still satisfy the safe-token grammar");
 assert(reporting.includes("emitOperationalLog") && reporting.includes("getFailureTransport"), "central reporting must always keep local structured logging");
 assert(reporting.includes('event: "observability.failure-transport.failed"'), "transport failures must remain visible locally");
 assert(reporting.includes("return false"), "monitoring transport failures must be best-effort/non-throwing");
@@ -73,6 +79,7 @@ assert(readiness.includes('severity: "warning"') && readiness.includes('event: "
 
 assert(test.includes("createServer") && test.includes("127.0.0.1"), "dynamic validation must use real local HTTP transport");
 assert(test.includes("customer@example.test") && test.includes("secret-token-123") && test.includes("P1234567"), "dynamic validation must exercise realistic sensitive fixtures");
+assert(test.includes("safe-looking-but-not-allowlisted"), "dynamic validation must prove arbitrary fields cannot leave the core");
 assert(test.includes("equivalent failures must share a stable grouping fingerprint"), "dynamic validation must protect fingerprint stability");
 assert(test.includes("failure transport must not retry"), "dynamic validation must protect single-attempt delivery");
 assert(test.includes("Sensitive value leaked into failure transport"), "dynamic validation must assert sensitive values never leave the core");
@@ -96,6 +103,7 @@ for (const variable of [
 for (const [name, text] of [["English", docs], ["Spanish", docsEs]]) {
   assert(text.includes("X-OTP-Failure-Contract-Version"), `${name} docs must document contract versioning`);
   assert(text.toLowerCase().includes("fingerprint"), `${name} docs must document grouping fingerprint semantics`);
+  assert(text.toLowerCase().includes("allowlist"), `${name} docs must document strict outbound field allowlisting`);
   assert(text.toLowerCase().includes("no reintenta") || text.toLowerCase().includes("does not retry"), `${name} docs must document no-retry semantics`);
   assert(text.toLowerCase().includes("message") && text.toLowerCase().includes("stack"), `${name} docs must document exception redaction`);
   assert(text.toLowerCase().includes("best-effort"), `${name} docs must document non-authoritative delivery semantics`);
