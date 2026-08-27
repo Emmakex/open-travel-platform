@@ -1,0 +1,135 @@
+name: MongoDB recovery drill
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mongodb-recovery-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  recovery-drill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      MONGODB_URI: mongodb://127.0.0.1:27017/?replicaSet=rs0
+      SOURCE_DB: ktravel_recovery_source_${{ github.run_id }}_${{ github.run_attempt }}
+      RECOVERY_DB: ktravel_recovery_restored_${{ github.run_id }}_${{ github.run_attempt }}
+      NEXT_PUBLIC_DATA_MODE: demo
+      TRAVEL_DATA_MODE: disabled
+      IDENTITY_MODE: disabled
+      STAFF_AUTH_MODE: disabled
+      BOOKING_MODE: disabled
+      OPERATIONS_MODE: disabled
+      PAYMENT_LEDGER_MODE: disabled
+      KTRAVEL_DEPLOYMENT_PROFILE: demo
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Resolve dependency lock
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+
+      - name: Clean install from resolved lock
+        run: npm ci --no-fund
+
+      - name: MongoDB recovery invariant check
+        run: npm run check:mongodb-recovery
+
+      - name: Start MongoDB 8.0 replica set
+        run: |
+          docker run --rm -d \
+            --name otp-mongo-recovery \
+            -p 27017:27017 \
+            mongo:8.0.29 \
+            --replSet rs0 \
+            --bind_ip_all
+
+          reachable=false
+          for attempt in {1..30}; do
+            if docker exec otp-mongo-recovery mongosh --quiet --eval 'db.adminCommand({ ping: 1 }).ok' 2>/dev/null | grep -q 1; then
+              reachable=true
+              break
+            fi
+            sleep 1
+          done
+          test "$reachable" = "true"
+
+          docker exec otp-mongo-recovery mongosh --quiet --eval \
+            'rs.initiate({_id:"rs0",members:[{_id:0,host:"127.0.0.1:27017"}]})'
+
+          primary=false
+          for attempt in {1..30}; do
+            if docker exec otp-mongo-recovery mongosh --quiet --eval 'db.hello().isWritablePrimary' 2>/dev/null | grep -q true; then
+              primary=true
+              break
+            fi
+            sleep 1
+          done
+          test "$primary" = "true"
+          docker exec otp-mongo-recovery mongodump --version
+          docker exec otp-mongo-recovery mongorestore --version
+
+      - name: Seed recovery source
+        env:
+          MONGODB_DB_NAME: ${{ env.SOURCE_DB }}
+        run: npm run test:mongodb-recovery-seed
+
+      - name: Create compressed logical backup
+        run: |
+          docker exec otp-mongo-recovery mongodump \
+            --uri="mongodb://127.0.0.1:27017/?replicaSet=rs0" \
+            --db="$SOURCE_DB" \
+            --archive=/tmp/ktravel-recovery.archive.gz \
+            --gzip
+          docker exec otp-mongo-recovery test -s /tmp/ktravel-recovery.archive.gz
+          docker exec otp-mongo-recovery sha256sum /tmp/ktravel-recovery.archive.gz
+
+      - name: Simulate destructive incident on source
+        run: |
+          docker exec otp-mongo-recovery mongosh --quiet \
+            "mongodb://127.0.0.1:27017/?replicaSet=rs0" \
+            --eval "const dbx=db.getSiblingDB('$SOURCE_DB'); dbx.travel_reservations.deleteMany({}); dbx.travel_payment_transactions.deleteMany({}); dbx.travel_traveller_details.deleteMany({}); dbx.travel_recovery_incident.insertOne({id:'incident-simulated',state:'damaged'});"
+
+          remaining=$(docker exec otp-mongo-recovery mongosh --quiet \
+            "mongodb://127.0.0.1:27017/?replicaSet=rs0" \
+            --eval "db.getSiblingDB('$SOURCE_DB').travel_reservations.countDocuments({})")
+          test "$remaining" = "0"
+
+      - name: Restore backup into isolated recovery database
+        run: |
+          test "$SOURCE_DB" != "$RECOVERY_DB"
+          docker exec otp-mongo-recovery mongorestore \
+            --uri="mongodb://127.0.0.1:27017/?replicaSet=rs0" \
+            --archive=/tmp/ktravel-recovery.archive.gz \
+            --gzip \
+            --nsFrom="${SOURCE_DB}.*" \
+            --nsTo="${RECOVERY_DB}.*"
+
+      - name: Validate recovered data and indexes
+        env:
+          MONGODB_DB_NAME: ${{ env.RECOVERY_DB }}
+          MONGODB_RECOVERY_SOURCE_DB: ${{ env.SOURCE_DB }}
+        run: npm run test:mongodb-recovery-verify
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: MongoDB diagnostics on failure
+        if: failure()
+        run: docker logs otp-mongo-recovery || true
+
+      - name: Stop MongoDB recovery container
+        if: always()
+        run: docker rm -f otp-mongo-recovery || true
