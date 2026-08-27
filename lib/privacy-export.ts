@@ -239,6 +239,7 @@ export async function buildApprovedPrivacyExport(input: {
 }): Promise<PrivacyExportPackage> {
   const { request } = await getApprovedPrivacyExport(input);
   const portability = request.type === "portability";
+  const exportType: "access" | "portability" = portability ? "portability" : "access";
   const client = await getMongoClient();
   const database = client.db(getMongoDatabaseName());
 
@@ -273,7 +274,7 @@ export async function buildApprovedPrivacyExport(input: {
     schemaVersion: 1,
     request: {
       id: request.id,
-      type: request.type,
+      type: exportType,
       receivedAt: request.receivedAt.toISOString(),
       generatedAt: new Date().toISOString()
     },
