@@ -1,85 +1,112 @@
-# Base para rotación de claves de cifrado
+# Rotación y recuperación de claves de cifrado
 
-La Fase 9C-5 introduce un keyring versionado AES-256-GCM para **credenciales de proveedores de pago** y **secretos de firma de integraciones salientes**. Mantiene compatibilidad hacia atrás con ciphertext versión 1 y permite una rotación escalonada sin volver ilegibles inmediatamente los registros antiguos cuando cambia la clave actual.
+Open Travel Platform utiliza keyrings versionados AES-256-GCM para secretos operativos protegidos y datos post-compra de viajeros retenidos. El ciphertext versión 2 guarda un `keyId` estable y no secreto; el material de clave permanece exclusivamente en configuración server-only.
 
-Los datos protegidos post-compra de viajeros no se migran en este bloque. `TRAVELLER_DATA_KEY` debe permanecer estable hasta completar el trabajo específico de rotación/migración de datos de viajeros.
+El keyring mantiene compatibilidad con ciphertext versión 1 existente y permite una rotación controlada. Las claves anteriores son dependencias temporales de lectura y no deben eliminarse hasta migrar todos los ciphertext retenidos que dependan de ellas.
 
-## Por qué hace falta un keyring
+## Configuración de keyrings
 
-Antes de esta fase, los registros cifrados guardaban únicamente:
-
-```text
-versión + iv + authentication tag + ciphertext
-```
-
-No identificaban la clave utilizada. Sustituir una clave maestra podía por tanto volver ilegibles los datos existentes.
-
-Los nuevos secretos de pagos/integraciones pueden usar ahora ciphertext versión 2 con un `keyId` estable. Los ciphertext versión 1 existentes siguen siendo legibles durante una migración probando la clave actual y después un conjunto acotado de claves anteriores configuradas explícitamente.
-
-## Modelo de configuración
-
-### Credenciales de pago
+### Credenciales de proveedores de pago
 
 - `PAYMENT_SECRETS_KEY` — clave AES actual de 32 bytes.
-- `PAYMENT_SECRETS_KEY_ID` — ID estable opcional de la clave actual, por ejemplo `pay-2026-08`.
+- `PAYMENT_SECRETS_KEY_ID` — ID estable de la clave actual, por ejemplo `pay-2026-09`.
 - `PAYMENT_SECRETS_PREVIOUS_KEYS` — objeto JSON opcional que relaciona IDs anteriores con claves anteriores.
 
-Ejemplo solo de estructura; nunca confirmes material real en el repositorio:
-
-```text
-PAYMENT_SECRETS_KEY_ID=pay-2026-09
-PAYMENT_SECRETS_PREVIOUS_KEYS={"pay-2026-08":"<old-32-byte-key>"}
-```
-
-### Secretos de firma de integraciones
+### Secretos de firma de integraciones salientes
 
 - `INTEGRATION_SECRETS_KEY`
 - `INTEGRATION_SECRETS_KEY_ID`
 - `INTEGRATION_SECRETS_PREVIOUS_KEYS`
 
-Los mapas de claves anteriores admiten como máximo ocho entradas. Los IDs se limitan a 1–64 caracteres seguros y el ID actual no puede aparecer también dentro del mapa de claves anteriores.
+### Datos protegidos de viajeros
 
-## Compatibilidad hacia atrás
+- `TRAVELLER_DATA_KEY`
+- `TRAVELLER_DATA_KEY_ID`
+- `TRAVELLER_DATA_PREVIOUS_KEYS`
 
-Si no se configura un ID para la clave actual, las nuevas escrituras conservan el formato ciphertext versión 1. Así una actualización no cambia silenciosamente la semántica de almacenamiento antes de que el operador prepare un plan de rotación.
+Todo el material de clave es server-only. Nunca debe colocarse en `NEXT_PUBLIC_*`, código fuente, tickets, chats, logs ni registros de auditoría de base de datos. Los mapas de claves anteriores admiten como máximo ocho entradas y el ID actual no puede repetirse dentro del mapa de claves anteriores.
 
-Cuando existe un ID de clave, las nuevas escrituras usan versión 2 y almacenan únicamente el `keyId` no secreto junto al ciphertext. El valor de la clave sigue siendo configuración server-only.
+## Compatibilidad de ciphertext
 
-Los valores versión 1 no tienen ID. Durante una rotación escalonada se descifran intentando la clave actual y luego las claves anteriores configuradas explícitamente. La autenticación AES-GCM hace que una clave incorrecta falle de forma segura.
+Si no existe un ID para la clave actual, las nuevas escrituras conservan ciphertext versión 1. Esto mantiene compatibilidad de actualización para despliegues que todavía no hayan preparado una rotación.
 
-## Procedimiento de rotación escalonada
+Cuando se configura un ID estable, las nuevas escrituras usan versión 2 y guardan únicamente el `keyId` junto al ciphertext AES-GCM. Las lecturas versión 2 seleccionan exactamente la clave actual o anterior por ID. Los valores legacy versión 1 prueban la clave actual y después el conjunto acotado de claves anteriores. La autenticación AES-GCM hace que una clave incorrecta falle de forma segura.
 
-Para claves de pago o integración, de forma independiente:
+Versiones de ciphertext no soportadas, configuración malformada del keyring e IDs versión 2 sin clave disponible fallan explícitamente, sin hacer fallback a otro formato.
 
-1. Conserva la clave maestra actual dentro del proceso seguro de backup de secretos del despliegue. Nunca la copies a código fuente, tickets, chats, logs ni registros de auditoría de base de datos.
-2. Asigna a la clave actual un ID estable antes de comenzar rotaciones rutinarias. Los registros v1 existentes siguen siendo compatibles.
+## Rotación de claves de pagos e integraciones
+
+Para pagos e integraciones de manera independiente:
+
+1. Guarda la clave maestra existente dentro del sistema aprobado de recuperación de secretos del despliegue.
+2. Asigna a la clave existente un ID estable antes de rotaciones rutinarias si aún no lo tiene.
 3. Genera una nueva clave de 32 bytes y un nuevo ID único.
-4. Configura la nueva clave como `*_KEY` y su nuevo ID como `*_KEY_ID`.
-5. Añade la clave anterior al objeto JSON `*_PREVIOUS_KEYS` correspondiente bajo su ID anterior.
-6. Despliega y verifica lecturas/escrituras de secretos de pago/integración. Las nuevas escrituras usarán el nuevo ID; los registros antiguos seguirán siendo legibles.
-7. Vuelve a guardar o recifra los registros restantes con la clave actual antes de eliminar material anterior. Un bloque posterior proporcionará recifrado masivo acotado para todos los almacenes protegidos.
-8. Elimina una clave anterior únicamente cuando un inventario confirme que ningún ciphertext almacenado sigue dependiendo de ella.
+4. Configura la nueva clave como `*_KEY` y su ID como `*_KEY_ID`.
+5. Añade la antigua clave actual a `*_PREVIOUS_KEYS` bajo su ID anterior.
+6. Despliega y verifica que los secretos antiguos sigan siendo legibles y los nuevos se escriban con el nuevo ID.
+7. Vuelve a guardar o recifra los registros restantes con la clave actual mediante mantenimiento controlado.
+8. Elimina una clave anterior únicamente cuando el inventario confirme que ningún ciphertext sigue referenciándola o dependiendo de ella.
 
-No elimines una clave anterior solo porque la aplicación arranque correctamente. Algunos secretos se leen únicamente durante un webhook, checkout de proveedor o entrega de integración y pueden permanecer inactivos durante periodos largos.
+No elimines una clave anterior solo porque la aplicación arranque. Algunos secretos de pago/integración pueden permanecer inactivos hasta un checkout, callback o entrega.
+
+## Rotación y recifrado de Traveller Data
+
+Los datos de viajeros se migran mediante el comando operativo acotado:
+
+```text
+npm run migrate:traveller-encryption -- --batch-size=25 --max-batches=20
+```
+
+`--batch-size` se limita a 1–100 registros. `--max-batches` se limita a 1–1000. El runner muestra únicamente el ID no secreto de la clave actual y contadores de migración; nunca muestra claves, plaintext ni ciphertext.
+
+Procedimiento:
+
+1. Guarda de forma segura la `TRAVELLER_DATA_KEY` actual.
+2. Asigna un ID estable a la clave anterior si todavía no tiene uno.
+3. Genera una nueva `TRAVELLER_DATA_KEY` de 32 bytes y un nuevo `TRAVELLER_DATA_KEY_ID`.
+4. Añade la clave anterior a `TRAVELLER_DATA_PREVIOUS_KEYS` bajo su ID anterior. Si registros legacy versión 1 fueron cifrados con más de una clave histórica, conserva temporalmente cada clave necesaria bajo un ID único.
+5. Despliega con la nueva clave actual y todas las claves anteriores necesarias.
+6. Ejecuta `migrate:traveller-encryption` repetidamente hasta que la salida indique `remaining: 0`.
+7. Verifica las lecturas de datos protegidos desde cliente/Operator y los checks operativos correspondientes.
+8. Solo después de `remaining: 0`, elimina las claves anteriores de viajeros que ya no sean necesarias.
+
+La migración selecciona únicamente registros todavía retenidos cuyo payload no esté cifrado con el ID actual. Es idempotente: una vez que todos los registros retenidos están actualizados, ejecuciones posteriores escanean/migran cero registros.
+
+### Garantías de integridad de la migración
+
+Cada batch se ejecuta dentro de una transacción MongoDB. Si cualquier registro no puede descifrarse, recifrarse o actualizarse de forma segura, todo el batch hace rollback.
+
+El recifrado modifica únicamente el `payload` cifrado. Preserva deliberadamente:
+
+- `createdAt`;
+- el `updatedAt` funcional;
+- `retentionUntil` y su semántica TTL;
+- `completedFields`;
+- identificadores de reserva, cliente y viajero.
+
+La migración no genera eventos normales de auditoría Traveller Data `created`/`updated`, porque el mantenimiento criptográfico no constituye una modificación de datos realizada por cliente/operador. El historial existente queda intacto.
+
+Las actualizaciones utilizan comparación del ciphertext original. Si un registro de viajero cambia concurrentemente mientras se ejecuta el batch, la migración falla de forma segura por conflicto en lugar de sobrescribir la actualización más reciente.
+
+Los registros expirados no son objetivos de migración; el TTL de MongoDB continúa siendo responsable de su eliminación por retención.
 
 ## Procedimiento de recuperación
 
-Si se pierde la clave actual pero existe un backup seguro, restaura exactamente esa clave junto con su ID asociado. No generes una nueva esperando que descifre ciphertext existente.
+Si se pierde una clave actual pero existe un backup seguro aprobado, restaura exactamente esa clave y su ID asociado. Generar una nueva clave no permite descifrar ciphertext AES-GCM existente.
 
-Si una clave anterior se elimina accidentalmente de la configuración, restáurala con exactamente el mismo ID. El ciphertext versión 2 selecciona la clave por ID y falla de forma segura si ese ID no está disponible.
+Si se elimina accidentalmente una clave anterior, restáurala bajo exactamente el mismo ID y completa el recifrado antes de intentar eliminarla de nuevo.
 
-Si se pierden todas las copias de una clave necesaria por ciphertext existente, la aplicación no puede recuperar esos datos AES-GCM. Las credenciales/secretos deberán sustituirse desde el proveedor externo autoritativo y guardarse de nuevo.
+Para Traveller Data, no elimines ninguna clave anterior mientras la migración indique `remaining > 0`. Si una clave histórica necesaria se pierde de forma irreversible, el ciphertext afectado no puede recuperarse mediante la aplicación y debe gestionarse mediante el procedimiento de incidente/recuperación de datos de la organización.
+
+Para secretos de pago/integración cuya clave se haya perdido de forma irreversible, sustituye las credenciales o secretos de firma desde el proveedor externo autoritativo y guárdalos de nuevo.
 
 ## Fronteras de seguridad
 
-- Las claves maestras y mapas JSON de claves anteriores son server-only y nunca deben usar `NEXT_PUBLIC_*`.
-- Los IDs de clave son metadata, no secretos.
-- El keyring nunca registra material de clave ni plaintext descifrado.
-- Se aceptan como máximo ocho claves anteriores para mantener acotada la prueba de claves legacy.
-- Una configuración malformada del keyring falla de forma segura.
-- La autoridad de pagos/integraciones no cambia por la selección de clave.
-- Los registros de auditoría privilegiada continúan excluyendo valores secretos.
-
-## Limitación actual del alcance
-
-`TRAVELLER_DATA_KEY` sigue usando el formato original de una sola clave en este bloque. No rotes todavía esa clave. Los datos de viajeros requieren una migración validada por separado porque pueden existir muchos registros retenidos y el recifrado debe preservar TTL, auditoría y privacidad post-compra.
+- AES-256-GCM sigue siendo el algoritmo de cifrado y usa IVs nuevos de 96 bits.
+- Los IDs de clave son metadata, no material secreto.
+- Claves y mapas de claves anteriores permanecen server-only.
+- Cada keyring admite como máximo ocho claves anteriores.
+- Versiones desconocidas e IDs versión 2 sin clave disponible fallan de forma segura.
+- La rotación no modifica la autoridad de reservas, pagos, integraciones ni Traveller Data.
+- Los logs de migración contienen solo contadores e IDs de clave.
+- Las claves anteriores deben retirarse tras verificar la migración, pero nunca antes de que su dependencia llegue a cero (`remaining: 0`).

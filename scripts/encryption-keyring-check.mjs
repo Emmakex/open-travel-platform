@@ -22,6 +22,7 @@ assert(keyring.includes("previousKeys: Map<string, Buffer>"), "keyring must keep
 assert(keyring.includes("entries.length > 8"), "previous-key trial must remain bounded");
 assert(keyring.includes("createCipheriv(\"aes-256-gcm\""), "encryption must remain AES-256-GCM");
 assert(keyring.includes("decipher.setAuthTag"), "decryption must verify the GCM authentication tag");
+assert(keyring.includes("Unsupported encrypted value version"), "unsupported ciphertext versions must fail closed");
 
 for (const variable of ["PAYMENT_SECRETS_KEY_ID", "PAYMENT_SECRETS_PREVIOUS_KEYS"]) {
   assert(payments.includes(`\"${variable}\"`), `payment keyring must reference ${variable}`);
@@ -33,12 +34,16 @@ for (const variable of ["INTEGRATION_SECRETS_KEY_ID", "INTEGRATION_SECRETS_PREVI
 }
 assert(integrations.includes("encryptVersionedValue") && integrations.includes("decryptVersionedValue"), "integration secrets must use the shared versioned keyring");
 
-assert(traveller.includes("TRAVELLER_DATA_KEY"), "traveller protected data must retain its existing explicit key boundary");
-assert(!traveller.includes("TRAVELLER_DATA_KEY_ID"), "traveller data must not be silently migrated as part of the payment/integration keyring slice");
+for (const variable of ["TRAVELLER_DATA_KEY", "TRAVELLER_DATA_KEY_ID", "TRAVELLER_DATA_PREVIOUS_KEYS"]) {
+  assert(traveller.includes(`\"${variable}\"`), `traveller keyring must reference ${variable}`);
+}
+assert(traveller.includes("encryptVersionedValue") && traveller.includes("decryptVersionedValue"), "traveller protected data must use the shared versioned keyring");
+assert(traveller.includes("reencryptTravellerDataBatch"), "traveller keyring adoption must include an explicit controlled re-encryption path");
 
 assert(test.includes("legacy v1 ciphertext must remain readable"), "dynamic test must prove legacy compatibility during staged rotation");
 assert(test.includes("v2 ciphertext must select the previous key"), "dynamic test must prove keyed previous-key selection");
 assert(test.includes("removing a previous key before re-encryption must fail closed"), "dynamic test must prove early key removal fails closed");
+assert(test.includes("unknown ciphertext versions must fail closed"), "dynamic test must reject unsupported ciphertext versions");
 
 assert(packageJson.scripts?.["check:encryption-keyring"] === "node scripts/encryption-keyring-check.mjs", "keyring invariant must be registered");
 assert(packageJson.scripts?.["test:encryption-keyring"] === "tsx tests/encryption-keyring.ts", "keyring test must be registered");
@@ -48,7 +53,7 @@ for (const [name, text] of [["English", docs], ["Spanish", docsEs]]) {
   const lower = text.toLowerCase();
   assert(lower.includes("previous") || lower.includes("anteriores"), `${name} docs must explain previous-key staging`);
   assert(lower.includes("keyid"), `${name} docs must explain stable key IDs`);
-  assert(lower.includes("traveller_data_key"), `${name} docs must explicitly preserve the traveller-data limitation`);
+  assert(lower.includes("traveller_data_key_id"), `${name} docs must cover traveller-data key IDs and migration`);
   assert(lower.includes("server-only"), `${name} docs must keep key material server-only`);
 }
 
