@@ -2,6 +2,7 @@ import Link from "next/link";
 import styles from "@/app/account/account.module.css";
 import { createPrivacyRequestAction, withdrawPrivacyRequestAction } from "@/app/account/privacy/actions";
 import { getLocale } from "@/lib/get-locale";
+import { listPrivacyExecutionForCustomer } from "@/lib/privacy-execution-view";
 import { listPrivacyRequestsForCustomer, privacyRightTypes, type PrivacyRequestStatus, type PrivacyRightType } from "@/lib/privacy-rights";
 import { requireCustomerIdentity } from "@/lib/require-customer-identity";
 
@@ -59,7 +60,11 @@ export default async function AccountPrivacyPage({
     requireCustomerIdentity(),
     searchParams
   ]);
-  const requests = await listPrivacyRequestsForCustomer(identity.id);
+  const [requests, executionStates] = await Promise.all([
+    listPrivacyRequestsForCustomer(identity.id),
+    listPrivacyExecutionForCustomer(identity.id)
+  ]);
+  const executionByRequest = new Map(executionStates.map((state) => [state.requestId, state]));
   const errors: Record<string, string> = {
     "invalid-type": tr(locale, "Choose a supported privacy right.", "Selecciona un derecho de privacidad compatible."),
     "already-open": tr(locale, "You already have an open request of this type. Track it below before creating another one.", "Ya tienes una solicitud abierta de este tipo. Revísala abajo antes de crear otra."),
@@ -109,6 +114,8 @@ export default async function AccountPrivacyPage({
           <dl className={styles.profileList}>
             {requests.map((request) => {
               const deadline = request.extendedDueAt ?? request.dueAt;
+              const execution = executionByRequest.get(request.id);
+              const exportReady = (request.type === "access" || request.type === "portability") && execution?.exportApproved;
               return (
                 <div key={request.id}>
                   <dt>{rightLabel(locale, request.type)}</dt>
@@ -117,6 +124,16 @@ export default async function AccountPrivacyPage({
                     <small>{tr(locale, "Received", "Recibida")}: {formatDate(locale, request.receivedAt)} · {tr(locale, "Current response deadline", "Plazo de respuesta actual")}: {formatDate(locale, deadline)}</small>
                     {request.extendedDueAt ? <div><small>{tr(locale, "Deadline extension recorded", "Prórroga de plazo registrada")}</small></div> : null}
                     {request.type === "erasure" && request.retentionState === "hold" ? <div><small>{tr(locale, "Retention review: some data must remain retained; the final outcome will explain the applicable case status.", "Revisión de retención: algunos datos deben conservarse; el resultado final reflejará el estado aplicable del expediente.")}</small></div> : null}
+                    {exportReady ? (
+                      <div style={{ marginTop: "0.65rem" }}>
+                        <a className="button" href={`/api/account/privacy/requests/${encodeURIComponent(request.id)}/export`}>
+                          {tr(locale, "Download approved JSON", "Descargar JSON aprobado")}
+                        </a>
+                      </div>
+                    ) : null}
+                    {(request.type === "access" || request.type === "portability") && request.status === "action-pending" && !exportReady ? (
+                      <div><small>{tr(locale, "Your export is being prepared and will appear here after release approval.", "Tu exportación se está preparando y aparecerá aquí cuando se apruebe su entrega.")}</small></div>
+                    ) : null}
                     {!terminal.has(request.status) ? (
                       <form action={withdrawPrivacyRequestAction} style={{ marginTop: "0.65rem" }}>
                         <input type="hidden" name="requestId" value={request.id} />

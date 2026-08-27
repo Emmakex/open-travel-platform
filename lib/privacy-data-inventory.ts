@@ -1,7 +1,17 @@
 import { authAuditCollectionName } from "@/lib/auth-security";
 import { customerSessionCollectionName, customerUserCollectionName } from "@/lib/customer-auth";
+import {
+  integrationDeliveryAttemptCollectionName,
+  integrationDeliveryCollectionName,
+  integrationEventCollectionName
+} from "@/lib/integration-outbox";
 import { travelOperationsAuditCollectionName, travelReservationCollectionName } from "@/lib/mongo-reservations";
 import { travelPaymentTransactionCollectionName } from "@/lib/mongo-payments";
+import {
+  travelOperationsTaskCollectionName,
+  travelOperationsTaskCommentCollectionName,
+  travelOperationsTaskEventCollectionName
+} from "@/lib/operations-tasks";
 import { privacyRequestAuditCollectionName, privacyRequestCollectionName } from "@/lib/privacy-rights";
 import { serviceReservationCollectionName } from "@/lib/service-reservations";
 import { travellerDataAuditCollectionName, travellerDataCollectionName } from "@/lib/traveller-data";
@@ -29,8 +39,8 @@ export type PrivacyDataInventoryItem = {
 /**
  * Technical inventory for privacy-right execution. This is intentionally not
  * a declaration of legal basis or a jurisdiction-specific retention schedule.
- * Phase 9D-2 will use this registry as the allowlisted starting point for
- * access/portability exports and erasure/restriction execution.
+ * The registry is the allowlisted starting point for access/portability export
+ * and erasure/restriction execution and must evolve with every personal-data store.
  */
 export const privacyDataInventory: PrivacyDataInventoryItem[] = [
   {
@@ -58,7 +68,7 @@ export const privacyDataInventory: PrivacyDataInventoryItem[] = [
     access: "customer-summary",
     erasure: "security-retained",
     retention: "Security/audit retention requires a dedicated policy review; records use subject IDs and hashed email identifiers rather than plaintext email.",
-    notes: "Do not expose hashes or internal security signals as portability data."
+    notes: "Do not expose hashes or internal security signals as portability data. Approved erasure pseudonymises the subject and removes the email hash."
   },
   {
     id: "trip-reservations",
@@ -66,8 +76,8 @@ export const privacyDataInventory: PrivacyDataInventoryItem[] = [
     categories: ["booking", "traveller-snapshot", "commercial", "service-selection", "timestamps"],
     access: "customer-copy",
     erasure: "review-required",
-    retention: "Reservation retention is not auto-deleted by this phase; contractual, consumer, accounting and legal-claims requirements must be reviewed before erasure.",
-    notes: "Customer-owned reservation data is a primary access/export source; internal-only supplier and permission-gated fields require separate filtering."
+    retention: "Reservation retention is not auto-deleted; contractual, consumer, accounting and legal-claims requirements must be reviewed before erasure.",
+    notes: "Customer-owned reservation data is a primary access/export source; erasure preserves booking/inventory/financial structure while removing direct customer ownership and traveller identity fields."
   },
   {
     id: "service-reservations",
@@ -85,7 +95,7 @@ export const privacyDataInventory: PrivacyDataInventoryItem[] = [
     access: "customer-copy",
     erasure: "review-required",
     retention: "Authoritative payment/refund history is immutable business history and requires fiscal/accounting/legal review before any erasure or anonymisation.",
-    notes: "Provider credentials and raw callback material are not part of this ledger and must never enter a customer export."
+    notes: "Provider credentials and raw callback material are not part of this ledger. Approved erasure removes customer actor/free-text fields while retaining monetary history."
   },
   {
     id: "protected-traveller-data",
@@ -94,7 +104,7 @@ export const privacyDataInventory: PrivacyDataInventoryItem[] = [
     access: "internal-review",
     erasure: "ttl-managed",
     retention: "Encrypted traveller payloads use reservation-configured TTL expiry; the audit stores field names rather than protected values.",
-    notes: "The Phase 9D-2 exporter must decrypt only customer-owned, unexpired values at request execution time and must never expose encryption metadata."
+    notes: "The exporter decrypts only customer-owned, unexpired values at execution time and never exposes encryption metadata. Approved erasure removes the identity-owned protected payloads."
   },
   {
     id: "operations-audit",
@@ -106,12 +116,38 @@ export const privacyDataInventory: PrivacyDataInventoryItem[] = [
     notes: "Customer access may summarize relevant processing without disclosing unrelated staff/internal data or rights of others."
   },
   {
+    id: "customer-operations-tasks",
+    collections: [
+      travelOperationsTaskCollectionName,
+      travelOperationsTaskEventCollectionName,
+      travelOperationsTaskCommentCollectionName
+    ],
+    categories: ["customer-follow-up", "staff-workflow", "task-events", "task-comments"],
+    access: "internal-review",
+    erasure: "review-required",
+    retention: "Operational task history may be required to evidence customer-service follow-up and must be reviewed with the underlying case.",
+    notes: "Approved erasure pseudonymises customer-targeted task/event target IDs. Staff-authored task content is not copied into customer portability output."
+  },
+  {
+    id: "integration-outbox",
+    collections: [
+      integrationEventCollectionName,
+      integrationDeliveryCollectionName,
+      integrationDeliveryAttemptCollectionName
+    ],
+    categories: ["business-event", "delivery-status", "adapter-routing", "retry-history"],
+    access: "internal-review",
+    erasure: "review-required",
+    retention: "Integration events may contain customer-linked identifiers and require lifecycle review alongside the source business record.",
+    notes: "Approved erasure removes retained customer-aggregate integration events and their delivery/attempt copies; non-customer business events remain subject to their own retention boundary."
+  },
+  {
     id: "privacy-rights-case",
     collections: [privacyRequestCollectionName, privacyRequestAuditCollectionName],
     categories: ["rights-request", "case-status", "deadline", "retention-review", "audit"],
     access: "customer-copy",
     erasure: "review-required",
     retention: "The rights case itself is retained as bounded evidence of request handling; a dedicated retention period must be set in a later policy slice.",
-    notes: "The case stores identity IDs and structured reason codes, not copies of credentials or protected traveller values."
+    notes: "The case stores structured workflow metadata, not credentials or protected traveller values. Approved erasure pseudonymises identity and customer-actor linkage."
   }
 ];
