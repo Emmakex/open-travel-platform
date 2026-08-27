@@ -66,6 +66,8 @@ try {
       provider: "stripe",
       reason: "provider-unavailable",
       durationMs: 125,
+      mode: "customer@example.test",
+      diagnostic: "safe-looking-but-not-allowlisted",
       customerEmail: "customer@example.test",
       bearerToken: "secret-token-123",
       signature: "signature-secret",
@@ -119,6 +121,7 @@ try {
   const serialized = JSON.stringify(firstBody);
   for (const secret of [
     "customer@example.test",
+    "safe-looking-but-not-allowlisted",
     "secret-token-123",
     "signature-secret",
     "provider-ref-123",
@@ -154,7 +157,7 @@ try {
   );
 
   originalInfo(
-    "Failure transport validation passed: real local HTTP delivery, auth, stable fingerprinting, no retries and sensitive-data redaction are consistent."
+    "Failure transport validation passed: real local HTTP delivery, auth, stable fingerprinting, strict allowlists, no retries and sensitive-data redaction are consistent."
   );
 } finally {
   console.info = originalInfo;
