@@ -42,6 +42,9 @@ export default async function RegisterPage({
       ? "Se han realizado demasiados intentos de registro en poco tiempo. Espera antes de volver a intentarlo."
       : "Too many registration attempts were made in a short period. Wait before trying again."
   };
+  const errorMessage = error ? errors[error] : undefined;
+  const validationError = error === "validation";
+  const emailExists = error === "email-exists";
 
   return (
     <main className="section">
@@ -55,17 +58,17 @@ export default async function RegisterPage({
               : isEs ? "Crea una cuenta para guardar reservas y consultar tus viajes desde cualquier sesión." : "Create an account to keep reservations and access your trips whenever you need them."}
           </p>
 
-          {error && errors[error] ? <div className={styles.notice}>{errors[error]}</div> : null}
+          {errorMessage ? <div id="registration-error" className={styles.notice} role="alert" aria-live="assertive">{errorMessage}</div> : null}
 
-          <form action={registerCustomerAction} className={styles.authForm}>
+          <form action={registerCustomerAction} className={styles.authForm} aria-describedby={errorMessage ? "registration-error" : undefined}>
             <input type="hidden" name="next" value={next} />
             <div className={styles.authGrid}>
-              <label className={styles.field}><span>{isEs ? "Nombre" : "First name"}</span><input name="firstName" autoComplete="given-name" maxLength={80} required /></label>
-              <label className={styles.field}><span>{isEs ? "Apellidos" : "Last name"}</span><input name="lastName" autoComplete="family-name" maxLength={80} required /></label>
+              <label className={styles.field} htmlFor="register-first-name"><span>{isEs ? "Nombre" : "First name"}</span><input id="register-first-name" name="firstName" autoComplete="given-name" maxLength={80} required aria-invalid={validationError || undefined} autoFocus={validationError && !emailExists} /></label>
+              <label className={styles.field} htmlFor="register-last-name"><span>{isEs ? "Apellidos" : "Last name"}</span><input id="register-last-name" name="lastName" autoComplete="family-name" maxLength={80} required aria-invalid={validationError || undefined} /></label>
             </div>
-            <label className={styles.field}><span>Email</span><input name="email" type="email" autoComplete="email" required /></label>
-            <label className={styles.field}><span>{isEs ? "País" : "Country"}</span><input name="country" autoComplete="country-name" maxLength={80} /></label>
-            <label className={styles.field}><span>{isEs ? "Contraseña" : "Password"}</span><input name="password" type="password" minLength={10} maxLength={128} autoComplete="new-password" required /><small>{isEs ? "Mínimo 10 caracteres." : "At least 10 characters."}</small></label>
+            <label className={styles.field} htmlFor="register-email"><span>Email</span><input id="register-email" name="email" type="email" autoComplete="email" required aria-invalid={emailExists || validationError || undefined} aria-describedby={emailExists ? "registration-error" : undefined} autoFocus={emailExists} /></label>
+            <label className={styles.field} htmlFor="register-country"><span>{isEs ? "País" : "Country"}</span><input id="register-country" name="country" autoComplete="country-name" maxLength={80} /></label>
+            <label className={styles.field} htmlFor="register-password"><span>{isEs ? "Contraseña" : "Password"}</span><input id="register-password" name="password" type="password" minLength={10} maxLength={128} autoComplete="new-password" required aria-invalid={validationError || undefined} aria-describedby={`register-password-help${validationError ? " registration-error" : ""}`} /><small id="register-password-help">{isEs ? "Mínimo 10 caracteres." : "At least 10 characters."}</small></label>
             <button className="button button-primary" type="submit">{isEs ? "Crear mi cuenta" : "Create my account"}</button>
           </form>
 
