@@ -122,6 +122,7 @@ export default async function AccountPage({
             <Link className="button button-primary" href="/account/profile">{locale === "es" ? "Editar perfil" : "Edit profile"}</Link>
             <Link className="button button-secondary" href="/account/services">{locale === "es" ? "Mis servicios" : "My services"}</Link>
             <Link className="button button-secondary" href="/account/security">{locale === "es" ? "Seguridad" : "Security"}</Link>
+            <Link className="button button-secondary" href="/account/privacy">{locale === "es" ? "Privacidad y mis derechos" : "Privacy and my rights"}</Link>
             <form action={endCustomerSession}><button className="button button-secondary" type="submit">{copy.endSession}</button></form>
             <Link className="button button-secondary" href="/operator/sign-in">{copy.switchStaff}</Link>
           </div>
