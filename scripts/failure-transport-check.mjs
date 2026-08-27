@@ -72,8 +72,14 @@ for (const [name, route] of [
 ]) {
   assert(route.includes("reportOperationalFailure"), `${name} must use the centralized failure boundary`);
 }
-assert(stripe.includes('reason: "invalid-signature"') && stripe.includes("logRejected"), "invalid Stripe signatures must remain local rejection logs");
-assert(redsys.includes('reason: "invalid-signature"') && redsys.includes("logRejected"), "invalid Redsys signatures must remain local rejection logs");
+assert(
+  stripe.includes('logRejected(correlationId, "invalid-signature"'),
+  "invalid Stripe signatures must remain local rejection logs"
+);
+assert(
+  redsys.includes('logRejected(correlationId, "invalid-signature"'),
+  "invalid Redsys signatures must remain local rejection logs"
+);
 assert(worker.includes('event: "integration.worker.failed"'), "integration worker failures must be externally visible when configured");
 assert(readiness.includes('severity: "warning"') && readiness.includes('event: "health.readiness.not-ready"'), "degraded readiness must use warning severity");
 
