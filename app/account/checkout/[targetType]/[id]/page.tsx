@@ -67,15 +67,15 @@ export default async function UnifiedCheckoutPage({ params, searchParams }: {
           <h1>{target.label}</h1>
           <p className={styles.lead}>{t("Review the amount due and choose an available payment method. Your reservation will show the updated payment status once the payment has been confirmed.", "Revisa el importe pendiente y elige un método de pago disponible. La reserva mostrará el estado actualizado cuando el pago quede confirmado.")}</p>
 
-          {query.error && errors[query.error] ? <div className={styles.notice}>{errors[query.error]}</div> : null}
+          {query.error && errors[query.error] ? <div id="checkout-error" className={styles.notice} role="alert" aria-live="assertive">{errors[query.error]}</div> : null}
           {schedule.outdated ? (
-            <div className={styles.notice}>
+            <div id="checkout-plan-status" className={styles.notice} role="status" aria-live="polite">
               <strong>{t("Your payment plan needs review before another online payment can be made.", "Tu plan de pagos necesita una revisión antes de realizar otro pago online.")}</strong><br />
               {t("Return to the reservation for the latest balance and payment information.", "Vuelve a la reserva para consultar el saldo y la información de pago actualizados.")}
             </div>
           ) : null}
 
-          <dl className={styles.profileList}>
+          <dl className={styles.profileList} aria-label={t("Payment summary", "Resumen de pago")}>
             <div><dt>{t("Payment status", "Estado del pago")}</dt><dd>{paymentStatusLabel(summary.status, locale)}</dd></div>
             <div><dt>{t("Reservation total", "Total de la reserva")}</dt><dd>{money(summary.totalAmount, summary.currency, locale)}</dd></div>
             <div><dt>{t("Already paid", "Ya pagado")}</dt><dd>{money(summary.netPaidAmount, summary.currency, locale)}</dd></div>
@@ -94,15 +94,15 @@ export default async function UnifiedCheckoutPage({ params, searchParams }: {
           </dl>
 
           {target.status === "cancelled" ? (
-            <div className={styles.notice}>{t("This reservation is cancelled and cannot receive payments.", "Esta reserva está cancelada y no admite pagos.")}</div>
+            <div id="checkout-state" className={styles.notice} role="status" aria-live="polite">{t("This reservation is cancelled and cannot receive payments.", "Esta reserva está cancelada y no admite pagos.")}</div>
           ) : summary.outstandingAmount <= 0 ? (
-            <div className={styles.notice}>{t("This reservation is fully paid.", "Esta reserva está pagada por completo.")}</div>
+            <div id="checkout-state" className={styles.notice} role="status" aria-live="polite">{t("This reservation is fully paid.", "Esta reserva está pagada por completo.")}</div>
           ) : summary.pendingPaymentAmount > 0 ? (
-            <div className={styles.notice}>{t("A payment is awaiting confirmation. You do not need to pay again.", "Hay un pago pendiente de confirmación. No necesitas volver a pagar.")}</div>
+            <div id="checkout-state" className={styles.notice} role="status" aria-live="polite">{t("A payment is awaiting confirmation. You do not need to pay again.", "Hay un pago pendiente de confirmación. No necesitas volver a pagar.")}</div>
           ) : canPayOnline && publicProviders.length ? (
-            <div className={styles.actions}>
+            <div className={styles.actions} aria-label={t("Available payment methods", "Métodos de pago disponibles")}>
               {publicProviders.map((provider) => (
-                <form action={startPaymentCheckoutAction} key={provider.provider}>
+                <form action={startPaymentCheckoutAction} key={provider.provider} aria-describedby={query.error && errors[query.error] ? "checkout-error" : undefined}>
                   <input type="hidden" name="targetType" value={target.targetType} />
                   <input type="hidden" name="targetId" value={target.targetId} />
                   <input type="hidden" name="provider" value={provider.provider} />
@@ -113,7 +113,7 @@ export default async function UnifiedCheckoutPage({ params, searchParams }: {
               ))}
             </div>
           ) : canPayOnline && !publicProviders.length ? (
-            <div className={styles.notice}>{t("Online payment is not available for this reservation right now.", "El pago online no está disponible para esta reserva en este momento.")}</div>
+            <div id="checkout-state" className={styles.notice} role="status" aria-live="polite">{t("Online payment is not available for this reservation right now.", "El pago online no está disponible para esta reserva en este momento.")}</div>
           ) : null}
 
           <p><Link className="text-link" href={target.detailUrl}>{t("← Back to reservation", "← Volver a la reserva")}</Link></p>
