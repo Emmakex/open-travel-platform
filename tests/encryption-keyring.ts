@@ -35,6 +35,12 @@ async function main() {
   assert.equal(legacyCiphertext.version, 1, "deployments without a key ID must preserve the v1 write format");
   assert.equal(decryptVersionedValue(legacyCiphertext, config), "legacy-secret");
 
+  assert.throws(
+    () => decryptVersionedValue({ ...legacyCiphertext, version: 3 } as never, config),
+    /unsupported encrypted value version/i,
+    "unknown ciphertext versions must fail closed at runtime"
+  );
+
   process.env[config.keyVariable] = firstKey;
   process.env[config.keyIdVariable] = "key-2026-a";
   process.env[config.previousKeysVariable] = JSON.stringify({ legacy: legacyKey });
