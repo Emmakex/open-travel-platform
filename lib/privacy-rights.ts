@@ -276,6 +276,7 @@ export async function updatePrivacyRequestByAdmin(input: {
       const requests = database.collection<StoredPrivacyRequest>(privacyRequestCollectionName);
       const current = await requests.findOne({ id: input.requestId }, { session });
       if (!current) throw privacyError("PRIVACY_REQUEST_NOT_FOUND", "Privacy request not found.");
+      if (terminalStatuses.has(current.status)) throw privacyError("PRIVACY_REQUEST_TERMINAL", "Privacy request is already closed.");
       if (input.status === "withdrawn") throw privacyError("PRIVACY_STATUS_INVALID", "Only the customer can withdraw a request.");
       if (input.status && !canTransition(current.status, input.status)) {
         throw privacyError("PRIVACY_STATUS_INVALID", `Invalid privacy request transition: ${current.status} -> ${input.status}`);
@@ -291,6 +292,17 @@ export async function updatePrivacyRequestByAdmin(input: {
       }
 
       const nextStatus = input.status ?? current.status;
+      const nextRetentionState = input.retentionState ?? current.retentionState;
+      if ((nextStatus === "completed" || nextStatus === "declined") && !input.outcomeCode) {
+        throw privacyError("PRIVACY_OUTCOME_REQUIRED", "A structured outcome is required before closing a request.");
+      }
+      if (input.outcomeCode && nextStatus !== "completed" && nextStatus !== "declined") {
+        throw privacyError("PRIVACY_OUTCOME_REQUIRED", "An outcome can be recorded only when the request is being closed.");
+      }
+      if (current.type === "erasure" && nextStatus === "completed" && nextRetentionState === "pending") {
+        throw privacyError("PRIVACY_RETENTION_REVIEW_REQUIRED", "Erasure cannot be completed before retention review is resolved.");
+      }
+
       const updatedAt = new Date();
       const set: Record<string, unknown> = { updatedAt };
       const unset: Record<string, ""> = {};
