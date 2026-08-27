@@ -30,6 +30,12 @@ function baseUrl(type: PaymentTargetType | null, reservationId: string) {
     : "/account";
 }
 
+function errorUrl(returnTo: string, error: string, travellerId?: string) {
+  const params = new URLSearchParams({ error });
+  if (travellerId) params.set("traveller", travellerId);
+  return `${returnTo}?${params.toString()}`;
+}
+
 export async function savePostPurchaseTravellerDataAction(formData: FormData) {
   const identity = await requireCustomerIdentity();
   const type = targetType(value(formData, "targetType"));
@@ -37,26 +43,26 @@ export async function savePostPurchaseTravellerDataAction(formData: FormData) {
   const travellerId = value(formData, "travellerId");
   const returnTo = baseUrl(type, reservationId);
 
-  if (!type || !reservationId || !travellerId) redirect(`${returnTo}?error=invalid-request`);
-  if (!isTravellerDataEncryptionConfigured()) redirect(`${returnTo}?error=encryption-unavailable`);
+  if (!type || !reservationId || !travellerId) redirect(errorUrl(returnTo, "invalid-request"));
+  if (!isTravellerDataEncryptionConfigured()) redirect(errorUrl(returnTo, "encryption-unavailable", travellerId));
 
   const context = await resolveTravellerReservationContextForCustomer(identity.id, type, reservationId);
   if (!context) redirect("/account");
-  if (context.status === "cancelled") redirect(`${returnTo}?error=cancelled`);
-  if (!context.requirements || context.requirements.preset === "none") redirect(`${returnTo}?error=not-required`);
+  if (context.status === "cancelled") redirect(errorUrl(returnTo, "cancelled", travellerId));
+  if (!context.requirements || context.requirements.preset === "none") redirect(errorUrl(returnTo, "not-required", travellerId));
 
   const deadline = travellerRequirementsDeadline(context.requirements, context.startDate);
   const today = new Date().toISOString().slice(0, 10);
-  if (deadline && today > deadline) redirect(`${returnTo}?error=editing-closed`);
+  if (deadline && today > deadline) redirect(errorUrl(returnTo, "editing-closed", travellerId));
 
   const traveller = context.travellers.find((item) => item.id === travellerId);
-  if (!traveller) redirect(`${returnTo}?error=invalid-traveller`);
+  if (!traveller) redirect(errorUrl(returnTo, "invalid-traveller"));
 
   const requiredFields = travellerFieldsForReservationTraveller(context.requirements, traveller);
   const raw: Record<string, string> = {};
   for (const field of requiredFields) raw[field] = value(formData, field);
   const normalized = normalizeTravellerPostPurchaseData(raw, requiredFields, context.startDate);
-  if (!normalized) redirect(`${returnTo}?error=validation`);
+  if (!normalized) redirect(errorUrl(returnTo, "validation", travellerId));
 
   try {
     await saveTravellerDataForCustomer({
@@ -70,7 +76,7 @@ export async function savePostPurchaseTravellerDataAction(formData: FormData) {
     });
   } catch (error) {
     console.error("Traveller data save failed", { reservationId, travellerId, error });
-    redirect(`${returnTo}?error=save`);
+    redirect(errorUrl(returnTo, "save", travellerId));
   }
 
   redirect(`${returnTo}?saved=${encodeURIComponent(travellerId)}`);
