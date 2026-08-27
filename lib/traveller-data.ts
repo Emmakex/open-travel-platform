@@ -93,11 +93,11 @@ async function ensureIndexes(database: Db) {
     ),
     data.createIndex(
       { identityId: 1, targetType: 1, reservationId: 1, retentionUntil: 1 },
-      { name: "traveller_data_customer_reservation_retained" }
+      { name: "traveller_data_customer_active" }
     ),
     data.createIndex(
       { targetType: 1, reservationId: 1, retentionUntil: 1 },
-      { name: "traveller_data_operator_reservation_retained" }
+      { name: "traveller_data_reservation_active" }
     ),
     data.createIndex(
       { retentionUntil: 1 },
