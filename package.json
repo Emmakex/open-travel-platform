@@ -21,6 +21,7 @@
     "test:observability": "tsx tests/observability.ts",
     "test:failure-transport": "tsx tests/failure-transport.ts",
     "test:external-monitoring": "tsx tests/external-monitoring.ts",
+    "test:encryption-keyring": "tsx tests/encryption-keyring.ts",
     "test:e2e:seed": "tsx tests/e2e/seed.ts",
     "test:e2e": "playwright test",
     "check:safety": "node scripts/public-safety-check.mjs",
@@ -54,8 +55,9 @@
     "check:failure-transport": "node scripts/failure-transport-check.mjs",
     "check:external-monitoring": "node scripts/external-monitoring-check.mjs",
     "check:privileged-audit": "node scripts/privileged-audit-check.mjs",
+    "check:encryption-keyring": "node scripts/encryption-keyring-check.mjs",
     "check:browser-e2e": "node scripts/browser-e2e-check.mjs",
-    "verify": "npm run check:safety && npm run check:ux && npm run check:release && npm run check:amendments && npm run check:accommodation && npm run check:package-addons && npm run check:package-addon-amendments && npm run check:operations && npm run check:tasks && npm run check:fulfilment && npm run check:operations-queue && npm run check:staff-permissions && npm run check:booking-documents && npm run check:departure-documents && npm run check:voucher-documents && npm run check:reporting-exports && npm run check:outbound-integrations && npm run check:integration-operations && npm run check:rest-booking-adapter && npm run check:supplier-fulfilment-adapter && npm run check:crm-sync-adapter && npm run check:erp-accounting-adapter && npm run check:production-security && npm run check:mongodb-concurrency && npm run check:payment-idempotency && npm run check:traveller-amendment-validation && npm run check:adapter-contract-validation && npm run check:observability && npm run check:failure-transport && npm run check:external-monitoring && npm run check:privileged-audit && npm run check:browser-e2e && npm run typecheck && npm run build",
+    "verify": "npm run check:safety && npm run check:ux && npm run check:release && npm run check:amendments && npm run check:accommodation && npm run check:package-addons && npm run check:package-addon-amendments && npm run check:operations && npm run check:tasks && npm run check:fulfilment && npm run check:operations-queue && npm run check:staff-permissions && npm run check:booking-documents && npm run check:departure-documents && npm run check:voucher-documents && npm run check:reporting-exports && npm run check:outbound-integrations && npm run check:integration-operations && npm run check:rest-booking-adapter && npm run check:supplier-fulfilment-adapter && npm run check:crm-sync-adapter && npm run check:erp-accounting-adapter && npm run check:production-security && npm run check:mongodb-concurrency && npm run check:payment-idempotency && npm run check:traveller-amendment-validation && npm run check:adapter-contract-validation && npm run check:observability && npm run check:failure-transport && npm run check:external-monitoring && npm run check:privileged-audit && npm run check:encryption-keyring && npm run check:browser-e2e && npm run typecheck && npm run build",
     "check": "npm run verify"
   },
   "dependencies": {
