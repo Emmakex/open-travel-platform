@@ -8,23 +8,35 @@ import {
 
 /**
  * Runs the primary bounded erasure transaction, then removes secondary identity
- * links in a second idempotent transaction. If the second transaction fails,
- * the whole operation can be retried: primary erasure returns its persisted
- * pseudonym and secondary cleanup safely converges to the same result.
+ * links in a second idempotent transaction. A retry first checks the persisted
+ * primary execution record, so it never needs to resolve an already-erased
+ * account again before converging the secondary cleanup.
  */
 export async function executePrivacyErasureWithSecondaryByAdmin(input: {
   requestId: string;
   actorId: string;
 }) {
-  const primary = await executePrivacyErasureByAdmin(input);
+  const client = await getMongoClient();
+  const database = client.db(getMongoDatabaseName());
+  const existing = await database.collection<PrivacyExecutionRecord>(privacyExecutionCollectionName)
+    .findOne({ requestId: input.requestId });
+
+  const primary = existing?.erasureAppliedAt && existing.erasurePseudonym
+    ? {
+        identityId: existing.identityId,
+        pseudonym: existing.erasurePseudonym,
+        appliedAt: existing.erasureAppliedAt,
+        trips: 0,
+        services: 0
+      }
+    : await executePrivacyErasureByAdmin(input);
+
   if (!primary) {
     throw Object.assign(new Error("Privacy erasure did not produce an execution result."), {
       code: "PRIVACY_ERASURE_EXECUTION_FAILED"
     });
   }
 
-  const client = await getMongoClient();
-  const database = client.db(getMongoDatabaseName());
   const session = client.startSession();
   try {
     await session.withTransaction(async () => {
