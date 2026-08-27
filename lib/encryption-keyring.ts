@@ -103,6 +103,10 @@ export function isEncryptionKeyringConfigured(config: EncryptionKeyringConfig) {
   }
 }
 
+export function currentEncryptionKeyId(config: EncryptionKeyringConfig) {
+  return loadEncryptionKeyring(config).currentKeyId;
+}
+
 function encryptWithKey(value: string, key: Buffer) {
   const iv = randomBytes(12);
   const cipher = createCipheriv("aes-256-gcm", key, iv);
