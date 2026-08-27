@@ -90,7 +90,7 @@ try {
   assert.equal(secondDelivered, true, "a second equivalent failure should still be delivered");
   assert.equal(received.length, 2, "each failure report should result in exactly one HTTP request");
 
-  const firstRequest = received[0];
+  const firstRequest = received[0]!;
   assert.equal(firstRequest.headers.authorization, "Bearer test-failure-transport-token");
   assert.equal(firstRequest.headers["x-otp-failure-contract-version"], "1");
   assert.equal(firstRequest.headers["x-otp-request-id"], "req-contract-test-0001");
@@ -99,7 +99,7 @@ try {
   const firstBody = firstRequest.body as {
     failure?: Record<string, unknown>;
   };
-  const secondBody = received[1].body as {
+  const secondBody = received[1]!.body as {
     failure?: Record<string, unknown>;
   };
   assert.ok(firstBody.failure, "transport body must contain a normalized failure event");
@@ -153,7 +153,6 @@ try {
     "transport failure must remain visible in the local structured log"
   );
 
-  console.log = originalInfo;
   originalInfo(
     "Failure transport validation passed: real local HTTP delivery, auth, stable fingerprinting, no retries and sensitive-data redaction are consistent."
   );
