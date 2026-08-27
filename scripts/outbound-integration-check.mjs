@@ -71,10 +71,16 @@ assert.ok(securitySource.includes("responseBytes > 65536"), "webhook responses m
 assert.equal(securitySource.includes("redirect"), false, "delivery code must not implement redirect following");
 
 const secretSource = await readFile(new URL("../lib/integration-secrets.ts", import.meta.url), "utf8");
+const keyringSource = await readFile(new URL("../lib/encryption-keyring.ts", import.meta.url), "utf8");
 assert.ok(secretSource.includes("INTEGRATION_SECRETS_KEY"));
-assert.ok(secretSource.includes('createCipheriv("aes-256-gcm"'));
-assert.ok(secretSource.includes('createDecipheriv("aes-256-gcm"'));
-assert.ok(secretSource.includes("randomBytes(12)"), "AES-GCM must use a fresh 96-bit IV");
+assert.ok(secretSource.includes("INTEGRATION_SECRETS_KEY_ID"));
+assert.ok(secretSource.includes("INTEGRATION_SECRETS_PREVIOUS_KEYS"));
+assert.ok(secretSource.includes("encryptVersionedValue"), "integration secrets must use the shared versioned encryption helper");
+assert.ok(secretSource.includes("decryptVersionedValue"), "integration secrets must use the shared versioned decryption helper");
+assert.ok(keyringSource.includes('createCipheriv("aes-256-gcm"'), "shared secret encryption must remain AES-256-GCM");
+assert.ok(keyringSource.includes('createDecipheriv("aes-256-gcm"'), "shared secret decryption must remain AES-256-GCM");
+assert.ok(keyringSource.includes("randomBytes(12)"), "AES-GCM must use a fresh 96-bit IV");
+assert.ok(keyringSource.includes("decipher.setAuthTag"), "AES-GCM authentication tags must be verified");
 
 const endpointSource = await readFile(new URL("../lib/integration-endpoints.ts", import.meta.url), "utf8");
 assert.ok(endpointSource.includes("input.signingSecret?.trim()"));
@@ -129,6 +135,8 @@ assert.ok(actionSource.includes("processIntegrationDeliveries({ limit: 25 })"));
 
 const envSource = await readFile(new URL("../.env.example", import.meta.url), "utf8");
 assert.ok(envSource.includes("INTEGRATION_SECRETS_KEY="), "deployment template must document the integration encryption key");
+assert.ok(envSource.includes("INTEGRATION_SECRETS_KEY_ID="), "deployment template must document the integration key ID");
+assert.ok(envSource.includes("INTEGRATION_SECRETS_PREVIOUS_KEYS="), "deployment template must document staged previous integration keys");
 assert.equal(envSource.includes("NEXT_PUBLIC_INTEGRATION_SECRETS_KEY"), false, "integration encryption key must never be browser-visible");
 
 console.log("Outbound integration security, outbox and delivery invariants passed.");
