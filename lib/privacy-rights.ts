@@ -264,7 +264,7 @@ export async function updatePrivacyRequestByAdmin(input: {
   retentionState?: PrivacyRetentionState;
   retentionReason?: PrivacyRetentionReason;
   outcomeCode?: PrivacyOutcomeCode;
-}) {
+}): Promise<StoredPrivacyRequest | null> {
   const client = await getMongoClient();
   const database = client.db(getMongoDatabaseName());
   await ensurePrivacyRequestIndexes(database);
