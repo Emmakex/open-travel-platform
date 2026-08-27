@@ -73,9 +73,9 @@ export async function ensureIntegrationOutboxIndexes(database: Db) {
     database.collection<IntegrationDelivery>(integrationDeliveryCollectionName)
       .createIndex({ status: 1, nextAttemptAt: 1, createdAt: 1 }, { name: "integration_delivery_due_queue" }),
     database.collection<IntegrationDelivery>(integrationDeliveryCollectionName)
-      .createIndex({ status: 1, leaseUntil: 1, nextAttemptAt: 1, createdAt: 1 }, { name: "integration_delivery_expired_lease" }),
+      .createIndex({ status: 1, leaseUntil: 1, createdAt: 1 }, { name: "integration_delivery_lease_queue" }),
     database.collection<IntegrationDelivery>(integrationDeliveryCollectionName)
-      .createIndex({ createdAt: -1 }, { name: "integration_delivery_recent" }),
+      .createIndex({ createdAt: -1 }, { name: "integration_delivery_created" }),
     database.collection<IntegrationDeliveryAttempt>(integrationDeliveryAttemptCollectionName)
       .createIndex({ deliveryId: 1, occurredAt: -1 }, { name: "integration_delivery_attempt_history" })
   ]);
@@ -113,9 +113,6 @@ export async function enqueueIntegrationEvent(
   if (shouldQueueCrmIntegrationEvent(event.type)) destinationIds.push(crmIntegrationDeliveryEndpointId);
   if (shouldQueueErpAccountingEvent(event.type)) destinationIds.push(erpAccountingDeliveryEndpointId);
 
-  // Customer and payment-transaction events are dedicated business-adapter
-  // triggers. If their adapter is disabled, do not retain orphan events that
-  // generic webhooks cannot consume.
   if (
     (event.aggregateType === "customer" || event.aggregateType === "payment-transaction") &&
     destinationIds.length === 0
