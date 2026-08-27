@@ -17,9 +17,10 @@ test.describe("accessibility foundation", () => {
     await expect(page.locator("#main-content")).toBeFocused();
 
     await page.keyboard.press("Tab");
-    const brand = page.locator("a.brand");
-    await expect(brand).toBeFocused();
-    const focusStyle = await brand.evaluate((element) => {
+    const firstContentLink = page.locator("#main-content a").first();
+    await expect(firstContentLink).toBeFocused();
+    await expect(page.locator("a.brand")).not.toBeFocused();
+    const focusStyle = await firstContentLink.evaluate((element) => {
       const style = getComputedStyle(element);
       return {
         outlineStyle: style.outlineStyle,
