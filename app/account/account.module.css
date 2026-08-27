@@ -102,6 +102,13 @@
   cursor: not-allowed;
 }
 
+.field input[aria-invalid="true"],
+.field select[aria-invalid="true"] {
+  border-width: 2px;
+  border-color: #ffb4ab;
+  box-shadow: inset 0 0 0 1px rgba(255, 180, 171, 0.2);
+}
+
 .field input:focus,
 .field select:focus {
   outline: 2px solid rgba(74, 222, 198, 0.35);
