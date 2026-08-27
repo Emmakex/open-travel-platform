@@ -116,7 +116,8 @@ assert(staffActions.includes("httpOnly: true") && staffActions.includes('sameSit
 assert(customerActions.includes('secure: process.env.NODE_ENV === "production"'), "customer session cookie must be Secure in production");
 assert(staffActions.includes('secure: process.env.NODE_ENV === "production"'), "staff session cookie must be Secure in production");
 
-assert(liveRoute.includes('{ status: "ok" }') && liveRoute.includes("no-store"), "liveness endpoint must be cheap and non-cacheable");
+assert(liveRoute.includes('status: "ok"') && liveRoute.includes("no-store"), "liveness endpoint must be cheap and non-cacheable");
+assert(!liveRoute.includes("getProductionReadiness"), "liveness endpoint must remain independent from readiness dependencies");
 assert(readyRoute.includes("getProductionReadiness") && readyRoute.includes("503"), "readiness endpoint must fail with 503 when dependencies/configuration are not ready");
 assert(readiness.includes("KTRAVEL_DEPLOYMENT_PROFILE"), "readiness must support explicit demo/live profiles");
 assert(readiness.includes("liveProfileUsesDemoCapability"), "live readiness must reject demo capabilities");
