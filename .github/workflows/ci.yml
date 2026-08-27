@@ -116,6 +116,12 @@ jobs:
       - name: Traveller pricing and amendment invariant check
         run: npm run check:traveller-amendment-validation
 
+      - name: REST adapter contract validation invariant check
+        run: npm run check:adapter-contract-validation
+
+      - name: REST adapter contract integration test
+        run: npm run test:rest-adapter-contracts
+
       - name: Browser E2E invariant check
         run: npm run check:browser-e2e
 
