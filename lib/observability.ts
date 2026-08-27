@@ -32,6 +32,12 @@ export function safeOperationalToken(value: unknown) {
   return safeTokenPattern.test(normalized) ? normalized : undefined;
 }
 
+export function sanitizeOperationalCorrelationId(value: unknown) {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim();
+  return requestIdPattern.test(normalized) ? normalized : undefined;
+}
+
 export function sanitizeOperationalFields(fields: OperationalLogFields | undefined) {
   if (!fields) return undefined;
   const output: Record<string, OperationalLogScalar> = {};
@@ -65,9 +71,7 @@ export function describeOperationalError(error: unknown) {
 }
 
 export function getRequestCorrelationId(request: Request) {
-  const provided = request.headers.get("x-request-id")?.trim() ?? "";
-  if (requestIdPattern.test(provided)) return provided;
-  return `req-${randomUUID()}`;
+  return sanitizeOperationalCorrelationId(request.headers.get("x-request-id")) ?? `req-${randomUUID()}`;
 }
 
 export function correlationHeaders(correlationId: string): HeadersInit {
@@ -78,6 +82,7 @@ export function emitOperationalLog(input: OperationalLogInput) {
   try {
     const event = safeOperationalToken(input.event) ?? "operational-event";
     const component = safeOperationalToken(input.component) ?? "unknown";
+    const correlationId = sanitizeOperationalCorrelationId(input.correlationId);
     const fields = sanitizeOperationalFields(input.fields);
     const error = describeOperationalError(input.error);
     const record = {
@@ -87,9 +92,7 @@ export function emitOperationalLog(input: OperationalLogInput) {
       level: input.level,
       event,
       component,
-      ...(input.correlationId && requestIdPattern.test(input.correlationId)
-        ? { correlationId: input.correlationId }
-        : {}),
+      ...(correlationId ? { correlationId } : {}),
       ...(fields ? { fields } : {}),
       ...(error ? error : {})
     };
