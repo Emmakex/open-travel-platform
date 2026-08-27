@@ -1,4 +1,5 @@
 import { MongoClient, type Db } from "mongodb";
+import { ensureMongoPerformanceIndexes } from "@/lib/mongodb-performance-indexes";
 
 const defaultDatabaseName = "ktravel";
 
@@ -126,7 +127,9 @@ async function createMongoClient() {
     serverSelectionTimeoutMS: 7000
   });
 
-  return client.connect();
+  const connected = await client.connect();
+  await ensureMongoPerformanceIndexes(connected.db(getMongoDatabaseName()));
+  return connected;
 }
 
 export function getMongoClient() {

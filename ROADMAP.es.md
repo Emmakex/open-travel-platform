@@ -17,9 +17,9 @@ _Última actualización: 27 de agosto de 2026._
 
 La plataforma está muy por encima del MVP original de catálogo/reservas. Ya están implementadas identidad persistente, reservas/inventario transaccionales, pricing por viajero, alojamiento, servicios independientes, pagos, datos post-compra, modificaciones, workflow Operator avanzado, permisos granulares, documentos, reporting y la infraestructura común de integraciones.
 
-**La Fase 8 está COMPLETADA. La Fase 9 — Endurecimiento productivo está EN PROGRESO: la Fase 9A de seguridad / operabilidad productiva y el baseline crítico de validación de persistencia/concurrencia/contratos de la Fase 9B están COMPLETADOS. La Fase 9C — Observabilidad, recuperación y endurecimiento de auditoría privilegiada es la SIGUIENTE.**
+**La Fase 8 está COMPLETADA. La Fase 9 — Endurecimiento productivo está EN PROGRESO: la Fase 9A de seguridad / operabilidad productiva, el baseline crítico de persistencia/concurrencia/contratos de la Fase 9B y la Fase 9C de observabilidad/recuperación/auditoría privilegiada están COMPLETADOS. La Fase 9D de privacidad, regulación, accesibilidad y rendimiento es la SIGUIENTE.**
 
-La validación E2E TEST/LIVE con credenciales Stripe/Redsys sigue pendiente hasta disponer de cuentas proveedor adecuadas. Esa validación dependiente del proveedor debe incorporarse en cuanto existan credenciales, pero ya no bloquea el avance hacia la Fase 9C. El Browser E2E permanece como señal CI informativa/no bloqueante por política explícita del proyecto; los gates bloqueantes son seguridad determinista, TypeScript/build/smoke, concurrencia/idempotencia/modificaciones sobre MongoDB real y validación local HTTP de contratos de adapters.
+La validación E2E TEST/LIVE con credenciales Stripe/Redsys sigue pendiente hasta disponer de cuentas proveedor adecuadas. Debe incorporarse en cuanto existan credenciales, pero no bloquea la Fase 9D. El Browser E2E permanece como señal CI informativa/no bloqueante por política explícita del proyecto; los gates bloqueantes cubren seguridad determinista, TypeScript/build/smoke, concurrencia/idempotencia/modificaciones MongoDB, contratos HTTP locales de adapters, observabilidad/failure transport, rollback de auditoría privilegiada, rotación de claves, recovery MongoDB y validación real de planes de consulta MongoDB.
 
 ---
 
@@ -282,25 +282,77 @@ La prioridad es endurecer para producción la amplia superficie funcional ya con
 - respuestas 4xx no transitorias no se reintentan;
 - mismatches de ownership/trip/departure en Booking fallan cerrados;
 - allowlists salientes de Supplier/CRM/ERP impiden filtrar campos comerciales/protegidos;
-- Supplier, CRM y ERP rechazan ahora respuestas exitosas no JSON de forma consistente con Booking;
+- Supplier, CRM y ERP rechazan respuestas exitosas no JSON de forma consistente con Booking;
 - gates bloqueantes permanentes `check:adapter-contract-validation` y `test:rest-adapter-contracts`.
 
 ### Validación con credenciales de proveedor — DEPENDENCIA EXTERNA DIFERIDA
 - E2E Stripe/Redsys TEST/LIVE con credenciales sigue siendo necesario antes de afirmar validación productiva completa de esos proveedores;
 - debe insertarse inmediatamente cuando existan cuentas/credenciales adecuadas;
-- la ausencia de credenciales no bloquea el trabajo de la Fase 9C.
+- la ausencia de credenciales no bloquea el trabajo de la Fase 9D.
 
-## 9C — Observabilidad, recuperación y endurecimiento de auditoría privilegiada — SIGUIENTE
+## 9C — Observabilidad, recuperación y endurecimiento de auditoría privilegiada — COMPLETADO
 
-- logs estructurados y errores centralizados;
-- monitorización externa de uptime/readiness y alertas accionables;
-- visibilidad de fallos de pagos/integraciones;
-- revisión de auditoría de acciones privilegiadas;
-- procedimientos de recuperación/rotación de claves;
-- simulaciones de backup/restore MongoDB, disaster recovery y rollback;
-- revisión de índices/rendimiento de base de datos.
+### 9C-1 — Observabilidad operativa estructurada — COMPLETADO
+- logging JSON-line neutral respecto a proveedor con schema, servicio, evento, componente y severidad;
+- correlación `X-Request-Id` validada con UUID server-side de fallback;
+- redacción central de credenciales, PII cliente/viajero, payloads crudos, valores de tarjeta, referencias provider e importes;
+- instrumentación de integration worker, Stripe, Redsys y readiness;
+- gates bloqueantes `check:observability` y `test:observability` más documentación EN/ES.
 
-## 9D — Preparación de privacidad, regulación, accesibilidad y rendimiento
+### 9C-2 — Transporte centralizado de visibilidad de fallos — COMPLETADO
+- `FailureTransport` neutral `disabled|rest` con collector HTTPS confiable, Bearer opcional, timeout/respuesta acotados y sin redirects;
+- eventos normalizados `warning|error|critical` con fingerprint SHA-256 estable para agrupación;
+- allowlist saliente más estricta que excluye PII, credenciales, firmas, payloads crudos, referencias provider e importes;
+- monitorización best-effort y no autoritativa: nunca modifica reservas, pagos, integraciones ni readiness;
+- validación HTTP local real de auth, contrato, redacción, agrupación y single-attempt;
+- gates `check:failure-transport` y `test:failure-transport` más documentación EN/ES.
+
+### 9C-3 — Monitorización externa de uptime/readiness y alertas accionables — COMPLETADO
+- contrato exacto de probes externos para `/api/health/live` y `/api/health/ready`;
+- intervalos, timeouts y umbrales consecutivos de fallo/recuperación recomendados;
+- mapping accionable de severidad/escalado para degradación de readiness y fingerprints normalizados;
+- runbook neutral para routing de alertas sin acoplar el core MIT a un SDK concreto de monitorización;
+- monitorización fuera de la autoridad de negocio y fuera de datos protegidos cliente/viajero;
+- gate bloqueante de contrato/configuración de monitorización externa.
+
+### 9C-4 — Integridad de auditoría de acciones privilegiadas — COMPLETADO
+- cambios de configuración de proveedores de pago y endpoints de integración confirman la mutación y su audit bounded dentro de la misma transacción MongoDB;
+- asignación/eliminación de capacidades staff conserva la misma frontera fail-closed;
+- secretos, PII, payloads crudos y valores protegidos excluidos de la auditoría privilegiada;
+- prueba MongoDB real demuestra rollback de la mutación si falla la escritura de audit;
+- workflow bloqueante y runbook EN/ES.
+
+### 9C-5 — Base de keyring de cifrado versionado — COMPLETADO
+- keyring AES-256-GCM v1/v2 compartido para credenciales de pago y secretos de firma de integraciones;
+- `keyId` estable no secreto y mapas acotados de claves anteriores para rotación escalonada;
+- ciphertext legacy legible durante migración y formatos inválidos/desconocidos fail-closed;
+- procedimientos de recuperación/rotación, contrato de entorno y gate bloqueante dedicado.
+
+### 9C-6 — Rotación y recifrado de Traveller Data — COMPLETADO
+- Traveller Data usa el keyring versionado con frontera dedicada de clave actual/anterior;
+- batches transaccionales acotados recifran únicamente el payload cifrado;
+- TTL, completitud y timestamps de negocio se preservan;
+- compare-and-set sobre ciphertext impide sobreescribir cambios concurrentes de viajeros;
+- errores de descifrado/recifrado/conflicto revierten todo el batch;
+- mantenimiento criptográfico no crea falsos eventos de cambio de datos cliente;
+- pruebas MongoDB reales demuestran rollback, lectura post-rotación e idempotencia.
+
+### 9C-7 — Backup/restore MongoDB y disaster recovery — COMPLETADO
+- runbook EN/ES neutral con RPO/RTO y separación del recovery de claves de cifrado;
+- drill real `mongodump`/`mongorestore` sobre MongoDB 8 desechable;
+- daño deliberado de la fuente seguido de restore en base aislada, nunca directamente sobre la base activa;
+- validación de canarios de reservas, pagos, auditoría y Traveller Data más índices únicos/TTL antes del cutover;
+- checksum de backup y procedimiento de rollback/cutover incluidos en el workflow bloqueante.
+
+### 9C-8 — Endurecimiento de índices y planes de consulta MongoDB — COMPLETADO
+- baseline aditivo de índices alineados con queries de reservas Operator, Traveller Data activo y cola/historial de integraciones;
+- índices de pagos, auditoría y tareas revisados sin añadir sobreindexado especulativo;
+- validación real MongoDB 8 con `explain("executionStats")` sobre datos representativos;
+- los hot paths críticos exigen índices esperados, ausencia de `COLLSCAN` y documentos examinados acotados;
+- seguimiento Atlas Query Profiler/Performance Advisor y ciclo de vida seguro de índices documentados EN/ES;
+- gate permanente `check:mongodb-index-performance` más prueba real de query plans.
+
+## 9D — Preparación de privacidad, regulación, accesibilidad y rendimiento — SIGUIENTE
 
 - workflows GDPR/privacidad/reservas/cookies/retención/exportación/eliminación;
 - revisión específica por mercado de viajes/pagos/consumidor/fiscal;
@@ -332,9 +384,23 @@ La validación TEST/LIVE Stripe/Redsys con credenciales sigue siendo requisito d
   ↓
 9B    Validación crítica de persistencia/concurrencia/contratos — COMPLETADO
   ↓
-9C    Observabilidad / recuperación / auditoría privilegiada — SIGUIENTE
+9C-1  Observabilidad operativa estructurada — COMPLETADO
   ↓
-9D    Privacidad / regulación / accesibilidad / rendimiento
+9C-2  Transporte centralizado de visibilidad de fallos — COMPLETADO
+  ↓
+9C-3  Uptime/readiness externo + routing de alertas — COMPLETADO
+  ↓
+9C-4  Integridad de auditoría privilegiada — COMPLETADO
+  ↓
+9C-5  Keyring de cifrado versionado — COMPLETADO
+  ↓
+9C-6  Rotación/recifrado de Traveller Data — COMPLETADO
+  ↓
+9C-7  Backup/restore MongoDB + disaster recovery — COMPLETADO
+  ↓
+9C-8  Índices/planes de consulta MongoDB — COMPLETADO
+  ↓
+9D    Privacidad / regulación / accesibilidad / rendimiento — SIGUIENTE
   ↓
 10    Productización open-source / release
   ↓

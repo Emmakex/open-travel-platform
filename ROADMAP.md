@@ -17,9 +17,9 @@ _Last updated: 27 August 2026._
 
 The platform is well beyond the original catalogue/booking MVP. Persistent identity, transactional reservations/inventory, traveller pricing, accommodation, independent services, payments, post-purchase traveller data, amendments, rich Operator workflows, granular permissions, documents, reporting and the common integration infrastructure are already implemented.
 
-**Phase 8 is COMPLETE. Phase 9 — Production hardening is IN PROGRESS: Phase 9A production security / operability baseline and Phase 9B critical persistence/concurrency/contract validation baseline are COMPLETE. Phase 9C is IN PROGRESS: 9C-1 structured operational observability and 9C-2 centralized failure visibility transport are COMPLETE; 9C-3 external uptime/readiness monitoring and actionable alert routing is NEXT.**
+**Phase 8 is COMPLETE. Phase 9 — Production hardening is IN PROGRESS: Phase 9A production security / operability baseline, Phase 9B critical persistence/concurrency/contract validation baseline and Phase 9C observability/recovery/privileged-audit hardening are COMPLETE. Phase 9D privacy, regulatory, accessibility and performance readiness is NEXT.**
 
-Credentialed Stripe/Redsys TEST/LIVE end-to-end validation remains pending until suitable provider accounts are available. That provider-dependent validation should be inserted as soon as credentials exist, but it does not block Phase 9C. Browser E2E remains an informational/non-blocking CI signal by explicit project policy; the blocking gates are deterministic security, TypeScript/build/smoke, MongoDB concurrency/idempotency/amendment tests, local HTTP adapter contracts, structured-log redaction/correlation and real-local-HTTP failure-transport validation.
+Credentialed Stripe/Redsys TEST/LIVE end-to-end validation remains pending until suitable provider accounts are available. That provider-dependent validation should be inserted as soon as credentials exist, but it does not block Phase 9D. Browser E2E remains an informational/non-blocking CI signal by explicit project policy; blocking gates cover deterministic security, TypeScript/build/smoke, MongoDB concurrency/idempotency/amendments, local HTTP adapter contracts, structured observability/failure transport, privileged audit rollback, encryption-key rotation, MongoDB recovery and real MongoDB query-plan validation.
 
 ---
 
@@ -288,9 +288,9 @@ The priority is to harden the already broad product surface for real production 
 ### Provider-credential validation — DEFERRED EXTERNAL DEPENDENCY
 - credentialed Stripe/Redsys TEST/LIVE E2E remains required before claiming those providers fully production-validated;
 - it should be inserted immediately when suitable provider accounts/credentials are available;
-- lack of provider credentials does not block Phase 9C work.
+- lack of provider credentials does not block Phase 9D work.
 
-## 9C — Observability, recovery and privileged audit hardening — IN PROGRESS
+## 9C — Observability, recovery and privileged audit hardening — COMPLETE
 
 ### 9C-1 — Structured operational observability — COMPLETE
 - provider-neutral JSON-line logging to stdout/stderr with schema version, service, event, component and severity;
@@ -316,21 +316,52 @@ The priority is to harden the already broad product surface for real production 
 - real local HTTP validation proves auth, contract version, allowlists, redaction, stable grouping and single-attempt behavior;
 - blocking `check:failure-transport` and `test:failure-transport` gates plus EN/ES documentation and `.env.example` contract.
 
-### 9C-3 — External uptime/readiness monitoring + actionable alert routing — NEXT
-- define exact external probe behavior for `/api/health/live` and `/api/health/ready`;
-- define recommended poll intervals, timeouts and consecutive-failure/recovery thresholds;
-- map readiness degradation and normalized failure fingerprints to actionable severity/escalation rules;
-- define provider-neutral alert-routing/runbook guidance for Grafana/Alertmanager, Sentry, Datadog or equivalent deployment tooling without vendor SDK coupling in the MIT core;
-- keep monitoring outside application authority and outside protected customer/traveller data;
-- add deterministic configuration/runbook invariants where they protect the production contract.
+### 9C-3 — External uptime/readiness monitoring + actionable alert routing — COMPLETE
+- exact external probe contract for `/api/health/live` and `/api/health/ready`;
+- recommended intervals, timeouts and consecutive-failure/recovery thresholds;
+- actionable severity/escalation mapping for readiness degradation and normalized failure fingerprints;
+- provider-neutral runbook for external monitoring/alert routing without monitoring-vendor SDK coupling in the MIT core;
+- monitoring remains outside application authority and protected customer/traveller data;
+- blocking external-monitoring configuration/contract validation.
 
-### Remaining 9C hardening after 9C-3
-- privileged-action audit review;
-- encryption-key recovery/rotation/re-encryption procedures;
-- MongoDB backup/restore drills, disaster recovery and rollback;
-- database index/performance review.
+### 9C-4 — Privileged-action audit integrity — COMPLETE
+- payment-provider configuration and integration-endpoint mutations commit with their bounded persistent audit event in the same MongoDB transaction;
+- staff capability assignment/removal retains the same fail-closed transactional audit contract;
+- secrets, customer/traveller personal data, raw provider payloads and protected values are excluded from privileged audit records;
+- real MongoDB rollback validation proves audit-write failure rolls back the privileged mutation;
+- blocking privileged-audit integrity workflow and EN/ES runbook.
 
-## 9D — Privacy, regulatory, accessibility and performance readiness
+### 9C-5 — Versioned encryption keyring foundation — COMPLETE
+- shared AES-256-GCM v1/v2 keyring for payment-provider credentials and integration signing secrets;
+- stable non-secret `keyId` plus bounded previous-key maps for staged rotation;
+- legacy ciphertext remains readable during migration and malformed/unknown formats fail closed;
+- recovery/rotation procedures, environment contract and dedicated blocking keyring validation.
+
+### 9C-6 — Traveller-data key rotation and re-encryption — COMPLETE
+- Traveller Data moved onto the versioned keyring with dedicated current/previous-key boundaries;
+- bounded transactional re-encryption batches update only ciphertext payloads;
+- TTL, completion state and business timestamps remain unchanged;
+- ciphertext compare-and-set prevents migration from overwriting concurrent traveller updates;
+- decryption/re-encryption/conflict failures roll back the whole batch;
+- no false customer-data audit event is produced by cryptographic maintenance;
+- real MongoDB tests prove rollback, post-rotation readability and idempotency.
+
+### 9C-7 — MongoDB backup/restore and disaster recovery — COMPLETE
+- provider-neutral EN/ES recovery runbook with explicit RPO/RTO and encryption-key recovery boundaries;
+- real `mongodump`/`mongorestore` drill against disposable MongoDB 8;
+- deliberate source damage followed by restore into an isolated recovery database, never directly over the active database;
+- recovered reservation, payment, audit and Traveller Data canaries plus unique/TTL indexes are validated before any cutover;
+- backup checksum and rollback/cutover procedure included in the blocking recovery workflow.
+
+### 9C-8 — MongoDB index and query-plan hardening — COMPLETE
+- additive query-aligned index baseline for Operator reservation recency/status, active Traveller Data reads and integration due/lease/history paths;
+- payments, audit and operations-task indexes reviewed without speculative over-indexing;
+- real MongoDB 8 `explain("executionStats")` validation on representative data;
+- critical hot paths must use expected indexes, reject `COLLSCAN` and keep documents examined bounded;
+- Atlas Query Profiler/Performance Advisor follow-up and safe index-lifecycle guidance documented EN/ES;
+- permanent `check:mongodb-index-performance` plus real MongoDB query-plan gate.
+
+## 9D — Privacy, regulatory, accessibility and performance readiness — NEXT
 
 - GDPR/privacy/booking/cookie/retention/export/deletion workflows;
 - market-specific travel/payment/consumer/fiscal review;
@@ -366,11 +397,19 @@ Credentialed Stripe/Redsys TEST/LIVE validation remains a production-hardening r
   ↓
 9C-2  Centralized failure visibility transport — COMPLETE
   ↓
-9C-3  External uptime/readiness monitoring + alert routing — NEXT
+9C-3  External uptime/readiness monitoring + alert routing — COMPLETE
   ↓
-9C    Recovery / privileged audit / database hardening
+9C-4  Privileged-action audit integrity — COMPLETE
   ↓
-9D    Privacy / regulatory / accessibility / performance
+9C-5  Versioned encryption keyring foundation — COMPLETE
+  ↓
+9C-6  Traveller-data key rotation/re-encryption — COMPLETE
+  ↓
+9C-7  MongoDB backup/restore/disaster recovery — COMPLETE
+  ↓
+9C-8  MongoDB index/query-plan hardening — COMPLETE
+  ↓
+9D    Privacy / regulatory / accessibility / performance — NEXT
   ↓
 10    Open-source productisation / release
   ↓
