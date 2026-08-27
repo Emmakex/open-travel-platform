@@ -71,6 +71,10 @@ export default async function AccountPrivacyPage({
     "invalid-request": tr(locale, "The request identifier is invalid.", "El identificador de la solicitud no es válido."),
     "request-unavailable": tr(locale, "That request cannot be withdrawn because it is closed or unavailable.", "Esa solicitud no puede retirarse porque ya está cerrada o no está disponible.")
   };
+  const createFormError = query.error === "invalid-type" || query.error === "already-open";
+  const invalidType = query.error === "invalid-type";
+  const privacyHelpId = "privacy-right-help";
+  const privacyErrorId = "privacy-right-error";
 
   return (
     <main className="section">
@@ -88,17 +92,25 @@ export default async function AccountPrivacyPage({
             "Requests are reviewed individually. We may ask for additional identity verification when necessary. An erasure request does not automatically delete booking, payment or audit records when a retention review shows they must remain available for another applicable purpose or obligation.",
             "Las solicitudes se revisan individualmente. Podemos pedir verificación adicional de identidad cuando sea necesario. Una solicitud de supresión no elimina automáticamente reservas, pagos o auditorías cuando la revisión de retención determine que deben conservarse por otra finalidad u obligación aplicable."
           )}</div>
-          {query.created ? <div className={styles.notice}><strong>{tr(locale, "Request received.", "Solicitud recibida.")}</strong> {tr(locale, "You can track it below.", "Puedes seguirla a continuación.")}</div> : null}
-          {query.withdrawn ? <div className={styles.notice}>{tr(locale, "Request withdrawn.", "Solicitud retirada.")}</div> : null}
-          {query.error && errors[query.error] ? <div className={styles.notice}>{errors[query.error]}</div> : null}
+          {query.created ? <div className={styles.notice} id="privacy-request-created" role="status" aria-live="polite"><strong>{tr(locale, "Request received.", "Solicitud recibida.")}</strong> {tr(locale, "You can track it below.", "Puedes seguirla a continuación.")}</div> : null}
+          {query.withdrawn ? <div className={styles.notice} id="privacy-request-withdrawn" role="status" aria-live="polite">{tr(locale, "Request withdrawn.", "Solicitud retirada.")}</div> : null}
+          {query.error && errors[query.error] ? <div className={styles.notice} id={createFormError ? privacyErrorId : "privacy-page-error"} role="alert" aria-live="assertive">{errors[query.error]}</div> : null}
 
           <form action={createPrivacyRequestAction} className={styles.form}>
-            <label className={styles.field}>
+            <label className={styles.field} htmlFor="privacy-right-type">
               <span>{tr(locale, "Right to exercise", "Derecho que quieres ejercer")}</span>
-              <select name="type" required defaultValue="access">
+              <select
+                id="privacy-right-type"
+                name="type"
+                required
+                defaultValue="access"
+                aria-invalid={invalidType || undefined}
+                aria-describedby={createFormError ? `${privacyHelpId} ${privacyErrorId}` : privacyHelpId}
+                autoFocus={createFormError}
+              >
                 {privacyRightTypes.map((type) => <option key={type} value={type}>{rightLabel(locale, type)}</option>)}
               </select>
-              <small>{tr(locale, "Only one open request of the same type is kept at a time; completed requests remain in your history.", "Solo se mantiene una solicitud abierta del mismo tipo a la vez; las solicitudes cerradas permanecen en tu historial.")}</small>
+              <small id={privacyHelpId}>{tr(locale, "Only one open request of the same type is kept at a time; completed requests remain in your history.", "Solo se mantiene una solicitud abierta del mismo tipo a la vez; las solicitudes cerradas permanecen en tu historial.")}</small>
             </label>
             <div className={styles.actions}>
               <button className="button" type="submit">{tr(locale, "Submit request", "Enviar solicitud")}</button>
@@ -107,9 +119,9 @@ export default async function AccountPrivacyPage({
           </form>
         </section>
 
-        <section className={styles.panel} style={{ marginTop: "1rem" }}>
+        <section className={styles.panel} style={{ marginTop: "1rem" }} aria-labelledby="privacy-history-heading">
           <div className="eyebrow">{tr(locale, "Request history", "Historial de solicitudes")}</div>
-          <h2>{tr(locale, "Privacy cases", "Expedientes de privacidad")}</h2>
+          <h2 id="privacy-history-heading">{tr(locale, "Privacy cases", "Expedientes de privacidad")}</h2>
           {requests.length === 0 ? <p className={styles.lead}>{tr(locale, "You have not submitted a privacy-rights request yet.", "Todavía no has presentado ninguna solicitud de derechos de privacidad.")}</p> : null}
           <dl className={styles.profileList}>
             {requests.map((request) => {
