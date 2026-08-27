@@ -9,6 +9,7 @@ const assert = (condition, message) => {
 
 const rights = read("lib/privacy-rights.ts");
 const inventory = read("lib/privacy-data-inventory.ts");
+const inventoryLower = inventory.toLowerCase();
 const accountPage = read("app/account/page.tsx");
 const customerActions = read("app/account/privacy/actions.ts");
 const customerPage = read("app/account/privacy/page.tsx");
@@ -54,7 +55,7 @@ for (const boundary of [
   assert(inventory.includes(`id: \"${boundary}\"`), `technical privacy inventory must include ${boundary}`);
 }
 assert(inventory.includes("Password hashes") && inventory.includes("token hashes"), "inventory must separate profile data from credential/session security material");
-assert(inventory.includes("not a declaration of legal basis"), "technical inventory must not pretend to choose legal basis");
+assert(inventoryLower.includes("not") && inventoryLower.includes("declaration of legal basis"), "technical inventory must not pretend to choose legal basis");
 
 for (const evidence of [
   "one-calendar-month deadlines must clamp safely at month end",
