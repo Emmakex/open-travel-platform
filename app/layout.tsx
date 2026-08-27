@@ -4,6 +4,7 @@ import "./visual-polish.css";
 import "./rich-travel.css";
 import "./media-gallery.css";
 import "./session-header.css";
+import "./accessibility.css";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { appConfig } from "@/lib/config";
@@ -25,12 +26,16 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const locale = await getLocale();
+  const skipLabel = locale === "es" ? "Saltar al contenido principal" : "Skip to main content";
 
   return (
     <html lang={locale}>
       <body>
+        <a className="skip-link" href="#main-content">{skipLabel}</a>
         <SiteHeader locale={locale} />
-        {children}
+        <div id="main-content" tabIndex={-1}>
+          {children}
+        </div>
         <SiteFooter locale={locale} />
       </body>
     </html>
