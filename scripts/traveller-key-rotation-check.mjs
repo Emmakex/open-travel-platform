@@ -47,10 +47,10 @@ assert(test.includes("must not create false traveller-data change audit events")
 assert(test.includes("after old keys are removed"), "MongoDB test must prove migrated data reads after previous keys are removed");
 assert(test.includes("migration must be idempotent"), "MongoDB test must prove migration becomes a no-op once complete");
 
-assert(runner.includes("--batch-size"), "operator runner must expose bounded batch size");
-assert(runner.includes("--max-batches"), "operator runner must expose a bounded maximum number of batches");
+assert(runner.includes('numericOption("batch-size"'), "operator runner must expose bounded batch size");
+assert(runner.includes('numericOption("max-batches"'), "operator runner must expose a bounded maximum number of batches");
 assert(!runner.includes("payload.value"), "operator runner must never log ciphertext contents");
-assert(!runner.includes("TRAVELLER_DATA_KEY]"), "operator runner must never read/log key material directly");
+assert(!runner.includes("process.env.TRAVELLER_DATA_KEY"), "operator runner must never read/log key material directly");
 
 assert(packageJson.scripts?.["check:traveller-key-rotation"] === "node scripts/traveller-key-rotation-check.mjs", "static key-rotation gate must be registered");
 assert(packageJson.scripts?.["test:mongodb-traveller-key-rotation"] === "tsx tests/mongodb-traveller-key-rotation.ts", "MongoDB rotation test must be registered");
