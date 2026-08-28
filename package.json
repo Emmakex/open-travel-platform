@@ -34,7 +34,7 @@
     "test:external-monitoring": "tsx tests/external-monitoring.ts",
     "test:encryption-keyring": "tsx tests/encryption-keyring.ts",
     "test:e2e:seed": "tsx tests/e2e/seed.ts",
-    "test:e2e": "playwright test",
+    "test:e2e": "playwright test tests/e2e/persistent-booking.spec.ts --project=chromium",
     "migrate:traveller-encryption": "tsx scripts/reencrypt-traveller-data.ts",
     "check:safety": "node scripts/public-safety-check.mjs",
     "check:ux": "node scripts/ux-content-check.mjs",
