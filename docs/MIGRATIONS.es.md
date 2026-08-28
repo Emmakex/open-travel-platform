@@ -26,7 +26,7 @@ Lectores antiguos/nuevos deben mantener compatibilidad cuando sea viable. El pas
 
 ### C. Transformación/backfill
 
-Debe ser determinista, acotada, observable, retry-safe o resumible, limitada al scope previsto, auditable cuando corresponda y verificada antes de cleanup destructivo.
+Debe ser determinista, acotada, observable, **idempotente o resumible**, limitada al scope previsto, auditable cuando corresponda y verificada antes de cleanup destructivo.
 
 Nunca reinterpretar silenciosamente dinero, divisa, inventario, identidad, reservas o historial de pagos.
 
@@ -58,7 +58,7 @@ Documentar:
 - assumptions y release origen mínima soportada;
 - estado/release destino;
 - scope/query;
-- idempotencia o resumibilidad;
+- comportamiento **idempotente o resumible**;
 - dry-run/read-only cuando sea viable;
 - impacto operativo;
 - verificación;
