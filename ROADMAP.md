@@ -20,6 +20,7 @@ Completed Phase 10 slices:
 10.3     Extension contracts/reference adapters -------------- COMPLETE
 10.4     Release and migration conventions ------------------- COMPLETE
 10.5     Upgrade and deprecation lifecycle policy ------------ COMPLETE
+10.6     Contribution and release templates ------------------ COMPLETE
 ```
 
 Credentialed Stripe/Redsys TEST/LIVE E2E remains a separate external dependency and does not reopen Phase 9.
@@ -132,15 +133,32 @@ Delivered:
 - dedicated `.github/workflows/upgrade-deprecations.yml`;
 - release, migration, extension compatibility, SUPPORT and CONTRIBUTING integration.
 
+## 10.6 — Contribution and release templates — COMPLETE
+
+Authoritative documents:
+
+- [`docs/CONTRIBUTION-TEMPLATES.md`](docs/CONTRIBUTION-TEMPLATES.md)
+- [`docs/CONTRIBUTION-TEMPLATES.es.md`](docs/CONTRIBUTION-TEMPLATES.es.md)
+
+Delivered:
+
+- exactly one canonical `.github/PULL_REQUEST_TEMPLATE.md`;
+- PR checklist aligned with capability/extension boundaries, SemVer, migrations, lifecycle, authority/security/privacy, UX/accessibility and phase completion;
+- richer bug/feature issue forms with exact-version, upgrade/public-contract, provider-neutrality and data-safety context;
+- reusable `.github/RELEASE_TEMPLATE.md` for release identity, compatibility, migrations, deprecations/removals, rollback, validation and publication;
+- `scripts/contribution-template-check.mjs` and `check:contribution-templates` inside `npm run verify`;
+- dedicated `.github/workflows/contribution-templates.yml`;
+- contributor documentation synchronized with Phases 10.3–10.5.
+
 ## Planned later Phase 10 work
 
 No later slice is active merely because it is listed. Each receives its own branch and full completion gate when started.
 
 Potential next slices:
 
-- richer contribution/release templates;
 - trademark/branding policy between Open Travel Platform and Kairoseth Travel;
-- optional adapters driven by commercial/community demand.
+- final Phase 10 documentation/release audit and next public release cut;
+- optional adapters driven by commercial/community demand, outside the Phase 10 completion blocker unless deliberately promoted.
 
 ## Permanent phase gate
 

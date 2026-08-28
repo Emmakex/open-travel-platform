@@ -37,6 +37,7 @@ Slices completados:
 - **10.3 Contratos de extensión/adapters de referencia — COMPLETADA**
 - **10.4 Convenciones de release y migraciones — COMPLETADA**
 - **10.5 Política de lifecycle de upgrades y deprecaciones — COMPLETADA**
+- **10.6 Plantillas de contribución y release — COMPLETADA**
 
 La Fase 10.5 establece:
 
@@ -57,6 +58,8 @@ Documentación autoritativa 10.4–10.5:
 - [`docs/MIGRATIONS.es.md`](docs/MIGRATIONS.es.md)
 - [`docs/UPGRADES.es.md`](docs/UPGRADES.es.md)
 - [`docs/DEPRECATIONS.es.md`](docs/DEPRECATIONS.es.md)
+
+La Fase 10.6 añade una plantilla PR canónica, issue forms enriquecidos, una plantilla reutilizable de release notes y validación permanente mediante `npm run check:contribution-templates`. Consulta [`docs/CONTRIBUTION-TEMPLATES.es.md`](docs/CONTRIBUTION-TEMPLATES.es.md).
 
 La validación TEST/LIVE con credenciales Stripe/Redsys sigue siendo una dependencia externa separada.
 
@@ -126,10 +129,11 @@ npm ci
 npm run check:release
 npm run check:release-migrations
 npm run check:upgrade-deprecations
+npm run check:contribution-templates
 npm run verify
 ```
 
-Consulta [`docs/RELEASES.es.md`](docs/RELEASES.es.md), [`docs/MIGRATIONS.es.md`](docs/MIGRATIONS.es.md), [`docs/UPGRADES.es.md`](docs/UPGRADES.es.md) y [`docs/DEPRECATIONS.es.md`](docs/DEPRECATIONS.es.md).
+Consulta [`docs/RELEASES.es.md`](docs/RELEASES.es.md), [`docs/MIGRATIONS.es.md`](docs/MIGRATIONS.es.md), [`docs/UPGRADES.es.md`](docs/UPGRADES.es.md), [`docs/DEPRECATIONS.es.md`](docs/DEPRECATIONS.es.md) y [`docs/CONTRIBUTION-TEMPLATES.es.md`](docs/CONTRIBUTION-TEMPLATES.es.md).
 
 ## Documentación
 
@@ -144,6 +148,7 @@ Consulta [`docs/RELEASES.es.md`](docs/RELEASES.es.md), [`docs/MIGRATIONS.es.md`]
 - [`docs/MIGRATIONS.es.md`](docs/MIGRATIONS.es.md)
 - [`docs/UPGRADES.es.md`](docs/UPGRADES.es.md)
 - [`docs/DEPRECATIONS.es.md`](docs/DEPRECATIONS.es.md)
+- [`docs/CONTRIBUTION-TEMPLATES.es.md`](docs/CONTRIBUTION-TEMPLATES.es.md)
 - [`docs/DEPLOYMENT.es.md`](docs/DEPLOYMENT.es.md)
 
 ### Extensiones
@@ -161,16 +166,17 @@ Consulta [`docs/RELEASES.es.md`](docs/RELEASES.es.md), [`docs/MIGRATIONS.es.md`]
 npm run check:extension-contracts
 npm run check:release-migrations
 npm run check:upgrade-deprecations
+npm run check:contribution-templates
 npm run verify
 ```
 
-Workflows dedicados protegen contratos de extensión, releases/migraciones y lifecycle de upgrades/deprecaciones en PR y `main`.
+Workflows dedicados protegen contratos de extensión, releases/migraciones, lifecycle de upgrades/deprecaciones y plantillas de contribución/release en PR y `main`.
 
 ## Regla de cierre de fases
 
 Una fase/slice no está completada hasta terminar implementación/pruebas, sincronizar documentación EN/ES, revisar diff, tener CI obligatorio verde, mergear a `main` y verificar `main` antes de iniciar el siguiente bloque.
 
-La Fase 10.5 sigue la misma regla.
+La Fase 10.6 sigue la misma regla; branding/trademark permanece separado hasta cerrar este slice.
 
 ## Licencia
 

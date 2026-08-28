@@ -20,6 +20,7 @@ Slices completados:
 10.3     Contratos de extensión/adapters referencia ----------- COMPLETADA
 10.4     Convenciones de release y migración ------------------ COMPLETADA
 10.5     Lifecycle de upgrades y deprecaciones ---------------- COMPLETADA
+10.6     Plantillas de contribución y release ----------------- COMPLETADA
 ```
 
 La validación Stripe/Redsys TEST/LIVE con credenciales sigue siendo una dependencia externa separada y no reabre la Fase 9.
@@ -120,15 +121,32 @@ Entregado:
 - workflow `.github/workflows/upgrade-deprecations.yml`;
 - integración con releases, migraciones, compatibilidad, SUPPORT y CONTRIBUTING.
 
+## 10.6 — Plantillas de contribución y release — COMPLETADA
+
+Documentos:
+
+- [`docs/CONTRIBUTION-TEMPLATES.es.md`](docs/CONTRIBUTION-TEMPLATES.es.md)
+- [`docs/CONTRIBUTION-TEMPLATES.md`](docs/CONTRIBUTION-TEMPLATES.md)
+
+Entregado:
+
+- una única `.github/PULL_REQUEST_TEMPLATE.md` canónica;
+- checklist PR alineado con fronteras de capacidad/extensión, SemVer, migraciones, lifecycle, autoridad/seguridad/privacidad, UX/accesibilidad y cierre de fases;
+- issue forms bug/feature con versión exacta, contexto upgrade/contrato público, neutralidad de proveedor y seguridad de datos;
+- `.github/RELEASE_TEMPLATE.md` reutilizable para identidad, compatibilidad, migraciones, deprecaciones/retiradas, rollback, validación y publicación;
+- `scripts/contribution-template-check.mjs` y `check:contribution-templates` dentro de `npm run verify`;
+- workflow dedicado `.github/workflows/contribution-templates.yml`;
+- documentación de contribución sincronizada con las Fases 10.3–10.5.
+
 ## Trabajo posterior planificado
 
 Ningún bloque posterior está activo por aparecer aquí. Cada uno recibe su rama y gate completo al iniciarse.
 
-Posibles slices:
+Posibles siguientes slices:
 
-- templates más completos de contribución/release;
 - política de trademark/branding entre Open Travel Platform y Kairoseth Travel;
-- adapters opcionales según demanda comercial/comunitaria.
+- auditoría final de documentación/release de Fase 10 y corte del siguiente release público;
+- adapters opcionales según demanda comercial/comunitaria, fuera del bloqueo de cierre de Fase 10 salvo decisión explícita.
 
 ## Gate permanente
 

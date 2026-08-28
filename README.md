@@ -37,6 +37,7 @@ Completed Phase 10 slices:
 - **10.3 Extension contracts and reference adapters — COMPLETE**
 - **10.4 Release and migration conventions — COMPLETE**
 - **10.5 Upgrade and deprecation lifecycle policy — COMPLETE**
+- **10.6 Contribution and release templates — COMPLETE**
 
 Phase 10.5 establishes:
 
@@ -57,6 +58,8 @@ Authoritative Phase 10.4–10.5 documentation:
 - [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md)
 - [`docs/UPGRADES.md`](docs/UPGRADES.md)
 - [`docs/DEPRECATIONS.md`](docs/DEPRECATIONS.md)
+
+Phase 10.6 adds one canonical PR template, richer issue forms, a reusable release-notes template and permanent validation through `npm run check:contribution-templates`. See [`docs/CONTRIBUTION-TEMPLATES.md`](docs/CONTRIBUTION-TEMPLATES.md).
 
 Credentialed Stripe/Redsys TEST/LIVE E2E remains a separate provider-dependent release validation until suitable provider accounts are available.
 
@@ -161,10 +164,11 @@ npm ci
 npm run check:release
 npm run check:release-migrations
 npm run check:upgrade-deprecations
+npm run check:contribution-templates
 npm run verify
 ```
 
-See [`docs/RELEASES.md`](docs/RELEASES.md), [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md), [`docs/UPGRADES.md`](docs/UPGRADES.md) and [`docs/DEPRECATIONS.md`](docs/DEPRECATIONS.md).
+See [`docs/RELEASES.md`](docs/RELEASES.md), [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md), [`docs/UPGRADES.md`](docs/UPGRADES.md), [`docs/DEPRECATIONS.md`](docs/DEPRECATIONS.md) and [`docs/CONTRIBUTION-TEMPLATES.md`](docs/CONTRIBUTION-TEMPLATES.md).
 
 ## Documentation
 
@@ -179,6 +183,7 @@ See [`docs/RELEASES.md`](docs/RELEASES.md), [`docs/MIGRATIONS.md`](docs/MIGRATIO
 - [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md)
 - [`docs/UPGRADES.md`](docs/UPGRADES.md)
 - [`docs/DEPRECATIONS.md`](docs/DEPRECATIONS.md)
+- [`docs/CONTRIBUTION-TEMPLATES.md`](docs/CONTRIBUTION-TEMPLATES.md)
 - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 
 ### Extensions
@@ -198,16 +203,17 @@ Important project-level gates include:
 npm run check:extension-contracts
 npm run check:release-migrations
 npm run check:upgrade-deprecations
+npm run check:contribution-templates
 npm run verify
 ```
 
-Dedicated workflows protect extension contracts, release/migration conventions and the upgrade/deprecation lifecycle in pull requests and on `main`.
+Dedicated workflows protect extension contracts, release/migration conventions, the upgrade/deprecation lifecycle and contribution/release templates in pull requests and on `main`.
 
 ## Phase completion rule
 
 A phase/slice is not complete until implementation and tests are finished, EN/ES documentation/README/ROADMAP/CHANGELOG are synchronized, the PR scope is reviewed, required CI is green, the PR is merged to `main`, and `main` is verified before the next phase starts.
 
-Phase 10.5 follows the same rule; later Phase 10 work remains separate until explicitly started.
+Phase 10.6 follows the same rule; branding/trademark work remains separate until this slice is merged and verified.
 
 ## License
 

@@ -1,18 +1,22 @@
 name: Feature request
-description: Propose a reusable capability or improvement
+description: Propose a reusable provider-neutral capability or improvement
 title: "feat: "
 body:
+  - type: markdown
+    attributes:
+      value: Proposals should describe the reusable product problem first. Vendor/customer-specific implementations should remain optional adapters or outside the public MIT core when appropriate.
   - type: textarea
     id: problem
     attributes:
       label: Problem to solve
-      description: Describe the reusable product problem, not only one vendor-specific implementation.
+      description: Describe the reusable user/operator/contributor problem, not only one vendor-specific implementation.
     validations:
       required: true
   - type: textarea
     id: proposal
     attributes:
       label: Proposed capability
+      description: Describe the desired behavior and success criteria.
     validations:
       required: true
   - type: dropdown
@@ -22,22 +26,53 @@ body:
       options:
         - Travel catalogue
         - Identity / authorization
-        - Booking / availability
+        - Booking / availability / inventory
+        - Payment / finance
+        - Traveller Data / privacy
         - Operator / admin operations
-        - New optional adapter
+        - Supplier / CRM / ERP / integration
+        - New optional adapter / extension
         - UI / accessibility
-        - Quality / tooling
+        - Build / deployment / upgrade
+        - Quality / tooling / contribution workflow
         - Documentation
         - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: public_contract
+    attributes:
+      label: Public contract impact
+      description: Does the proposal add/change a public API, repository/adapter interface, event/signature contract or documented configuration surface?
+      options:
+        - No / internal-only
+        - Additive public capability
+        - Existing public contract would change
+        - New versioned public contract
+        - Unknown / needs design review
     validations:
       required: true
   - type: textarea
     id: portability
     attributes:
-      label: Portability considerations
-      description: Explain how the proposal can remain provider-neutral or optional.
+      label: Provider-neutral / portability considerations
+      description: Explain how the proposal avoids coupling the core to a single PSP, supplier, CRM/ERP, hosting vendor or Kairoseth-only implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: migration
+    attributes:
+      label: Upgrade / migration / lifecycle impact
+      description: Note required configuration or data migration, deprecation/removal of existing behavior, or state N/A.
   - type: textarea
     id: security
     attributes:
-      label: Security / privacy impact
-      description: Note any new write paths, identity/role behavior, customer data or external integrations.
+      label: Authority / security / privacy impact
+      description: Note new write paths, authority changes, identity/role behavior, pricing/inventory/payment semantics, protected Traveller Data or external integrations.
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety check
+      options:
+        - label: I did not include private customer data, credentials, protected Traveller Data or deployment secrets.
+          required: true
