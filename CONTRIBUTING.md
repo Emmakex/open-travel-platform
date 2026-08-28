@@ -23,10 +23,11 @@ npm run check:extension-contracts
 npm run check:release-migrations
 npm run check:upgrade-deprecations
 npm run check:contribution-templates
+npm run check:branding-policy
 npm run verify
 ```
 
-The permanent gates protect extension architecture, release/migration conventions, upgrade/deprecation lifecycle and contribution/release templates. `verify` includes them plus the other project checks, TypeScript validation and production build.
+The permanent gates protect extension architecture, release/migration conventions, upgrade/deprecation lifecycle, contribution/release templates and branding/trademark separation. `verify` includes them plus the other project checks, TypeScript validation and production build.
 
 GitHub Actions additionally exercises real MongoDB replica sets, local HTTP adapter contracts, privacy, accessibility, recovery and performance/resource baselines.
 
@@ -127,6 +128,28 @@ npm run check:contribution-templates
 
 Do not reintroduce case-variant duplicate PR templates.
 
+## Branding / trademark impact
+
+Read [`TRADEMARKS.md`](TRADEMARKS.md) before changing public project names, Kairoseth/Kairoseth Travel wording, official-status claims, logos, wordmarks or reference-deployment identity.
+
+The repository software remains MIT-licensed. That software license must not be represented as permission for an independently operated fork or hosted service to claim it is **official Kairoseth Travel**.
+
+Truthful descriptive statements such as “based on Open Travel Platform” or “compatible with Open Travel Platform” are different from using Kairoseth/Kairoseth Travel branding as the primary identity of an unrelated service.
+
+A PR with branding impact must state:
+
+- whether Open Travel Platform project naming/attribution changes;
+- whether Kairoseth or Kairoseth Travel wording changes;
+- whether an `official`/reference-deployment claim changes;
+- whether logos, wordmarks or distinctive visual-brand assets change;
+- whether separate permission/asset licensing is required.
+
+The permanent branding gate is:
+
+```bash
+npm run check:branding-policy
+```
+
 ## Pull requests
 
 A PR should explain:
@@ -137,6 +160,7 @@ A PR should explain:
 - compatibility impact;
 - release/migration impact;
 - upgrade/deprecation impact;
+- **Branding / trademark impact** when public identity changes;
 - configuration/migration requirements;
 - rollback/recovery when state changes;
 - how the change was validated.
