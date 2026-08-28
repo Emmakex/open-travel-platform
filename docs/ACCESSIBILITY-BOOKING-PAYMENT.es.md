@@ -6,13 +6,21 @@ Es un baseline técnico, **no una certificación WCAG ni una declaración de con
 
 ## Feedback de reserva
 
-Las páginas de reserva de viajes y servicios exponen ahora los errores devueltos por servidor mediante regiones estables `role="alert"` con `aria-live="assertive"`. De esta forma, errores por disponibilidad desactualizada, validación de viajeros, inventario, alojamiento o reglas del paquete no se comunican únicamente mediante estilos visuales.
+Las páginas de reserva de viajes y servicios exponen los errores devueltos por servidor mediante regiones estables `role="alert"` con `aria-live="assertive"`. De esta forma, errores por disponibilidad desactualizada, validación de viajeros, inventario, alojamiento o reglas del paquete no se comunican únicamente mediante estilos visuales.
 
-Los formularios de reserva existentes mantienen labels visibles y controles required nativos. La recuperación de errores campo a campo en cliente, los estados dinámicos de preparación de viajeros y una revisión adicional con tecnologías de apoyo quedan como trabajo posterior.
+El formulario de viajeros del viaje también incorpora recuperación en cliente para los datos obligatorios antes del envío. Cuando el usuario intenta confirmar un formulario incompleto:
+
+- se muestra un resumen de errores estable y assertive;
+- cada campo afectado recibe `aria-invalid="true"`;
+- el control queda asociado a su error inline visible mediante `aria-describedby`;
+- el focus (foco) se mueve al primer campo de viajero inválido;
+- al corregir un campo se elimina inmediatamente la relación con el error ya resuelto.
+
+Esta recuperación en cliente es únicamente una ayuda de usabilidad y accesibilidad. El parsing de viajeros, las bandas de edad/precio, las reglas de adulto responsable, el inventario, el alojamiento y las reglas del paquete siguen siendo autoridad del servidor y se validan de nuevo en cada envío aceptado.
 
 ## Feedback del checkout
 
-El checkout autenticado distingue ahora:
+El checkout autenticado distingue:
 
 - fallos accionables de pago/proveedor mediante `role="alert"` y `aria-live="assertive"`;
 - estados no erróneos como reserva cancelada, pago completo, confirmación pendiente, pago online no disponible o calendario de pagos desactualizado mediante `role="status"` y `aria-live="polite"`;
@@ -33,13 +41,14 @@ Las páginas alojadas por el proveedor quedan fuera del DOM de la aplicación op
 Un smoke test dedicado en Chromium utiliza un replica set MongoDB desechable y un seed controlado para comprobar:
 
 1. los errores de reserva de viaje se exponen como alertas assertive;
-2. un cliente real puede registrarse y crear una reserva persistente;
-3. el checkout autenticado expone un error de proveedor como alerta;
-4. el resumen de pago tiene un nombre accesible estable;
-5. el estado actual/sin proveedor del checkout se expone de forma polite.
+2. un formulario de viajeros incompleto muestra errores inline, relaciones `aria-invalid` y recuperación de focus hacia el primer campo inválido;
+3. un cliente real puede registrarse y crear una reserva persistente;
+4. el checkout autenticado expone un error de proveedor como alerta;
+5. el resumen de pago tiene un nombre accesible estable;
+6. el estado actual/sin proveedor del checkout se expone de forma polite.
 
 El test de navegador no contacta con Stripe ni Redsys.
 
 ## Trabajo restante de la Fase 9D-4
 
-Los siguientes slices de accesibilidad incluyen estados y recuperación de errores más ricos dentro de los formularios cliente de viajes/servicios, workflows de Operator, revisión más amplia de contraste/contenido y recorridos manuales con tecnologías de apoyo en superficies inglesas y españolas.
+Los siguientes slices de accesibilidad incluyen recuperación más rica en la reserva de servicios, workflows de Operator, revisión más amplia de contraste/contenido y recorridos manuales con tecnologías de apoyo en superficies inglesas y españolas.
