@@ -18,7 +18,7 @@ Los releases públicos estables usan Semantic Versioning:
 MAJOR.MINOR.PATCH
 ```
 
-Los tags Git usan `vX.Y.Z`. Deben coincidir `package.json`, badge README, heading de CHANGELOG y tag Git. Los tags publicados son inmutables.
+Los tags Git usan `vX.Y.Z`. Deben coincidir `package.json`, badge README, heading de CHANGELOG y tag Git. **Los tags son inmutables** después de publicarse.
 
 Los checks actuales aceptan versiones estables `x.y.z`; introducir prereleases exige una política futura explícita.
 
