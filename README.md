@@ -8,7 +8,7 @@ Open Travel Platform is a clean-room **Next.js + TypeScript + MongoDB** platform
 
 The official commercial/reference implementation is **Kairoseth Travel**, deployed at **[travel.kairoseth.com](https://travel.kairoseth.com)**.
 
-![Version](https://img.shields.io/badge/version-1.0.0-0d1b2d)
+![Version](https://img.shields.io/badge/version-1.1.0-0d1b2d)
 ![Next.js](https://img.shields.io/badge/Next.js-16.3.2-000000)
 ![React](https://img.shields.io/badge/React-19.2.8-149eca)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178c6)
@@ -31,9 +31,9 @@ Branding and trademark usage is documented separately in [`TRADEMARKS.md`](TRADE
 
 **Phase 8 — External integrations: COMPLETE.**  
 **Phase 9 — Production hardening engineering baseline: COMPLETE.**  
-**Phase 10 — Open-source productisation: IN PROGRESS.**
+**Phase 10 — Open-source productisation: COMPLETE.**
 
-Completed Phase 10 slices:
+Phase 10 completion:
 
 - **10.1 Reproducible fresh-clone/demo bootstrap — COMPLETE**
 - **10.2 Provider-neutral self-host standalone deployment — COMPLETE**
@@ -42,22 +42,13 @@ Completed Phase 10 slices:
 - **10.5 Upgrade and deprecation lifecycle policy — COMPLETE**
 - **10.6 Contribution and release templates — COMPLETE**
 - **10.7 Branding and trademark policy — COMPLETE**
+- **10.8 Final documentation/release audit and v1.1.0 publication — COMPLETE**
 
-Phase 10.7 establishes:
+The Phase 10 closeout is documented in [`docs/PHASE-10-RELEASE-AUDIT.md`](docs/PHASE-10-RELEASE-AUDIT.md). v1.1.0 release notes are in [`docs/RELEASE-NOTES-1.1.0.md`](docs/RELEASE-NOTES-1.1.0.md).
 
-- explicit separation between MIT software rights and project/commercial branding;
-- **Open Travel Platform** as the public provider-neutral core/project name;
-- **Kairoseth Travel** as the official hosted/commercial reference implementation;
-- `https://travel.kairoseth.com` as the official reference deployment;
-- truthful descriptive use such as “based on Open Travel Platform” / “compatible with Open Travel Platform”;
-- distinct primary branding for independently operated forks/services;
-- no implied sponsorship, certification or official status from use of the MIT code;
-- separate permission expectations for Kairoseth/Kairoseth Travel logos, wordmarks and official-status claims;
-- permanent validation through `npm run check:branding-policy`.
+The repository previously recorded package version 1.0.0 but had no historical Git tag/GitHub Release. The project does not fabricate a retroactive tag; **v1.1.0 is the first release published under the completed Phase 10 release convention**.
 
-This policy does not claim that any mark is registered in every jurisdiction; it defines the project's usage rules for project/commercial branding. See [`TRADEMARKS.md`](TRADEMARKS.md) and [`TRADEMARKS.es.md`](TRADEMARKS.es.md).
-
-Credentialed Stripe/Redsys TEST/LIVE E2E remains a separate provider-dependent release validation until suitable provider accounts are available.
+Credentialed Stripe/Redsys TEST/LIVE E2E remains a separate provider-dependent validation until suitable provider accounts are available. It does not reopen the completed Phase 9 baseline or block the provider-neutral v1.1.0 release.
 
 ## Core capabilities
 
@@ -162,10 +153,13 @@ npm run check:release-migrations
 npm run check:upgrade-deprecations
 npm run check:contribution-templates
 npm run check:branding-policy
+npm run check:phase-10-release
 npm run verify
 ```
 
-See [`docs/RELEASES.md`](docs/RELEASES.md), [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md), [`docs/UPGRADES.md`](docs/UPGRADES.md), [`docs/DEPRECATIONS.md`](docs/DEPRECATIONS.md), [`docs/CONTRIBUTION-TEMPLATES.md`](docs/CONTRIBUTION-TEMPLATES.md) and [`TRADEMARKS.md`](TRADEMARKS.md).
+The final Phase 10 release workflow creates the immutable release tag only after the dedicated release audit succeeds on merged `main`.
+
+See [`docs/RELEASES.md`](docs/RELEASES.md), [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md), [`docs/UPGRADES.md`](docs/UPGRADES.md), [`docs/DEPRECATIONS.md`](docs/DEPRECATIONS.md), [`docs/CONTRIBUTION-TEMPLATES.md`](docs/CONTRIBUTION-TEMPLATES.md), [`TRADEMARKS.md`](TRADEMARKS.md) and [`docs/PHASE-10-RELEASE-AUDIT.md`](docs/PHASE-10-RELEASE-AUDIT.md).
 
 ## Documentation
 
@@ -178,6 +172,8 @@ See [`docs/RELEASES.md`](docs/RELEASES.md), [`docs/MIGRATIONS.md`](docs/MIGRATIO
 - [`SUPPORT.md`](SUPPORT.md)
 - [`TRADEMARKS.md`](TRADEMARKS.md)
 - [`TRADEMARKS.es.md`](TRADEMARKS.es.md)
+- [`docs/PHASE-10-RELEASE-AUDIT.md`](docs/PHASE-10-RELEASE-AUDIT.md)
+- [`docs/RELEASE-NOTES-1.1.0.md`](docs/RELEASE-NOTES-1.1.0.md)
 - [`docs/RELEASES.md`](docs/RELEASES.md)
 - [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md)
 - [`docs/UPGRADES.md`](docs/UPGRADES.md)
@@ -204,16 +200,17 @@ npm run check:release-migrations
 npm run check:upgrade-deprecations
 npm run check:contribution-templates
 npm run check:branding-policy
+npm run check:phase-10-release
 npm run verify
 ```
 
-Dedicated workflows protect extension contracts, release/migration conventions, upgrade/deprecation lifecycle, contribution/release templates and branding/trademark separation in pull requests and on `main`.
+Dedicated workflows protect extension contracts, releases/migrations, upgrades/deprecations, contribution templates, branding and the final release identity.
 
 ## Phase completion rule
 
-A phase/slice is not complete until implementation and tests are finished, EN/ES documentation/README/ROADMAP/CHANGELOG are synchronized, the PR scope is reviewed, required CI is green, the PR is merged to `main`, and `main` is verified before the next phase starts.
+A phase/slice is not complete until implementation and tests are finished, EN/ES documentation/README/ROADMAP/CHANGELOG are synchronized, PR scope is reviewed, required CI is green, the PR is merged to `main`, and `main` is verified before subsequent roadmap work begins.
 
-Phase 10.7 follows the same rule; the final Phase 10 documentation/release audit remains separate until this slice is merged and verified.
+Phase 10 is closed by the audited v1.1.0 release. Future optional adapters and Kairoseth-specific commercial evolution are post-Phase-10 work unless explicitly promoted into a new core roadmap phase.
 
 ## License and branding
 
