@@ -10,7 +10,8 @@ _Last updated: 28 August 2026._
 
 **Phase 8 — External integrations: COMPLETE.**  
 **Phase 9 — Production hardening engineering baseline: COMPLETE.**  
-**Phase 10 — Open-source productisation — COMPLETE.**
+**Phase 10 — Open-source productisation: COMPLETE.**  
+**Phase 11 — Distribution & deployment ecosystem: IN PROGRESS.**
 
 Phase 10 closeout release: **v1.1.0**.
 
@@ -23,18 +24,23 @@ Phase 10 closeout release: **v1.1.0**.
 10.6     Contribution and release templates ------------------ COMPLETE
 10.7     Branding and trademark policy ----------------------- COMPLETE
 10.8     Final documentation/release audit + v1.1.0 ---------- COMPLETE
+
+11.1     Reproducible OCI/Docker distribution baseline ------- COMPLETE
+11.2     Registry publication + provenance ------------------- PLANNED
+11.3     Deployment recipes / orchestrator examples ---------- PLANNED
+11.4     Distribution release verification ------------------- PLANNED
 ```
 
-Final audit: [`docs/PHASE-10-RELEASE-AUDIT.md`](docs/PHASE-10-RELEASE-AUDIT.md)  
-Release notes: [`docs/RELEASE-NOTES-1.1.0.md`](docs/RELEASE-NOTES-1.1.0.md)
+Final Phase 10 audit: [`docs/PHASE-10-RELEASE-AUDIT.md`](docs/PHASE-10-RELEASE-AUDIT.md)  
+Container deployment: [`docs/CONTAINERS.md`](docs/CONTAINERS.md)
 
-Credentialed Stripe/Redsys TEST/LIVE E2E remains a separate provider-dependent validation item and does not reopen Phase 9 or block the provider-neutral v1.1.0 release.
+Credentialed Stripe/Redsys TEST/LIVE E2E remains a separate provider-dependent validation item and does not reopen Phase 9 or block provider-neutral distribution work.
 
 ---
 
 # Completed platform foundations
 
-Catalogue, identity, booking, commerce, post-purchase, operations, documents/reporting, external integrations and the Phase 9 production-hardening baseline are complete. The core includes persistent MongoDB capability adapters, provider-neutral payment boundaries, encrypted Traveller Data, operational workflows, signed outbound integrations, privacy/accessibility gates, recovery and repeatable performance baselines.
+Catalogue, identity, booking, commerce, post-purchase, operations, documents/reporting, external integrations, Phase 9 production hardening and Phase 10 open-source productisation are complete. The core includes persistent MongoDB capability adapters, provider-neutral payment boundaries, encrypted Traveller Data, operational workflows, signed outbound integrations, privacy/accessibility gates, recovery, repeatable performance baselines and a verified release lifecycle.
 
 ---
 
@@ -118,12 +124,70 @@ Documents: [`TRADEMARKS.md`](TRADEMARKS.md), [`TRADEMARKS.es.md`](TRADEMARKS.es.
 - package/README/CHANGELOG release identity moved to 1.1.0;
 - final audit and bilingual release notes added;
 - `check:phase-10-release` added to `npm run verify`;
-- dedicated release-audit workflow validates the merged `main` revision;
-- publication workflow creates the immutable `v1.1.0` tag and GitHub Release only after that main audit succeeds;
-- existing tags are never moved/recreated;
+- dedicated release-audit workflow validates merged `main`;
+- publication workflow created the immutable `v1.1.0` tag and GitHub Release after that audit succeeded;
 - historical 1.0.0 package state is documented honestly rather than fabricating a retroactive tag.
 
 Documents: [`docs/PHASE-10-RELEASE-AUDIT.md`](docs/PHASE-10-RELEASE-AUDIT.md), [`docs/RELEASE-NOTES-1.1.0.md`](docs/RELEASE-NOTES-1.1.0.md).
+
+---
+
+# Phase 11 — Distribution & deployment ecosystem — IN PROGRESS
+
+Goal: make the verified standalone core straightforward to distribute and operate as an immutable provider-neutral application artifact without leaking secrets, vendor coupling or private Kairoseth implementation details.
+
+## 11.1 — Reproducible OCI/Docker distribution baseline — COMPLETE
+
+Tracked by issue **#134**.
+
+Delivered:
+
+- provider-neutral multi-stage `Dockerfile` using Node.js 24 Debian slim;
+- build stage reuses `npm ci`, `npm run build` and `npm run package:standalone`;
+- final image contains the prepared standalone runtime rather than the full source/build toolchain;
+- fixed non-root runtime identity `app` / `10001:10001`;
+- runtime defaults limited to `NODE_ENV`, `HOSTNAME`, `PORT` and telemetry control;
+- privileged configuration/secrets remain runtime-injected and are not baked into image layers;
+- Docker healthcheck uses `/api/health/live`, while production routing remains tied to `/api/health/ready`;
+- `.dockerignore` reduces build context and excludes local environment/runtime artifacts;
+- `scripts/container-distribution-check.mjs` + `npm run check:container` are part of `npm run verify`;
+- dedicated blocking `Container distribution` workflow performs a real image build, non-root inspection, health wait and HTTP/static-asset smoke;
+- bilingual [`docs/CONTAINERS.md`](docs/CONTAINERS.md) / [`docs/CONTAINERS.es.md`](docs/CONTAINERS.es.md).
+
+Phase 11.1 does **not** publish an image to a registry. That boundary is deliberate.
+
+## 11.2 — Registry publication and provenance — PLANNED
+
+Candidate scope, not active until 11.1 is merged and verified:
+
+- select the public registry/distribution target;
+- publish immutable version/tag and digest references only from audited release commits;
+- define image labels/metadata and source/revision linkage;
+- add checksums/SBOM/provenance/signing policy where supported;
+- define retention and never-move tag rules;
+- keep private Kairoseth/customer images/configuration outside the public core.
+
+## 11.3 — Deployment recipes / orchestrator examples — PLANNED
+
+Candidate provider-neutral examples may cover:
+
+- Docker Compose for local evaluation and controlled self-hosting;
+- Kubernetes/container-platform deployment primitives;
+- reverse proxy/TLS/readiness configuration;
+- runtime secret/config injection and persistent external services;
+- upgrade/rollback using immutable image digests.
+
+No provider-specific platform becomes mandatory for the core.
+
+## 11.4 — Distribution release verification — PLANNED
+
+Potential closeout gate for Phase 11:
+
+- verify published artifact digest ↔ source tag/commit identity;
+- verify clean pull/run of the public artifact;
+- validate release notes/upgrade/rollback documentation;
+- preserve non-root, health and runtime-secret invariants in published artifacts;
+- close Phase 11 only after the same permanent documentation/PR/CI/merge/main-verification gate.
 
 ## Permanent project gate
 
@@ -136,16 +200,10 @@ implementation
 → required CI green
 → merge to main
 → verify main
-→ immutable release/tag when applicable
+→ immutable release/tag/artifact when applicable
 → subsequent roadmap work
 ```
 
-## Post-Phase-10 evolution
-
-Optional adapters driven by commercial/community demand and Kairoseth-specific capabilities continue as normal evolution. They are not retroactive Phase 10 blockers unless deliberately promoted into a new core roadmap phase.
-
-Potential future roadmap themes may include additional provider adapters, ecosystem packaging/distribution and new product capabilities, each with its own explicit phase/scope before implementation.
-
 ## Core non-goals
 
-The public core must not become permanently tied to one PSP, supplier, CRM/ERP, CMS, identity vendor, monitoring vendor, hosting provider or Kairoseth-only infrastructure.
+The public core must not become permanently tied to one PSP, supplier, CRM/ERP, CMS, identity vendor, monitoring vendor, hosting provider, container registry or Kairoseth-only infrastructure.
