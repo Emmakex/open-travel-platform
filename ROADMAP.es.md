@@ -33,44 +33,114 @@ Objetivo: hacer el core MIT fácil de adoptar, desplegar, extender, publicar, ac
 
 ## 10.1 — Bootstrap demo reproducible — COMPLETADA
 
-Instalación bloqueada, bootstrap demo seguro, evaluación sin infraestructura, smoke build/start/HTTP y onboarding EN/ES.
+- `npm ci` bloqueado;
+- bootstrap demo seguro/no destructivo;
+- evaluación sin infraestructura externa obligatoria;
+- smoke build/start/HTTP;
+- onboarding EN/ES.
 
 ## 10.2 — Despliegue standalone provider-neutral — COMPLETADA
 
-Runtime standalone, packaging, smoke HTTP/static real y guía de readiness/TLS/MongoDB/workers/rollback.
+- runtime Next.js `output: standalone`;
+- `npm run package:standalone`;
+- smoke HTTP/static real;
+- guía de readiness/TLS/MongoDB/workers/rollback.
 
 ## 10.3 — Contratos de extensión y adapters de referencia — COMPLETADA
 
-Nueve interfaces provider-neutral verificadas, mapa de autoridad, compatibilidad/versionado, adapters reales de referencia y gate permanente `check:extension-contracts`.
+Documentos:
+
+- [`docs/EXTENSION-POINT-INVENTORY.es.md`](docs/EXTENSION-POINT-INVENTORY.es.md)
+- [`docs/EXTENSION-COMPATIBILITY.es.md`](docs/EXTENSION-COMPATIBILITY.es.md)
+- [`docs/REFERENCE-ADAPTERS.es.md`](docs/REFERENCE-ADAPTERS.es.md)
+- [`docs/EXTENSION-VALIDATION.es.md`](docs/EXTENSION-VALIDATION.es.md)
+
+Entregado: nueve interfaces provider-neutral verificadas, mapa de autoridad, versionado/compatibilidad, referencias reales y gate `check:extension-contracts`.
 
 ## 10.4 — Convenciones de release y migraciones — COMPLETADA
 
-Semantic Versioning, tags inmutables `vX.Y.Z`, releases desde `main` verificado, clases de migración, **expand → migrate → contract**, recuperación y gate `check:release-migrations`.
+Documentos:
 
-## 10.5 — Lifecycle de upgrades y deprecaciones — COMPLETADA
+- [`docs/RELEASES.es.md`](docs/RELEASES.es.md)
+- [`docs/RELEASES.md`](docs/RELEASES.md)
+- [`docs/MIGRATIONS.es.md`](docs/MIGRATIONS.es.md)
+- [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md)
 
-Rutas soportadas de upgrade, lifecycle `ACTIVE → DEPRECATED → REMOVED`, retirada ordinaria solo en MAJOR, excepciones de seguridad documentadas y gate `check:upgrade-deprecations`.
+Entregado:
+
+- Semantic Versioning estable y tags inmutables `vX.Y.Z`;
+- identidad package/README/CHANGELOG/tag alineada;
+- releases solo desde `main` verificado;
+- clasificación de migraciones de configuración, datos, wire, claves y cambios destructivos;
+- patrón **expand → migrate → contract**;
+- sin migraciones destructivas ocultas en startup;
+- `check:release-migrations` y workflow bloqueante.
+
+## 10.5 — Política de lifecycle de upgrades y deprecaciones — COMPLETADA
+
+Documentos:
+
+- [`docs/UPGRADES.es.md`](docs/UPGRADES.es.md)
+- [`docs/UPGRADES.md`](docs/UPGRADES.md)
+- [`docs/DEPRECATIONS.es.md`](docs/DEPRECATIONS.es.md)
+- [`docs/DEPRECATIONS.md`](docs/DEPRECATIONS.md)
+
+Contrato de soporte/upgrade:
+
+- la última release estable del major actual es el target soportado principal;
+- no hay LTS/backports garantizados salvo anuncio explícito;
+- upgrades del mismo major están soportados aplicando migraciones documentadas;
+- un major upgrade parte de la última release estable del major inmediatamente anterior cuando la ruta está documentada;
+- saltos de major solo si se documentan explícitamente;
+- operadores registran versiones/SHAs origen/destino y recuperación exactos.
+
+Lifecycle:
+
+```text
+ACTIVE → DEPRECATED → REMOVED
+```
+
+- retirada ordinaria de superficies públicas únicamente en una release **MAJOR**;
+- avisos indican reemplazo, primera release deprecated y earliest ordinary removal;
+- PATCH/MINOR no eliminan ni reinterpretan silenciosamente contratos/configuración soportados;
+- configuración, interfaces de extensión, wire contracts y datos persistentes siguen el mismo lifecycle;
+- seguridad puede acelerar retirada solo mediante excepción documentada;
+- warnings nunca filtran secretos ni datos protegidos.
+
+Automatización:
+
+```bash
+npm run check:upgrade-deprecations
+npm run verify
+```
+
+Entregado:
+
+- `scripts/upgrade-deprecation-check.mjs`;
+- `check:upgrade-deprecations` dentro de `verify`;
+- workflow `.github/workflows/upgrade-deprecations.yml`;
+- integración con releases, migraciones, compatibilidad, SUPPORT y CONTRIBUTING.
 
 ## 10.6 — Plantillas de contribución y release — COMPLETADA
 
-Documentos autoritativos:
+Documentos:
 
 - [`docs/CONTRIBUTION-TEMPLATES.es.md`](docs/CONTRIBUTION-TEMPLATES.es.md)
 - [`docs/CONTRIBUTION-TEMPLATES.md`](docs/CONTRIBUTION-TEMPLATES.md)
 
 Entregado:
 
-- una única `.github/PULL_REQUEST_TEMPLATE.md` canónica; eliminado el duplicado por mayúsculas/minúsculas;
-- checklist PR alineado con fronteras de capacidad, SemVer, migraciones, lifecycle, autoridad/seguridad/privacidad, UX/accesibilidad y cierre de fases;
-- issue forms bug/feature con versión exacta, compatibilidad/contrato público y seguridad de datos;
-- `.github/RELEASE_TEMPLATE.md` reutilizable con identidad, compatibilidad, upgrade/migración, deprecaciones/retiradas, rollback, validación y publicación;
-- `scripts/contribution-template-check.mjs` y `npm run check:contribution-templates`;
+- una única `.github/PULL_REQUEST_TEMPLATE.md` canónica;
+- checklist PR alineado con fronteras de capacidad/extensión, SemVer, migraciones, lifecycle, autoridad/seguridad/privacidad, UX/accesibilidad y cierre de fases;
+- issue forms bug/feature con versión exacta, contexto upgrade/contrato público, neutralidad de proveedor y seguridad de datos;
+- `.github/RELEASE_TEMPLATE.md` reutilizable para identidad, compatibilidad, migraciones, deprecaciones/retiradas, rollback, validación y publicación;
+- `scripts/contribution-template-check.mjs` y `check:contribution-templates` dentro de `npm run verify`;
 - workflow dedicado `.github/workflows/contribution-templates.yml`;
-- gate integrado en `npm run verify` y documentación de contribución.
+- documentación de contribución sincronizada con las Fases 10.3–10.5.
 
 ## Trabajo posterior planificado
 
-Ningún bloque posterior está activo por aparecer aquí. Cada uno recibe rama propia y gate completo al iniciarse.
+Ningún bloque posterior está activo por aparecer aquí. Cada uno recibe su rama y gate completo al iniciarse.
 
 Posibles siguientes slices:
 
