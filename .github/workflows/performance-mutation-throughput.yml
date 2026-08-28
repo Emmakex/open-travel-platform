@@ -1,0 +1,89 @@
+name: Mutation throughput baseline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: performance-mutation-throughput-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      MONGODB_URI: mongodb://127.0.0.1:27017/?replicaSet=rs0
+      MONGODB_DB_NAME: ktravel_ci_mutation_load_${{ github.run_id }}_${{ github.run_attempt }}
+      BOOKING_MODE: mongodb
+      CRM_SYNC_MODE: disabled
+      ERP_ACCOUNTING_MODE: disabled
+      SUPPLIER_FULFILMENT_ADAPTER_MODE: disabled
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Resolve dependency lock
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+
+      - name: Clean install from resolved lock
+        run: npm ci --no-fund
+
+      - name: Mutation throughput source invariants
+        run: npm run check:performance-mutation-throughput
+
+      - name: Start MongoDB 8.0 replica set
+        run: |
+          docker run --rm -d \
+            --name otp-mongo-mutation-load \
+            -p 27017:27017 \
+            mongo:8.0.29 \
+            --replSet rs0 \
+            --bind_ip_all
+
+          reachable=false
+          for attempt in {1..30}; do
+            if docker exec otp-mongo-mutation-load mongosh --quiet --eval 'db.adminCommand({ ping: 1 }).ok' 2>/dev/null | grep -q 1; then
+              reachable=true
+              break
+            fi
+            sleep 1
+          done
+          test "$reachable" = "true"
+
+          docker exec otp-mongo-mutation-load mongosh --quiet --eval \
+            'rs.initiate({_id:"rs0",members:[{_id:0,host:"127.0.0.1:27017"}]})'
+
+          primary=false
+          for attempt in {1..30}; do
+            if docker exec otp-mongo-mutation-load mongosh --quiet --eval 'db.hello().isWritablePrimary' 2>/dev/null | grep -q true; then
+              primary=true
+              break
+            fi
+            sleep 1
+          done
+          test "$primary" = "true"
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Blocking bounded mutation throughput baseline
+        run: npm run test:performance-mutation-throughput
+
+      - name: MongoDB diagnostics on failure
+        if: failure()
+        run: docker logs otp-mongo-mutation-load || true
+
+      - name: Stop MongoDB test container
+        if: always()
+        run: docker rm -f otp-mongo-mutation-load || true
