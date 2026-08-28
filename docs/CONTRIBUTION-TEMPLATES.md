@@ -2,7 +2,7 @@
 
 <p align="center"><strong>English</strong> · <a href="./CONTRIBUTION-TEMPLATES.es.md">Español</a></p>
 
-Status: **Phase 10.6 — COMPLETE candidate pending closing PR/CI/merge**
+Status: **Phase 10.6 — COMPLETE**
 
 ## Purpose
 
@@ -93,4 +93,4 @@ A valid future change can update the protected template vocabulary, but the docs
 
 ## Phase completion rule
 
-Phase 10.6 becomes officially complete only after its closing PR is green, merged to `main`, and `main` is verified. No branding/trademark slice starts before that gate is satisfied.
+Phase 10.6 follows the permanent project completion gate: implementation, validation, synchronized EN/ES documentation, diff review, green CI, merge to `main`, and verification of `main` before branding/trademark work starts.
