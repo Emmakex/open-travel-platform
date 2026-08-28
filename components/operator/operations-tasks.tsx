@@ -96,41 +96,47 @@ export function OperationsTasks({
     "no-changes": tr(locale, "No task changes were detected.", "No se detectaron cambios en la tarea."),
     "update-failed": tr(locale, "The task change could not be saved.", "No se pudo guardar el cambio de la tarea.")
   };
+  const hasError = Boolean(error && errors[error]);
+  const assigneeInvalid = error === "invalid-assignee" || error === "invalid-task";
+  const dueDateInvalid = error === "invalid-due-date" || error === "invalid-task";
+  const titleInvalid = error === "invalid-task";
+  const commentInvalid = error === "invalid-comment";
+  const statusInvalid = error === "invalid-transition";
 
   return (
-    <section className={styles.panel} id="tasks" style={{ marginTop: "1rem" }}>
+    <section className={styles.panel} id="tasks" style={{ marginTop: "1rem" }} aria-labelledby="tasks-title">
       <div className="eyebrow">{tr(locale, "Tasks and follow-ups", "Tareas y seguimientos")}</div>
-      <h2>{tr(locale, "Team actions", "Acciones del equipo")}</h2>
+      <h2 id="tasks-title">{tr(locale, "Team actions", "Acciones del equipo")}</h2>
       <p className={styles.lead}>{tr(
         locale,
         "Create dated internal tasks, assign them to active staff and keep follow-up notes with a durable history. These tasks are never shown to customers.",
         "Crea tareas internas con fecha, asígnalas a personal activo y conserva seguimientos con historial. Estas tareas nunca se muestran al cliente."
       )}</p>
 
-      {updated === "created" ? <div className={styles.notice}>{tr(locale, "Task created.", "Tarea creada.")}</div> : null}
-      {updated === "updated" ? <div className={styles.notice}>{tr(locale, "Task updated.", "Tarea actualizada.")}</div> : null}
-      {updated === "comment" ? <div className={styles.notice}>{tr(locale, "Follow-up added.", "Seguimiento añadido.")}</div> : null}
-      {error && errors[error] ? <div className={styles.notice}>{errors[error]}</div> : null}
+      {updated === "created" ? <div id="tasks-status" className={styles.notice} role="status" aria-live="polite">{tr(locale, "Task created.", "Tarea creada.")}</div> : null}
+      {updated === "updated" ? <div id="tasks-status" className={styles.notice} role="status" aria-live="polite">{tr(locale, "Task updated.", "Tarea actualizada.")}</div> : null}
+      {updated === "comment" ? <div id="tasks-status" className={styles.notice} role="status" aria-live="polite">{tr(locale, "Follow-up added.", "Seguimiento añadido.")}</div> : null}
+      {hasError ? <div id="tasks-error" className={styles.notice} role="alert" aria-live="assertive">{errors[error!]}</div> : null}
 
-      <form action={createOperationsTaskAction} className={styles.editorForm}>
+      <form action={createOperationsTaskAction} className={styles.editorForm} aria-label={tr(locale, "Create internal task", "Crear tarea interna")} aria-describedby={hasError && !commentInvalid && !statusInvalid ? "tasks-error" : undefined}>
         <input type="hidden" name="targetType" value={targetType} />
         <input type="hidden" name="targetId" value={targetId} />
         <input type="hidden" name="returnTo" value={returnTo} />
         <div className={styles.formGrid}>
           <label className={styles.field}>
             <span>{tr(locale, "Task", "Tarea")}</span>
-            <input name="title" maxLength={160} required disabled={!writesEnabled} placeholder={tr(locale, "Confirm hotel with supplier", "Confirmar hotel con proveedor")} />
+            <input name="title" maxLength={160} required disabled={!writesEnabled} placeholder={tr(locale, "Confirm hotel with supplier", "Confirmar hotel con proveedor")} aria-invalid={titleInvalid ? "true" : undefined} />
           </label>
           <label className={styles.field}>
             <span>{tr(locale, "Assignee", "Responsable")}</span>
-            <select name="assigneeStaffId" defaultValue="" disabled={!writesEnabled}>
+            <select name="assigneeStaffId" defaultValue="" disabled={!writesEnabled} aria-invalid={assigneeInvalid ? "true" : undefined}>
               <option value="">{tr(locale, "Unassigned", "Sin asignar")}</option>
               {staffOptions.map((member) => <option key={member.id} value={member.id} disabled={member.status !== "active"}>{member.displayName} · {staffRoleLabel(member.role, locale)}{member.status !== "active" ? ` · ${tr(locale, "inactive", "inactivo")}` : ""}</option>)}
             </select>
           </label>
           <label className={styles.field}>
             <span>{tr(locale, "Due date", "Vencimiento")}</span>
-            <input name="dueDate" type="date" disabled={!writesEnabled} />
+            <input name="dueDate" type="date" disabled={!writesEnabled} aria-invalid={dueDateInvalid ? "true" : undefined} />
           </label>
         </div>
         <label className={styles.field}>
@@ -146,22 +152,23 @@ export function OperationsTasks({
         {tasks.length ? <div className={styles.managementList}>{tasks.map((task) => {
           const history = histories[task.id] ?? { events: [], comments: [] };
           const currentAssigneeIncluded = !task.assigneeStaffId || staffOptions.some((member) => member.id === task.assigneeStaffId);
+          const taskTitleId = `task-${task.id}-title`;
           return (
-            <div className={styles.editorSection} key={task.id} style={{ marginTop: "1rem" }}>
+            <article className={styles.editorSection} key={task.id} style={{ marginTop: "1rem" }} aria-labelledby={taskTitleId}>
               <div>
-                <strong>{task.title}</strong>{" "}<span className={styles.badge}>{operationsTaskStatusLabel(task.status, locale)}</span>
+                <h4 id={taskTitleId}>{task.title}{" "}<span className={styles.badge}>{operationsTaskStatusLabel(task.status, locale)}</span></h4>
                 <p className={styles.muted}>{dueLabel(task, locale)} · {task.assigneeDisplayName ?? tr(locale, "Unassigned", "Sin asignar")}</p>
                 {task.details ? <p>{task.details}</p> : null}
                 <p className={styles.muted}>{tr(locale, "Created by", "Creada por")} {task.createdByDisplayName} · {formatOperatorDate(task.createdAt, locale, true)}</p>
               </div>
 
-              {task.status !== "cancelled" ? <form action={updateOperationsTaskAction} className={styles.editorForm}>
+              {task.status !== "cancelled" ? <form action={updateOperationsTaskAction} className={styles.editorForm} aria-label={tr(locale, `Update task ${task.title}`, `Actualizar tarea ${task.title}`)} aria-describedby={hasError && !commentInvalid ? "tasks-error" : undefined}>
                 <input type="hidden" name="taskId" value={task.id} />
                 <input type="hidden" name="returnTo" value={returnTo} />
                 <div className={styles.formGrid}>
                   <label className={styles.field}>
                     <span>{tr(locale, "Status", "Estado")}</span>
-                    <select name="status" defaultValue={task.status} disabled={!writesEnabled}>
+                    <select name="status" defaultValue={task.status} disabled={!writesEnabled} aria-invalid={statusInvalid ? "true" : undefined}>
                       <option value="open">{operationsTaskStatusLabel("open", locale)}</option>
                       <option value="in-progress">{operationsTaskStatusLabel("in-progress", locale)}</option>
                       <option value="completed">{operationsTaskStatusLabel("completed", locale)}</option>
@@ -170,7 +177,7 @@ export function OperationsTasks({
                   </label>
                   <label className={styles.field}>
                     <span>{tr(locale, "Assignee", "Responsable")}</span>
-                    <select name="assigneeStaffId" defaultValue={task.assigneeStaffId ?? ""} disabled={!writesEnabled}>
+                    <select name="assigneeStaffId" defaultValue={task.assigneeStaffId ?? ""} disabled={!writesEnabled} aria-invalid={assigneeInvalid ? "true" : undefined}>
                       <option value="">{tr(locale, "Unassigned", "Sin asignar")}</option>
                       {!currentAssigneeIncluded && task.assigneeStaffId ? <option value={task.assigneeStaffId}>{task.assigneeDisplayName ?? task.assigneeStaffId} · {tr(locale, "inactive", "inactivo")}</option> : null}
                       {staffOptions.map((member) => <option key={member.id} value={member.id} disabled={member.status !== "active"}>{member.displayName} · {staffRoleLabel(member.role, locale)}{member.status !== "active" ? ` · ${tr(locale, "inactive", "inactivo")}` : ""}</option>)}
@@ -178,23 +185,23 @@ export function OperationsTasks({
                   </label>
                   <label className={styles.field}>
                     <span>{tr(locale, "Due date", "Vencimiento")}</span>
-                    <input name="dueDate" type="date" defaultValue={task.dueDate ?? ""} disabled={!writesEnabled} />
+                    <input name="dueDate" type="date" defaultValue={task.dueDate ?? ""} disabled={!writesEnabled} aria-invalid={dueDateInvalid ? "true" : undefined} />
                   </label>
                 </div>
                 {writesEnabled ? <button className="button button-secondary" type="submit">{tr(locale, "Save task", "Guardar tarea")}</button> : null}
               </form> : null}
 
-              <form action={addOperationsTaskCommentAction} className={styles.editorForm}>
+              <form action={addOperationsTaskCommentAction} className={styles.editorForm} aria-label={tr(locale, `Add follow-up to ${task.title}`, `Añadir seguimiento a ${task.title}`)} aria-describedby={commentInvalid ? "tasks-error" : undefined}>
                 <input type="hidden" name="taskId" value={task.id} />
                 <input type="hidden" name="returnTo" value={returnTo} />
                 <label className={styles.field}>
                   <span>{tr(locale, "Follow-up", "Seguimiento")}</span>
-                  <textarea name="body" rows={2} maxLength={2000} required disabled={!writesEnabled} placeholder={tr(locale, "Add the latest update for the team.", "Añade la última actualización para el equipo.")} />
+                  <textarea name="body" rows={2} maxLength={2000} required disabled={!writesEnabled} placeholder={tr(locale, "Add the latest update for the team.", "Añade la última actualización para el equipo.")} aria-invalid={commentInvalid ? "true" : undefined} />
                 </label>
                 {writesEnabled ? <button className="button button-secondary" type="submit">{tr(locale, "Add follow-up", "Añadir seguimiento")}</button> : null}
               </form>
 
-              {history.comments.length || history.events.length ? <div className={styles.auditList}>
+              {history.comments.length || history.events.length ? <div className={styles.auditList} aria-label={tr(locale, `History for ${task.title}`, `Historial de ${task.title}`)}>
                 {[
                   ...history.comments.map((comment) => ({ kind: "comment" as const, at: comment.createdAt, comment })),
                   ...history.events.map((event) => ({ kind: "event" as const, at: event.occurredAt, event }))
@@ -214,7 +221,7 @@ export function OperationsTasks({
                   </div>
                 ))}
               </div> : null}
-            </div>
+            </article>
           );
         })}</div> : <p className={styles.muted}>{tr(locale, "No tasks have been created for this item yet.", "Todavía no se han creado tareas para este elemento.")}</p>}
       </div>
