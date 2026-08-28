@@ -3,7 +3,7 @@
 <p align="center"><a href="./EXTENSION-CONTRACTS.md">English</a> · <strong>Español</strong></p>
 
 Estado: **Fase 10.3 — ACTIVA**  
-Slice actual: **10.3.2 — política de compatibilidad y versionado**  
+Slice actual: **10.3.3 — adapters/ejemplos de referencia para contribuidores**  
 Alcance: fronteras públicas de extensión del core MIT  
 Despliegue de referencia: **Kairoseth Travel** en `travel.kairoseth.com`
 
@@ -13,7 +13,10 @@ La Fase 10.3 convierte las fronteras de adapters ya existentes en Open Travel Pl
 
 El objetivo no es exponer cada módulo interno como API de plugins. El objetivo es hacer predecibles, versionables y seguras de extender las fronteras provider-neutral existentes sin permitir que un sistema externo se convierta silenciosamente en autoridad sobre dominios centrales que no le corresponden.
 
-El inventario respaldado por código de la Fase 10.3.1 ya está completado. Consulta [`EXTENSION-POINT-INVENTORY.es.md`](EXTENSION-POINT-INVENTORY.es.md) para ver la lista verificada de interfaces, rutas de composición, implementaciones incluidas, contratos de red y mapa de autoridad.
+La Fase 10.3.1 completó el inventario respaldado por código y la Fase 10.3.2 completó la política de compatibilidad/versionado. Consulta:
+
+- [`EXTENSION-POINT-INVENTORY.es.md`](EXTENSION-POINT-INVENTORY.es.md) — interfaces verificadas, composición, implementaciones, contratos de red y mapa de autoridad;
+- [`EXTENSION-COMPATIBILITY.es.md`](EXTENSION-COMPATIBILITY.es.md) — SemVer, versiones wire, schemas de eventos, firma, deprecación y reglas de migración.
 
 ## Regla principal: la autoridad debe permanecer explícita
 
@@ -100,53 +103,53 @@ La Fase 10.3.1 también deja explícito qué **no** es un contrato público sopo
 - helpers MongoDB y módulos arbitrarios `lib/*`, `app/*` o componentes no se convierten automáticamente en APIs de plugins;
 - adapters propietarios de Kairoseth/cliente pueden consumir contratos públicos, pero el core MIT no debe depender de ellos.
 
-## Política de compatibilidad/versionado — Fase 10.3.2 activa
+## Política de compatibilidad/versionado — COMPLETADA (10.3.2)
 
-Los contratos públicos de extensión deben distinguir evolución compatible de breaking changes.
+La política autoritativa es [`EXTENSION-COMPATIBILITY.es.md`](EXTENSION-COMPATIBILITY.es.md).
 
-### Cambios backward-compatible
+La Fase 10.3.2 establece:
 
-Normalmente compatibles:
+- no se introduce una constante global artificial de versión de extensiones;
+- las interfaces in-process siguen el SemVer del release del core;
+- las rutas y headers REST v1 existentes permanecen sin cambios;
+- que Booking/Supplier/CRM compartan `X-OTP-Contract-Version` no los convierte en una única familia de schema;
+- ERP/contabilidad conserva `X-OTP-Accounting-Contract-Version: 1`;
+- FailureTransport conserva `X-OTP-Failure-Contract-Version: 1` y versiona de forma independiente `FailureTransportEvent.schemaVersion`;
+- el catálogo HTTP sin versión queda congelado como semántica legacy-v1 y no puede romperse in-place;
+- `IntegrationEventEnvelope.version` y la firma webhook `v1=` son dimensiones de compatibilidad independientes;
+- autoridad, autenticación, idempotencia, semántica de estados y allowlists de datos protegidos forman parte del contrato;
+- los adapters de mutación no pueden hacer downgrade silencioso de versiones de protocolo;
+- la retirada ordinaria exige deprecación y guía de migración;
+- los breaking changes requieren release major del core o un contrato wire paralelo/nuevo cuando corresponda.
 
-- añadir campos opcionales con defaults seguros;
-- añadir capacidades opcionales que adapters existentes no estén obligados a implementar;
-- añadir códigos de error sin cambiar semántica de éxitos existentes;
-- añadir nuevos endpoints/operaciones sin modificar los existentes;
-- reforzar documentación sin cambiar valores aceptados en runtime.
+### Evolución compatible
 
-### Breaking changes
+Normalmente compatible:
+
+- campos opcionales aditivos con ausencia segura;
+- implementaciones nuevas opt-in detrás de una interfaz sin cambios;
+- endpoints nuevos sin modificar los existentes;
+- event types nuevos con suscripción explícita;
+- upgrades de APIs proveedor absorbidos dentro del adapter mientras el contrato normalizado del core permanece estable.
+
+### Evolución breaking
 
 Normalmente breaking:
 
-- eliminar o renombrar campos obligatorios;
-- cambiar el significado de un estado existente;
-- cambiar supuestos de ownership o autoridad;
-- cambiar semántica de idempotencia;
-- cambiar autenticación o headers de versión obligatorios;
-- convertir una operación read-only/downstream-only en autoridad de mutación;
-- ampliar datos salientes más allá de la allowlist documentada.
+- eliminar/renombrar campos o métodos obligatorios;
+- añadir métodos obligatorios a interfaces públicas implementadas por terceros;
+- cambiar headers de auth/versión o rutas/métodos de endpoints;
+- cambiar significado de estados, autoridad o idempotencia;
+- ampliar exposición de datos protegidos;
+- convertir comportamiento downstream-only/subordinado a workflow en autoridad de mutación inversa.
 
-Los breaking changes públicos requieren una ruta deliberada de versión/migración. Los cambios específicos de una API proveedor deberían absorberse dentro del adapter siempre que sea posible, evitando romper el contrato del core.
+Consulta matriz completa, ciclo de deprecación y requisitos de migración en [`EXTENSION-COMPATIBILITY.es.md`](EXTENSION-COMPATIBILITY.es.md).
 
-La Fase 10.3.2 convertirá estos principios en una matriz explícita para interfaces tipadas in-process, contratos HTTP, schemas de eventos, deprecación y migraciones.
-
-## Identificadores de versión
-
-Los contratos de red existentes ya emplean varios mecanismos deliberados:
-
-- REST booking genérico: `/v1` más `X-OTP-Contract-Version: 1`;
-- adapters de referencia Supplier/CRM/ERP: contratos REST v1 versionados;
-- `FailureTransportEvent`: `schemaVersion: 1`;
-- eventos de integraciones salientes: schemas versionados;
-- catálogo HTTP: contrato API read-only actual.
-
-La Fase 10.3.2 definirá cuándo cada mecanismo exige transición de versión mayor o ruta de deprecación. No debe introducirse una única versión global de extensiones salvo que mejore materialmente la compatibilidad de las fronteras existentes.
-
-## Requisitos de adapters de referencia — objetivo de 10.3.3
+## Requisitos de adapters de referencia — Fase 10.3.3 activa
 
 Un adapter de referencia para contribuidores debe demostrar el comportamiento mínimo correcto y no incrustar un vendor comercial específico.
 
-Debe mostrar:
+Las implementaciones/ejemplos de referencia deben mostrar:
 
 1. composición/configuración opt-in explícita;
 2. credenciales server-only para transportes privilegiados;
@@ -159,7 +162,10 @@ Debe mostrar:
 9. audit-before-apply cuando una respuesta externa afecte un workflow local;
 10. allowlists explícitas de datos salientes;
 11. ausencia de filtración de Traveller Data protegido, secretos o payloads raw;
-12. ausencia de escalado de autoridad cross-domain.
+12. ausencia de escalado de autoridad cross-domain;
+13. compatibilidad con el identificador público de versión existente;
+14. upgrades de versión de proveedor absorbidos internamente cuando el contrato core pueda permanecer estable;
+15. comportamiento explícito cuando sea necesaria una migración deliberada v1 → v2.
 
 ## Frontera de adapters propietarios
 
@@ -189,9 +195,9 @@ El nombre exacto del script/test se decidirá cuando llegue la implementación. 
 ```text
 10.3.1  Inventario público + mapa de autoridad              COMPLETADA
    ↓
-10.3.2  Política de compatibilidad/versionado               ACTIVA
+10.3.2  Política de compatibilidad/versionado               COMPLETADA
    ↓
-10.3.3  Adapters/ejemplos para contribuidores               PLANIFICADA
+10.3.3  Adapters/ejemplos para contribuidores               ACTIVA
    ↓
 10.3.4  Validación automatizada permanente                  PLANIFICADA
    ↓
@@ -214,6 +220,7 @@ La Fase 10.3 solo está completada cuando:
 ## Documentación relacionada
 
 - [`EXTENSION-POINT-INVENTORY.es.md`](EXTENSION-POINT-INVENTORY.es.md)
+- [`EXTENSION-COMPATIBILITY.es.md`](EXTENSION-COMPATIBILITY.es.md)
 - [`EXTENSION-POINT-INVENTORY.md`](EXTENSION-POINT-INVENTORY.md)
 - [`../ROADMAP.es.md`](../ROADMAP.es.md)
 - [`ADAPTER-GUIDE.md`](ADAPTER-GUIDE.md)

@@ -21,7 +21,7 @@ La plataforma está muy por encima del MVP original de catálogo/reservas. Ya es
 
 **Fase 9 — Baseline de ingeniería de endurecimiento productivo está COMPLETADA.** Incluye seguridad/operabilidad, validación crítica de persistencia/concurrencia/contratos, observabilidad/recovery/auditoría, privacidad/retención, accesibilidad y preparación de rendimiento/carga.
 
-**Fase 10 — Productización open-source está EN CURSO. Las Fases 10.1 y 10.2 están COMPLETADAS. La Fase 10.3 — Contratos de extensión y adapters de referencia está ACTIVA: 10.3.1 inventario/mapa de autoridad está COMPLETADA y 10.3.2 política de compatibilidad/versionado está ACTIVA.**
+**Fase 10 — Productización open-source está EN CURSO. Las Fases 10.1 y 10.2 están COMPLETADAS. La Fase 10.3 — Contratos de extensión y adapters de referencia está ACTIVA: 10.3.1 inventario/mapa de autoridad y 10.3.2 compatibilidad/versionado están COMPLETADAS; 10.3.3 adapters de referencia para contribuidores está ACTIVA.**
 
 La validación E2E TEST/LIVE con credenciales Stripe/Redsys sigue pendiente hasta disponer de cuentas adecuadas. Es una validación de release dependiente de proveedores y no reabre el baseline de ingeniería completado de la Fase 9.
 
@@ -186,20 +186,30 @@ Inventario autoritativo: [`docs/EXTENSION-POINT-INVENTORY.es.md`](docs/EXTENSION
 - mantenidos SMTP/email y módulos internos arbitrarios fuera del contrato público de plugins;
 - clasificados Stripe/Redsys como integraciones PSP y no como sustitutos de `PaymentRepository`.
 
-### 10.3.2 — Compatibilidad y versionado de contratos — ACTIVA
+### 10.3.2 — Compatibilidad y versionado de contratos — COMPLETADA
 
-- definir identificadores públicos estables y expectativas de compatibilidad;
-- documentar cambios backward-compatible frente a breaking changes;
-- definir expectativas de deprecación antes de eliminar contratos;
-- mapear reglas entre interfaces tipadas, contratos HTTP y schemas de eventos;
-- mantener payloads/versionado específicos de proveedor dentro del adapter siempre que sea posible.
+Política autoritativa: [`docs/EXTENSION-COMPATIBILITY.es.md`](docs/EXTENSION-COMPATIBILITY.es.md).
 
-### 10.3.3 — Adapters de referencia para contribuidores — PLANIFICADA
+- las interfaces in-process siguen el SemVer del release core en lugar de versiones numéricas independientes;
+- las rutas y headers REST v1 actuales se preservan exactamente;
+- Booking/Supplier/CRM pueden compartir `X-OTP-Contract-Version` sin compartir un único ciclo de schema;
+- ERP/contabilidad y FailureTransport conservan sus headers v1 especializados;
+- el catálogo HTTP sin versión queda congelado como semántica legacy-v1 y no puede romperse in-place;
+- schema de evento y versión de firma webhook son dimensiones independientes;
+- autoridad, autenticación, idempotencia, estados y allowlists de datos protegidos son semántica contractual;
+- se prohíbe el downgrade automático de versión wire en mutaciones;
+- la retirada ordinaria de contratos requiere deprecación y guía de migración;
+- los breaking changes requieren release major del core o contrato wire paralelo/nuevo deliberado.
 
-- aportar implementaciones/ejemplos mínimos sobre contratos genéricos existentes;
-- demostrar credenciales server-only, validación runtime, transporte acotado y normalización de errores;
+### 10.3.3 — Adapters de referencia para contribuidores — ACTIVA
+
+- aportar implementaciones/ejemplos mínimos provider-neutral sobre contratos genéricos existentes;
+- demostrar un adapter source/repository acotado y otro exclusivamente downstream;
+- demostrar credenciales server-only, validación runtime, transporte acotado y errores estables;
 - demostrar idempotencia en mutaciones y audit-before-apply cuando aplique;
-- mostrar cómo mantener integraciones propietarias fuera del core genérico.
+- mostrar upgrades de API proveedor absorbidos dentro del adapter manteniendo estable el contrato core;
+- mostrar migración deliberada v1 → v2 sin fallback oculto de mutaciones;
+- mostrar cómo mantener integraciones propietarias fuera del core MIT genérico.
 
 ### 10.3.4 — Validación permanente de contratos de extensión — PLANIFICADA
 
@@ -241,8 +251,8 @@ Fase 9   Baseline de hardening productivo --------------------- COMPLETADA
 10.1     Bootstrap demo desde clon limpio --------------------- COMPLETADA
 10.2     Despliegue self-host standalone ---------------------- COMPLETADA
 10.3.1   Inventario de extensiones + mapa de autoridad -------- COMPLETADA
-10.3.2   Política de compatibilidad/versionado ---------------- ACTIVA
-10.3.3   Ejemplos de adapters de referencia ------------------- PLANIFICADA
+10.3.2   Política de compatibilidad/versionado ---------------- COMPLETADA
+10.3.3   Ejemplos de adapters de referencia ------------------- ACTIVA
 10.3.4   Validación permanente de contratos ------------------- PLANIFICADA
           ↓
 Después   Convenciones de release/migración/contribución/marca

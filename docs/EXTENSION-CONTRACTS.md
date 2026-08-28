@@ -3,7 +3,7 @@
 <p align="center"><strong>English</strong> · <a href="./EXTENSION-CONTRACTS.es.md">Español</a></p>
 
 Status: **Phase 10.3 — ACTIVE**  
-Current slice: **10.3.2 — compatibility and versioning policy**  
+Current slice: **10.3.3 — contributor-facing reference adapters/examples**  
 Scope: public extension boundaries of the MIT core  
 Reference deployment: **Kairoseth Travel** at `travel.kairoseth.com`
 
@@ -13,7 +13,10 @@ Phase 10.3 turns the adapter boundaries that already exist in Open Travel Platfo
 
 The goal is not to expose every internal module as a plugin API. The goal is to make the existing provider-neutral boundaries predictable, versionable and safe to extend without allowing an external system to silently become authoritative over unrelated core domains.
 
-The code-backed Phase 10.3.1 inventory is now complete. See [`EXTENSION-POINT-INVENTORY.md`](EXTENSION-POINT-INVENTORY.md) for the verified interface list, composition paths, bundled implementations, network contracts and authority map.
+Phase 10.3.1 completed the code-backed extension inventory. Phase 10.3.2 completed the compatibility/versioning policy. See:
+
+- [`EXTENSION-POINT-INVENTORY.md`](EXTENSION-POINT-INVENTORY.md) — verified interfaces, composition paths, implementations, wire contracts and authority map;
+- [`EXTENSION-COMPATIBILITY.md`](EXTENSION-COMPATIBILITY.md) — SemVer, wire-version, event-schema, signature, deprecation and migration rules.
 
 ## Core rule: authority stays explicit
 
@@ -100,53 +103,53 @@ Phase 10.3.1 also records what is **not** a supported public extension contract 
 - MongoDB helpers and arbitrary `lib/*`, `app/*` or component modules are not automatically plugin APIs;
 - proprietary Kairoseth/customer adapters may consume public contracts, but the MIT core must not depend on them.
 
-## Compatibility/versioning policy — active Phase 10.3.2
+## Compatibility/versioning policy — COMPLETE (10.3.2)
 
-Public extension contracts must distinguish compatible evolution from breaking changes.
+The authoritative policy is [`EXTENSION-COMPATIBILITY.md`](EXTENSION-COMPATIBILITY.md).
 
-### Backward-compatible changes
+Phase 10.3.2 established these rules:
+
+- no artificial global extension-version constant;
+- in-process interfaces follow core release SemVer;
+- existing REST v1 paths and headers remain unchanged;
+- Booking/Supplier/CRM sharing `X-OTP-Contract-Version` does not make them one schema family;
+- ERP/accounting keeps `X-OTP-Accounting-Contract-Version: 1`;
+- FailureTransport keeps `X-OTP-Failure-Contract-Version: 1` and independently versions `FailureTransportEvent.schemaVersion`;
+- the unversioned HTTP catalogue is frozen as legacy-v1 semantics and cannot be broken in place;
+- `IntegrationEventEnvelope.version` and webhook signature `v1=` are independent compatibility dimensions;
+- authority, authentication, idempotency, state semantics and protected-data allowlists are contract semantics;
+- mutating adapters may not silently downgrade protocol versions;
+- ordinary removal requires deprecation and migration guidance;
+- breaking changes require a core major release or a deliberate parallel/new wire contract as appropriate.
+
+### Compatible evolution
 
 Normally compatible:
 
-- adding optional response fields with safe defaults;
-- adding optional capabilities that existing adapters are not required to implement;
-- adding new error codes without changing existing success semantics;
-- adding new endpoints/operations without changing existing ones;
-- tightening documentation without changing accepted runtime values.
+- optional additive fields with safe absence;
+- new opt-in implementations behind an unchanged interface;
+- new endpoints that do not change existing ones;
+- new explicitly subscribed event types;
+- provider API upgrades absorbed inside adapters while the normalized core contract remains stable.
 
-### Breaking changes
+### Breaking evolution
 
 Normally breaking:
 
-- removing or renaming required fields;
-- changing the meaning of an existing status/state;
-- changing ownership or authority assumptions;
-- changing idempotency semantics;
-- changing required authentication/version headers;
-- changing an operation from read-only/downstream-only into mutation authority;
-- widening outbound data beyond the documented allowlist.
+- removing/renaming required fields or methods;
+- adding required methods to public interfaces implemented by third parties;
+- changing auth/version headers or endpoint methods/paths;
+- changing state meanings, authority boundaries or idempotency semantics;
+- widening protected-data exposure;
+- converting downstream-only/workflow-subordinate behavior into reverse mutation authority.
 
-Breaking public contracts require a deliberate version/migration path. Provider-specific API changes should be absorbed inside the adapter whenever possible instead of forcing a core-contract break.
+See the full compatibility matrix, deprecation lifecycle and migration requirements in [`EXTENSION-COMPATIBILITY.md`](EXTENSION-COMPATIBILITY.md).
 
-Phase 10.3.2 will turn these principles into an explicit matrix covering typed in-process interfaces, HTTP contracts, event schemas, deprecation and migration expectations.
-
-## Version identifiers
-
-Existing network contracts already use several deliberate version mechanisms:
-
-- generic REST booking: `/v1` plus `X-OTP-Contract-Version: 1`;
-- supplier/CRM/ERP reference adapters: versioned REST v1 contracts;
-- `FailureTransportEvent`: `schemaVersion: 1`;
-- outbound integration events: versioned event schemas;
-- HTTP catalogue: current read-only API contract.
-
-Phase 10.3.2 will define when each mechanism requires a major-version transition or deprecation path. No new single global extension version should be introduced unless it materially improves compatibility across the existing boundaries.
-
-## Reference adapter requirements — target for 10.3.3
+## Reference adapter requirements — active Phase 10.3.3
 
 A contributor-facing reference adapter should demonstrate the minimum correct behavior rather than embed a specific commercial vendor.
 
-Reference implementations must show:
+Reference implementations/examples must show:
 
 1. explicit opt-in composition/configuration;
 2. server-only credentials for privileged transports;
@@ -159,7 +162,10 @@ Reference implementations must show:
 9. audit-before-apply when an external response affects a local workflow;
 10. explicit outbound data allowlists;
 11. no protected Traveller Data, secrets or raw provider payload leakage;
-12. no cross-domain authority escalation.
+12. no cross-domain authority escalation;
+13. compatibility with the existing public version identifier;
+14. provider-version changes absorbed internally when the core contract can remain stable;
+15. explicit migration behavior when a deliberate v1 → v2 transition is required.
 
 ## Proprietary adapter boundary
 
@@ -189,9 +195,9 @@ The exact script/test name will be chosen when the implementation lands. Documen
 ```text
 10.3.1  Inventory public extension points + authority map   COMPLETE
    ↓
-10.3.2  Compatibility/versioning policy                    ACTIVE
+10.3.2  Compatibility/versioning policy                    COMPLETE
    ↓
-10.3.3  Contributor-facing reference adapters/examples     PLANNED
+10.3.3  Contributor-facing reference adapters/examples     ACTIVE
    ↓
 10.3.4  Permanent automated contract validation            PLANNED
    ↓
@@ -214,6 +220,7 @@ Phase 10.3 is complete only when all of the following are true:
 ## Related documentation
 
 - [`EXTENSION-POINT-INVENTORY.md`](EXTENSION-POINT-INVENTORY.md)
+- [`EXTENSION-COMPATIBILITY.md`](EXTENSION-COMPATIBILITY.md)
 - [`../ROADMAP.md`](../ROADMAP.md)
 - [`ADAPTER-GUIDE.md`](ADAPTER-GUIDE.md)
 - [`API-CONTRACT.md`](API-CONTRACT.md)

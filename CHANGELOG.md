@@ -10,13 +10,19 @@ All notable project changes are documented here.
 - Code-backed Phase 10.3.1 public extension inventory in English and Spanish.
 - Verified map of all 9 first-class `repositories/` interfaces, composition selectors, bundled implementations and network contracts.
 - Explicit `PaymentRepository` classification as the local provider-neutral financial-ledger boundary.
-- Phase 10.3 compatibility/versioning baseline and completion criteria.
+- Phase 10.3.2 compatibility/versioning policy in English and Spanish through `docs/EXTENSION-COMPATIBILITY.md` and `docs/EXTENSION-COMPATIBILITY.es.md`.
+- Compatibility matrix covering typed in-process interfaces, REST/HTTP contracts, event envelopes, failure-event schemas and webhook signature versions.
+- Explicit migration/deprecation rules for breaking public contract changes, including no hidden downgrade fallback for mutating v2-to-v1 flows.
 - Contributor-facing reference-adapter checklist covering server-only credentials, bounded transports, runtime validation, idempotency, allowlists and cross-domain authority protection.
 
 ### Changed
 - Phase 10 is documented as **IN PROGRESS**, with 10.1 and 10.2 complete and 10.3 active.
-- **Phase 10.3.1 is COMPLETE; Phase 10.3.2 compatibility/versioning is ACTIVE.**
-- README and ROADMAP EN/ES are synchronized with the completed extension inventory and active versioning slice.
+- **Phase 10.3.1 and 10.3.2 are COMPLETE; Phase 10.3.3 contributor-facing reference adapters is ACTIVE.**
+- README and ROADMAP EN/ES are synchronized with the completed extension inventory and completed compatibility/versioning policy.
+- Existing REST v1 paths/headers remain unchanged; compatibility policy documents them instead of silently rewriting deployed contracts.
+- Typed repository/adapter interfaces are governed by the SemVer/release lifecycle of the core rather than a synthetic global extension version.
+- The read-only catalogue HTTP contract is treated as a legacy-v1 compatibility surface: additive evolution is allowed, while breaking evolution requires a new versioned surface.
+- Outbound event schema version and webhook signature algorithm version are explicitly treated as independent compatibility dimensions.
 - README runtime badge reflects Next.js 16.3.2.
 - Quick-start and contribution workflows use reproducible `npm ci` + non-destructive `npm run setup:demo` instead of ad-hoc `npm install` setup.
 - Adapter guidance now covers `PaymentRepository`, CRM, ERP/accounting, supplier fulfilment, failure visibility, generic webhooks and explicit authority boundaries.
