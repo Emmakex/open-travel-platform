@@ -19,6 +19,7 @@ Completed Phase 10 slices:
 10.2     Provider-neutral standalone deployment -------------- COMPLETE
 10.3     Extension contracts/reference adapters -------------- COMPLETE
 10.4     Release and migration conventions ------------------- COMPLETE
+10.5     Upgrade and deprecation lifecycle policy ------------ COMPLETE
 ```
 
 Credentialed Stripe/Redsys TEST/LIVE E2E remains a separate external dependency and does not reopen Phase 9.
@@ -27,53 +28,13 @@ Credentialed Stripe/Redsys TEST/LIVE E2E remains a separate external dependency 
 
 # Completed platform foundations
 
-## Catalogue, identity and booking — COMPLETE
-
-- Next.js / React / TypeScript foundation;
-- MongoDB capability adapters;
-- bilingual EN/ES public and Operator surfaces;
-- destinations, trips, itineraries, departures and inventory;
-- persistent customer/staff identity and RBAC;
-- transactional booking with trusted pricing/inventory;
-- travellers/minors/guardians and historical pricing snapshots.
-
-## Commerce, post-purchase and operations — COMPLETE
-
-- provider-neutral payment/refund ledger and Stripe/Redsys checkout adapters;
-- deposits/installments/outstanding balance;
-- Activities, Transport and Travel protection;
-- encrypted Traveller Data and amendments;
-- accommodation/room inventory and package supplements;
-- Operator workflows, supplier fulfilment, documents, exports and reporting.
-
----
-
-# Phase 8 — External integrations — COMPLETE
-
-- versioned integration events and transactional MongoDB outbox;
-- signed HTTPS webhooks, retries/dead-letter and durable worker;
-- generic REST `BookingRepository`;
-- supplier fulfilment REST adapter;
-- downstream-only CRM and ERP/accounting adapters;
-- real local-HTTP contract validation.
-
----
-
-# Phase 9 — Production hardening — COMPLETE
-
-- CSP/security headers, HSTS, Origin checks and throttling;
-- liveness/readiness and fail-closed `demo|live` profiles;
-- MongoDB concurrency, rollback and idempotency validation;
-- observability, recovery and privileged audit;
-- privacy/retention;
-- WCAG 2.2 AA-oriented accessibility gates;
-- read, mutation-throughput and runtime-resource baselines.
+Catalogue, identity, booking, commerce, post-purchase, operations, documents/reporting, external integrations and the Phase 9 production-hardening baseline are complete. The core includes persistent MongoDB capability adapters, provider-neutral payment boundaries, encrypted Traveller Data, operational workflows, signed outbound integrations, privacy/accessibility gates, recovery and repeatable performance baselines.
 
 ---
 
 # Phase 10 — Open-source productisation — IN PROGRESS
 
-Goal: make the MIT core easy to adopt, self-host, extend, release and contribute to without hidden Kairoseth dependencies.
+Goal: make the MIT core easy to adopt, self-host, extend, release, upgrade and contribute to without hidden Kairoseth dependencies.
 
 ## 10.1 — Reproducible demo bootstrap — COMPLETE
 
@@ -101,9 +62,9 @@ Authoritative documents:
 
 Delivered:
 
-- nine verified provider-neutral public extension interfaces;
+- nine verified provider-neutral extension interfaces;
 - explicit authority map;
-- compatibility/versioning/deprecation rules;
+- compatibility/versioning rules;
 - real contributor reference adapters;
 - permanent `check:extension-contracts` gate and blocking workflow.
 
@@ -116,54 +77,72 @@ Authoritative documents:
 - [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md)
 - [`docs/MIGRATIONS.es.md`](docs/MIGRATIONS.es.md)
 
-Release contract:
+Delivered:
 
-- stable public releases follow Semantic Versioning;
-- `package.json` uses `X.Y.Z` and Git uses immutable `vX.Y.Z` tags;
-- package version, README badge, CHANGELOG and tag must agree;
-- releases are cut only from verified `main`;
-- `npm ci` + `npm run verify` is mandatory before release;
-- historical release entries/tags are immutable records.
+- stable Semantic Versioning and immutable `vX.Y.Z` tags;
+- release identity aligned across package/README/CHANGELOG/tag;
+- releases cut only from verified `main`;
+- migration classes for configuration, persistent state, wire contracts, key rotation and destructive changes;
+- **expand → migrate → contract** persistent evolution;
+- no hidden destructive startup migrations;
+- `check:release-migrations` and dedicated blocking workflow.
 
-Migration contract:
+## 10.5 — Upgrade and deprecation lifecycle policy — COMPLETE
 
-- configuration, persistent-data, wire-contract, encryption/key and destructive changes are explicitly classified;
-- compatible persistent evolution follows **expand → migrate → contract**;
-- operational migrations must be deterministic, bounded, retry-safe/idempotent or resumable, and verifiable;
-- hidden destructive migrations during application startup are prohibited;
-- payment/history, booking/inventory and protected Traveller Data receive explicit migration safeguards;
-- every non-trivial migration declares rollback/recovery semantics.
+Authoritative documents:
+
+- [`docs/UPGRADES.md`](docs/UPGRADES.md)
+- [`docs/UPGRADES.es.md`](docs/UPGRADES.es.md)
+- [`docs/DEPRECATIONS.md`](docs/DEPRECATIONS.md)
+- [`docs/DEPRECATIONS.es.md`](docs/DEPRECATIONS.es.md)
+
+Support/upgrade contract:
+
+- latest stable release of the current major is the primary supported target;
+- no guaranteed LTS/backport line unless explicitly announced;
+- same-major upgrades are supported with documented migrations;
+- major upgrade path starts from the latest stable release of the immediately previous major when documented;
+- skip-major upgrades require explicit support documentation;
+- operators record exact source/target versions/SHAs and recovery classification.
+
+Deprecation contract:
+
+```text
+ACTIVE → DEPRECATED → REMOVED
+```
+
+- ordinary removal of a public surface occurs only in a **MAJOR** release;
+- deprecation notices identify replacement, first deprecated release and earliest ordinary removal release;
+- PATCH/MINOR releases do not silently remove or reinterpret supported public contracts/configuration;
+- configuration, extension interfaces, wire contracts and persistent data follow the same lifecycle;
+- security can accelerate removal only through an explicit documented exception;
+- warnings must not leak secrets/protected data.
 
 Permanent automation:
 
 ```bash
-npm run check:release
-npm run check:release-migrations
+npm run check:upgrade-deprecations
 npm run verify
 ```
 
 Delivered:
 
-- `scripts/release-migration-check.mjs`;
-- `check:release-migrations` registered in `verify`;
-- `release-check.mjs` now requires the bilingual release/migration policy files;
-- dedicated blocking `.github/workflows/release-migrations.yml`;
-- contribution guidance requires explicit release/migration impact classification.
+- `scripts/upgrade-deprecation-check.mjs`;
+- `check:upgrade-deprecations` registered in `verify`;
+- dedicated `.github/workflows/upgrade-deprecations.yml`;
+- release, migration, extension compatibility, SUPPORT and CONTRIBUTING integration.
 
-## Planned Phase 10 work
+## Planned later Phase 10 work
 
-No later slice is active merely because it appears below. Each receives its own branch and full completion gate when started.
+No later slice is active merely because it is listed. Each receives its own branch and full completion gate when started.
 
 Potential next slices:
 
-- **10.5 — upgrade and deprecation lifecycle policy**;
 - richer contribution/release templates;
 - trademark/branding policy between Open Travel Platform and Kairoseth Travel;
 - optional adapters driven by commercial/community demand.
 
 ## Permanent phase gate
-
-Every phase/slice follows the same immutable sequence:
 
 ```text
 implementation
