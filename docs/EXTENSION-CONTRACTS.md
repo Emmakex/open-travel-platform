@@ -2,8 +2,8 @@
 
 <p align="center"><strong>English</strong> · <a href="./EXTENSION-CONTRACTS.es.md">Español</a></p>
 
-Status: **Phase 10.3 — closing candidate; COMPLETE only after green CI + merge + `main` verification**  
-Slices: **10.3.1 COMPLETE · 10.3.2 COMPLETE · 10.3.3 COMPLETE · 10.3.4 COMPLETE candidate**  
+Status: **Phase 10.3 — COMPLETE**  
+Slices: **10.3.1 COMPLETE · 10.3.2 COMPLETE · 10.3.3 COMPLETE · 10.3.4 COMPLETE**  
 Permanent gate: `npm run check:extension-contracts`
 
 ## Purpose
@@ -79,9 +79,9 @@ They demonstrate server-only credentials, HTTPS/redirect safety, bounded transpo
 
 See [`REFERENCE-ADAPTERS.md`](REFERENCE-ADAPTERS.md).
 
-## 10.3.4 — Permanent extension-contract validation — COMPLETE candidate
+## 10.3.4 — Permanent extension-contract validation — COMPLETE
 
-The new permanent static gate is:
+Permanent static gate:
 
 ```bash
 npm run check:extension-contracts
@@ -133,22 +133,23 @@ A legitimate future extension-model change must update the gate rather than bypa
 5. update `extension-contract-check.mjs` to encode the new intended model;
 6. update runtime tests;
 7. synchronize EN/ES README, ROADMAP, CHANGELOG and relevant docs;
-8. require green CI and merge before advancing.
+8. require green CI, merge to `main`, and `main` verification before advancing.
 
 ## Proprietary adapter boundary
 
 Kairoseth/customer/vendor-specific adapters may remain private and may import public OTP contracts. The MIT core must not depend on private packages or credentials.
 
-## Phase 10.3 closure gate
+## Phase 10.3 completion record
 
 ```text
 10.3.1  Inventory + authority map                 COMPLETE
 10.3.2  Compatibility/versioning                  COMPLETE
 10.3.3  Contributor reference adapters            COMPLETE
-10.3.4  Permanent automated validation            COMPLETE candidate
+10.3.4  Permanent automated validation            COMPLETE
+10.3     Extension contracts/reference adapters   COMPLETE
 ```
 
-**Phase 10.3 becomes officially COMPLETE only when the 10.3.4 closing PR has green required CI, is merged to `main`, and `main` is verified.** No later Phase 10 work may start before that gate.
+The permanent project rule continues to apply to every later slice: implementation, tests, synchronized documentation, green CI, merge to `main`, and verification of `main` before the next phase starts.
 
 ## Related documentation
 
