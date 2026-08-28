@@ -25,6 +25,7 @@ Describe the release outcome in user/operator/contributor terms.
 - REST/event/signature contracts changed: yes / no
 - Authority/authentication/idempotency semantics changed: yes / no
 - New/changed configuration: yes / no
+- Container/distribution artifact changed: yes / no
 - Minimum supported source release for upgrade: `<version>`
 
 ## Upgrade and migration
@@ -66,6 +67,17 @@ If none, state `None` explicitly.
 - [ ] Any logo/wordmark/visual-brand use has the appropriate permission or separate asset license
 - [ ] N/A — no branding/trademark impact
 
+## Container / distribution
+
+- [ ] `Dockerfile` / container runtime changes preserve the provider-neutral standalone contract
+- [ ] Final runtime remains non-root
+- [ ] Secrets and privileged configuration are injected at runtime, not baked into image layers
+- [ ] Liveness/readiness semantics remain documented and compatible
+- [ ] `npm run check:container` passed when container/distribution behavior changed
+- [ ] Real container build/start/HTTP validation passed when applicable
+- [ ] Registry/image publication identity and digest are recorded when a later distribution phase publishes artifacts
+- [ ] N/A — no container/distribution impact
+
 ## Validation
 
 - [ ] Release version, README badge, CHANGELOG and tag identity agree
@@ -75,7 +87,8 @@ If none, state `None` explicitly.
 - [ ] `npm run check:upgrade-deprecations`
 - [ ] `npm run check:contribution-templates`
 - [ ] `npm run check:branding-policy`
-- [ ] `npm run check:phase-10-release` when closing/auditing the Phase 10 release baseline
+- [ ] `npm run check:phase-10-release` when auditing the Phase 10 release baseline
+- [ ] `npm run check:container`
 - [ ] `npm run verify`
 - [ ] `npm run package:standalone`
 - [ ] Fresh-clone/demo validation passed
@@ -93,6 +106,7 @@ State any provider-dependent checks that could not be completed. Do not represen
 - [ ] ROADMAP EN/ES updated when project state changed
 - [ ] Upgrade/migration/deprecation docs updated when applicable
 - [ ] Branding/trademark policy updated when public names, logos or official-status claims changed
+- [ ] Container deployment docs updated when image/runtime behavior changed
 - [ ] Final release audit/release notes updated when closing a major project phase
 - [ ] Release notes contain no credentials, private customer data or protected Traveller Data
 
@@ -103,4 +117,5 @@ State any provider-dependent checks that could not be completed. Do not represen
 - [ ] Required dedicated release-audit workflow succeeded on the merged revision when applicable
 - [ ] Immutable `vX.Y.Z` tag created on the audited `main` commit
 - [ ] GitHub release published from that tag
+- [ ] Published image tag/digest recorded when registry distribution applies
 - [ ] Deployment/consumer rollouts tracked separately with exact version/SHA

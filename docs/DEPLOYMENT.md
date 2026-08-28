@@ -8,6 +8,7 @@ Before a production rollout, read:
 
 - [`RELEASES.md`](RELEASES.md) — release identity, SemVer, immutable tags and release sequence;
 - [`MIGRATIONS.md`](MIGRATIONS.md) — configuration/data/wire/key migration classes, verification and rollback;
+- [`CONTAINERS.md`](CONTAINERS.md) — provider-neutral OCI/Docker build, non-root runtime, runtime-only secrets and health checks when using containers;
 - [`PRODUCTION-CHECKLIST.md`](PRODUCTION-CHECKLIST.md) — final production review.
 
 ## Exact release identity
@@ -53,6 +54,25 @@ HOSTNAME=0.0.0.0 PORT=3000 node .next/standalone/server.js
 Do not copy `.env.local` or production secrets into an artifact. Supply server-only configuration through the hosting platform's protected environment or secret manager.
 
 The blocking `Self-host standalone` workflow validates clean install → build → package → standalone server → HTTP/static smoke without production secrets.
+
+## Container deployment path
+
+Phase 11.1 packages that same standalone runtime as a provider-neutral OCI/Docker image. It does not create a second application runtime.
+
+```bash
+docker build -t open-travel-platform:local .
+
+docker run --rm \
+  --env-file .env.demo.example \
+  -p 127.0.0.1:3000:3000 \
+  open-travel-platform:local
+```
+
+The final image runs as non-root user `app` (`10001:10001`). Privileged configuration remains runtime-injected; do not bake production `.env` files, MongoDB credentials, payment secrets, encryption keys or adapter tokens into layers.
+
+The image healthcheck uses `/api/health/live`; production ingress/orchestrators should use `/api/health/ready` before routing traffic. Run `npm run check:container` for the static contract and rely on the blocking `Container distribution` workflow for a real Docker build/start/health/HTTP smoke.
+
+See [`CONTAINERS.md`](CONTAINERS.md). Public registry publication is intentionally outside Phase 11.1.
 
 ## Build-time versus runtime configuration
 
@@ -248,10 +268,13 @@ For the exact revision intended for release:
 npm ci
 npm run check:release
 npm run check:release-migrations
+npm run check:container
 npm run verify
 npm run build
 npm run package:standalone
 ```
+
+When deploying the container artifact, also perform the image build/run validation described in [`CONTAINERS.md`](CONTAINERS.md).
 
 Then verify at minimum:
 
@@ -272,6 +295,7 @@ Before launch review:
 
 - [`RELEASES.md`](RELEASES.md);
 - [`MIGRATIONS.md`](MIGRATIONS.md);
+- [`CONTAINERS.md`](CONTAINERS.md) when deploying a container;
 - [`PRODUCTION-CHECKLIST.md`](PRODUCTION-CHECKLIST.md);
 - [`PRODUCTION-SECURITY.md`](PRODUCTION-SECURITY.md);
 - [`EXTERNAL-MONITORING.md`](EXTERNAL-MONITORING.md);

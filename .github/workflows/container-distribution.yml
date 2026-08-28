@@ -1,0 +1,97 @@
+name: Container distribution
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Clean install from lockfile
+        run: npm ci --no-fund
+
+      - name: Container source invariants
+        run: npm run check:container
+
+      - name: Build provider-neutral image
+        run: docker build --tag open-travel-platform:ci .
+
+      - name: Start demo container
+        run: |
+          docker run --detach \
+            --name open-travel-platform-ci \
+            --env-file .env.demo.example \
+            --publish 127.0.0.1:3000:3000 \
+            open-travel-platform:ci
+
+      - name: Verify non-root runtime identity
+        run: |
+          test "$(docker inspect --format '{{.Config.User}}' open-travel-platform-ci)" = "app"
+
+      - name: Wait for application liveness
+        run: |
+          ready=false
+          for attempt in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:3000/api/health/live >/dev/null; then
+              ready=true
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ready" != "true" ]; then
+            docker logs open-travel-platform-ci || true
+            exit 1
+          fi
+
+      - name: Wait for Docker health status
+        run: |
+          healthy=false
+          for attempt in {1..75}; do
+            status="$(docker inspect --format '{{.State.Health.Status}}' open-travel-platform-ci)"
+            if [ "$status" = "healthy" ]; then
+              healthy=true
+              break
+            fi
+            if [ "$status" = "unhealthy" ]; then
+              docker inspect open-travel-platform-ci
+              docker logs open-travel-platform-ci || true
+              exit 1
+            fi
+            sleep 1
+          done
+          test "$healthy" = "true"
+
+      - name: Container HTTP and asset smoke
+        run: |
+          curl --fail --silent --show-error http://127.0.0.1:3000/ >/dev/null
+          curl --fail --silent --show-error http://127.0.0.1:3000/trips >/dev/null
+          curl --fail --silent --show-error http://127.0.0.1:3000/destinations >/dev/null
+          curl --fail --silent --show-error http://127.0.0.1:3000/operator/sign-in >/dev/null
+          curl --fail --silent --show-error http://127.0.0.1:3000/api/health/live >/dev/null
+          curl --fail --silent --show-error http://127.0.0.1:3000/media/barcelona-cover.svg >/dev/null
+
+      - name: Container diagnostics on failure
+        if: failure()
+        run: |
+          docker inspect open-travel-platform-ci || true
+          docker logs open-travel-platform-ci || true
+
+      - name: Stop container
+        if: always()
+        run: docker rm --force open-travel-platform-ci || true

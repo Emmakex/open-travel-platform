@@ -24,12 +24,14 @@ npm run check:release-migrations
 npm run check:upgrade-deprecations
 npm run check:contribution-templates
 npm run check:branding-policy
+npm run check:phase-10-release
+npm run check:container
 npm run verify
 ```
 
-The permanent gates protect extension architecture, release/migration conventions, upgrade/deprecation lifecycle, contribution/release templates and branding/trademark separation. `verify` includes them plus the other project checks, TypeScript validation and production build.
+The permanent gates protect extension architecture, release/migration conventions, upgrade/deprecation lifecycle, contribution/release templates, branding/trademark separation, the audited Phase 10 release baseline and the container-distribution contract. `verify` includes them plus the other project checks, TypeScript validation and production build.
 
-GitHub Actions additionally exercises real MongoDB replica sets, local HTTP adapter contracts, privacy, accessibility, recovery and performance/resource baselines.
+GitHub Actions additionally exercises real MongoDB replica sets, local HTTP adapter contracts, privacy, accessibility, recovery, performance/resource baselines and a real provider-neutral Docker build/start/health/HTTP smoke.
 
 ## Architecture rules
 
@@ -118,7 +120,7 @@ Maintainers use:
 .github/RELEASE_TEMPLATE.md
 ```
 
-as the reusable release-notes checklist. It does not automate publication: releases still require verified `main`, immutable `vX.Y.Z` tags and the procedures in `RELEASES.md`, `MIGRATIONS.md`, `UPGRADES.md` and `DEPRECATIONS.md`.
+as the reusable release-notes checklist. It does not replace release policy: releases still require verified `main`, immutable `vX.Y.Z` tags and the procedures in `RELEASES.md`, `MIGRATIONS.md`, `UPGRADES.md` and `DEPRECATIONS.md`.
 
 The permanent template gate is:
 
@@ -150,6 +152,30 @@ The permanent branding gate is:
 npm run check:branding-policy
 ```
 
+## Container and distribution changes
+
+Read [`docs/CONTAINERS.md`](docs/CONTAINERS.md) before changing `Dockerfile`, `.dockerignore`, container runtime defaults or the container workflow.
+
+The public container path must reuse the verified Next.js standalone runtime. It must not become a second application packaging model or a place to embed vendor/customer-specific behavior.
+
+Container changes must preserve:
+
+- Node.js 24-compatible runtime;
+- a non-root final user;
+- privileged configuration and secrets supplied only at runtime;
+- `/api/health/live` for process liveness and `/api/health/ready` for production traffic readiness;
+- provider-neutral operation with the infrastructure-free demo profile;
+- no required registry dependency until an explicit later Phase 11 slice introduces publication;
+- no private Kairoseth/customer adapters or credentials in the public image.
+
+Validate the static contract with:
+
+```bash
+npm run check:container
+```
+
+The dedicated `Container distribution` workflow performs the real Docker build/start/non-root/health/HTTP validation in CI.
+
 ## Pull requests
 
 A PR should explain:
@@ -161,6 +187,7 @@ A PR should explain:
 - release/migration impact;
 - upgrade/deprecation impact;
 - **Branding / trademark impact** when public identity changes;
+- container/distribution impact when the deployable artifact changes;
 - configuration/migration requirements;
 - rollback/recovery when state changes;
 - how the change was validated.

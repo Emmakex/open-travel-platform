@@ -4,7 +4,31 @@ All notable project changes are documented here.
 
 ## [Unreleased]
 
-No unreleased changes yet.
+### Added
+- Phase 11 distribution/deployment ecosystem tracking through issues #133 and #134.
+- Phase 11.1 provider-neutral multi-stage `Dockerfile` built from the existing Next.js standalone runtime.
+- Non-root final container runtime (`app`, UID/GID `10001:10001`), built-in `/api/health/live` Docker healthcheck and runtime-only privileged configuration.
+- `.dockerignore` build-context hardening that excludes local environment and generated runtime artifacts.
+- Bilingual container deployment guidance through `docs/CONTAINERS.md` and `docs/CONTAINERS.es.md`.
+- Permanent container-distribution gate through `scripts/container-distribution-check.mjs` and `npm run check:container`.
+- Blocking `Container distribution` GitHub Actions workflow performing a real Docker build/start, non-root inspection, health validation and representative HTTP/static-asset smoke.
+
+### Changed
+- **Phase 11 — Distribution & deployment ecosystem is IN PROGRESS**; Phase 11.1 is documented as COMPLETE subject to the permanent PR/CI/merge/`main` verification gate.
+- `npm run verify` now includes `check:container` alongside the existing fresh-clone and standalone deployment gates.
+- Release consistency now requires the bilingual container deployment documents.
+- README and ROADMAP EN/ES document Phase 11 and the completed 11.1 scope; 11.2 registry/provenance, 11.3 deployment recipes and 11.4 distribution release verification remain PLANNED.
+- Registry publication is explicitly outside Phase 11.1 so the public core does not gain an implicit registry dependency.
+
+### Security
+- Container builds exclude local `.env*`, `.next`, `node_modules` and repository/runtime artifacts from the build context while retaining only reviewed public environment examples.
+- The Dockerfile does not bake MongoDB, SMTP, PSP, Traveller Data, integration or adapter credentials into image layers.
+- The final runtime executes as a fixed non-root user; privileged capability configuration must be injected at runtime.
+
+### Compatibility
+- No public repository/adapter contract, REST/event/signature identifier or persistent-data schema changes are introduced by Phase 11.1.
+- No migration is required.
+- The image path reuses the existing supported Next.js standalone runtime and does not create a second application execution model.
 
 ## [1.1.0] - 2026-08-28
 
