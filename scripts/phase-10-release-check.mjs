@@ -24,14 +24,23 @@ const requiredFiles = [
   "docs/RELEASE-NOTES-1.1.0.md",
   "docs/RELEASE-NOTES-1.1.0.es.md",
   "docs/RELEASES.md",
+  "docs/RELEASES.es.md",
   "docs/MIGRATIONS.md",
+  "docs/MIGRATIONS.es.md",
   "docs/UPGRADES.md",
+  "docs/UPGRADES.es.md",
   "docs/DEPRECATIONS.md",
+  "docs/DEPRECATIONS.es.md",
   "docs/CONTRIBUTION-TEMPLATES.md",
+  "docs/CONTRIBUTION-TEMPLATES.es.md",
   "docs/EXTENSION-POINT-INVENTORY.md",
+  "docs/EXTENSION-POINT-INVENTORY.es.md",
   "docs/EXTENSION-COMPATIBILITY.md",
+  "docs/EXTENSION-COMPATIBILITY.es.md",
   "docs/REFERENCE-ADAPTERS.md",
+  "docs/REFERENCE-ADAPTERS.es.md",
   "docs/EXTENSION-VALIDATION.md",
+  "docs/EXTENSION-VALIDATION.es.md",
   ".github/PULL_REQUEST_TEMPLATE.md",
   ".github/RELEASE_TEMPLATE.md",
   ".github/workflows/phase-10-release-audit.yml",
@@ -41,6 +50,7 @@ const requiredFiles = [
 for (const file of requiredFiles) assert(exists(file), `missing ${file}`);
 
 const packageJson = JSON.parse(read("package.json"));
+const packageLock = JSON.parse(read("package-lock.json"));
 const readme = read("README.md");
 const readmeEs = read("README.es.md");
 const roadmap = read("ROADMAP.md");
@@ -54,6 +64,11 @@ const notesEs = read("docs/RELEASE-NOTES-1.1.0.es.md");
 assert(packageJson.version === "1.1.0", "package version must be 1.1.0");
 assert(packageJson.scripts?.["check:phase-10-release"] === "node scripts/phase-10-release-check.mjs", "package must expose check:phase-10-release");
 assert(packageJson.scripts?.verify?.includes("check:phase-10-release"), "final release gate must remain inside npm run verify");
+
+const rootLock = packageLock.packages?.[""];
+assert(rootLock, "package-lock must retain the root package record");
+assert(JSON.stringify(rootLock.dependencies ?? {}) === JSON.stringify(packageJson.dependencies ?? {}), "release must not drift runtime dependency lock");
+assert(JSON.stringify(rootLock.devDependencies ?? {}) === JSON.stringify(packageJson.devDependencies ?? {}), "release must not drift dev dependency lock");
 
 for (const [name, source] of [["README", readme], ["README.es", readmeEs]]) {
   assert(source.includes("version-1.1.0-"), `${name} badge must be v1.1.0`);
@@ -111,7 +126,7 @@ assert(publishWorkflow.includes("Phase 10 release audit"), "publication must dep
 assert(publishWorkflow.includes("contents: write"), "publication workflow needs scoped contents write permission");
 assert(publishWorkflow.includes("git ls-remote"), "publication must check existing immutable tag before creation");
 assert(publishWorkflow.includes("gh release create"), "publication must create GitHub Release from release notes");
-assert(publishWorkflow.includes("RELEASE-NOTES-1.1.0.md"), "publication must use reviewed v1.1.0 notes");
+assert(publishWorkflow.includes("RELEASE-NOTES-${VERSION}.md"), "publication must use reviewed version-specific release notes");
 
 assert(read("LICENSE").startsWith("MIT License"), "software license must remain MIT");
 assert(read("TRADEMARKS.md").includes("does **not** claim"), "branding policy must keep registration claim bounded");
