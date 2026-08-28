@@ -7,16 +7,21 @@ All notable project changes are documented here.
 ### Added
 - Phase 10.3 extension-contract documentation in English and Spanish.
 - Explicit authority model for repository, workflow-sync, downstream CRM/ERP and delivery/observability extensions.
-- Phase 10.3 compatibility/versioning guidance and completion criteria.
+- Code-backed Phase 10.3.1 public extension inventory in English and Spanish.
+- Verified map of all 9 first-class `repositories/` interfaces, composition selectors, bundled implementations and network contracts.
+- Explicit `PaymentRepository` classification as the local provider-neutral financial-ledger boundary.
+- Phase 10.3 compatibility/versioning baseline and completion criteria.
 - Contributor-facing reference-adapter checklist covering server-only credentials, bounded transports, runtime validation, idempotency, allowlists and cross-domain authority protection.
 
 ### Changed
-- Phase 10 is now documented as **IN PROGRESS**, with 10.1 and 10.2 complete and 10.3 active.
-- README and ROADMAP EN/ES are synchronized with the real Phase 10 status.
+- Phase 10 is documented as **IN PROGRESS**, with 10.1 and 10.2 complete and 10.3 active.
+- **Phase 10.3.1 is COMPLETE; Phase 10.3.2 compatibility/versioning is ACTIVE.**
+- README and ROADMAP EN/ES are synchronized with the completed extension inventory and active versioning slice.
 - README runtime badge reflects Next.js 16.3.2.
-- Quick-start and contribution workflows now use reproducible `npm ci` + non-destructive `npm run setup:demo` instead of ad-hoc `npm install` setup.
-- Adapter guidance now covers CRM, ERP/accounting, delivery/failure visibility, compatibility/versioning and explicit authority boundaries.
-- Phase 10.3.1 is the active delivery slice: extension-point inventory and authority mapping.
+- Quick-start and contribution workflows use reproducible `npm ci` + non-destructive `npm run setup:demo` instead of ad-hoc `npm install` setup.
+- Adapter guidance now covers `PaymentRepository`, CRM, ERP/accounting, supplier fulfilment, failure visibility, generic webhooks and explicit authority boundaries.
+- Stripe/Redsys are explicitly classified as PSP/checkout integrations rather than `PaymentRepository` implementations.
+- SMTP/email and arbitrary internal modules are explicitly not promoted to public plugin contracts.
 
 ### External validation still pending
 - Credentialed Stripe/Redsys TEST/LIVE end-to-end validation remains pending suitable provider accounts. This does not reopen the completed Phase 9 engineering baseline.
