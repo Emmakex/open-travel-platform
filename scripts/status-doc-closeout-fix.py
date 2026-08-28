@@ -1,11 +1,22 @@
 from pathlib import Path
 
-path = Path("scripts/status-doc-closeout.py")
-text = path.read_text()
-old = "La prioridad es endurecer la superficie ya amplia del producto para operación productiva real."
-new = "La prioridad es endurecer para producción la amplia superficie funcional ya construida."
-count = text.count(old)
-if count != 1:
-    raise SystemExit(f"Expected exactly one Spanish Phase 9 phrase in updater, found {count}.")
-path.write_text(text.replace(old, new))
-print("Spanish Phase 9 closeout phrase patched for this run.")
+replacements = {
+    "ROADMAP.md": (
+        "That provider-dependent validation should be inserted as soon as credentials exist, It remains an explicit external-dependency release validation and does not reopen the completed Phase 9 engineering baseline.",
+        "That provider-dependent validation should be inserted as soon as credentials exist. It remains an explicit external-dependency release validation and does not reopen the completed Phase 9 engineering baseline.",
+    ),
+    "ROADMAP.es.md": (
+        "Debe incorporarse en cuanto existan credenciales, Permanece como validación de release dependiente de proveedores y no reabre el baseline de ingeniería completado de la Fase 9.",
+        "Debe incorporarse en cuanto existan credenciales. Permanece como validación de release dependiente de proveedores y no reabre el baseline de ingeniería completado de la Fase 9.",
+    ),
+}
+
+for path, (old, new) in replacements.items():
+    file = Path(path)
+    text = file.read_text()
+    count = text.count(old)
+    if count != 1:
+        raise SystemExit(f"{path}: expected exactly one closeout wording match, found {count}.")
+    file.write_text(text.replace(old, new))
+
+print("Phase 9D-5 closeout wording polished.")
