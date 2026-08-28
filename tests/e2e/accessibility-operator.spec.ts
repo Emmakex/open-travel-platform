@@ -15,7 +15,7 @@ async function createPersistentReservation(browser: Browser) {
   await page.locator('input[name="email"]').fill(customerEmail);
   await page.locator('input[name="country"]').fill("Spain");
   await page.locator('input[name="password"]').fill(customerPassword);
-  await page.locator('form button[type="submit"]').click();
+  await page.getByRole("button", { name: /^(Create my account|Crear mi cuenta)$/i }).click();
   await expect(page).toHaveURL(/\/account(?:\?created=1)?$/);
 
   await page.goto("/trips/barcelona-city-break/book");
@@ -25,7 +25,7 @@ async function createPersistentReservation(browser: Browser) {
   await page.locator('input[name="travellerLastName__traveller-1"]').fill("Traveller");
   await page.locator('input[name="travellerDateOfBirth__traveller-1"]').fill("1990-01-15");
   await page.locator('input[name="travellerNationality__traveller-1"]').fill("Spanish");
-  await page.locator('form button[type="submit"]').last().click();
+  await page.getByRole("button", { name: /^(Confirm reservation|Confirmar reserva)$/i }).click();
   await expect(page).toHaveURL(/\/account\/reservations\/res-[^/?]+(?:\?.*)?$/);
 
   const reservationId = new URL(page.url()).pathname.split("/").filter(Boolean).at(-1);
@@ -44,7 +44,7 @@ test("Operator workflow exposes accessible feedback, form names and error relati
   await page.goto("/operator/sign-in");
   await page.locator('input[name="email"]').fill(adminEmail);
   await page.locator('input[name="password"]').fill(adminPassword);
-  await page.locator('form button[type="submit"]').click();
+  await page.getByRole("button", { name: /^(Sign in to operations|Entrar en operaciones)$/i }).click();
   await expect(page).toHaveURL(/\/operator(?:\?.*)?$/);
 
   const query = new URLSearchParams({
@@ -67,7 +67,7 @@ test("Operator workflow exposes accessible feedback, form names and error relati
   await expect(page.locator("#operations-error")).toHaveAttribute("aria-live", "assertive");
   await expect(page.locator('input[name="tags"]')).toHaveAttribute("aria-invalid", "true");
 
-  // PR #115 regression guard: Operator copy is localized, so browser expectations must not depend on one language.
+  // PR #115 regression guard: localized UI must use semantic, locale-safe selectors rather than generic submit buttons.
   const workflowForm = page.getByRole("form", { name: /^(Reservation internal workflow|Gestión interna de la reserva)$/i });
   await expect(workflowForm).toHaveAttribute("aria-describedby", "operations-error");
 
