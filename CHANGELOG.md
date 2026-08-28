@@ -40,7 +40,7 @@ All notable project changes are documented here.
 - `npm run verify` now includes `check:extension-contracts`, `check:release-migrations`, `check:upgrade-deprecations` and `check:contribution-templates`.
 - The duplicate case-variant `.github/pull_request_template.md` was removed so the repository has one unambiguous canonical PR template.
 - CONTRIBUTING, README and ROADMAP EN/ES now link the Phase 10.6 template guide and permanent gate.
-- `release-check.mjs` requires bilingual release, migration, upgrade and deprecation policy documents as permanent release artifacts.
+- `release-check.mjs` now requires bilingual release, migration, upgrade and deprecation policy documents as permanent release artifacts.
 - Public stable releases are governed by Semantic Versioning with immutable `vX.Y.Z` Git tags and release identity aligned across `package.json`, README badge, CHANGELOG and tag.
 - Public releases are cut only from a reviewed, verified `main` commit; tags are not moved or reused after publication.
 - Migration guidance classifies configuration, persistent-data, wire-contract, encryption/key and destructive changes and requires explicit verification and rollback/recovery semantics.
@@ -52,10 +52,10 @@ All notable project changes are documented here.
 - A deprecation notice identifies the replacement, first deprecated release, earliest ordinary removal release, migration/rollback impact and any security implications.
 - Configuration, extension interfaces, REST/event/signature contracts and durable data follow the same lifecycle model.
 - Security may accelerate deprecation/removal only through an explicit documented exception; warnings must not expose secrets or protected data.
-- CONTRIBUTING requires explicit release/migration and upgrade/deprecation impact classification and now documents the canonical PR/release templates.
-- SUPPORT defines the public support baseline and best-effort backport expectations.
+- CONTRIBUTING now requires explicit release/migration and upgrade/deprecation impact classification and documents the canonical PR/release templates.
+- SUPPORT now defines the public support baseline and best-effort backport expectations.
 - README and ROADMAP EN/ES are synchronized through completed Phase 10.6.
-- Existing REST v1 paths/headers remain unchanged; compatibility policy delegates ordinary retirement to the Phase 10.5 lifecycle rather than an unspecified release policy.
+- Existing REST v1 paths/headers remain unchanged; compatibility policy now delegates ordinary retirement to the Phase 10.5 lifecycle rather than an unspecified release policy.
 - Typed repository/adapter interfaces remain governed by core SemVer rather than a synthetic global extension version.
 - The read-only catalogue HTTP contract remains a legacy-v1 compatibility surface: additive evolution is allowed, breaking evolution requires a new versioned surface.
 - Outbound event schema version and webhook signature algorithm version remain independent compatibility dimensions.
@@ -162,7 +162,7 @@ All notable project changes are documented here.
 - Scoped account CSS module.
 
 ### Security
-- Production identity defaults to disabled in production when not explicitly configured.
+- Production identity defaults to disabled when not explicitly configured.
 - Production demo sign-in requires an explicit `DEMO_IDENTITY_ENABLED=true` opt-in.
 - Identity configuration remains server-only; no credentials are handled by the demo flow.
 
