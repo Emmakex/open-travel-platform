@@ -28,31 +28,32 @@ Este repositorio es el **core MIT provider-neutral**. Kairoseth Travel es la imp
 
 **Fase 8 — Integraciones externas: COMPLETADA.**  
 **Fase 9 — Baseline de hardening productivo: COMPLETADA.**  
-**Fase 10 — Productización open-source: EN CURSO.**  
-**Fase 10.3 — Contratos de extensión y adapters de referencia: COMPLETADA.**
+**Fase 10 — Productización open-source: EN CURSO.**
 
-Estado de Fase 10.3:
+Slices completados de Fase 10:
 
-- **10.3.1 Inventario y mapa de autoridad — COMPLETADA**
-- **10.3.2 Compatibilidad/versionado — COMPLETADA**
-- **10.3.3 Adapters de referencia — COMPLETADA**
-- **10.3.4 Validación permanente de contratos — COMPLETADA**
+- **10.1 Bootstrap demo/fresh-clone reproducible — COMPLETADA**
+- **10.2 Despliegue standalone provider-neutral — COMPLETADA**
+- **10.3 Contratos de extensión y adapters de referencia — COMPLETADA**
+- **10.4 Convenciones de releases y migraciones — COMPLETADA**
 
-El modelo de extensiones completado en Fase 10.3 queda protegido por un gate arquitectónico permanente:
+La Fase 10.4 establece:
 
-```bash
-npm run check:extension-contracts
-```
+- Semantic Versioning para releases públicos estables;
+- tags Git inmutables `vX.Y.Z`;
+- identidad de release alineada entre `package.json`, badge README y CHANGELOG;
+- releases cortados únicamente desde `main` verificado;
+- clasificación explícita de migraciones y requisitos de rollback/recuperación;
+- patrón **expand → migrate → contract** para evolución compatible de datos persistentes;
+- prohibición de migraciones destructivas ocultas durante startup;
+- gate permanente `npm run check:release-migrations`.
 
-Forma parte de `npm run verify` y dispone de un workflow bloqueante dedicado que además ejecuta la suite contractual HTTP real.
+Documentación autoritativa de Fase 10.4:
 
-Documentación de Fase 10.3:
-
-- [`docs/EXTENSION-POINT-INVENTORY.es.md`](docs/EXTENSION-POINT-INVENTORY.es.md)
-- [`docs/EXTENSION-COMPATIBILITY.es.md`](docs/EXTENSION-COMPATIBILITY.es.md)
-- [`docs/REFERENCE-ADAPTERS.es.md`](docs/REFERENCE-ADAPTERS.es.md)
-- [`docs/EXTENSION-VALIDATION.es.md`](docs/EXTENSION-VALIDATION.es.md)
-- [`docs/EXTENSION-CONTRACTS.es.md`](docs/EXTENSION-CONTRACTS.es.md)
+- [`docs/RELEASES.md`](docs/RELEASES.md)
+- [`docs/RELEASES.es.md`](docs/RELEASES.es.md)
+- [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md)
+- [`docs/MIGRATIONS.es.md`](docs/MIGRATIONS.es.md)
 
 La validación TEST/LIVE con credenciales Stripe/Redsys sigue siendo una dependencia externa separada hasta disponer de cuentas proveedor adecuadas.
 
@@ -97,42 +98,14 @@ La validación TEST/LIVE con credenciales Stripe/Redsys sigue siendo una depende
 - concurrencia/idempotencia MongoDB, backup/restore e índices;
 - baselines de rendimiento/recursos.
 
-### Integraciones
+### Integraciones y extensiones
 
 - outbox MongoDB transaccional;
 - webhooks HTTPS firmados con retry/dead-letter;
-- worker durable;
-- `BookingRepository` REST;
-- fulfilment REST;
-- CRM y ERP downstream;
-- failure transport provider-neutral;
-- protección SSRF/DNS rebinding y transporte acotado.
-
-## Arquitectura de extensiones
-
-```text
-TravelRepository + IdentityRepository
-        |
-BookingRepository (demo / MongoDB / REST v1)
-        |
-reservas + inventario transaccional
-        |
-PaymentRepository -> ledger local provider-neutral -> PSP/manual
-        |
-outbox transaccional
-        |
-        +--> webhooks firmados
-        +--> CRM REST (downstream-only)
-        +--> ERP/contabilidad REST (downstream-only)
-
-OperationsRepository
-        |
-SupplierFulfilmentAdapter -> audit-before-apply -> workflow local
-
-Fallos operativos -> FailureTransport opcional
-```
-
-Los payloads provider permanecen dentro de adapters y la autoridad del core sigue explícita.
+- `BookingRepository` REST, fulfilment, CRM/ERP downstream y failure transport;
+- nueve interfaces públicas verificadas;
+- payloads provider contenidos dentro de adapters;
+- gate permanente `check:extension-contracts`.
 
 ## Inicio rápido
 
@@ -160,59 +133,40 @@ node .next/standalone/server.js
 
 Para producción consulta [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) y [`docs/PRODUCTION-CHECKLIST.md`](docs/PRODUCTION-CHECKLIST.md).
 
-## Modelo público de extensiones
+## Contrato de release y migración
 
-Interfaces de primer nivel verificadas:
+Releases estables:
 
-- `TravelRepository`
-- `IdentityRepository`
-- `BookingRepository`
-- `OperationsRepository`
-- `PaymentRepository`
-- `SupplierFulfilmentAdapter`
-- `CrmSyncAdapter`
-- `ErpAccountingAdapter`
-- `FailureTransport`
+```text
+package.json  -> X.Y.Z
+Git tag       -> vX.Y.Z
+CHANGELOG     -> ## [X.Y.Z] - YYYY-MM-DD
+```
 
-Referencias oficiales:
-
-- `RestBookingRepository` — autoridad acotada de repository;
-- `RestSupplierFulfilmentAdapter` + `performSupplierAdapterOperation()` — subordinado a workflow y audit-before-apply;
-- `RestCrmSyncAdapter` — downstream-only;
-- `RestFailureTransport` — patrón opcional de monitorización.
-
-## Validación permanente
-
-`check:extension-contracts` protege:
-
-- inventario público exacto;
-- pureza provider-neutral de interfaces;
-- autoridad downstream-only de CRM/ERP;
-- audit-before-apply y límites de Supplier;
-- neutralidad provider de `PaymentRepository`;
-- identificadores v1 documentados de headers/schemas/firma;
-- protecciones de transporte de adapters de referencia;
-- consistencia de documentación EN/ES.
-
-Ejecuta localmente:
+Antes de un release:
 
 ```bash
-npm run check:extension-contracts
+npm ci
+npm run check:release
+npm run check:release-migrations
 npm run verify
 ```
 
-CI dedicado: `.github/workflows/extension-contracts.yml`.
+Cambios de configuración, datos persistentes o contratos wire deben clasificarse y documentarse con verificación y rollback/recuperación. El startup de la aplicación no puede ejecutar migraciones destructivas ocultas.
 
-Consulta [`docs/EXTENSION-VALIDATION.es.md`](docs/EXTENSION-VALIDATION.es.md).
+Consulta [`docs/RELEASES.es.md`](docs/RELEASES.es.md) y [`docs/MIGRATIONS.es.md`](docs/MIGRATIONS.es.md).
 
 ## Documentación
 
-### Proyecto
+### Proyecto y entrega
 
 - [`ROADMAP.es.md`](ROADMAP.es.md)
 - [`ROADMAP.md`](ROADMAP.md)
 - [`CHANGELOG.md`](CHANGELOG.md)
 - [`CONTRIBUTING.md`](CONTRIBUTING.md)
+- [`docs/RELEASES.es.md`](docs/RELEASES.es.md)
+- [`docs/MIGRATIONS.es.md`](docs/MIGRATIONS.es.md)
+- [`docs/DEPLOYMENT.es.md`](docs/DEPLOYMENT.es.md)
 
 ### Extensiones
 
@@ -223,11 +177,23 @@ Consulta [`docs/EXTENSION-VALIDATION.es.md`](docs/EXTENSION-VALIDATION.es.md).
 - [`docs/EXTENSION-CONTRACTS.es.md`](docs/EXTENSION-CONTRACTS.es.md)
 - [`docs/ADAPTER-GUIDE.md`](docs/ADAPTER-GUIDE.md)
 
+## Validación permanente
+
+Gates de proyecto relevantes:
+
+```bash
+npm run check:extension-contracts
+npm run check:release-migrations
+npm run verify
+```
+
+Workflows dedicados protegen contratos de extensión y convenciones de release/migración tanto en PR como en `main`.
+
 ## Regla de cierre de fases
 
 Una fase/slice no está completada hasta que implementación y pruebas terminen, documentación EN/ES/README/ROADMAP/CHANGELOG esté sincronizada, el alcance del PR sea revisado, CI obligatorio esté verde, el PR esté mergeado a `main` y `main` sea verificado antes de iniciar la siguiente fase.
 
-La Fase 10.3 cumple esta regla. Cualquier trabajo posterior de Fase 10 debe respetar el mismo gate antes de volver a avanzar.
+La Fase 10.4 sigue esta regla; cualquier bloque posterior permanece separado hasta iniciarse explícitamente.
 
 ## Licencia
 

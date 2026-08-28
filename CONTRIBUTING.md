@@ -20,10 +20,11 @@ Before opening a pull request, run:
 
 ```bash
 npm run check:extension-contracts
+npm run check:release-migrations
 npm run verify
 ```
 
-`check:extension-contracts` is the permanent Phase 10.3 architectural gate. `verify` includes that gate plus the other permanent project checks, TypeScript validation and production build.
+`check:extension-contracts` protects the public extension architecture. `check:release-migrations` protects release and migration conventions. `verify` includes both gates plus the other permanent project checks, TypeScript validation and production build.
 
 GitHub Actions additionally exercises real MongoDB replica sets, local HTTP adapter contracts, privacy, accessibility, recovery and performance/resource baselines.
 
@@ -88,6 +89,29 @@ If a legitimate public contract change requires changing a protected invariant, 
 - mutating adapters must not silently fall back from a newer contract to an older one;
 - breaking public changes require explicit migration/versioning guidance.
 
+## Release and migration impact
+
+Every non-trivial PR must classify whether it affects release or migration behavior.
+
+Read:
+
+- [`docs/RELEASES.md`](docs/RELEASES.md) — SemVer, immutable `vX.Y.Z` tags, CHANGELOG and release sequence;
+- [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md) — configuration/data/wire/key migration classes, expand → migrate → contract, verification and rollback.
+
+A PR should explicitly state when applicable:
+
+- PATCH/MINOR/MAJOR compatibility impact;
+- required environment/configuration changes;
+- persistent-data/index/backfill changes;
+- public wire/event contract migration;
+- protected/encrypted data impact;
+- deployment order/compatibility window;
+- rollback/recovery path.
+
+Do not add hidden destructive database migrations to application startup. Operational migrations must be deliberate, reviewable and recoverable.
+
+A public release is cut only from verified `main`; package version, README badge, CHANGELOG entry and immutable Git tag must agree.
+
 ## Pull requests
 
 A PR should explain:
@@ -96,7 +120,9 @@ A PR should explain:
 - affected capability/extension boundary;
 - authority/security implications;
 - compatibility impact;
+- **Release and migration impact**;
 - configuration or migration requirements;
+- rollback/recovery when state changes;
 - how the change was validated.
 
 Kairoseth-specific or customer-specific adapters may remain outside the public MIT core. The core may define the contract they consume but must not depend on proprietary implementations.
