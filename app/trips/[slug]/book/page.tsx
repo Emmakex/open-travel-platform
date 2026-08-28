@@ -85,7 +85,7 @@ export default async function BookTripPage({ params, searchParams }: { params: P
           <h1>{localizedTrip.title}</h1>
           <p className={styles.lead}>{locale === "es" ? "Elige la salida e introduce los datos de cada viajero. Después podrás revisar alojamiento y suplementos opcionales antes de confirmar el total." : "Choose the departure and enter each traveller. You can then review accommodation and optional supplements before confirming the total."}</p>
 
-          {error && errorMessages[error] ? <div className={styles.error}>{errorMessages[error]}</div> : null}
+          {error && errorMessages[error] ? <div id="trip-booking-error" className={styles.error} role="alert" aria-live="assertive">{errorMessages[error]}</div> : null}
           {!identity ? <div className={styles.notice}><strong>{copy.booking.customerRequired}</strong> {copy.booking.customerRequiredCopy}{" "}<Link className="text-link" href="/account/sign-in">{copy.booking.signIn}</Link></div> : null}
           {staff ? <div className={styles.notice}>{copy.booking.staffActive}{" "}<Link className="text-link" href="/operator">{copy.booking.openOperator}</Link></div> : null}
 

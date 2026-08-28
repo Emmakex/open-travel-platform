@@ -58,7 +58,7 @@ test("registered customer booking is visible to persistent admin", async ({ brow
   await expect(adminPage.getByRole("heading", { name: "Barcelona City Break" })).toBeVisible();
   await expect(adminPage.getByText(reservationId, { exact: true })).toBeVisible();
   await expect(adminPage.getByText("Browser Traveller", { exact: false })).toBeVisible();
-  await expect(adminPage.getByText("pending", { exact: true })).toBeVisible();
+  await expect(adminPage.getByText(/^(Pending|Pendiente)$/)).toBeVisible();
 
   await adminContext.close();
   await customerContext.close();

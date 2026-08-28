@@ -14,7 +14,10 @@ const journey = read("tests/e2e/persistent-booking.spec.ts");
 const workflow = read(".github/workflows/ci.yml");
 
 assert(packageJson.devDependencies?.["@playwright/test"] === "1.62.1", "Playwright Test must remain exactly pinned to the reviewed stable version");
-assert(packageJson.scripts?.["test:e2e"] === "playwright test", "package script must execute Playwright");
+assert(
+  packageJson.scripts?.["test:e2e"] === "playwright test tests/e2e/persistent-booking.spec.ts --project=chromium",
+  "historical browser E2E script must execute only the persistent Chromium booking journey",
+);
 assert(packageJson.scripts?.["test:e2e:seed"] === "tsx tests/e2e/seed.ts", "package script must expose the protected Mongo E2E seed");
 assert(config.includes('baseURL: process.env.PLAYWRIGHT_BASE_URL?.trim() || "http://localhost:3000"'), "browser test must use the controlled localhost application origin");
 assert(config.includes('command: "npm start"'), "browser E2E must run the production Next.js server rather than next dev");

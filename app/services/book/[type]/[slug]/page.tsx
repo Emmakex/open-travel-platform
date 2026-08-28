@@ -74,7 +74,7 @@ export default async function ServiceBookingPage({ params, searchParams }: PageP
           <h1>{item.title}</h1>
           <p className={styles.lead}>{t("Choose the details for this service and review the price before confirming. You can link it to one of your Kairoseth trips when relevant.", "Configura los datos de este servicio y revisa el precio antes de confirmar. Cuando corresponda, puedes vincularlo a uno de tus viajes Kairoseth.")}</p>
 
-          {query.error && errors[query.error] ? <div className={styles.error}>{errors[query.error]}</div> : null}
+          {query.error && errors[query.error] ? <div id="service-booking-error" className={styles.error} role="alert" aria-live="assertive">{errors[query.error]}</div> : null}
 
           {service.serviceType === "insurance" && !insuranceReady ? (
             <div className={styles.notice}>
