@@ -143,14 +143,14 @@ See [`docs/CONTAINERS.md`](docs/CONTAINERS.md).
 GHCR is the public reference registry for future audited container releases:
 
 ```text
-ghcr.io/Emmakex/open-travel-platform:vX.Y.Z
-ghcr.io/Emmakex/open-travel-platform:sha-<full-source-sha>
+ghcr.io/emmakex/open-travel-platform:vX.Y.Z
+ghcr.io/emmakex/open-travel-platform:sha-<full-source-sha>
 ```
 
 No moving `latest`, major or minor aliases are published. Production should deploy the recorded digest, for example:
 
 ```bash
-docker pull ghcr.io/Emmakex/open-travel-platform@sha256:<digest>
+docker pull ghcr.io/emmakex/open-travel-platform@sha256:<digest>
 ```
 
 Published release images include SBOM, BuildKit `provenance: mode=max`, OCI source/revision/version/license metadata and a GitHub artifact attestation tied to the image digest. `v1.1.0` is intentionally not rebuilt retroactively because its immutable source tag predates the Dockerfile/container workflow.
