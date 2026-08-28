@@ -6,205 +6,134 @@ Estado: **Fase 10.4 — COMPLETADA**
 
 ## Propósito
 
-Una migración es cualquier cambio de release que obliga a un operador o despliegue a transformar configuración, estado persistente, estado criptográfico o un contrato público, en lugar de limitarse a sustituir código de aplicación.
+Una migración transforma configuración, estado persistente, estado criptográfico o un contrato público; no es solo sustituir código.
 
-Las migraciones deben ser explícitas, revisables y recuperables. Open Travel Platform **no** ejecuta migraciones destructivas ocultas durante el startup de la aplicación.
+Debe ser explícita, revisable y recuperable. Open Travel Platform **no** ejecuta migraciones destructivas ocultas durante startup.
 
-## Clases de migración
+La secuencia de upgrade se define en [`UPGRADES.es.md`](UPGRADES.es.md) y los límites de lifecycle/retirada en [`DEPRECATIONS.es.md`](DEPRECATIONS.es.md).
+
+## Clases
 
 ### A. Solo configuración
 
-Ejemplos:
-
-- añadir una variable de entorno opcional con default seguro;
-- introducir un adapter opt-in.
-
-Patrón preferido:
-
-1. entregar soporte con estado seguro/deshabilitado por defecto;
-2. documentar variable en `.env.example` y docs de despliegue;
-3. activar por despliegue.
-
-Una variable nueva obligatoria sin ventana compatible es un cambio breaking de despliegue.
+Preferir settings opcionales con default seguro o capacidades opt-in. Un setting obligatorio nuevo sin ventana compatible es breaking. Si se reemplaza un nombre existente, sigue el lifecycle de deprecación; nunca se reinterpreta silenciosamente.
 
 ### B. Cambio persistente aditivo
 
-Ejemplos:
+Campos opcionales MongoDB, colecciones o índices compatibles siguen **expand → migrate → contract**.
 
-- campos opcionales MongoDB;
-- colección nueva;
-- índice compatible.
+Lectores antiguos/nuevos deben mantener compatibilidad cuando sea viable. El paso destructivo/contract solo ocurre tras la ventana de compatibilidad/deprecación y requisitos de rollback.
 
-Estrategia preferida: **expand → migrate → contract**.
+### C. Transformación/backfill
 
-Durante expand, lectores antiguos y nuevos deben mantener compatibilidad cuando sea viable. Después se hace backfill y solo finalmente cleanup destructivo tras cerrar ventana de compatibilidad/rollback.
+Debe ser determinista, acotada, observable, retry-safe o resumible, limitada al scope previsto, auditable cuando corresponda y verificada antes de cleanup destructivo.
 
-### C. Transformación/backfill de datos
+Nunca reinterpretar silenciosamente dinero, divisa, inventario, identidad, reservas o historial de pagos.
 
-Debe ser:
+### D. Contrato wire/público
 
-- determinista;
-- acotada y observable;
-- segura al reintentar o explícitamente resumible;
-- limitada a los registros previstos;
-- auditable cuando afecte datos protegidos/privilegiados;
-- verificada antes de cleanup destructivo.
+REST/eventos/firma siguen [`EXTENSION-COMPATIBILITY.es.md`](EXTENSION-COMPATIBILITY.es.md) y [`DEPRECATIONS.es.md`](DEPRECATIONS.es.md).
 
-Nunca debe reinterpretar silenciosamente dinero, divisa, inventario, identidad, reservas o historial de pagos.
+Breaking changes requieren versión paralela/nueva, ventana de migración y límite de retirada anunciado. Mutaciones v2 nunca hacen downgrade silencioso a v1.
 
-### D. Migración de contrato wire/público
+### E. Cifrado/claves
 
-Cambios REST/eventos/firma siguen [`EXTENSION-COMPATIBILITY.es.md`](EXTENSION-COMPATIBILITY.es.md).
+Traveller Data protegido utiliza keyring/re-encryption documentados y conserva recuperación mientras ciphertext antiguo siga siendo necesario.
 
-Un breaking change exige nueva versión/paralela y ventana explícita. Mutaciones v2 nunca hacen downgrade silencioso a v1.
+### F. Destructiva/irreversible
 
-### E. Migración de cifrado/claves
-
-Traveller Data protegido y cambios de claves usan los mecanismos de keyring/re-encryption ya documentados. La rotación debe conservar recuperación/rollback hasta que el ciphertext antiguo deje de ser necesario.
-
-Consulta [`TRAVELLER-DATA.md`](TRAVELLER-DATA.md).
-
-### F. Migración destructiva/irreversible
-
-Ejemplos:
-
-- eliminar campos/colecciones;
-- cambiar semántica de forma incompatible con código anterior;
-- reducción irreversible de datos;
-- retirar versión wire antigua tras deprecación.
-
-Requiere plan de recuperación antes del release. Si el rollback exige restaurar backup, debe quedar declarado y probado.
+Eliminar campos/colecciones, hacer estado ilegible para código anterior, reducir datos irreversiblemente o retirar una versión wire exige recuperación explícita y probada. Una migración destructiva no puede usarse para saltarse la regla de retirada ordinaria solo en MAJOR.
 
 ## Sin migraciones destructivas en startup
 
-El startup de aplicación, evaluación de módulos o requests normales no deben ejecutar automáticamente migraciones destructivas persistentes.
+Startup, evaluación de módulos y requests normales no ejecutan automáticamente migraciones destructivas persistentes. Varias instancias pueden arrancar a la vez, health checks no deben mutar schemas y el operador necesita controlar backup, timing y verificación.
 
-Motivos:
-
-- varias instancias pueden arrancar concurrentemente;
-- health checks no deben mutar schema de forma inesperada;
-- un fallo parcial vuelve ambiguo el rollback;
-- el operador necesita control de backup, timing y verificación.
-
-Los cambios operativos deben usar un comando/script deliberado.
+Usa comandos/scripts deliberados.
 
 ## Convenciones de scripts
 
-Un script nuevo debe documentar:
+Documentar:
 
 - identificador/nombre;
-- assumptions origen;
-- estado destino;
+- assumptions y release origen mínima soportada;
+- estado/release destino;
 - scope/query;
-- si es idempotente o resumible;
-- dry-run/inspección read-only cuando sea viable;
-- impacto operativo/tiempo esperado;
-- método de verificación;
-- rollback/recuperación.
-
-Nunca incluir credenciales productivas ni IDs específicos de clientes en scripts públicos.
-
-## Secuencia productiva
-
-1. **Clasificar compatibilidad y tipo.**
-2. **Tomar/verificar backup** antes de cambios destructivos o de alto riesgo.
-3. **Registrar versión actual y estado de DB.**
-4. **Desplegar código expand-compatible primero** cuando sea posible.
-5. **Ejecutar migración deliberadamente** con autorización operativa adecuada.
-6. **Verificar resultados** mediante counts/invariantes/domain checks, no solo exit code.
-7. **Observar health e invariantes de negocio.**
-8. **Ejecutar cleanup/contract destructivo** únicamente tras la ventana compatible.
-9. **Registrar finalización** en operaciones del release/despliegue.
-
-## MongoDB
-
-Preferir cambios aditivos frente a reinterpretación destructiva in-place.
-
-En backfills grandes:
-
-- batches acotados;
-- criterio/cursor estable;
-- restart explícito;
-- memoria acotada;
-- monitorizar carga/locks/latencia;
-- validar índices antes/después cuando aplique.
-
-Backup/restore e index validation existentes siguen formando parte de la seguridad productiva.
-
-## Pagos y datos financieros
-
-El ledger de pagos/reembolsos es historial autoritativo.
-
-La migración debe preservar:
-
-- identidad/idempotencia del movimiento;
-- importe y divisa;
-- referencias provider cuando existan;
-- cronología/auditoría;
-- distinción payment/refund.
-
-Nunca recalcular importes históricos desde datos actuales mutables de la reserva.
-
-## Booking/inventario
-
-Cambios sobre reservas/inventario deben preservar invariantes transaccionales y no crear/perder capacidad implícitamente.
-
-Si cambia el significado de estados, tratarlo como breaking change de dominio y documentar compatibilidad/rollback.
-
-## Traveller Data protegido
-
-Requiere acceso mínimo necesario y nunca debe aparecer en logs, summaries o artefactos públicos.
-
-Outputs de migración usan counts, IDs seguros/correlación y diagnósticos redactados.
-
-## Verificación
-
-Toda migración no trivial define postcondiciones, por ejemplo:
-
-- counts esperados;
-- ausencia de registros legacy pendientes;
-- invariantes de unicidad/índices;
-- totales de dominio preservados;
-- datos cifrados legibles con el keyring esperado;
-- comportamiento old/new consumers dentro de la ventana declarada.
-
-Un exit code correcto no basta en migraciones de alto impacto.
-
-## Rollback/recuperación
-
-Antes de ejecutar, declarar si rollback es:
-
-- **solo aplicación** — release anterior puede leer el nuevo estado;
-- **reverse migration** — existe transformación inversa probada;
-- **restore de backup** — hace falta restauración;
-- **irreversible** — recuperación únicamente forward.
-
-Las irreversibles requieren revisión explícita y release notes antes de producción.
-
-## Documentación de release
-
-Todo release con migración debe indicar en `CHANGELOG.md`:
-
-- migración necesaria: sí/no;
-- capacidad/estado afectado;
-- ventana compatible;
-- comando/procedimiento;
+- idempotencia o resumibilidad;
+- dry-run/read-only cuando sea viable;
+- impacto operativo;
 - verificación;
 - rollback/recuperación.
 
-Consulta [`RELEASES.es.md`](RELEASES.es.md).
+Nunca incluir credenciales productivas ni IDs específicos de clientes.
+
+## Secuencia productiva
+
+1. **Identificar versiones/SHAs exactos origen y destino** según [`UPGRADES.es.md`](UPGRADES.es.md).
+2. **Clasificar compatibilidad, deprecaciones/retiradas y migración.**
+3. **Tomar/verificar backup** para trabajo persistente de riesgo.
+4. **Registrar release actual y estado DB.**
+5. **Desplegar expand-compatible** cuando sea posible.
+6. **Ejecutar migración deliberadamente.**
+7. **Verificar resultados** con counts/invariantes/domain checks.
+8. **Observar health e invariantes de negocio.**
+9. **Ejecutar cleanup/contract solo después de la ventana lifecycle.**
+10. **Registrar finalización** con versión/SHA y recuperación.
+
+## MongoDB
+
+Preferir cambios aditivos. Backfills grandes usan batches acotados, criterio/cursor estable, restart explícito, memoria acotada, monitorización e index validation.
+
+## Pagos y finanzas
+
+El ledger es historial autoritativo. Preserva identidad/idempotencia, importe/divisa, referencias proveedor, cronología/auditoría y distinción payment/refund.
+
+Nunca recalcular importes históricos desde datos actuales mutables.
+
+## Booking/inventario
+
+Preservar invariantes transaccionales y capacidad. Si cambia el significado de estados, tratarlo como breaking y documentar compatibilidad, deprecación y rollback.
+
+## Traveller Data protegido
+
+Usar acceso mínimo necesario. Nunca escribir datos protegidos en logs, summaries o artefactos públicos; usar counts, IDs seguros y diagnósticos redactados.
+
+## Verificación
+
+Toda migración no trivial define postcondiciones: counts, ausencia de legacy pendiente, invariantes de índices/unicidad, totales preservados, ciphertext legible y consumidores old/new funcionando según la ventana declarada.
+
+Exit code no basta para migraciones de alto impacto.
+
+## Rollback/recuperación
+
+Clasificar como:
+
+- **solo aplicación**;
+- **reverse migration**;
+- **restore de backup**;
+- **irreversible/forward-only**.
+
+Las irreversibles requieren revisión y release notes explícitos.
+
+## Documentación de release/lifecycle
+
+Todo release con migración registra en CHANGELOG:
+
+- migración sí/no;
+- capacidad/estado afectado;
+- assumptions de soporte origen/destino;
+- ventana de compatibilidad/deprecación;
+- procedimiento;
+- verificación;
+- rollback/recuperación.
+
+Consulta [`RELEASES.es.md`](RELEASES.es.md), [`UPGRADES.es.md`](UPGRADES.es.md) y [`DEPRECATIONS.es.md`](DEPRECATIONS.es.md).
 
 ## Automatización
 
-El gate permanente de Fase 10.4 protege estas convenciones:
-
 ```bash
 npm run check:release-migrations
+npm run check:upgrade-deprecations
 npm run verify
 ```
 
-El gate no demuestra automáticamente que toda migración futura sea segura; impide que el proyecto pierda silenciosamente las convenciones e integración obligatorias.
-
-## Registro de cierre
-
-La Fase 10.4 cumple la regla de cierre del proyecto. Ningún bloque posterior de Fase 10 se considera activo hasta que el CI obligatorio esté verde, el cambio de cierre se mergee a `main` y `main` sea verificado.
+Los gates evitan perder silenciosamente los contratos de release, upgrade, deprecación y migración.
