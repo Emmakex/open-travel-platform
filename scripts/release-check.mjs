@@ -18,6 +18,8 @@ const requiredFiles = [
   "docs/ADAPTER-GUIDE.md",
   "docs/PRODUCTION-CHECKLIST.md",
   "docs/DEPLOYMENT.md",
+  "docs/CONTAINERS.md",
+  "docs/CONTAINERS.es.md",
   "docs/RELEASES.md",
   "docs/RELEASES.es.md",
   "docs/MIGRATIONS.md",
