@@ -1,236 +1,275 @@
 # Guía de despliegue
 
-Open Travel Platform es provider-neutral y no exige un proveedor de hosting concreto. El repositorio genera un runtime Next.js `standalone` que puede desplegarse en una VM, plataforma de contenedores, PaaS u otro entorno compatible con Node.js 24 junto con los servicios persistentes elegidos por cada despliegue.
+Open Travel Platform es provider-neutral y no exige un proveedor de hosting concreto. El repositorio genera un runtime Next.js `standalone` para VM, contenedores, PaaS u otros entornos compatibles con Node.js 24 junto con los servicios persistentes elegidos.
 
-`travel.kairoseth.com` es el despliegue comercial/de referencia de Kairoseth. No es una dependencia del core MIT y su infraestructura privada no es necesaria para autoalojar Open Travel Platform.
+`travel.kairoseth.com` es el despliegue comercial/de referencia de Kairoseth y no es una dependencia del core MIT.
+
+Antes de un rollout productivo revisa:
+
+- [`RELEASES.es.md`](RELEASES.es.md) — identidad del release, SemVer, tags inmutables y secuencia de publicación;
+- [`MIGRATIONS.es.md`](MIGRATIONS.es.md) — migraciones de configuración/datos/wire/claves, verificación y rollback;
+- [`PRODUCTION-CHECKLIST.md`](PRODUCTION-CHECKLIST.md) — revisión final de producción.
+
+## Identidad exacta del release
+
+Producción debe desplegar una release/revisión exacta y revisada, no una rama móvil sin fijar.
+
+En un release público deben coincidir:
+
+```text
+package.json  -> X.Y.Z
+Git tag       -> vX.Y.Z
+CHANGELOG     -> ## [X.Y.Z] - YYYY-MM-DD
+```
+
+Construye desde el source/tag exacto y su lockfile versionado. Registra release/tag/commit exactos en las operaciones de despliegue para poder identificar qué estaba ejecutándose durante incidencias y rollbacks.
+
+Los tags publicados son inmutables. Un rollback selecciona una release anterior conocida como buena; nunca mueve ni reutiliza un tag.
 
 ## Runtime soportado
 
-El objetivo actual es Node.js 24 LTS y npm 11. El repositorio versiona `package-lock.json`; utiliza la instalación reproducible:
+El objetivo actual es Node.js 24 LTS y npm 11. Utiliza:
 
 ```bash
 npm ci
+npm run check:release
+npm run check:release-migrations
 npm run verify
 ```
 
-`next.config.ts` utiliza `output: "standalone"`. Por tanto, el entrypoint desplegable **no** es `next start`. Construye y prepara el runtime transportable con:
+`next.config.ts` usa `output: "standalone"`. Construye y prepara el runtime transportable con:
 
 ```bash
 npm run build
 npm run package:standalone
 ```
 
-`npm run package:standalone` conserva el servidor standalone trazado por Next.js y añade los assets que Next.js no copia automáticamente a esa carpeta:
-
-- `.next/static` → `.next/standalone/.next/static`
-- `public` → `.next/standalone/public`
-
-La raíz del runtime resultante es `.next/standalone`. Arráncalo con las variables del entorno de despliegue ya inyectadas:
+El runtime queda en `.next/standalone` y se inicia con configuración protegida ya inyectada:
 
 ```bash
 HOSTNAME=0.0.0.0 PORT=3000 node .next/standalone/server.js
 ```
 
-No copies `.env.local` ni secretos productivos dentro de una imagen/artefacto. Suministra la configuración server-only mediante el entorno protegido o el gestor de secretos del hosting.
+No copies `.env.local` ni secretos productivos dentro del artefacto. Suministra configuración server-only desde el entorno protegido o gestor de secretos.
 
-El workflow bloqueante `Self-host standalone` demuestra instalación limpia → build → empaquetado → servidor standalone → smoke HTTP/assets sin MongoDB ni credenciales de proveedores externos. Esto valida el contrato público de empaquetado, no la capacidad productiva del hosting.
+El workflow bloqueante `Self-host standalone` valida instalación limpia → build → package → servidor standalone → smoke HTTP/assets sin secretos productivos.
 
-## Configuración de build y de runtime
+## Configuración de build y runtime
 
-Los valores `NEXT_PUBLIC_*` son visibles en navegador y pueden quedar embebidos durante el build. Trátalos como configuración pública. Si cambian branding, orígenes públicos de API u otros `NEXT_PUBLIC_*`, reconstruye el artefacto.
+`NEXT_PUBLIC_*` es visible en navegador y puede quedar embebido en build. Trátalo como configuración pública y reconstruye cuando cambie.
 
-MongoDB, claves de cifrado, secretos de pago y tokens de workers son server-only y deben inyectarse de forma segura en runtime. Nunca coloques valores privilegiados dentro de `NEXT_PUBLIC_*`.
+MongoDB, claves de cifrado, secretos de pago y tokens de workers son server-only. Nunca coloques valores privilegiados en `NEXT_PUBLIC_*`.
 
-Usa `.env.example` como inventario completo de capacidades y `.env.demo.example` únicamente para evaluación local/sin infraestructura.
+Usa `.env.example` como inventario completo y `.env.demo.example` solo para evaluación.
+
+## Revisión de migración antes del despliegue
+
+Antes de desplegar una revisión, clasifica si cambia:
+
+- configuración/variables obligatorias;
+- colecciones, documentos o índices MongoDB;
+- datos históricos de pagos/finanzas;
+- semántica de reservas/inventario;
+- contratos públicos REST/eventos/firma;
+- Traveller Data cifrado/protegido o estado de claves.
+
+Si no requiere migración, regístralo explícitamente en la revisión del release/despliegue.
+
+Si requiere migración, sigue [`MIGRATIONS.es.md`](MIGRATIONS.es.md). Cuando sea viable, utiliza **expand → migrate → contract**.
+
+**No dependas del startup de la aplicación, evaluación de módulos o requests normales para ejecutar migraciones destructivas persistentes.** Las migraciones operativas deben ser deliberadas, revisables, verificables y recuperables.
+
+## Rollout con migración
+
+Secuencia segura:
+
+1. registrar release/commit actual y objetivo;
+2. clasificar compatibilidad y tipo de migración;
+3. tomar/verificar backup o punto de restore en cambios destructivos/de alto riesgo;
+4. desplegar primero cambios expand-compatible cuando sea posible;
+5. ejecutar migración deliberadamente con autorización operativa;
+6. verificar postcondiciones mediante counts/invariantes de dominio, no solo exit status;
+7. comprobar readiness y journeys críticos cliente/Operator;
+8. observar salud de negocio/infraestructura durante la ventana compatible;
+9. hacer cleanup/contract destructivo solo tras satisfacer rollback;
+10. registrar finalización y release activa.
+
+Los cambios irreversibles deben declarar antes del release si la recuperación es forward-only o mediante restore de backup.
 
 ## Perfil de despliegue
 
-El contrato de readiness utiliza:
+Usa:
 
 ```text
 KTRAVEL_DEPLOYMENT_PROFILE=demo
 ```
 
-para evaluación/referencia, y:
+para evaluación y:
 
 ```text
 KTRAVEL_DEPLOYMENT_PROFILE=live
 ```
 
-para un despliegue productivo real.
+para producción.
 
-`live` no habilita capacidades automáticamente. Hace más estricto `/api/health/ready` para evitar que un despliegue aparezca como listo mientras queden activos modos demo del core, la URL canónica no sea HTTPS, MongoDB requerido no esté disponible o integraciones habilitadas carezcan de configuración server-side obligatoria.
-
-No uses `live` como etiqueta estética. Actívalo solo después de configurar las capacidades persistentes y secretos productivos previstos.
+`live` hace que `/api/health/ready` falle de forma cerrada si siguen activos modos demo, la URL canónica no es HTTPS, MongoDB requerido no está disponible o adapters habilitados carecen de configuración obligatoria.
 
 ## Entorno mínimo de producción
 
-La configuración exacta depende de las capacidades habilitadas, pero un despliegue live normalmente necesita:
+Un despliegue live suele necesitar configuración equivalente a:
 
 ```text
 KTRAVEL_PUBLIC_URL=https://travel.example.com
 KTRAVEL_DEPLOYMENT_PROFILE=live
 NEXT_PUBLIC_DATA_MODE=<modo público/persistente>
-TRAVEL_DATA_MODE=<mongodb|rest según corresponda>
-IDENTITY_MODE=<mongodb|adaptador revisado>
-STAFF_AUTH_MODE=<mongodb|adaptador revisado>
-BOOKING_MODE=<mongodb|adaptador revisado>
-OPERATIONS_MODE=<mongodb|adaptador revisado>
+TRAVEL_DATA_MODE=<mongodb|rest>
+IDENTITY_MODE=<mongodb|adapter revisado>
+STAFF_AUTH_MODE=<mongodb|adapter revisado>
+BOOKING_MODE=<mongodb|adapter revisado>
+OPERATIONS_MODE=<mongodb|adapter revisado>
 PAYMENT_LEDGER_MODE=<mongodb cuando haya pagos>
 DEMO_IDENTITY_ENABLED=false
 DEMO_BOOKING_ENABLED=false
 DEMO_OPERATIONS_ENABLED=false
 ```
 
-Añade únicamente las credenciales exigidas por capacidades activas. Ejemplos: `MONGODB_URI`, SMTP, perfiles de proveedores de pago, `PAYMENT_SECRETS_KEY`, `TRAVELLER_DATA_KEY`, `INTEGRATION_SECRETS_KEY` y `KTRAVEL_INTEGRATION_WORKER_TOKEN`.
-
-Una integración deshabilitada no debe necesitar credenciales ficticias para que la aplicación arranque.
+Añade solo las credenciales exigidas por capacidades activas. Una integración deshabilitada no debe necesitar secretos placeholder.
 
 ## Endpoints de salud
-
-Existen dos endpoints no cacheables:
 
 ```text
 GET /api/health/live
 GET /api/health/ready
 ```
 
-`/api/health/live` comprueba el proceso y evita deliberadamente dependencias. `/api/health/ready` evalúa el perfil seleccionado y la infraestructura requerida.
+- **liveness**: salud del proceso;
+- **readiness**: perfil productivo y dependencias seleccionadas.
 
-Semántica recomendada para orquestación:
-
-- **liveness**: reiniciar/alertar cuando el proceso esté realmente insano;
-- **readiness**: sacar la instancia del tráfico cuando las dependencias configuradas o requisitos de producción no estén listos.
-
-No uses liveness como sustituto de readiness.
+Usa readiness para controlar tráfico; no sustituyas readiness por liveness.
 
 ## Proxy inverso y HTTPS
 
-En producción coloca el proceso Node standalone detrás del terminador TLS/proxy inverso o ingress gestionado elegido. El edge debe:
+Coloca el proceso standalone detrás de TLS/proxy inverso o ingress gestionado. El edge debe:
 
-1. terminar HTTPS con el hostname canónico;
-2. redirigir HTTP cuando corresponda;
-3. reenviar peticiones al puerto privado de la aplicación;
-4. conservar o sobrescribir de forma deliberada los forwarding headers según el modelo de confianza;
-5. aplicar límites de infraestructura de petición/body adecuados al despliegue.
+1. terminar HTTPS en el hostname canónico;
+2. redirigir HTTP cuando aplique;
+3. proxyear al puerto privado;
+4. controlar forwarding headers según el modelo de confianza;
+5. aplicar límites adecuados de request/body.
 
-`KTRAVEL_PUBLIC_URL` debe coincidir con el origen HTTPS visible externamente.
+`KTRAVEL_PUBLIC_URL` debe coincidir con el origen HTTPS externo. Las mutaciones con cookie validan `Origin`; orígenes adicionales exactos se configuran en `KTRAVEL_ALLOWED_BROWSER_ORIGINS`.
 
-Las mutaciones autenticadas mediante cookie validan `Origin`. Los orígenes de navegador adicionales deben listarse de forma exacta en `KTRAVEL_ALLOWED_BROWSER_ORIGINS`; no se admiten wildcards.
-
-Mantén `KTRAVEL_TRUST_PROXY_IP_HEADERS=false` salvo que el edge confiable elimine headers falsificados y proporcione la IP real de forma autoritativa. Consulta `docs/PRODUCTION-SECURITY.es.md`.
+Mantén `KTRAVEL_TRUST_PROXY_IP_HEADERS=false` salvo que el edge confiable elimine headers falsificables y suministre IP autoritativa. Consulta [`PRODUCTION-SECURITY.es.md`](PRODUCTION-SECURITY.es.md).
 
 ## MongoDB y estado persistente
 
-Producción debe utilizar modos persistentes en lugar de escrituras demo. Un rollout seguro con MongoDB es:
+Un despliegue seguro incluye:
 
-1. provisionar MongoDB/Atlas y un usuario de aplicación con mínimos privilegios;
-2. restringir Network Access al camino real de despliegue cuando sea posible;
-3. inyectar `MONGODB_URI` y `MONGODB_DB_NAME` mediante configuración protegida;
-4. sembrar/migrar únicamente los datos previstos;
-5. activar los modos MongoDB de las capacidades seleccionadas;
-6. verificar `/api/health/ready` y journeys de cliente/Operator;
-7. conservar una release inmutable conocida como buena y un plan probado de restore/rollback de datos.
+1. usuario MongoDB/Atlas con mínimos privilegios;
+2. Network Access restringido cuando sea posible;
+3. `MONGODB_URI` / `MONGODB_DB_NAME` protegidos;
+4. seeding/migración deliberados solo para datos previstos;
+5. modos persistentes seleccionados;
+6. verificación de readiness y flujos críticos;
+7. release anterior inmutable y ownership probado de backup/restore.
 
-No hagas commit de cadenas de conexión.
+En backfills usa batches acotados, criterios/cursor estables y restart explícito. No hagas commit de cadenas de conexión.
 
 ## Primer administrador persistente
 
-El primer administrador de staff en MongoDB puede crearse mediante variables temporales `KTRAVEL_BOOTSTRAP_ADMIN_*`. Una vez verificado el acceso:
+Usa `KTRAVEL_BOOTSTRAP_ADMIN_*` temporalmente. Después del primer acceso correcto:
 
-1. elimina `KTRAVEL_BOOTSTRAP_ADMIN_PASSWORD` del entorno;
-2. redespliega/reinicia sin ese secreto;
-3. vuelve a comprobar inicio de sesión y readiness.
-
-No mantengas la contraseña bootstrap como credencial administrativa permanente.
+1. elimina la contraseña bootstrap del entorno;
+2. redespliega/reinicia;
+3. verifica sign-in y readiness.
 
 ## Pagos
 
-Stripe y Redsys están detrás de la frontera provider-neutral de pagos, pero sus credenciales dependen del despliegue. Secuencia recomendada:
+Secuencia recomendada para Stripe/Redsys:
 
-1. configurar perfiles TEST y la clave de cifrado necesaria;
-2. ejecutar checkout → callback firmado del servidor → conciliación del ledger;
-3. repetir callbacks duplicados para comprobar idempotencia;
-4. probar devoluciones/conciliación cuando corresponda;
-5. comparar importe, moneda y referencias con el panel del proveedor;
-6. pasar a LIVE únicamente después de cerrar TEST;
-7. repetir transacciones LIVE controladas antes de abrir tráfico general.
+1. perfiles TEST y clave de cifrado;
+2. checkout → callback firmado → conciliación;
+3. callbacks duplicados para idempotencia;
+4. devoluciones/conciliación cuando corresponda;
+5. comparar importe/divisa/referencias con proveedor;
+6. LIVE solo tras cerrar TEST;
+7. transacciones LIVE controladas antes de tráfico general.
 
-Las URLs de retorno del navegador nunca sustituyen la verificación del callback firmado del proveedor. El E2E TEST/LIVE con credenciales de Stripe/Redsys sigue siendo una validación específica del despliegue porque el repositorio público no contiene cuentas ni secretos de proveedores.
+Las URLs de retorno del navegador nunca sustituyen callbacks firmados. El E2E TEST/LIVE con credenciales es una validación externa específica del despliegue.
+
+Una migración del ledger debe preservar identidad/idempotencia, importe, divisa, referencias e historial payment/refund. Nunca recalcules movimientos históricos desde estado actual mutable de reservas.
 
 ## Integraciones salientes y workers
 
-Cuando se habiliten adaptadores REST de proveedor, CRM o ERP/contabilidad, configura un `KTRAVEL_INTEGRATION_WORKER_TOKEN` de alta entropía y programa:
+Cuando se habiliten Supplier/CRM/ERP, configura `KTRAVEL_INTEGRATION_WORKER_TOKEN` de alta entropía y programa:
 
 ```text
 POST /api/internal/integrations/process
 Authorization: Bearer <token>
 ```
 
-Monitoriza reintentos, dead letters, readiness y latencia downstream. Mantén deshabilitados los adaptadores que no se usan en lugar de asignar credenciales placeholder.
+Monitoriza retries, dead letters, readiness y latencia. Mantén deshabilitados adapters no usados.
 
-## Claves de cifrado y secretos
+## Claves y datos protegidos
 
-La plataforma separa material criptográfico por clase de datos, incluyendo secretos de proveedores de pago, Traveller Data protegido y secretos de firma de integraciones. Genera claves productivas independientes, mantenlas estables, guárdalas en un gestor de secretos protegido y documenta backup/recuperación antes de depender de ciphertext.
+Usa claves independientes para pagos, Traveller Data e integraciones. Mantenlas estables, respáldalas y sigue los procedimientos keyring/re-encryption para rotación.
 
-Nunca hornees claves dentro de `.next/standalone`, capas de contenedor, repositorio o logs. La rotación debe seguir el procedimiento documentado de keyring/re-encryption.
+Nunca incluyas claves en `.next/standalone`, capas de contenedor, source o logs.
+
+Las migraciones de Traveller Data protegido usan acceso mínimo necesario y outputs redactados/basados en counts; nunca escriben valores protegidos en logs.
 
 ## Release inmutable
 
-Un despliegue self-host debe ser reproducible desde un SHA Git exacto. Un artefacto simple puede contener únicamente el runtime standalone preparado y metadatos de release:
+Un release self-host debe ser reproducible desde un tag/SHA exacto. El artefacto contiene el runtime standalone; la configuración runtime permanece separada.
 
-```text
-release/
-  server.js
-  .next/static/...
-  public/...
-  node_modules/...   # subconjunto trazado por Next.js standalone
-```
-
-La plataforma de despliegue debe inyectar la configuración de runtime por separado. Conserva la release inmutable anterior para que un rollback de aplicación no requiera reconstruir código antiguo con dependencias nuevas.
+Conserva el artefacto anterior para que el rollback no dependa de reconstruir source histórico con dependencias nuevas.
 
 ## Backups y rollback
 
-El rollback productivo debe cubrir código y efectos persistentes:
+El plan cubre código y efectos persistentes:
 
-- SHA/artefacto exacto de release;
-- punto de backup/restore de MongoDB y ownership probado del restore;
-- evolución de schemas/índices compatible hacia atrás cuando sea posible;
-- disponibilidad de claves de cifrado;
-- efectos de pagos/integraciones que no se revierten al hacer rollback del código.
+- release/tag/SHA/artefacto anterior exacto;
+- punto MongoDB backup/restore y ownership probado;
+- ventana compatible de schemas/índices;
+- disponibilidad de claves;
+- acciones externas de pagos/integraciones no reversibles por rollback de código.
 
-Ejecuta un ejercicio documentado de recuperación antes del lanzamiento y repítelo periódicamente.
+Antes de una migración no trivial declara si rollback es solo aplicación, reverse migration, restore de backup o irreversible/forward-only.
 
 ## Verificación productiva
 
-Para la revisión exacta que se quiere desplegar:
+Para la revisión exacta a publicar/desplegar:
 
 ```bash
 npm ci
+npm run check:release
+npm run check:release-migrations
 npm run verify
 npm run build
 npm run package:standalone
 ```
 
-Después arranca `server.js` con configuración similar a staging/live y verifica como mínimo:
+Después verifica como mínimo:
 
 - `/api/health/live` = 200;
-- `/api/health/ready` = 200 cuando las dependencias previstas estén listas;
-- páginas públicas de catálogo y assets estáticos;
-- autenticación/cuenta de cliente;
-- reservas y pagos habilitados;
-- login de Operator y colas operativas críticas;
-- worker de integraciones cuando esté habilitado.
+- `/api/health/ready` = 200 cuando estén listas las dependencias;
+- catálogo/assets públicos;
+- autenticación/cuenta cliente;
+- booking/pagos habilitados;
+- login Operator y colas críticas;
+- worker de integraciones si está activo;
+- postcondiciones específicas de migración si el release incluye una.
 
-Las credenciales de CI y los smoke tests demo no sustituyen este cierre específico del despliegue.
+CI/demo no sustituyen el sign-off específico del despliegue.
 
-## Revisión final de producción
+## Revisión final
 
-Antes del lanzamiento revisa:
+Antes de producción revisa:
 
-- `docs/PRODUCTION-CHECKLIST.md`;
-- `docs/PRODUCTION-SECURITY.es.md`;
-- `docs/EXTERNAL-MONITORING.es.md`;
+- [`RELEASES.es.md`](RELEASES.es.md);
+- [`MIGRATIONS.es.md`](MIGRATIONS.es.md);
+- [`PRODUCTION-CHECKLIST.md`](PRODUCTION-CHECKLIST.md);
+- [`PRODUCTION-SECURITY.es.md`](PRODUCTION-SECURITY.es.md);
+- [`EXTERNAL-MONITORING.es.md`](EXTERNAL-MONITORING.es.md);
 - `SECURITY.md`;
-- documentación de pagos e integraciones;
-- requisitos aplicables de privacidad, viajes, pagos y consumidores del mercado objetivo.
+- documentación de pagos/integraciones y regulación aplicable.
