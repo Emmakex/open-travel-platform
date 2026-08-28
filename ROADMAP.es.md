@@ -10,7 +10,8 @@ _Última actualización: 28 de agosto de 2026._
 
 **Fase 8 — Integraciones externas: COMPLETADA.**  
 **Fase 9 — Baseline de hardening productivo: COMPLETADA.**  
-**Fase 10 — Productización open-source — COMPLETADA.**
+**Fase 10 — Productización open-source: COMPLETADA.**  
+**Fase 11 — Ecosistema de distribución y despliegue: EN CURSO.**
 
 Release de cierre de Fase 10: **v1.1.0**.
 
@@ -23,12 +24,23 @@ Release de cierre de Fase 10: **v1.1.0**.
 10.6     Plantillas de contribución y release ----------------- COMPLETADA
 10.7     Política de branding y marcas ------------------------ COMPLETADA
 10.8     Auditoría final/release + v1.1.0 --------------------- COMPLETADA
+
+11.1     Baseline reproducible OCI/Docker --------------------- COMPLETADA
+11.2     Publicación registry + procedencia ------------------- PLANIFICADA
+11.3     Recetas de despliegue / orquestadores ---------------- PLANIFICADA
+11.4     Verificación de release de distribución -------------- PLANIFICADA
 ```
 
-Auditoría final: [`docs/PHASE-10-RELEASE-AUDIT.es.md`](docs/PHASE-10-RELEASE-AUDIT.es.md)  
-Release notes: [`docs/RELEASE-NOTES-1.1.0.es.md`](docs/RELEASE-NOTES-1.1.0.es.md)
+Auditoría final de Fase 10: [`docs/PHASE-10-RELEASE-AUDIT.es.md`](docs/PHASE-10-RELEASE-AUDIT.es.md)  
+Despliegue en contenedores: [`docs/CONTAINERS.es.md`](docs/CONTAINERS.es.md)
 
-La validación Stripe/Redsys TEST/LIVE con credenciales sigue siendo un ítem dependiente del proveedor y no reabre Fase 9 ni bloquea el release provider-neutral v1.1.0.
+La validación Stripe/Redsys TEST/LIVE con credenciales sigue siendo un ítem dependiente del proveedor y no reabre Fase 9 ni bloquea el trabajo provider-neutral de distribución.
+
+---
+
+# Fundaciones completadas de la plataforma
+
+Catálogo, identidad, booking, commerce, post-purchase, operaciones, documentos/reporting, integraciones externas, hardening de Fase 9 y productización open-source de Fase 10 están completados. El core incluye adapters MongoDB persistentes, fronteras provider-neutral de pagos, Traveller Data cifrado, workflows operativos, integraciones firmadas, gates de privacidad/accesibilidad, recovery, baselines repetibles de rendimiento y lifecycle de releases verificado.
 
 ---
 
@@ -113,11 +125,69 @@ Documentos: [`TRADEMARKS.es.md`](TRADEMARKS.es.md), [`TRADEMARKS.md`](TRADEMARKS
 - auditoría final y release notes bilingües;
 - `check:phase-10-release` añadido a `npm run verify`;
 - workflow dedicado audita la revisión ya mergeada en `main`;
-- workflow de publicación crea tag inmutable `v1.1.0` y GitHub Release únicamente tras audit exitoso en main;
-- tags existentes nunca se mueven ni recrean;
+- workflow de publicación creó el tag inmutable `v1.1.0` y GitHub Release tras audit exitoso en main;
 - se documenta honestamente el estado histórico 1.0.0 sin fabricar tag retroactivo.
 
 Documentos: [`docs/PHASE-10-RELEASE-AUDIT.es.md`](docs/PHASE-10-RELEASE-AUDIT.es.md), [`docs/RELEASE-NOTES-1.1.0.es.md`](docs/RELEASE-NOTES-1.1.0.es.md).
+
+---
+
+# Fase 11 — Ecosistema de distribución y despliegue — EN CURSO
+
+Objetivo: hacer que el core standalone verificado pueda distribuirse y operarse como artefacto inmutable provider-neutral sin filtrar secretos, acoplarse a vendors ni incluir implementación privada de Kairoseth.
+
+## 11.1 — Baseline reproducible OCI/Docker — COMPLETADA
+
+Seguimiento: issue **#134**.
+
+Entregado:
+
+- `Dockerfile` multi-stage provider-neutral con Node.js 24 Debian slim;
+- el stage de build reutiliza `npm ci`, `npm run build` y `npm run package:standalone`;
+- la imagen final contiene el runtime standalone preparado, no todo el source/toolchain de build;
+- identidad runtime no-root fija `app` / `10001:10001`;
+- defaults de runtime limitados a `NODE_ENV`, `HOSTNAME`, `PORT` y control de telemetría;
+- configuración/secretos privilegiados permanecen inyectados en runtime y no se incrustan en capas de imagen;
+- healthcheck Docker sobre `/api/health/live`, mientras el routing productivo sigue usando `/api/health/ready`;
+- `.dockerignore` reduce build context y excluye entornos/artefactos locales;
+- `scripts/container-distribution-check.mjs` + `npm run check:container` forman parte de `npm run verify`;
+- workflow bloqueante `Container distribution` construye imagen real, verifica non-root, espera health y ejecuta smoke HTTP/assets;
+- guía bilingüe [`docs/CONTAINERS.es.md`](docs/CONTAINERS.es.md) / [`docs/CONTAINERS.md`](docs/CONTAINERS.md).
+
+La Fase 11.1 **no publica** una imagen en registry. Esa frontera es deliberada.
+
+## 11.2 — Publicación en registry y procedencia — PLANIFICADA
+
+Scope candidato, no activo hasta mergear y verificar 11.1:
+
+- seleccionar target público de registry/distribución;
+- publicar únicamente referencias inmutables de versión/tag y digest desde commits de release auditados;
+- definir labels/metadata de imagen y enlace source/revision;
+- añadir checksums/SBOM/provenance/firma donde el ecosistema lo permita;
+- definir retención y reglas de tags que nunca se mueven;
+- mantener imágenes/configuración privadas Kairoseth/cliente fuera del core público.
+
+## 11.3 — Recetas de despliegue / ejemplos de orquestador — PLANIFICADA
+
+Ejemplos provider-neutral candidatos:
+
+- Docker Compose para evaluación local y self-host controlado;
+- primitivas Kubernetes/plataforma de contenedores;
+- proxy inverso/TLS/readiness;
+- inyección de secrets/config y servicios persistentes externos;
+- upgrade/rollback mediante digests inmutables.
+
+Ninguna plataforma específica será obligatoria para el core.
+
+## 11.4 — Verificación de release de distribución — PLANIFICADA
+
+Gate potencial de cierre de Fase 11:
+
+- verificar digest del artefacto publicado ↔ tag/commit source;
+- clean pull/run del artefacto público;
+- validar release notes y documentación upgrade/rollback;
+- conservar invariantes non-root, health y secretos de runtime en artefactos publicados;
+- cerrar Fase 11 únicamente con el mismo gate documental/PR/CI/merge/verificación de main.
 
 ## Gate permanente
 
@@ -130,16 +200,10 @@ implementación
 → CI obligatorio verde
 → merge a main
 → verificar main
-→ tag/release inmutable cuando corresponda
+→ tag/release/artefacto inmutable cuando corresponda
 → trabajo posterior del roadmap
 ```
 
-## Evolución post-Fase-10
-
-Adapters opcionales según demanda comercial/comunitaria y capacidades específicas de Kairoseth continúan como evolución normal. No son bloqueos retroactivos de Fase 10 salvo que se promuevan explícitamente a una nueva fase del core.
-
-Posibles temas futuros: más adapters de proveedor, packaging/distribución del ecosistema y nuevas capacidades de producto, cada uno con fase/scope explícitos antes de implementación.
-
 ## No-objetivos
 
-El core público no debe quedar ligado permanentemente a un PSP, proveedor, CRM/ERP, CMS, vendor de identidad, monitorización, hosting o infraestructura exclusiva de Kairoseth.
+El core público no debe quedar ligado permanentemente a un PSP, proveedor, CRM/ERP, CMS, vendor de identidad, monitorización, hosting, registry de contenedores o infraestructura exclusiva de Kairoseth.
