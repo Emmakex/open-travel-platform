@@ -9,6 +9,7 @@ Antes de un rollout productivo revisa:
 - [`RELEASES.es.md`](RELEASES.es.md) — identidad del release, SemVer, tags inmutables y secuencia de publicación;
 - [`MIGRATIONS.es.md`](MIGRATIONS.es.md) — migraciones de configuración/datos/wire/claves, verificación y rollback;
 - [`CONTAINERS.es.md`](CONTAINERS.es.md) — build OCI/Docker provider-neutral, runtime no-root, secretos solo en runtime y health checks cuando uses contenedores;
+- [`REGISTRY.es.md`](REGISTRY.es.md) — publicación GHCR auditada, identidades de imagen inmutables, despliegue por digest, SBOM/provenance y verificación de attestations;
 - [`PRODUCTION-CHECKLIST.md`](PRODUCTION-CHECKLIST.md) — revisión final de producción.
 
 ## Identidad exacta del release
@@ -72,7 +73,27 @@ La imagen final se ejecuta como usuario no-root `app` (`10001:10001`). La config
 
 El healthcheck de la imagen usa `/api/health/live`; ingress/orquestadores de producción deben usar `/api/health/ready` antes de enrutar tráfico. Ejecuta `npm run check:container` para el contrato estático y utiliza el workflow bloqueante `Container distribution` para build/start/health/smoke HTTP real.
 
-Consulta [`CONTAINERS.es.md`](CONTAINERS.es.md). La publicación en un registry público queda intencionadamente fuera de la Fase 11.1.
+Consulta [`CONTAINERS.es.md`](CONTAINERS.es.md).
+
+## Identidad de contenedor publicado
+
+La Fase 11.2 define GHCR como registry público de referencia para releases auditadas sin convertirlo en una dependencia del runtime. Cuando una release sea elegible para publicación, usa únicamente sus tags exactos SemVer/SHA y resuelve el digest OCI inmutable.
+
+```text
+ghcr.io/emmakex/open-travel-platform:vX.Y.Z
+ghcr.io/emmakex/open-travel-platform:sha-<sha-completo-del-codigo>
+ghcr.io/emmakex/open-travel-platform@sha256:<digest>
+```
+
+Producción debe desplegar el digest, verificar su GitHub artifact attestation y registrar conjuntamente release/tag/SHA de código/digest. No uses aliases móviles `latest`, major, minor o similares.
+
+Ejecuta:
+
+```bash
+npm run check:registry-provenance
+```
+
+y sigue [`REGISTRY.es.md`](REGISTRY.es.md) para comprobar SBOM/provenance/attestation. El histórico `v1.1.0` no es una release de contenedor porque su tag de código inmutable es anterior al Dockerfile.
 
 ## Configuración de build y runtime
 
@@ -265,12 +286,13 @@ npm ci
 npm run check:release
 npm run check:release-migrations
 npm run check:container
+npm run check:registry-provenance
 npm run verify
 npm run build
 npm run package:standalone
 ```
 
-Cuando despliegues el artefacto de contenedor, realiza también el build/run de imagen descrito en [`CONTAINERS.es.md`](CONTAINERS.es.md).
+Cuando despliegues el artefacto de contenedor, realiza también el build/run de imagen descrito en [`CONTAINERS.es.md`](CONTAINERS.es.md). Si usas una imagen publicada, verifica el digest OCI exacto y su attestation según [`REGISTRY.es.md`](REGISTRY.es.md).
 
 Después verifica como mínimo:
 
@@ -292,6 +314,7 @@ Antes de producción revisa:
 - [`RELEASES.es.md`](RELEASES.es.md);
 - [`MIGRATIONS.es.md`](MIGRATIONS.es.md);
 - [`CONTAINERS.es.md`](CONTAINERS.es.md) si despliegas contenedor;
+- [`REGISTRY.es.md`](REGISTRY.es.md) si despliegas una imagen publicada;
 - [`PRODUCTION-CHECKLIST.md`](PRODUCTION-CHECKLIST.md);
 - [`PRODUCTION-SECURITY.es.md`](PRODUCTION-SECURITY.es.md);
 - [`EXTERNAL-MONITORING.es.md`](EXTERNAL-MONITORING.es.md);
