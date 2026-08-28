@@ -1,11 +1,11 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Browser } from "@playwright/test";
 
 const customerEmail = "accessibility-operator-customer@example.test";
 const customerPassword = "Accessibility-Operator-Customer-2026";
 const adminEmail = process.env.KTRAVEL_BOOTSTRAP_ADMIN_EMAIL || "accessibility-operator-admin@example.test";
 const adminPassword = process.env.KTRAVEL_BOOTSTRAP_ADMIN_PASSWORD || "Accessibility-Operator-Admin-2026";
 
-async function createPersistentReservation(browser: Parameters<typeof test>[0] extends never ? never : any) {
+async function createPersistentReservation(browser: Browser) {
   const customerContext = await browser.newContext();
   const page = await customerContext.newPage();
 
