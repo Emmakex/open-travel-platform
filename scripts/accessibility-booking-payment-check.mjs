@@ -8,6 +8,7 @@ const assert = (condition, message) => {
 };
 
 const trip = read("app/trips/[slug]/book/page.tsx");
+const travellerForm = read("components/traveller-booking-form.tsx");
 const service = read("app/services/book/[type]/[slug]/page.tsx");
 const checkout = read("app/account/checkout/[targetType]/[id]/page.tsx");
 const checkoutReturn = read("app/account/checkout/return/page.tsx");
@@ -19,6 +20,11 @@ const packageJson = JSON.parse(read("package.json"));
 
 assert(trip.includes('id="trip-booking-error"'), "trip booking must keep a stable error region");
 assert(trip.includes('role="alert"') && trip.includes('aria-live="assertive"'), "trip booking errors must be announced assertively");
+assert(travellerForm.includes("validateTravellerFields"), "trip booking must preserve explicit traveller field recovery");
+assert(travellerForm.includes('id="trip-booking-field-errors"') && travellerForm.includes('aria-atomic="true"'), "field recovery must keep a stable atomic error summary");
+assert(travellerForm.includes("aria-invalid={") && travellerForm.includes("aria-describedby={"), "invalid traveller controls must be associated with inline errors");
+assert(travellerForm.includes("control.focus()"), "field recovery must move focus to the first invalid traveller control");
+assert(travellerForm.includes("noValidate") && travellerForm.includes("onSubmit={handleSubmit}"), "client recovery must run deterministically before server submission");
 assert(service.includes('id="service-booking-error"'), "service booking must keep a stable error region");
 assert(service.includes('role="alert"') && service.includes('aria-live="assertive"'), "service booking errors must be announced assertively");
 
@@ -37,6 +43,7 @@ assert(redsys.includes('id="redsys-handoff-status"') && redsys.includes('role="s
 
 for (const evidence of [
   "trip booking server feedback is exposed as an assertive alert",
+  "trip booking exposes inline traveller errors and focuses the first invalid field",
   "authenticated checkout exposes payment errors, summary and current state"
 ]) {
   assert(browser.includes(evidence), `blocking browser coverage must include: ${evidence}`);
@@ -47,6 +54,7 @@ for (const [name, text] of [["English", docs], ["Spanish", docsEs]]) {
   assert(lower.includes("booking") || lower.includes("reserva"), `${name} docs must cover booking feedback`);
   assert(lower.includes("checkout"), `${name} docs must cover checkout`);
   assert(lower.includes('role="alert"') && lower.includes('role="status"'), `${name} docs must document alert/status semantics`);
+  assert(lower.includes("aria-invalid") && lower.includes("focus"), `${name} docs must document field errors and focus recovery`);
   assert(lower.includes("redsys") && lower.includes("stripe"), `${name} docs must preserve provider boundary`);
 }
 
