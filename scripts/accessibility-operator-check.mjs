@@ -32,11 +32,15 @@ assert(tasks.includes("<article") && tasks.includes("aria-labelledby={taskTitleI
 assert(fulfilment.includes("aria-labelledby={componentTitleId}"), "supplier components must be named articles");
 assert(fulfilment.includes('role="group"') && fulfilment.includes("External supplier actions for"), "external supplier action groups must be named");
 
+assert(!browser.includes('form button[type="submit"]'), "browser journey must not use generic submit selectors that collide with locale controls");
 for (const evidence of [
   "Operator workflow exposes accessible feedback, form names and error relationships",
   "#operations-status",
   "#tasks-error",
   "#fulfilment-error",
+  "Create my account|Crear mi cuenta",
+  "Confirm reservation|Confirmar reserva",
+  "Sign in to operations|Entrar en operaciones",
   "Reservation internal workflow|Gestión interna de la reserva",
   "Create internal task|Crear tarea interna",
   "Supplier tracking for|Seguimiento de proveedor para",
