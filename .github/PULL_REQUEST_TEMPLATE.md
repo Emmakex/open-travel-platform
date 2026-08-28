@@ -44,6 +44,15 @@ For deprecations/removals state the replacement, first deprecated release, earli
 - Are browser-visible environment variables safe to expose publicly?
 - Are provider payloads still contained and normalized at adapter boundaries?
 
+## Branding / identity
+
+- [ ] No branding/identity impact
+- [ ] Public name, site identity, domain, package/app name or visual branding changes
+- [ ] Independent/fork branding guidance changes
+- [ ] Kairoseth/Kairoseth Travel reference identity changes
+
+If branding/identity changes, explain the impact and update [`TRADEMARKS.md`](../TRADEMARKS.md) / [`TRADEMARKS.es.md`](../TRADEMARKS.es.md). Do not imply registered, official, certified, approved, partner or endorsed status without an authoritative basis.
+
 ## UX / accessibility — visible changes only
 
 - [ ] Desktop layout reviewed
@@ -60,6 +69,8 @@ For deprecations/removals state the replacement, first deprecated release, earli
 - [ ] `npm run check:extension-contracts`
 - [ ] `npm run check:release-migrations`
 - [ ] `npm run check:upgrade-deprecations`
+- [ ] `npm run check:contribution-templates`
+- [ ] `npm run check:branding-policy`
 - [ ] `npm run verify`
 - [ ] Relevant runtime/integration/E2E flow tested when applicable
 - [ ] No private customer data, credentials or protected deployment values committed
