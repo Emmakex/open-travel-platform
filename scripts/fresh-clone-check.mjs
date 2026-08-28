@@ -8,6 +8,7 @@ const assert = (condition, message) => {
 };
 
 const packageJson = JSON.parse(read("package.json"));
+const packageLock = JSON.parse(read("package-lock.json"));
 const demoEnv = read(".env.demo.example");
 const setup = read("scripts/setup-demo.mjs");
 const workflow = read(".github/workflows/fresh-clone-demo.yml");
@@ -17,6 +18,11 @@ const docsEs = read("docs/GETTING-STARTED.es.md");
 assert(packageJson.engines?.node === ">=24 <25", "fresh-clone contract must stay on Node.js 24 LTS");
 assert(packageJson.scripts?.["setup:demo"] === "node scripts/setup-demo.mjs", "package must expose setup:demo");
 assert(packageJson.scripts?.["check:fresh-clone"] === "node scripts/fresh-clone-check.mjs", "package must expose the fresh-clone invariant gate");
+assert(packageLock.lockfileVersion === 3, "npm lockfile must use lockfileVersion 3");
+const rootLock = packageLock.packages?.[""];
+assert(rootLock, "package-lock.json must include the root package record");
+assert(JSON.stringify(rootLock.dependencies ?? {}) === JSON.stringify(packageJson.dependencies ?? {}), "runtime dependencies in package-lock.json must match package.json exactly");
+assert(JSON.stringify(rootLock.devDependencies ?? {}) === JSON.stringify(packageJson.devDependencies ?? {}), "dev dependencies in package-lock.json must match package.json exactly");
 
 for (const evidence of [
   "KTRAVEL_PUBLIC_URL=http://localhost:3000",
