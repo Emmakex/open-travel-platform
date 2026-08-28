@@ -21,6 +21,7 @@ Completed Phase 10 slices:
 10.4     Release and migration conventions ------------------- COMPLETE
 10.5     Upgrade and deprecation lifecycle policy ------------ COMPLETE
 10.6     Contribution and release templates ------------------ COMPLETE
+10.7     Trademark/branding and project identity policy ------ COMPLETE
 ```
 
 Credentialed Stripe/Redsys TEST/LIVE E2E remains a separate external dependency and does not reopen Phase 9.
@@ -97,41 +98,7 @@ Authoritative documents:
 - [`docs/DEPRECATIONS.md`](docs/DEPRECATIONS.md)
 - [`docs/DEPRECATIONS.es.md`](docs/DEPRECATIONS.es.md)
 
-Support/upgrade contract:
-
-- latest stable release of the current major is the primary supported target;
-- no guaranteed LTS/backport line unless explicitly announced;
-- same-major upgrades are supported with documented migrations;
-- major upgrade path starts from the latest stable release of the immediately previous major when documented;
-- skip-major upgrades require explicit support documentation;
-- operators record exact source/target versions/SHAs and recovery classification.
-
-Deprecation contract:
-
-```text
-ACTIVE → DEPRECATED → REMOVED
-```
-
-- ordinary removal of a public surface occurs only in a **MAJOR** release;
-- deprecation notices identify replacement, first deprecated release and earliest ordinary removal release;
-- PATCH/MINOR releases do not silently remove or reinterpret supported public contracts/configuration;
-- configuration, extension interfaces, wire contracts and persistent data follow the same lifecycle;
-- security can accelerate removal only through an explicit documented exception;
-- warnings must not leak secrets/protected data.
-
-Permanent automation:
-
-```bash
-npm run check:upgrade-deprecations
-npm run verify
-```
-
-Delivered:
-
-- `scripts/upgrade-deprecation-check.mjs`;
-- `check:upgrade-deprecations` registered in `verify`;
-- dedicated `.github/workflows/upgrade-deprecations.yml`;
-- release, migration, extension compatibility, SUPPORT and CONTRIBUTING integration.
+Delivered supported upgrade paths, lifecycle `ACTIVE → DEPRECATED → REMOVED`, ordinary MAJOR-only removal, security exceptions and permanent `check:upgrade-deprecations` validation.
 
 ## 10.6 — Contribution and release templates — COMPLETE
 
@@ -140,25 +107,44 @@ Authoritative documents:
 - [`docs/CONTRIBUTION-TEMPLATES.md`](docs/CONTRIBUTION-TEMPLATES.md)
 - [`docs/CONTRIBUTION-TEMPLATES.es.md`](docs/CONTRIBUTION-TEMPLATES.es.md)
 
+Delivered one canonical PR template, richer bug/feature forms, a reusable release template, `check:contribution-templates`, a dedicated workflow and contributor documentation synchronized with Phases 10.3–10.5.
+
+## 10.7 — Trademark/branding and project identity policy — COMPLETE
+
+Authoritative documents:
+
+- [`TRADEMARKS.md`](TRADEMARKS.md)
+- [`TRADEMARKS.es.md`](TRADEMARKS.es.md)
+
 Delivered:
 
-- exactly one canonical `.github/PULL_REQUEST_TEMPLATE.md`;
-- PR checklist aligned with capability/extension boundaries, SemVer, migrations, lifecycle, authority/security/privacy, UX/accessibility and phase completion;
-- richer bug/feature issue forms with exact-version, upgrade/public-contract, provider-neutrality and data-safety context;
-- reusable `.github/RELEASE_TEMPLATE.md` for release identity, compatibility, migrations, deprecations/removals, rollback, validation and publication;
-- `scripts/contribution-template-check.mjs` and `check:contribution-templates` inside `npm run verify`;
-- dedicated `.github/workflows/contribution-templates.yml`;
-- contributor documentation synchronized with Phases 10.3–10.5.
+- explicit separation between MIT software rights and project/reference identity guidance;
+- Open Travel Platform defined as the public upstream core identity;
+- Kairoseth Travel defined as the official hosted/commercial reference implementation at `travel.kairoseth.com`;
+- truthful “Based on/Powered by Open Travel Platform” attribution allowed for independent deployments when their own identity remains primary;
+- independent modified/public commercial deployments are expected to configure their own `NEXT_PUBLIC_SITE_NAME`/presentation identity;
+- no unverified registered, official, certified, approved, partner or endorsement claims;
+- current repository contains no designated official logo package under this policy;
+- legacy `KTRAVEL_*` configuration names classified as technical compatibility identifiers, not branding rights;
+- future `KTRAVEL_*` namespace migration must follow the established deprecation/upgrade/migration lifecycle rather than a silent rename;
+- PR/release templates include branding/identity impact classification;
+- `scripts/branding-policy-check.mjs`, `npm run check:branding-policy` and dedicated `.github/workflows/branding-policy.yml`.
 
-## Planned later Phase 10 work
+## Final Phase 10 closure work — PLANNED
 
-No later slice is active merely because it is listed. Each receives its own branch and full completion gate when started.
+No final closure slice is active until Phase 10.7 has green CI, is merged and `main` is verified.
 
-Potential next slices:
+The remaining Phase 10 blocker is a final documentation/release audit and public release cut. That slice should:
 
-- trademark/branding policy between Open Travel Platform and Kairoseth Travel;
-- final Phase 10 documentation/release audit and next public release cut;
-- optional adapters driven by commercial/community demand, outside the Phase 10 completion blocker unless deliberately promoted.
+- audit links, EN/ES documentation, templates and permanent gates from a clean `main`;
+- confirm fresh-clone/demo and standalone release paths;
+- perform final SemVer classification of all post-1.0 productisation work;
+- convert the current `Unreleased` work into the selected stable release (expected MINOR unless the final audit finds a breaking change);
+- synchronize package version, README badge, CHANGELOG and immutable Git tag;
+- run complete CI and verify `main` before creating the tag/GitHub Release;
+- mark Phase 10 COMPLETE only after the release record is verified.
+
+Optional adapters driven by commercial/community demand remain later evolution and are not a Phase 10 completion blocker unless deliberately promoted.
 
 ## Permanent phase gate
 
