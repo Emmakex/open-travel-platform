@@ -108,14 +108,14 @@ Consulta [`docs/CONTAINERS.es.md`](docs/CONTAINERS.es.md).
 GHCR es el registry público de referencia para futuras releases auditadas de contenedor:
 
 ```text
-ghcr.io/Emmakex/open-travel-platform:vX.Y.Z
-ghcr.io/Emmakex/open-travel-platform:sha-<sha-completo-del-codigo>
+ghcr.io/emmakex/open-travel-platform:vX.Y.Z
+ghcr.io/emmakex/open-travel-platform:sha-<sha-completo-del-codigo>
 ```
 
 No se publican aliases móviles `latest`, major o minor. Producción debe desplegar el digest registrado, por ejemplo:
 
 ```bash
-docker pull ghcr.io/Emmakex/open-travel-platform@sha256:<digest>
+docker pull ghcr.io/emmakex/open-travel-platform@sha256:<digest>
 ```
 
 Las imágenes de release publicadas incluyen SBOM, BuildKit `provenance: mode=max`, metadatos OCI de source/revision/version/license y una GitHub artifact attestation ligada al digest. `v1.1.0` no se reconstruye retroactivamente porque su tag de código inmutable es anterior al Dockerfile/workflow de contenedores.
