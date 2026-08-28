@@ -37,6 +37,25 @@ test.describe("booking and payment accessibility", () => {
     await expect(error).toHaveAttribute("aria-live", "assertive");
   });
 
+  test("trip booking exposes inline traveller errors and focuses the first invalid field", async ({ page }) => {
+    await page.goto("/trips/barcelona-city-break/book");
+    const confirm = page.getByRole("button", { name: /Confirm reservation|Confirmar reserva/i });
+    await expect(confirm).toBeEnabled();
+    await confirm.click();
+
+    const firstName = page.locator('input[name="travellerFirstName__traveller-1"]');
+    const firstNameError = page.locator("#traveller-traveller-1-firstName-error");
+    await expect(page.locator("#trip-booking-field-errors")).toHaveAttribute("role", "alert");
+    await expect(firstName).toBeFocused();
+    await expect(firstName).toHaveAttribute("aria-invalid", "true");
+    await expect(firstName).toHaveAttribute("aria-describedby", "traveller-traveller-1-firstName-error");
+    await expect(firstNameError).toBeVisible();
+
+    await firstName.fill("Accessible");
+    await expect(firstName).not.toHaveAttribute("aria-invalid", "true");
+    await expect(firstNameError).toHaveCount(0);
+  });
+
   test("authenticated checkout exposes payment errors, summary and current state", async ({ page }) => {
     await registerCustomer(page);
     const reservationId = await createReservation(page);
