@@ -36,24 +36,27 @@ Completed Phase 10 slices:
 - **10.2 Provider-neutral self-host standalone deployment — COMPLETE**
 - **10.3 Extension contracts and reference adapters — COMPLETE**
 - **10.4 Release and migration conventions — COMPLETE**
+- **10.5 Upgrade and deprecation lifecycle policy — COMPLETE**
 
-Phase 10.4 establishes:
+Phase 10.5 establishes:
 
-- Semantic Versioning for public stable releases;
-- immutable Git tags in `vX.Y.Z` form;
-- release identity alignment across `package.json`, README badge and CHANGELOG;
-- releases cut only from verified `main`;
-- explicit migration classification and rollback/recovery requirements;
-- **expand → migrate → contract** for compatible persistent-data evolution;
-- no hidden destructive migrations during application startup;
-- permanent validation through `npm run check:release-migrations`.
+- latest stable release in the current major as the primary supported target;
+- no guaranteed LTS/backport promise unless explicitly announced;
+- supported same-major and adjacent-major upgrade paths;
+- skip-major upgrades only when explicitly documented;
+- public lifecycle `ACTIVE → DEPRECATED → REMOVED`;
+- ordinary public removal only in a **MAJOR** release;
+- replacement + first deprecated release + earliest removal version as required deprecation metadata;
+- an explicit accelerated security exception rather than silent incompatible changes;
+- provider-neutral rules for configuration, APIs/events, extension interfaces and persistent data;
+- permanent validation through `npm run check:upgrade-deprecations`.
 
-Authoritative Phase 10.4 documentation:
+Authoritative Phase 10.4–10.5 documentation:
 
 - [`docs/RELEASES.md`](docs/RELEASES.md)
-- [`docs/RELEASES.es.md`](docs/RELEASES.es.md)
 - [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md)
-- [`docs/MIGRATIONS.es.md`](docs/MIGRATIONS.es.md)
+- [`docs/UPGRADES.md`](docs/UPGRADES.md)
+- [`docs/DEPRECATIONS.md`](docs/DEPRECATIONS.md)
 
 Credentialed Stripe/Redsys TEST/LIVE E2E remains a separate provider-dependent release validation until suitable provider accounts are available.
 
@@ -64,19 +67,17 @@ Credentialed Stripe/Redsys TEST/LIVE E2E remains a separate provider-dependent r
 - bilingual EN/ES catalogue and Operator experience;
 - destinations, trips, itineraries, departures and live inventory;
 - accommodation/rooms and seasonal/occupancy pricing;
-- Activities, Transport and Travel protection products;
+- Activities, Transport and Travel protection;
 - transactional reservations with server-authoritative pricing/inventory;
 - travellers/minors/guardians and historical pricing snapshots;
 - package supplements and post-booking amendments.
 
 ### Identity and operations
 
-- persistent customer/staff authentication;
-- separate customer/staff sessions;
+- persistent customer/staff authentication and separate sessions;
 - RBAC and granular Operator/Admin capabilities;
 - operational ownership, notes, priority, tags and timeline;
-- tasks/follow-ups and supplier fulfilment;
-- advanced queues/filtering;
+- tasks/follow-ups, supplier fulfilment and advanced queues;
 - privileged audit where required.
 
 ### Payments and finance
@@ -104,7 +105,7 @@ Credentialed Stripe/Redsys TEST/LIVE E2E remains a separate provider-dependent r
 - signed HTTPS webhooks with retry/dead-letter handling;
 - REST `BookingRepository`, supplier fulfilment, downstream CRM/ERP and failure transport;
 - nine verified first-class public extension interfaces;
-- provider-specific payload containment and explicit authority boundaries;
+- explicit provider/authority boundaries;
 - permanent extension gate through `check:extension-contracts`.
 
 ## Quick start
@@ -133,7 +134,7 @@ node .next/standalone/server.js
 
 For production deployment see [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) and [`docs/PRODUCTION-CHECKLIST.md`](docs/PRODUCTION-CHECKLIST.md).
 
-## Release and migration contract
+## Release, upgrade and deprecation contract
 
 Stable releases use:
 
@@ -143,18 +144,27 @@ Git tag       -> vX.Y.Z
 CHANGELOG     -> ## [X.Y.Z] - YYYY-MM-DD
 ```
 
-Before a release:
+A production upgrade identifies exact source/target versions and SHAs, reviews all intervening migrations/deprecations, validates a representative target environment and declares recovery before persistent changes.
+
+Public lifecycle:
+
+```text
+ACTIVE → DEPRECATED → REMOVED
+```
+
+Ordinary removal occurs only at/after the announced MAJOR boundary. PATCH/MINOR releases do not silently remove or reinterpret supported public surfaces.
+
+Before release/upgrade validation:
 
 ```bash
 npm ci
 npm run check:release
 npm run check:release-migrations
+npm run check:upgrade-deprecations
 npm run verify
 ```
 
-Persistent-data/configuration/wire changes must be classified and documented with verification and rollback/recovery guidance. Application startup must not perform hidden destructive migrations.
-
-See [`docs/RELEASES.md`](docs/RELEASES.md) and [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md).
+See [`docs/RELEASES.md`](docs/RELEASES.md), [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md), [`docs/UPGRADES.md`](docs/UPGRADES.md) and [`docs/DEPRECATIONS.md`](docs/DEPRECATIONS.md).
 
 ## Documentation
 
@@ -164,8 +174,11 @@ See [`docs/RELEASES.md`](docs/RELEASES.md) and [`docs/MIGRATIONS.md`](docs/MIGRA
 - [`ROADMAP.es.md`](ROADMAP.es.md)
 - [`CHANGELOG.md`](CHANGELOG.md)
 - [`CONTRIBUTING.md`](CONTRIBUTING.md)
+- [`SUPPORT.md`](SUPPORT.md)
 - [`docs/RELEASES.md`](docs/RELEASES.md)
 - [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md)
+- [`docs/UPGRADES.md`](docs/UPGRADES.md)
+- [`docs/DEPRECATIONS.md`](docs/DEPRECATIONS.md)
 - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 
 ### Extensions
@@ -184,16 +197,17 @@ Important project-level gates include:
 ```bash
 npm run check:extension-contracts
 npm run check:release-migrations
+npm run check:upgrade-deprecations
 npm run verify
 ```
 
-Dedicated workflows protect extension contracts and release/migration conventions in pull requests and on `main`.
+Dedicated workflows protect extension contracts, release/migration conventions and the upgrade/deprecation lifecycle in pull requests and on `main`.
 
 ## Phase completion rule
 
 A phase/slice is not complete until implementation and tests are finished, EN/ES documentation/README/ROADMAP/CHANGELOG are synchronized, the PR scope is reviewed, required CI is green, the PR is merged to `main`, and `main` is verified before the next phase starts.
 
-Phase 10.4 follows this rule; later Phase 10 work remains separate until explicitly started.
+Phase 10.5 follows the same rule; later Phase 10 work remains separate until explicitly started.
 
 ## License
 
