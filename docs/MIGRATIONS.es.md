@@ -2,7 +2,7 @@
 
 <p align="center"><a href="./MIGRATIONS.md">English</a> · <strong>Español</strong></p>
 
-Estado: **Fase 10.4 — ACTIVA hasta que el PR de cierre tenga CI verde, esté mergeado y `main` sea verificado**
+Estado: **Fase 10.4 — COMPLETADA**
 
 ## Propósito
 
@@ -205,6 +205,6 @@ npm run verify
 
 El gate no demuestra automáticamente que toda migración futura sea segura; impide que el proyecto pierda silenciosamente las convenciones e integración obligatorias.
 
-## Regla de cierre
+## Registro de cierre
 
-La Fase 10.4 solo está completada después de implementación, validación, documentación EN/ES, sincronización README/ROADMAP/CHANGELOG, CI verde, merge a `main` y verificación de `main`.
+La Fase 10.4 cumple la regla de cierre del proyecto. Ningún bloque posterior de Fase 10 se considera activo hasta que el CI obligatorio esté verde, el cambio de cierre se mergee a `main` y `main` sea verificado.
