@@ -1,11 +1,14 @@
-import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
+import { spawn, type ChildProcessByStdio } from "node:child_process";
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { performance } from "node:perf_hooks";
+import type { Readable } from "node:stream";
 
 const port = Number(process.env.PERFORMANCE_RESOURCE_PORT || "3100");
 const baseUrl = `http://127.0.0.1:${port}`;
 const nextBin = path.join(process.cwd(), "node_modules", "next", "dist", "bin", "next");
+
+type ResourceServerProcess = ChildProcessByStdio<null, Readable, Readable>;
 
 const SUSTAINED_REQUESTS = 240;
 const SUSTAINED_CONCURRENCY = 12;
@@ -109,7 +112,7 @@ async function requestOnce(route: string) {
   }
 }
 
-async function waitForServer(child: ChildProcessWithoutNullStreams) {
+async function waitForServer(child: ResourceServerProcess) {
   for (let attempt = 0; attempt < 120; attempt += 1) {
     if (child.exitCode !== null) throw new Error(`Next.js server exited before becoming ready with code ${child.exitCode}.`);
     const result = await requestOnce("/api/health/live");
@@ -171,7 +174,7 @@ async function runLoad(name: LoadResult["name"], requests: number, concurrency: 
   return result;
 }
 
-async function terminateServer(child: ChildProcessWithoutNullStreams) {
+async function terminateServer(child: ResourceServerProcess) {
   if (child.exitCode !== null) return;
   child.kill("SIGTERM");
   const exited = new Promise<boolean>((resolve) => child.once("exit", () => resolve(true)));
