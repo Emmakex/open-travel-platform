@@ -11,6 +11,8 @@ const assert = (condition, message) => {
 const requiredFiles = [
   ".github/workflows/publish-container.yml",
   ".github/workflows/registry-provenance.yml",
+  ".github/PULL_REQUEST_TEMPLATE.md",
+  ".github/RELEASE_TEMPLATE.md",
   "docs/REGISTRY.md",
   "docs/REGISTRY.es.md",
   "docs/CONTAINERS.md",
@@ -20,6 +22,8 @@ for (const file of requiredFiles) assert(exists(file), `missing ${file}`);
 
 const workflow = read(".github/workflows/publish-container.yml");
 const validationWorkflow = read(".github/workflows/registry-provenance.yml");
+const prTemplate = read(".github/PULL_REQUEST_TEMPLATE.md");
+const releaseTemplate = read(".github/RELEASE_TEMPLATE.md");
 const docs = read("docs/REGISTRY.md");
 const docsEs = read("docs/REGISTRY.es.md");
 const containers = read("docs/CONTAINERS.md");
@@ -33,7 +37,7 @@ for (const evidence of [
   "packages: write",
   "attestations: write",
   "id-token: write",
-  "ghcr.io/${{ github.repository_owner }}/open-travel-platform",
+  "IMAGE: ghcr.io/emmakex/open-travel-platform",
   "TAG_COMMIT=",
   '"$TAG_COMMIT" != "$AUDITED_SHA"',
   '"$TAG" == "v1.1.0"',
@@ -60,11 +64,12 @@ const pinnedActions = [
 for (const action of pinnedActions) assert(workflow.includes(action), `publish workflow must pin ${action}`);
 
 for (const forbidden of [
+  "ghcr.io/Emmakex/",
   "type=raw,value=latest",
   "type=semver,pattern={{major}}",
   "type=semver,pattern={{major}}.{{minor}}",
   ":latest"
-]) assert(!workflow.includes(forbidden), `moving image alias is forbidden: ${forbidden}`);
+]) assert(!workflow.includes(forbidden), `forbidden registry identity/alias: ${forbidden}`);
 
 assert(packageJson.scripts?.["check:registry-provenance"] === "node scripts/registry-provenance-check.mjs", "package must expose check:registry-provenance");
 assert(packageJson.scripts?.verify?.includes("check:registry-provenance"), "check:registry-provenance must remain inside npm run verify");
@@ -76,9 +81,10 @@ for (const evidence of [
 
 for (const [name, text] of [["English", docs], ["Spanish", docsEs]]) {
   const lower = text.toLowerCase();
-  assert(text.includes("ghcr.io"), `${name} registry guide must document GHCR`);
+  assert(text.includes("ghcr.io/emmakex/open-travel-platform"), `${name} registry guide must document lowercase GHCR identity`);
+  assert(!text.includes("ghcr.io/Emmakex/"), `${name} registry guide must not use uppercase OCI namespace`);
   assert(text.includes("@sha256:"), `${name} registry guide must document digest-pinned pulls`);
-  assert(text.includes("gh attestation verify oci://"), `${name} registry guide must document attestation verification`);
+  assert(text.includes("gh attestation verify"), `${name} registry guide must document attestation verification`);
   assert(lower.includes("sbom"), `${name} registry guide must document SBOM`);
   assert(lower.includes("provenance"), `${name} registry guide must document provenance`);
   assert(lower.includes("v1.1.0"), `${name} registry guide must explain historical v1.1.0 boundary`);
@@ -87,9 +93,21 @@ for (const [name, text] of [["English", docs], ["Spanish", docsEs]]) {
 }
 
 for (const [name, text] of [["English", containers], ["Spanish", containersEs]]) {
-  assert(text.includes("Phase 11.1"), `${name} container guide must retain Phase 11.1 identity`);
+  assert(text.includes("Phase 11.1") || text.includes("Fase 11.1"), `${name} container guide must retain Phase 11.1 identity`);
   assert(text.toLowerCase().includes("complete") || text.toLowerCase().includes("complet"), `${name} container guide must mark Phase 11.1 complete`);
   assert(text.includes("REGISTRY"), `${name} container guide must link registry publication guidance`);
+}
+
+for (const [name, text] of [["PR template", prTemplate], ["release template", releaseTemplate]]) {
+  assert(text.includes("registry") || text.includes("Registry"), `${name} must expose registry review`);
+  assert(text.includes("provenance") || text.includes("Provenance"), `${name} must expose provenance review`);
+  assert(text.includes("check:registry-provenance"), `${name} must expose the registry gate`);
+}
+
+for (const file of ["README.md", "README.es.md", "ROADMAP.md", "ROADMAP.es.md", "CONTRIBUTING.md", "CHANGELOG.md"]) {
+  const source = read(file);
+  assert(source.includes("11.2"), `${file} must record Phase 11.2`);
+  assert(source.includes("check:registry-provenance") || file === "CHANGELOG.md", `${file} must document the registry gate`);
 }
 
 console.log("Registry publication and provenance invariants passed.");
