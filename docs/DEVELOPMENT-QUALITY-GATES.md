@@ -1,6 +1,6 @@
 # Development quality gates
 
-These rules apply to **every change, feature, bug fix and refactor** that can affect a user-visible experience in Open Travel Platform / Kairoseth Travel.
+These rules apply to every Open Travel Platform / Kairoseth Travel change that can affect product behavior, public contracts, persisted state, deployment behavior or user-visible experience.
 
 They are part of the Definition of Done and are not optional polish.
 
@@ -10,59 +10,108 @@ Any change that affects a page, component, form, state, workflow, message or int
 
 A visible change is not complete until the reviewer has checked:
 
-- desktop layout;
-- mobile/responsive layout;
+- desktop and mobile/responsive layout;
 - visual hierarchy and spacing;
 - labels, inputs, buttons and touch targets;
 - loading, empty, success, validation and error states where applicable;
-- keyboard/focus usability for interactive controls;
+- keyboard/focus usability;
 - EN/ES consistency for visible copy;
 - no overflow, clipped controls or raw browser-looking form fields;
-- actions are named in product/user language, not implementation language;
-- the workflow is understandable without knowing the development roadmap.
+- product/user language rather than implementation language.
 
 If a change is not user-visible, the PR may mark this gate as not applicable and explain why.
 
 ## Rule 2 — Internal development copy must never ship in the UI
 
-Public/customer/staff interfaces must describe the **product and the action**, never the development process.
+Public/customer/staff interfaces must describe the product and action, never the development process.
 
-Do not expose copy such as:
+Do not expose roadmap/phase names, PR/issue numbers, WIP/TODO/FIXME/debug messages or internal implementation notes in user-facing copy.
 
-- roadmap or phase names (`Phase 6B`, `Fase 6B`, etc.);
-- PR/issue numbers;
-- `WIP`, `TODO`, `FIXME` or debug messages;
-- implementation notes such as “first slice”, “temporary block”, “internal test” or similar development explanations;
-- technical wording that only makes sense to developers when a normal product label exists.
+Development context belongs in pull requests, issues, roadmap/architecture/development docs or code comments where appropriate.
 
-Development context belongs in:
+## Rule 3 — Public extension contracts must remain explicit
 
-- pull-request descriptions;
-- issues;
-- roadmap documents;
-- architecture/development docs;
-- code comments when appropriate.
+Changes to public repositories/adapters must preserve the Phase 10.3 extension model or deliberately update it under the compatibility policy.
+
+Run:
+
+```bash
+npm run check:extension-contracts
+```
+
+The permanent extension gate protects the public interface inventory, authority boundaries, version identifiers, provider-neutral interface purity and reference-adapter safeguards.
+
+See:
+
+- [`EXTENSION-CONTRACTS.md`](EXTENSION-CONTRACTS.md)
+- [`EXTENSION-COMPATIBILITY.md`](EXTENSION-COMPATIBILITY.md)
+- [`EXTENSION-VALIDATION.md`](EXTENSION-VALIDATION.md)
+
+## Rule 4 — Release and migration impact must be classified
+
+Every non-trivial change must state whether it affects:
+
+- SemVer compatibility;
+- required environment/configuration;
+- persistent MongoDB data or indexes;
+- booking/inventory/payment historical semantics;
+- public REST/event/signature contracts;
+- encrypted/protected data or keys;
+- deployment order or rollback.
+
+Run:
+
+```bash
+npm run check:release
+npm run check:release-migrations
+```
+
+The Phase 10.4 gate protects the release identity and migration conventions documented in:
+
+- [`RELEASES.md`](RELEASES.md)
+- [`MIGRATIONS.md`](MIGRATIONS.md)
+
+Persistent-data evolution should use **expand → migrate → contract** where possible. Hidden destructive migrations during application startup are prohibited.
+
+The dedicated blocking workflow is:
+
+```text
+.github/workflows/release-migrations.yml
+```
 
 ## Automated enforcement
 
-`npm run check:ux` scans user-facing source roots (`app` and `components`) for common internal-development markers.
+Important project-level commands include:
 
-CI runs this check on every pull request and on `main`.
+```bash
+npm run check:ux
+npm run check:extension-contracts
+npm run check:release
+npm run check:release-migrations
+npm run verify
+```
 
-The automated check is intentionally only one layer. It does **not** replace visual review because layout quality, readability, interaction design and responsive behavior require human inspection.
+`npm run verify` is the complete local static/build validation path and includes the extension and release/migration gates.
+
+GitHub Actions additionally runs dedicated MongoDB, HTTP contract, recovery, privacy, accessibility and performance/resource workflows.
+
+Automated checks do not replace human UX review, compatibility classification or deployment/migration review.
 
 ## Pull-request gate
 
-Every PR with visible changes must complete the UX/content checklist in `.github/pull_request_template.md` before merge.
+Every PR should complete the relevant checklist before merge. The required project sequence is:
 
-The required sequence is:
-
-1. implement;
-2. run automated checks;
-3. visually validate affected screens and states;
-4. review visible copy for product language only;
-5. merge only when both automated and manual gates pass.
+1. implement the scoped change;
+2. run focused tests/checks;
+3. classify authority/compatibility/release/migration impact;
+4. visually validate affected screens when applicable;
+5. synchronize relevant EN/ES docs, README, ROADMAP and CHANGELOG;
+6. review the final diff;
+7. open the PR;
+8. require all mandatory CI to be green;
+9. merge to `main`;
+10. verify `main` before starting the next phase/slice.
 
 ## Definition of Done
 
-A change is done only when functionality, security, data integrity, UX and visible copy are all acceptable for production.
+A change is done only when functionality, security, data integrity, UX, public-contract compatibility, release/migration safety and documentation are acceptable for production.
