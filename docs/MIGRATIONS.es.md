@@ -8,7 +8,7 @@ Estado: **Fase 10.4 — COMPLETADA**
 
 Una migración transforma configuración, estado persistente, estado criptográfico o un contrato público; no es solo sustituir código.
 
-Debe ser explícita, revisable y recuperable. Open Travel Platform **no** ejecuta migraciones destructivas ocultas durante startup.
+Debe ser explícita, revisable y recuperable. Open Travel Platform **no** ejecuta migraciones destructivas ocultas durante el startup.
 
 La secuencia de upgrade se define en [`UPGRADES.es.md`](UPGRADES.es.md) y los límites de lifecycle/retirada en [`DEPRECATIONS.es.md`](DEPRECATIONS.es.md).
 
