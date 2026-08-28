@@ -131,10 +131,12 @@ Changing the collector transport and changing the failure event shape are separa
 
 ## Deprecation and migration
 
+The global lifecycle is defined by [`DEPRECATIONS.md`](DEPRECATIONS.md) and supported upgrade paths by [`UPGRADES.md`](UPGRADES.md). Ordinary removal of a public extension surface occurs only at/after its announced MAJOR boundary; PATCH/MINOR releases do not use migration work to bypass that lifecycle.
+
 A breaking public change should document:
 
 - old and new contract identities;
-- deprecation period when practical;
+- deprecation period and earliest ordinary removal release;
 - deployment/configuration migration steps;
 - idempotency/replay implications;
 - rollback constraints;
@@ -149,7 +151,7 @@ Correct migration:
 1. keep v1 stable during the supported migration period;
 2. introduce explicit v2 contract/parser;
 3. select/migrate v2 deliberately;
-4. retire v1 only according to the release/deprecation policy.
+4. retire v1 only according to [`DEPRECATIONS.md`](DEPRECATIONS.md) and the release lifecycle.
 
 Never retry a failed v2 mutation as v1 automatically.
 
@@ -161,7 +163,11 @@ Phase 10.3.4 encodes the shipped compatibility identities in:
 npm run check:extension-contracts
 ```
 
-The gate fails if current v1 header/schema/signature declarations are changed in place or if authority-sensitive public method surfaces drift without a deliberate gate update.
+Phase 10.5 additionally protects the upgrade/deprecation lifecycle through:
+
+```bash
+npm run check:upgrade-deprecations
+```
 
 See [`EXTENSION-VALIDATION.md`](EXTENSION-VALIDATION.md).
 
@@ -171,4 +177,6 @@ See [`EXTENSION-VALIDATION.md`](EXTENSION-VALIDATION.md).
 - [`REFERENCE-ADAPTERS.md`](REFERENCE-ADAPTERS.md)
 - [`EXTENSION-VALIDATION.md`](EXTENSION-VALIDATION.md)
 - [`EXTENSION-CONTRACTS.md`](EXTENSION-CONTRACTS.md)
+- [`UPGRADES.md`](UPGRADES.md)
+- [`DEPRECATIONS.md`](DEPRECATIONS.md)
 - [`ADAPTER-GUIDE.md`](ADAPTER-GUIDE.md)

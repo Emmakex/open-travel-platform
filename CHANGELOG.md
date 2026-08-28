@@ -23,27 +23,38 @@ All notable project changes are documented here.
 - Phase 10.4 migration conventions in English and Spanish through `docs/MIGRATIONS.md` and `docs/MIGRATIONS.es.md`.
 - Permanent release/migration convention gate through `scripts/release-migration-check.mjs` and `npm run check:release-migrations`.
 - Dedicated blocking `Release and migration validation` GitHub Actions workflow.
+- Phase 10.5 upgrade policy in English and Spanish through `docs/UPGRADES.md` and `docs/UPGRADES.es.md`.
+- Phase 10.5 deprecation lifecycle policy in English and Spanish through `docs/DEPRECATIONS.md` and `docs/DEPRECATIONS.es.md`.
+- Permanent upgrade/deprecation lifecycle gate through `scripts/upgrade-deprecation-check.mjs` and `npm run check:upgrade-deprecations`.
+- Dedicated blocking `Upgrade and deprecation validation` GitHub Actions workflow that preserves the release/migration and extension-contract gates.
 - Explicit project phase-completion rule in `CONTRIBUTING.md`: implementation -> validation -> EN/ES documentation -> PR review -> green CI -> merge -> verify `main` before starting the next phase.
 
 ### Changed
-- Phase 10 remains **IN PROGRESS**, while **Phase 10.3 and Phase 10.4 are COMPLETE**.
-- `npm run verify` now includes both `check:extension-contracts` and `check:release-migrations`.
-- `release-check.mjs` now requires the bilingual release and migration policy documents as permanent release artifacts.
+- Phase 10 remains **IN PROGRESS**, while **Phase 10.3, Phase 10.4 and Phase 10.5 are COMPLETE**.
+- `npm run verify` now includes `check:extension-contracts`, `check:release-migrations` and `check:upgrade-deprecations`.
+- `release-check.mjs` now requires bilingual release, migration, upgrade and deprecation policy documents as permanent release artifacts.
 - Public stable releases are governed by Semantic Versioning with immutable `vX.Y.Z` Git tags and release identity aligned across `package.json`, README badge, CHANGELOG and tag.
 - Public releases are cut only from a reviewed, verified `main` commit; tags are not moved or reused after publication.
-- Migration guidance now classifies configuration, persistent-data, wire-contract, encryption/key and destructive changes and requires explicit verification and rollback/recovery semantics.
+- Migration guidance classifies configuration, persistent-data, wire-contract, encryption/key and destructive changes and requires explicit verification and rollback/recovery semantics.
 - Compatible persistent-data evolution follows **expand -> migrate -> contract**; hidden destructive migrations during application startup are prohibited.
-- CONTRIBUTING requires explicit release/migration impact classification for non-trivial changes.
-- README and ROADMAP EN/ES are synchronized with completed Phase 10.4 release/migration conventions.
-- Existing REST v1 paths/headers remain unchanged; compatibility policy documents them instead of silently rewriting deployed contracts.
-- Typed repository/adapter interfaces are governed by the SemVer/release lifecycle of the core rather than a synthetic global extension version.
-- The read-only catalogue HTTP contract is treated as a legacy-v1 compatibility surface: additive evolution is allowed, while breaking evolution requires a new versioned surface.
-- Outbound event schema version and webhook signature algorithm version are explicitly treated as independent compatibility dimensions.
-- Adapter guidance identifies real tested implementations as the canonical contributor references instead of introducing parallel toy adapters.
+- The latest stable release in the current major is the primary support/upgrade target; no LTS or old-release backport line is guaranteed unless explicitly announced.
+- Same-major upgrades are supported with documented migrations; major upgrades target the latest stable release of the immediately previous major when the target documents that path; skip-major upgrades are not guaranteed.
+- Public lifecycle is standardized as **ACTIVE -> DEPRECATED -> REMOVED**.
+- Ordinary removal of a public contract/configuration/extension surface occurs only in a MAJOR release; PATCH/MINOR releases do not silently remove or reinterpret supported public behavior.
+- A deprecation notice identifies the replacement, first deprecated release, earliest ordinary removal release, migration/rollback impact and any security implications.
+- Configuration, extension interfaces, REST/event/signature contracts and durable data follow the same lifecycle model.
+- Security may accelerate deprecation/removal only through an explicit documented exception; warnings must not expose secrets or protected data.
+- CONTRIBUTING now requires explicit release/migration and upgrade/deprecation impact classification.
+- SUPPORT now defines the public support baseline and best-effort backport expectations.
+- README and ROADMAP EN/ES are synchronized through completed Phase 10.5.
+- Existing REST v1 paths/headers remain unchanged; compatibility policy now delegates ordinary retirement to the Phase 10.5 lifecycle rather than an unspecified release policy.
+- Typed repository/adapter interfaces remain governed by core SemVer rather than a synthetic global extension version.
+- The read-only catalogue HTTP contract remains a legacy-v1 compatibility surface: additive evolution is allowed, breaking evolution requires a new versioned surface.
+- Outbound event schema version and webhook signature algorithm version remain independent compatibility dimensions.
+- Adapter guidance identifies real tested implementations as canonical contributor references instead of introducing parallel toy adapters.
 - The reference network adapters remain tied to `tests/rest-adapter-contracts.ts` coverage for contract version, invalid schema/content type, scope, size bounds, retries and idempotency where applicable.
 - README runtime badge reflects Next.js 16.3.2.
 - Quick-start and contribution workflows use reproducible `npm ci` + non-destructive `npm run setup:demo` instead of ad-hoc `npm install` setup.
-- Adapter guidance covers `PaymentRepository`, CRM, ERP/accounting, supplier fulfilment, failure visibility, generic webhooks and explicit authority boundaries.
 - Stripe/Redsys are classified as PSP/checkout integrations rather than `PaymentRepository` implementations.
 - SMTP/email and arbitrary internal modules are explicitly not promoted to public plugin contracts.
 

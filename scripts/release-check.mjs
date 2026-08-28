@@ -19,7 +19,11 @@ const requiredFiles = [
   "docs/RELEASES.md",
   "docs/RELEASES.es.md",
   "docs/MIGRATIONS.md",
-  "docs/MIGRATIONS.es.md"
+  "docs/MIGRATIONS.es.md",
+  "docs/UPGRADES.md",
+  "docs/UPGRADES.es.md",
+  "docs/DEPRECATIONS.md",
+  "docs/DEPRECATIONS.es.md"
 ];
 
 const packageJson = JSON.parse(await readFile("package.json", "utf8"));

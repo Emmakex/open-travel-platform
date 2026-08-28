@@ -10,14 +10,13 @@ A migration is any release change that requires an operator or deployment to tra
 
 Migration work must be explicit, reviewable and recoverable. Open Travel Platform does **not** use hidden destructive migrations during application startup.
 
+Upgrade sequencing is defined by [`UPGRADES.md`](UPGRADES.md); lifecycle/removal boundaries are defined by [`DEPRECATIONS.md`](DEPRECATIONS.md).
+
 ## Migration classes
 
 ### A. Configuration-only
 
-Examples:
-
-- adding an optional environment variable with a safe default;
-- introducing a new opt-in adapter mode.
+Examples include an optional environment variable with a safe default or a new opt-in adapter mode.
 
 Preferred pattern:
 
@@ -25,19 +24,15 @@ Preferred pattern:
 2. document the variable in `.env.example` and deployment docs;
 3. opt in per deployment.
 
-A new required environment variable with no safe compatibility window is a deployment-breaking change and must be classified accordingly.
+A new required environment variable with no safe compatibility window is a deployment-breaking change. Replacing an existing variable also follows the deprecation lifecycle; do not silently reinterpret its old name.
 
 ### B. Additive persistent-data change
 
-Examples:
-
-- adding optional MongoDB fields;
-- adding a new collection;
-- adding a compatible index.
+Examples include optional MongoDB fields, a new collection or a compatible index.
 
 Preferred strategy: **expand → migrate → contract**.
 
-During expand, old and new application readers should remain compatible where practical. Data backfill follows. Destructive cleanup happens only after the compatibility window and rollback requirements are satisfied.
+During expand, old and new readers should remain compatible where practical. Backfill follows. The contract/destructive step happens only after the declared compatibility/deprecation window and rollback requirements are satisfied.
 
 ### C. Data transformation/backfill
 
@@ -46,81 +41,82 @@ A data migration must be:
 - deterministic;
 - bounded and observable;
 - safe to retry or explicitly resumable;
-- scoped to the intended records;
+- scoped to intended records;
 - auditable where protected/privileged data is involved;
 - validated before destructive cleanup.
 
-A migration should not silently reinterpret money, currency, inventory, identity, reservation or payment history.
+A migration must not silently reinterpret money, currency, inventory, identity, reservation or payment history.
 
 ### D. Wire/public-contract migration
 
-REST/event/signature changes follow the versioning rules in [`EXTENSION-COMPATIBILITY.md`](EXTENSION-COMPATIBILITY.md).
+REST/event/signature changes follow [`EXTENSION-COMPATIBILITY.md`](EXTENSION-COMPATIBILITY.md) and [`DEPRECATIONS.md`](DEPRECATIONS.md).
 
-Breaking contract changes require a deliberate parallel/new version and an explicit migration window. Mutating v2 operations must never silently downgrade to v1.
+Breaking changes require a deliberate parallel/new version, migration window and announced removal boundary. Mutating v2 operations never silently downgrade to v1.
 
 ### E. Encryption/key migration
 
-Protected Traveller Data/key changes must use the documented keyring and re-encryption mechanisms. Key rotation must preserve recovery/rollback requirements until old ciphertext is no longer needed.
+Protected Traveller Data/key changes use the documented keyring and re-encryption mechanisms. Rotation preserves recovery/rollback requirements until old ciphertext is no longer needed.
 
-See [`TRAVELLER-DATA.md`](TRAVELLER-DATA.md) and the existing key-rotation tooling/tests.
+See [`TRAVELLER-DATA.md`](TRAVELLER-DATA.md).
 
 ### F. Destructive/irreversible migration
 
 Examples:
 
 - deleting fields/collections;
-- changing semantics in a way old code cannot read;
+- changing semantics so old code cannot read them;
 - irreversible data reduction;
 - removing an old wire version after deprecation.
 
-These require an explicit recovery plan before release. If rollback requires backup restore, that must be stated and tested.
+These require an explicit recovery plan before release. If rollback requires backup restore, that must be stated and tested. Ordinary public removal cannot use a destructive migration to bypass the major-only removal rule.
 
 ## No destructive startup migrations
 
-Application startup, import-time module evaluation and ordinary request handling must not automatically run destructive persistent-data migrations.
+Application startup, import-time evaluation and ordinary request handling must not automatically run destructive persistent-data migrations.
 
 Reasons:
 
-- multiple application instances may start concurrently;
-- deployment health checks should not mutate data schemas unexpectedly;
-- failure halfway through startup makes rollback ambiguous;
+- multiple instances may start concurrently;
+- health checks should not mutate schemas unexpectedly;
+- partial startup failure makes rollback ambiguous;
 - operators need control over backup, timing and verification.
 
-A deliberate migration command/script is the preferred boundary for operational data changes.
+Use a deliberate migration command/script for operational changes.
 
 ## Migration script conventions
 
-New operational migration scripts should live under a clearly named migration/migration-support location and should document:
+New operational migration scripts should document:
 
 - migration identifier/name;
-- source assumptions;
-- target state;
+- source assumptions and minimum supported source release;
+- target state/release;
 - scope/query;
-- whether it is idempotent or resumable;
-- dry-run/read-only inspection mode when practical;
-- expected runtime/operational impact;
+- idempotent or resumable behavior;
+- dry-run/read-only inspection when practical;
+- expected operational impact;
 - verification method;
 - rollback/recovery method.
 
-Never embed production credentials or customer-specific identifiers in public migration scripts.
+Never embed production credentials or customer-specific identifiers in public scripts.
 
 ## Production sequence
 
 For a migration-bearing release:
 
-1. **Classify compatibility and migration type.**
-2. **Take/verify the required backup** before destructive or high-risk persistent-state work.
-3. **Record the current application/core release and database state.**
-4. **Deploy expand-compatible code first** where an expand/migrate/contract strategy is possible.
-5. **Run the migration deliberately** with the required operator authorization.
-6. **Verify migration results** using counts/invariants/domain checks rather than only command exit status.
-7. **Observe application health and business invariants.**
-8. **Perform contract/destructive cleanup only after the compatibility window.**
-9. **Record completion** in release/deployment operations.
+1. **Identify exact source and target releases/SHAs** using [`UPGRADES.md`](UPGRADES.md).
+2. **Classify compatibility, deprecations/removals and migration type.**
+3. **Take/verify required backup** before destructive/high-risk work.
+4. **Record current application release and database state.**
+5. **Deploy expand-compatible code first** when possible.
+6. **Run the migration deliberately** with operator authorization.
+7. **Verify migration results** using counts/invariants/domain checks, not only exit status.
+8. **Observe health and business invariants.**
+9. **Perform contract/destructive cleanup only after the lifecycle window.**
+10. **Record completion** with target version/SHA and recovery classification.
 
 ## MongoDB guidance
 
-Prefer additive changes over in-place destructive schema reinterpretation.
+Prefer additive changes over destructive in-place reinterpretation.
 
 For large backfills:
 
@@ -129,84 +125,72 @@ For large backfills:
 - make restart behavior explicit;
 - avoid unbounded memory use;
 - monitor load/locks/latency;
-- validate indexes before and after where relevant.
+- validate indexes before/after where relevant.
 
 Existing backup/restore and index validation remain part of production safety.
 
 ## Payment and financial data
 
-Payment/refund ledger history is authoritative historical state.
+Payment/refund ledger history is authoritative. Migration code preserves movement identity/idempotency, amount/currency semantics, provider references, chronology/audit history and payment/refund distinction.
 
-Migration code must preserve:
-
-- movement identity/idempotency;
-- amount and currency semantics;
-- provider references when applicable;
-- chronological/audit history;
-- refund/payment distinction.
-
-Do not “recalculate” historical payment amounts from mutable current booking data.
+Do not recalculate historical payment amounts from mutable current booking data.
 
 ## Booking/inventory data
 
-Migration work affecting reservation or inventory state must preserve transactional invariants and avoid creating/losing capacity implicitly.
+Migration work affecting reservations/inventory preserves transactional invariants and must not create or lose capacity implicitly.
 
-If a migration changes state-machine meanings, treat it as a public/domain breaking change and document compatibility/rollback explicitly.
+If state-machine meaning changes, treat it as breaking and document compatibility, deprecation and rollback explicitly.
 
 ## Protected Traveller Data
 
 Protected Traveller Data requires minimum-necessary access and must never be written to logs, migration summaries or public artifacts.
 
-Migration outputs should use counts, safe IDs/correlation references and redacted diagnostics.
+Outputs use counts, safe IDs/correlation references and redacted diagnostics.
 
 ## Verification
 
-Every non-trivial migration must define postconditions, such as:
+Every non-trivial migration defines postconditions such as:
 
 - expected record counts;
 - no records left in legacy state;
 - uniqueness/index invariants;
-- domain totals unchanged where they should be preserved;
-- encrypted records readable with the intended active keyring;
-- old/new contract consumers behaving according to the declared window.
+- domain totals preserved where required;
+- encrypted records readable with intended keyring;
+- old/new consumers behaving according to the declared lifecycle window.
 
-Exit code alone is not a sufficient verification strategy for high-impact migrations.
+Exit code alone is not sufficient for high-impact migrations.
 
 ## Rollback and recovery
 
-Before running a migration, state whether rollback is:
+Before running a migration, state whether recovery is:
 
-- **application-only** — previous release can read the new state;
-- **reverse migration** — a tested reverse transformation exists;
+- **application-only** — previous release can read current state;
+- **reverse migration** — tested reverse transformation exists;
 - **backup restore** — restore is required;
-- **irreversible** — rollback is impossible and recovery is forward-only.
+- **irreversible/forward-only** — rollback is impossible.
 
-Irreversible migrations require explicit review and release notes before production execution.
+Irreversible migrations require explicit review and release notes before execution.
 
-## Release documentation
+## Release and lifecycle documentation
 
-Every migration-bearing release should record in `CHANGELOG.md`:
+Every migration-bearing release records in `CHANGELOG.md`:
 
 - migration required: yes/no;
 - affected capability/state;
-- compatibility window;
-- operator command/procedure;
+- source/target support assumptions;
+- compatibility/deprecation window;
+- operator procedure;
 - verification step;
 - rollback/recovery path.
 
-See [`RELEASES.md`](RELEASES.md).
+See [`RELEASES.md`](RELEASES.md), [`UPGRADES.md`](UPGRADES.md) and [`DEPRECATIONS.md`](DEPRECATIONS.md).
 
 ## Automation
 
-The permanent Phase 10.4 gate checks that release/migration conventions remain present and synchronized:
-
 ```bash
 npm run check:release-migrations
+npm run check:upgrade-deprecations
 npm run verify
 ```
 
-The gate does not automatically prove every future migration is safe; it ensures the project cannot silently drop the required conventions and contributor/release integration points.
-
-## Phase completion record
-
-Phase 10.4 satisfies the project completion rule. No later Phase 10 slice is considered active until required CI is green, the closing change is merged to `main`, and `main` is verified.
+The gates cannot prove every future migration safe, but they prevent silent loss of the required release, upgrade, deprecation and migration contracts.

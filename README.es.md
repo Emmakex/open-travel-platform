@@ -30,82 +30,48 @@ Este repositorio es el **core MIT provider-neutral**. Kairoseth Travel es la imp
 **Fase 9 — Baseline de hardening productivo: COMPLETADA.**  
 **Fase 10 — Productización open-source: EN CURSO.**
 
-Slices completados de Fase 10:
+Slices completados:
 
 - **10.1 Bootstrap demo/fresh-clone reproducible — COMPLETADA**
 - **10.2 Despliegue standalone provider-neutral — COMPLETADA**
-- **10.3 Contratos de extensión y adapters de referencia — COMPLETADA**
-- **10.4 Convenciones de releases y migraciones — COMPLETADA**
+- **10.3 Contratos de extensión/adapters de referencia — COMPLETADA**
+- **10.4 Convenciones de release y migraciones — COMPLETADA**
+- **10.5 Política de lifecycle de upgrades y deprecaciones — COMPLETADA**
 
-La Fase 10.4 establece:
+La Fase 10.5 establece:
 
-- Semantic Versioning para releases públicos estables;
-- tags Git inmutables `vX.Y.Z`;
-- identidad de release alineada entre `package.json`, badge README y CHANGELOG;
-- releases cortados únicamente desde `main` verificado;
-- clasificación explícita de migraciones y requisitos de rollback/recuperación;
-- patrón **expand → migrate → contract** para evolución compatible de datos persistentes;
-- prohibición de migraciones destructivas ocultas durante startup;
-- gate permanente `npm run check:release-migrations`.
+- última release estable del major actual como target soportado principal;
+- sin compromiso LTS/backports salvo anuncio explícito;
+- rutas soportadas dentro del mismo major y desde el major inmediatamente anterior;
+- saltos de major solo si están documentados explícitamente;
+- lifecycle público `ACTIVE → DEPRECATED → REMOVED`;
+- retirada ordinaria pública únicamente en una release **MAJOR**;
+- replacement + primera release deprecated + earliest removal como metadatos obligatorios;
+- excepción acelerada solo por seguridad documentada;
+- reglas provider-neutral para configuración, APIs/eventos, interfaces y datos persistentes;
+- gate permanente `npm run check:upgrade-deprecations`.
 
-Documentación autoritativa de Fase 10.4:
+Documentación autoritativa 10.4–10.5:
 
-- [`docs/RELEASES.md`](docs/RELEASES.md)
 - [`docs/RELEASES.es.md`](docs/RELEASES.es.md)
-- [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md)
 - [`docs/MIGRATIONS.es.md`](docs/MIGRATIONS.es.md)
+- [`docs/UPGRADES.es.md`](docs/UPGRADES.es.md)
+- [`docs/DEPRECATIONS.es.md`](docs/DEPRECATIONS.es.md)
 
-La validación TEST/LIVE con credenciales Stripe/Redsys sigue siendo una dependencia externa separada hasta disponer de cuentas proveedor adecuadas.
+La validación TEST/LIVE con credenciales Stripe/Redsys sigue siendo una dependencia externa separada.
 
 ## Capacidades principales
 
-### Catálogo y comercio
-
 - catálogo y experiencia Operator EN/ES;
-- destinos, viajes, itinerarios, salidas e inventario;
-- alojamiento/habitaciones y pricing estacional/ocupación;
-- Actividades, Transporte y Protección de viaje;
-- reservas transaccionales con pricing/inventario server-authoritative;
-- viajeros/menores/tutores y snapshots históricos;
-- suplementos y modificaciones post-reserva.
-
-### Identidad y operaciones
-
-- autenticación persistente cliente/staff;
-- sesiones separadas;
-- RBAC y capacidades Operator/Admin;
-- ownership, notas, prioridad, tags y timeline;
-- tareas/seguimientos y fulfilment;
-- colas/filtros avanzados;
-- auditoría privilegiada cuando corresponde.
-
-### Pagos y finanzas
-
-- ledger provider-neutral de pagos/reembolsos;
-- transferencia, efectivo y terminal externo;
-- integraciones checkout Stripe/Redsys;
-- depósitos/cuotas/saldo pendiente;
-- conciliación/reporting;
-- ERP/contabilidad downstream-only.
-
-### Traveller Data y hardening
-
-- Traveller Data cifrado y rotación de claves;
-- workflows de privacidad y retención;
-- baseline de accesibilidad orientado a WCAG 2.2 AA;
-- CSP/headers, Origin y throttling;
-- liveness/readiness y perfiles `demo|live`;
-- concurrencia/idempotencia MongoDB, backup/restore e índices;
-- baselines de rendimiento/recursos.
-
-### Integraciones y extensiones
-
-- outbox MongoDB transaccional;
-- webhooks HTTPS firmados con retry/dead-letter;
-- `BookingRepository` REST, fulfilment, CRM/ERP downstream y failure transport;
-- nueve interfaces públicas verificadas;
-- payloads provider contenidos dentro de adapters;
-- gate permanente `check:extension-contracts`.
+- destinos, viajes, itinerarios, salidas, inventario y alojamiento;
+- reservas transaccionales y modificaciones post-reserva;
+- identidad persistente cliente/staff, RBAC y auditoría;
+- ledger provider-neutral, Stripe/Redsys, depósitos y conciliación;
+- Traveller Data cifrado, privacidad/retención y rotación de claves;
+- CSP/headers, readiness, concurrencia MongoDB, backup/restore e índices;
+- accesibilidad WCAG 2.2 AA-oriented y baselines de rendimiento;
+- outbox/integraciones, webhooks firmados, CRM/ERP downstream y fulfilment;
+- nueve interfaces públicas de extensión verificadas.
 
 ## Inicio rápido
 
@@ -131,9 +97,9 @@ npm run package:standalone
 node .next/standalone/server.js
 ```
 
-Para producción consulta [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) y [`docs/PRODUCTION-CHECKLIST.md`](docs/PRODUCTION-CHECKLIST.md).
+Para producción consulta [`docs/DEPLOYMENT.es.md`](docs/DEPLOYMENT.es.md) y [`docs/PRODUCTION-CHECKLIST.md`](docs/PRODUCTION-CHECKLIST.md).
 
-## Contrato de release y migración
+## Contrato de release, upgrade y deprecación
 
 Releases estables:
 
@@ -143,18 +109,27 @@ Git tag       -> vX.Y.Z
 CHANGELOG     -> ## [X.Y.Z] - YYYY-MM-DD
 ```
 
-Antes de un release:
+Un upgrade productivo identifica versiones/SHAs exactos origen/destino, revisa migraciones/deprecaciones, valida un entorno representativo y declara recuperación antes de cambios persistentes.
+
+Lifecycle público:
+
+```text
+ACTIVE → DEPRECATED → REMOVED
+```
+
+La retirada ordinaria ocurre solo en/después del límite MAJOR anunciado. PATCH/MINOR no eliminan ni reinterpretan silenciosamente superficies públicas soportadas.
+
+Validación:
 
 ```bash
 npm ci
 npm run check:release
 npm run check:release-migrations
+npm run check:upgrade-deprecations
 npm run verify
 ```
 
-Cambios de configuración, datos persistentes o contratos wire deben clasificarse y documentarse con verificación y rollback/recuperación. El startup de la aplicación no puede ejecutar migraciones destructivas ocultas.
-
-Consulta [`docs/RELEASES.es.md`](docs/RELEASES.es.md) y [`docs/MIGRATIONS.es.md`](docs/MIGRATIONS.es.md).
+Consulta [`docs/RELEASES.es.md`](docs/RELEASES.es.md), [`docs/MIGRATIONS.es.md`](docs/MIGRATIONS.es.md), [`docs/UPGRADES.es.md`](docs/UPGRADES.es.md) y [`docs/DEPRECATIONS.es.md`](docs/DEPRECATIONS.es.md).
 
 ## Documentación
 
@@ -164,8 +139,11 @@ Consulta [`docs/RELEASES.es.md`](docs/RELEASES.es.md) y [`docs/MIGRATIONS.es.md`
 - [`ROADMAP.md`](ROADMAP.md)
 - [`CHANGELOG.md`](CHANGELOG.md)
 - [`CONTRIBUTING.md`](CONTRIBUTING.md)
+- [`SUPPORT.md`](SUPPORT.md)
 - [`docs/RELEASES.es.md`](docs/RELEASES.es.md)
 - [`docs/MIGRATIONS.es.md`](docs/MIGRATIONS.es.md)
+- [`docs/UPGRADES.es.md`](docs/UPGRADES.es.md)
+- [`docs/DEPRECATIONS.es.md`](docs/DEPRECATIONS.es.md)
 - [`docs/DEPLOYMENT.es.md`](docs/DEPLOYMENT.es.md)
 
 ### Extensiones
@@ -179,21 +157,20 @@ Consulta [`docs/RELEASES.es.md`](docs/RELEASES.es.md) y [`docs/MIGRATIONS.es.md`
 
 ## Validación permanente
 
-Gates de proyecto relevantes:
-
 ```bash
 npm run check:extension-contracts
 npm run check:release-migrations
+npm run check:upgrade-deprecations
 npm run verify
 ```
 
-Workflows dedicados protegen contratos de extensión y convenciones de release/migración tanto en PR como en `main`.
+Workflows dedicados protegen contratos de extensión, releases/migraciones y lifecycle de upgrades/deprecaciones en PR y `main`.
 
 ## Regla de cierre de fases
 
-Una fase/slice no está completada hasta que implementación y pruebas terminen, documentación EN/ES/README/ROADMAP/CHANGELOG esté sincronizada, el alcance del PR sea revisado, CI obligatorio esté verde, el PR esté mergeado a `main` y `main` sea verificado antes de iniciar la siguiente fase.
+Una fase/slice no está completada hasta terminar implementación/pruebas, sincronizar documentación EN/ES, revisar diff, tener CI obligatorio verde, mergear a `main` y verificar `main` antes de iniciar el siguiente bloque.
 
-La Fase 10.4 sigue esta regla; cualquier bloque posterior permanece separado hasta iniciarse explícitamente.
+La Fase 10.5 sigue la misma regla.
 
 ## Licencia
 
