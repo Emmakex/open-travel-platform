@@ -1,0 +1,89 @@
+name: Publish audited release
+
+on:
+  workflow_run:
+    workflows: ["Phase 10 release audit"]
+    types: [completed]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-audited-release-${{ github.event.workflow_run.head_sha }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      AUDITED_SHA: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - name: Checkout exact audited main revision
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - name: Resolve approved release identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(node -p "require('./package.json').version")"
+          TAG="v${VERSION}"
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          grep -Fq "RELEASE APPROVED FOR ${TAG}" docs/PHASE-10-RELEASE-AUDIT.md
+          grep -Fq "## [${VERSION}] - 2026-08-28" CHANGELOG.md
+          test -f "docs/RELEASE-NOTES-${VERSION}.md"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+
+      - name: Preserve immutable release history
+        id: history
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXISTING="$(git ls-remote --tags origin "refs/tags/${TAG}" | awk '{print $1}')"
+          if [[ -n "$EXISTING" ]]; then
+            echo "Tag ${TAG} already exists; it will never be moved or recreated."
+            if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              echo "Existing tag ${TAG} has no GitHub Release; refusing to rewrite release history." >&2
+              exit 1
+            fi
+            echo "already_published=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "already_published=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create immutable audited tag
+        if: steps.history.outputs.already_published != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" "$AUDITED_SHA" -m "Open Travel Platform ${TAG}"
+          git push origin "refs/tags/${TAG}"
+
+      - name: Publish GitHub Release
+        if: steps.history.outputs.already_published != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release create "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --verify-tag \
+            --title "Open Travel Platform ${TAG}" \
+            --notes-file "docs/RELEASE-NOTES-${VERSION}.md"
+
+      - name: Verify published release
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null
+          echo "Audited release ${TAG} is published."
