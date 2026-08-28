@@ -21,6 +21,7 @@ Slices completados:
 10.4     Convenciones de release y migración ------------------ COMPLETADA
 10.5     Lifecycle de upgrades y deprecaciones ---------------- COMPLETADA
 10.6     Plantillas de contribución y release ----------------- COMPLETADA
+10.7     Política de trademark/branding e identidad ----------- COMPLETADA
 ```
 
 La validación Stripe/Redsys TEST/LIVE con credenciales sigue siendo una dependencia externa separada y no reabre la Fase 9.
@@ -66,15 +67,7 @@ Documentos:
 - [`docs/MIGRATIONS.es.md`](docs/MIGRATIONS.es.md)
 - [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md)
 
-Entregado:
-
-- Semantic Versioning estable y tags inmutables `vX.Y.Z`;
-- identidad package/README/CHANGELOG/tag alineada;
-- releases solo desde `main` verificado;
-- clasificación de migraciones de configuración, datos, wire, claves y cambios destructivos;
-- patrón **expand → migrate → contract**;
-- sin migraciones destructivas ocultas en startup;
-- `check:release-migrations` y workflow bloqueante.
+Entregado: Semantic Versioning, tags `vX.Y.Z` inmutables, releases desde `main` verificado, clasificación de migraciones, **expand → migrate → contract**, recuperación y gate `check:release-migrations`.
 
 ## 10.5 — Política de lifecycle de upgrades y deprecaciones — COMPLETADA
 
@@ -85,41 +78,7 @@ Documentos:
 - [`docs/DEPRECATIONS.es.md`](docs/DEPRECATIONS.es.md)
 - [`docs/DEPRECATIONS.md`](docs/DEPRECATIONS.md)
 
-Contrato de soporte/upgrade:
-
-- la última release estable del major actual es el target soportado principal;
-- no hay LTS/backports garantizados salvo anuncio explícito;
-- upgrades del mismo major están soportados aplicando migraciones documentadas;
-- un major upgrade parte de la última release estable del major inmediatamente anterior cuando la ruta está documentada;
-- saltos de major solo si se documentan explícitamente;
-- operadores registran versiones/SHAs origen/destino y recuperación exactos.
-
-Lifecycle:
-
-```text
-ACTIVE → DEPRECATED → REMOVED
-```
-
-- retirada ordinaria de superficies públicas únicamente en una release **MAJOR**;
-- avisos indican reemplazo, primera release deprecated y earliest ordinary removal;
-- PATCH/MINOR no eliminan ni reinterpretan silenciosamente contratos/configuración soportados;
-- configuración, interfaces de extensión, wire contracts y datos persistentes siguen el mismo lifecycle;
-- seguridad puede acelerar retirada solo mediante excepción documentada;
-- warnings nunca filtran secretos ni datos protegidos.
-
-Automatización:
-
-```bash
-npm run check:upgrade-deprecations
-npm run verify
-```
-
-Entregado:
-
-- `scripts/upgrade-deprecation-check.mjs`;
-- `check:upgrade-deprecations` dentro de `verify`;
-- workflow `.github/workflows/upgrade-deprecations.yml`;
-- integración con releases, migraciones, compatibilidad, SUPPORT y CONTRIBUTING.
+Entregado: rutas soportadas de upgrade, lifecycle `ACTIVE → DEPRECATED → REMOVED`, retirada ordinaria solo en MAJOR, excepciones de seguridad y gate `check:upgrade-deprecations`.
 
 ## 10.6 — Plantillas de contribución y release — COMPLETADA
 
@@ -128,25 +87,44 @@ Documentos:
 - [`docs/CONTRIBUTION-TEMPLATES.es.md`](docs/CONTRIBUTION-TEMPLATES.es.md)
 - [`docs/CONTRIBUTION-TEMPLATES.md`](docs/CONTRIBUTION-TEMPLATES.md)
 
+Entregado: una plantilla PR canónica, issue forms enriquecidos, release template reutilizable, `check:contribution-templates`, workflow dedicado y documentación sincronizada con 10.3–10.5.
+
+## 10.7 — Política de trademark/branding e identidad — COMPLETADA
+
+Documentos autoritativos:
+
+- [`TRADEMARKS.es.md`](TRADEMARKS.es.md)
+- [`TRADEMARKS.md`](TRADEMARKS.md)
+
 Entregado:
 
-- una única `.github/PULL_REQUEST_TEMPLATE.md` canónica;
-- checklist PR alineado con fronteras de capacidad/extensión, SemVer, migraciones, lifecycle, autoridad/seguridad/privacidad, UX/accesibilidad y cierre de fases;
-- issue forms bug/feature con versión exacta, contexto upgrade/contrato público, neutralidad de proveedor y seguridad de datos;
-- `.github/RELEASE_TEMPLATE.md` reutilizable para identidad, compatibilidad, migraciones, deprecaciones/retiradas, rollback, validación y publicación;
-- `scripts/contribution-template-check.mjs` y `check:contribution-templates` dentro de `npm run verify`;
-- workflow dedicado `.github/workflows/contribution-templates.yml`;
-- documentación de contribución sincronizada con las Fases 10.3–10.5.
+- separación explícita entre derechos MIT del software y reglas de identidad del proyecto/despliegue de referencia;
+- Open Travel Platform definido como identidad del core upstream público;
+- Kairoseth Travel definido como implementación oficial alojada/comercial de referencia en `travel.kairoseth.com`;
+- atribución veraz “Basado en/Powered by Open Travel Platform” permitida cuando la identidad propia del despliegue independiente sea principal;
+- despliegues públicos/comerciales independientes deben configurar su propio `NEXT_PUBLIC_SITE_NAME`/identidad de presentación;
+- sin claims no verificados de marca registrada, oficial, certificado, aprobado, partner o endorsement;
+- actualmente no existe un paquete oficial de logos designado por esta política;
+- variables legacy `KTRAVEL_*` clasificadas como identificadores técnicos de compatibilidad y no como derechos de branding;
+- futura migración del namespace `KTRAVEL_*` debe seguir lifecycle de deprecación/upgrade/migración y nunca renombrarse silenciosamente;
+- templates PR/release incorporan clasificación de impacto de branding/identidad;
+- `scripts/branding-policy-check.mjs`, `npm run check:branding-policy` y workflow `.github/workflows/branding-policy.yml`.
 
-## Trabajo posterior planificado
+## Cierre final de Fase 10 — PLANIFICADO
 
-Ningún bloque posterior está activo por aparecer aquí. Cada uno recibe su rama y gate completo al iniciarse.
+Ningún cierre final se activa hasta que 10.7 tenga CI verde, se mergee y `main` quede verificado.
 
-Posibles siguientes slices:
+El único bloqueo restante de Fase 10 será una auditoría final de documentación/release y corte del siguiente release público. Ese slice debe:
 
-- política de trademark/branding entre Open Travel Platform y Kairoseth Travel;
-- auditoría final de documentación/release de Fase 10 y corte del siguiente release público;
-- adapters opcionales según demanda comercial/comunitaria, fuera del bloqueo de cierre de Fase 10 salvo decisión explícita.
+- auditar enlaces, documentación EN/ES, templates y gates permanentes desde `main` limpio;
+- confirmar fresh-clone/demo y standalone;
+- clasificar finalmente por SemVer todo el trabajo posterior a 1.0;
+- convertir `Unreleased` en la release estable elegida (previsiblemente MINOR salvo que la auditoría detecte un breaking change);
+- sincronizar versión del package, badge README, CHANGELOG y tag Git inmutable;
+- ejecutar CI completo y verificar `main` antes de crear tag/GitHub Release;
+- marcar Fase 10 COMPLETADA solo después de verificar el registro de release.
+
+Adapters opcionales por demanda comercial/comunitaria quedan como evolución posterior y no bloquean Fase 10 salvo decisión explícita.
 
 ## Gate permanente
 
