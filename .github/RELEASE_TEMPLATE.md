@@ -58,6 +58,14 @@ For each item include:
 
 If none, state `None` explicitly.
 
+## Branding / trademark
+
+- [ ] Public names and official-status wording were reviewed against `TRADEMARKS.md`
+- [ ] MIT software licensing is not represented as permission to claim official Kairoseth/Kairoseth Travel status
+- [ ] Any Open Travel Platform attribution remains truthful and non-misleading
+- [ ] Any logo/wordmark/visual-brand use has the appropriate permission or separate asset license
+- [ ] N/A — no branding/trademark impact
+
 ## Validation
 
 - [ ] Release version, README badge, CHANGELOG and tag identity agree
@@ -65,6 +73,8 @@ If none, state `None` explicitly.
 - [ ] `npm run check:release`
 - [ ] `npm run check:release-migrations`
 - [ ] `npm run check:upgrade-deprecations`
+- [ ] `npm run check:contribution-templates`
+- [ ] `npm run check:branding-policy`
 - [ ] `npm run verify`
 - [ ] `npm run package:standalone`
 - [ ] Fresh-clone/demo validation passed
@@ -81,6 +91,7 @@ State any provider-dependent checks that could not be completed. Do not represen
 - [ ] README EN/ES updated when capabilities/version changed
 - [ ] ROADMAP EN/ES updated when project state changed
 - [ ] Upgrade/migration/deprecation docs updated when applicable
+- [ ] Branding/trademark policy updated when public names, logos or official-status claims changed
 - [ ] Release notes contain no credentials, private customer data or protected Traveller Data
 
 ## Publication record

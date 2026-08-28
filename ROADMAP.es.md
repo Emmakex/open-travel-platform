@@ -21,6 +21,7 @@ Slices completados:
 10.4     Convenciones de release y migración ------------------ COMPLETADA
 10.5     Lifecycle de upgrades y deprecaciones ---------------- COMPLETADA
 10.6     Plantillas de contribución y release ----------------- COMPLETADA
+10.7     Política de branding y marcas ------------------------ COMPLETADA
 ```
 
 La validación Stripe/Redsys TEST/LIVE con credenciales sigue siendo una dependencia externa separada y no reabre la Fase 9.
@@ -85,41 +86,15 @@ Documentos:
 - [`docs/DEPRECATIONS.es.md`](docs/DEPRECATIONS.es.md)
 - [`docs/DEPRECATIONS.md`](docs/DEPRECATIONS.md)
 
-Contrato de soporte/upgrade:
-
-- la última release estable del major actual es el target soportado principal;
-- no hay LTS/backports garantizados salvo anuncio explícito;
-- upgrades del mismo major están soportados aplicando migraciones documentadas;
-- un major upgrade parte de la última release estable del major inmediatamente anterior cuando la ruta está documentada;
-- saltos de major solo si se documentan explícitamente;
-- operadores registran versiones/SHAs origen/destino y recuperación exactos.
-
-Lifecycle:
-
-```text
-ACTIVE → DEPRECATED → REMOVED
-```
-
-- retirada ordinaria de superficies públicas únicamente en una release **MAJOR**;
-- avisos indican reemplazo, primera release deprecated y earliest ordinary removal;
-- PATCH/MINOR no eliminan ni reinterpretan silenciosamente contratos/configuración soportados;
-- configuración, interfaces de extensión, wire contracts y datos persistentes siguen el mismo lifecycle;
-- seguridad puede acelerar retirada solo mediante excepción documentada;
-- warnings nunca filtran secretos ni datos protegidos.
-
-Automatización:
-
-```bash
-npm run check:upgrade-deprecations
-npm run verify
-```
-
 Entregado:
 
-- `scripts/upgrade-deprecation-check.mjs`;
-- `check:upgrade-deprecations` dentro de `verify`;
-- workflow `.github/workflows/upgrade-deprecations.yml`;
-- integración con releases, migraciones, compatibilidad, SUPPORT y CONTRIBUTING.
+- última release estable del major actual como target principal de soporte/upgrade;
+- sin LTS/backports garantizados salvo anuncio explícito;
+- rutas soportadas dentro del mismo major y desde el major inmediatamente anterior;
+- lifecycle `ACTIVE → DEPRECATED → REMOVED`;
+- retirada ordinaria pública únicamente en MAJOR;
+- excepción acelerada explícita por seguridad;
+- `check:upgrade-deprecations` y workflow dedicado.
 
 ## 10.6 — Plantillas de contribución y release — COMPLETADA
 
@@ -130,23 +105,55 @@ Documentos:
 
 Entregado:
 
-- una única `.github/PULL_REQUEST_TEMPLATE.md` canónica;
-- checklist PR alineado con fronteras de capacidad/extensión, SemVer, migraciones, lifecycle, autoridad/seguridad/privacidad, UX/accesibilidad y cierre de fases;
-- issue forms bug/feature con versión exacta, contexto upgrade/contrato público, neutralidad de proveedor y seguridad de datos;
-- `.github/RELEASE_TEMPLATE.md` reutilizable para identidad, compatibilidad, migraciones, deprecaciones/retiradas, rollback, validación y publicación;
-- `scripts/contribution-template-check.mjs` y `check:contribution-templates` dentro de `npm run verify`;
-- workflow dedicado `.github/workflows/contribution-templates.yml`;
-- documentación de contribución sincronizada con las Fases 10.3–10.5.
+- una única plantilla PR canónica;
+- issue forms bug/feature enriquecidos;
+- plantilla reutilizable de release;
+- checklists de arquitectura/release/lifecycle/seguridad/UX;
+- `check:contribution-templates` dentro de `npm run verify`;
+- workflow dedicado de plantillas.
 
-## Trabajo posterior planificado
+## 10.7 — Política de branding y marcas — COMPLETADA
 
-Ningún bloque posterior está activo por aparecer aquí. Cada uno recibe su rama y gate completo al iniciarse.
+Documentos autoritativos:
 
-Posibles siguientes slices:
+- [`TRADEMARKS.es.md`](TRADEMARKS.es.md)
+- [`TRADEMARKS.md`](TRADEMARKS.md)
 
-- política de trademark/branding entre Open Travel Platform y Kairoseth Travel;
-- auditoría final de documentación/release de Fase 10 y corte del siguiente release público;
-- adapters opcionales según demanda comercial/comunitaria, fuera del bloqueo de cierre de Fase 10 salvo decisión explícita.
+Contrato:
+
+- MIT continúa licenciando el software y no cambia por la política de branding;
+- **Open Travel Platform** identifica el core/proyecto público provider-neutral;
+- **Kairoseth Travel** identifica la implementación oficial alojada/comercial de referencia;
+- `https://travel.kairoseth.com` es el despliegue oficial de referencia;
+- referencias descriptivas veraces de atribución/compatibilidad siguen permitidas;
+- forks/servicios independientes usan branding principal diferenciado y no implican estado oficial Kairoseth;
+- logos, wordmarks y claims oficiales Kairoseth/Kairoseth Travel requieren autorización separada cuando corresponda;
+- la política no afirma que una marca esté registrada en todas las jurisdicciones;
+- soporte, licencia de software y branding comercial/oficial quedan explícitamente separados.
+
+Automatización:
+
+```bash
+npm run check:branding-policy
+npm run verify
+```
+
+Entregado:
+
+- `scripts/branding-policy-check.mjs`;
+- `check:branding-policy` dentro de `verify`;
+- workflow `.github/workflows/branding-policy.yml`;
+- revisión de branding integrada en templates PR/release, CONTRIBUTING, SUPPORT y release consistency.
+
+## Trabajo final planificado de Fase 10
+
+Ningún bloque posterior está activo por aparecer aquí. Tendrá su propia rama y gate completo cuando comience.
+
+Siguiente slice de cierre:
+
+- **10.8 — auditoría final de documentación/release de Fase 10 y corte del siguiente release público**.
+
+Adapters opcionales según demanda comercial/comunitaria continúan como evolución y no bloquean el cierre de Fase 10 salvo decisión explícita.
 
 ## Gate permanente
 

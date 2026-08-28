@@ -33,14 +33,21 @@ All notable project changes are documented here.
 - Enriched bug and feature issue forms with exact-version, compatibility/public-contract, provider-neutrality and data-safety context.
 - Permanent contribution/release template gate through `scripts/contribution-template-check.mjs` and `npm run check:contribution-templates`.
 - Dedicated blocking `Contribution and release template validation` GitHub Actions workflow.
+- Phase 10.7 branding/trademark policies in English and Spanish through `TRADEMARKS.md` and `TRADEMARKS.es.md`.
+- Explicit separation between MIT software rights and Open Travel Platform / Kairoseth / Kairoseth Travel branding rights and official-status claims.
+- Descriptive-use guidance for forks, hosted services, adapters and integrations, including truthful “based on” / “compatible with” attribution.
+- Permanent branding/trademark gate through `scripts/branding-policy-check.mjs` and `npm run check:branding-policy`.
+- Dedicated blocking `Branding and trademark policy validation` GitHub Actions workflow.
 - Explicit project phase-completion rule in `CONTRIBUTING.md`: implementation -> validation -> EN/ES documentation -> PR review -> green CI -> merge -> verify `main` before starting the next phase.
 
 ### Changed
-- Phase 10 remains **IN PROGRESS**, while **Phase 10.3, Phase 10.4, Phase 10.5 and Phase 10.6 are COMPLETE**.
-- `npm run verify` now includes `check:extension-contracts`, `check:release-migrations`, `check:upgrade-deprecations` and `check:contribution-templates`.
+- Phase 10 remains **IN PROGRESS**, while **Phase 10.3 through Phase 10.7 are COMPLETE**.
+- `npm run verify` now includes `check:extension-contracts`, `check:release-migrations`, `check:upgrade-deprecations`, `check:contribution-templates` and `check:branding-policy`.
+- `release-check.mjs` now requires bilingual branding/trademark policies in addition to the permanent release, migration, upgrade and deprecation policy documents.
 - The duplicate case-variant `.github/pull_request_template.md` was removed so the repository has one unambiguous canonical PR template.
-- CONTRIBUTING, README and ROADMAP EN/ES now link the Phase 10.6 template guide and permanent gate.
-- `release-check.mjs` now requires bilingual release, migration, upgrade and deprecation policy documents as permanent release artifacts.
+- PR and release templates now include explicit branding/trademark impact review and the branding-policy gate.
+- CONTRIBUTING and SUPPORT explicitly distinguish MIT software rights/open-source support from Kairoseth/Kairoseth Travel commercial or official status.
+- README and ROADMAP EN/ES are synchronized through completed Phase 10.7 and identify the final Phase 10 audit/release slice as the next blocker.
 - Public stable releases are governed by Semantic Versioning with immutable `vX.Y.Z` Git tags and release identity aligned across `package.json`, README badge, CHANGELOG and tag.
 - Public releases are cut only from a reviewed, verified `main` commit; tags are not moved or reused after publication.
 - Migration guidance classifies configuration, persistent-data, wire-contract, encryption/key and destructive changes and requires explicit verification and rollback/recovery semantics.
@@ -50,21 +57,14 @@ All notable project changes are documented here.
 - Public lifecycle is standardized as **ACTIVE -> DEPRECATED -> REMOVED**.
 - Ordinary removal of a public contract/configuration/extension surface occurs only in a MAJOR release; PATCH/MINOR releases do not silently remove or reinterpret supported public behavior.
 - A deprecation notice identifies the replacement, first deprecated release, earliest ordinary removal release, migration/rollback impact and any security implications.
-- Configuration, extension interfaces, REST/event/signature contracts and durable data follow the same lifecycle model.
 - Security may accelerate deprecation/removal only through an explicit documented exception; warnings must not expose secrets or protected data.
-- CONTRIBUTING now requires explicit release/migration and upgrade/deprecation impact classification and documents the canonical PR/release templates.
-- SUPPORT now defines the public support baseline and best-effort backport expectations.
-- README and ROADMAP EN/ES are synchronized through completed Phase 10.6.
-- Existing REST v1 paths/headers remain unchanged; compatibility policy now delegates ordinary retirement to the Phase 10.5 lifecycle rather than an unspecified release policy.
-- Typed repository/adapter interfaces remain governed by core SemVer rather than a synthetic global extension version.
+- Open Travel Platform remains the public provider-neutral project/core identity, while Kairoseth Travel remains the official hosted/commercial reference implementation at `https://travel.kairoseth.com`.
+- The branding policy explicitly avoids claiming that any mark is registered in every jurisdiction and does not silently relicense MIT software.
+- Existing REST v1 paths/headers remain unchanged; typed repository/adapter interfaces remain governed by core SemVer.
 - The read-only catalogue HTTP contract remains a legacy-v1 compatibility surface: additive evolution is allowed, breaking evolution requires a new versioned surface.
 - Outbound event schema version and webhook signature algorithm version remain independent compatibility dimensions.
-- Adapter guidance identifies real tested implementations as canonical contributor references instead of introducing parallel toy adapters.
-- The reference network adapters remain tied to `tests/rest-adapter-contracts.ts` coverage for contract version, invalid schema/content type, scope, size bounds, retries and idempotency where applicable.
-- README runtime badge reflects Next.js 16.3.2.
-- Quick-start and contribution workflows use reproducible `npm ci` + non-destructive `npm run setup:demo` instead of ad-hoc `npm install` setup.
-- Stripe/Redsys are classified as PSP/checkout integrations rather than `PaymentRepository` implementations.
-- SMTP/email and arbitrary internal modules are explicitly not promoted to public plugin contracts.
+- Stripe/Redsys remain classified as PSP/checkout integrations rather than `PaymentRepository` implementations.
+- SMTP/email and arbitrary internal modules remain outside public plugin contracts.
 
 ### External validation still pending
 - Credentialed Stripe/Redsys TEST/LIVE end-to-end validation remains pending suitable provider accounts. This does not reopen the completed Phase 9 engineering baseline.

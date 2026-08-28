@@ -3,6 +3,8 @@ import { access, readFile } from "node:fs/promises";
 const errors = [];
 const requiredFiles = [
   "LICENSE",
+  "TRADEMARKS.md",
+  "TRADEMARKS.es.md",
   "SECURITY.md",
   "CONTRIBUTING.md",
   "CHANGELOG.md",
