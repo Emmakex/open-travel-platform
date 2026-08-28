@@ -36,11 +36,14 @@ Branding and trademark usage is documented separately in [`TRADEMARKS.md`](TRADE
 
 Phase 10 closed with **v1.1.0**. Its final slices remain explicitly recorded as **10.7 Branding and trademark policy — COMPLETE** and **10.8 Final documentation/release audit and v1.1.0 publication — COMPLETE**. The audited closeout is documented in [`docs/PHASE-10-RELEASE-AUDIT.md`](docs/PHASE-10-RELEASE-AUDIT.md).
 
-Current Phase 11 slice:
+Current Phase 11 slices:
 
 - **11.1 Reproducible OCI/Docker distribution baseline — COMPLETE**
+- **11.2 Registry publication and provenance — COMPLETE**
+- **11.3 Orchestrator/deployment recipes — PLANNED**
+- **11.4 Later distribution capabilities — PLANNED**
 
-Phase 11.1 provides a provider-neutral multi-stage container image, non-root runtime, runtime-only privileged configuration, built-in liveness healthcheck, real Docker build/start/HTTP validation and bilingual container deployment guidance. The slice is only considered officially closed after its PR is green, merged to `main` and `main` is verified.
+Phase 11.1 provides the provider-neutral multi-stage container image, non-root runtime, runtime-only privileged configuration, built-in liveness healthcheck and real Docker build/start/HTTP validation. Phase 11.2 adds the audited GHCR publication contract, immutable SemVer/SHA image identities, OCI metadata, BuildKit `mode=max` provenance, SBOM and GitHub artifact attestations bound to the pushed digest. Each slice is only officially closed after its PR is green, merged to `main` and `main` is verified.
 
 Credentialed Stripe/Redsys TEST/LIVE E2E remains a separate provider-dependent validation item. It does not reopen the completed Phase 9 baseline and is not required for infrastructure-free demo/container validation.
 
@@ -133,7 +136,26 @@ docker run --rm \
 
 The final image runs as non-root user `app` (`10001:10001`) and exposes a Docker healthcheck backed by `/api/health/live`. Production routing should use `/api/health/ready` and inject secrets/configuration only at runtime.
 
-See [`docs/CONTAINERS.md`](docs/CONTAINERS.md). Registry publication is deliberately not part of Phase 11.1.
+See [`docs/CONTAINERS.md`](docs/CONTAINERS.md).
+
+## Registry and provenance
+
+GHCR is the public reference registry for future audited container releases:
+
+```text
+ghcr.io/emmakex/open-travel-platform:vX.Y.Z
+ghcr.io/emmakex/open-travel-platform:sha-<full-source-sha>
+```
+
+No moving `latest`, major or minor aliases are published. Production should deploy the recorded digest, for example:
+
+```bash
+docker pull ghcr.io/emmakex/open-travel-platform@sha256:<digest>
+```
+
+Published release images include SBOM, BuildKit `provenance: mode=max`, OCI source/revision/version/license metadata and a GitHub artifact attestation tied to the image digest. `v1.1.0` is intentionally not rebuilt retroactively because its immutable source tag predates the Dockerfile/container workflow.
+
+See [`docs/REGISTRY.md`](docs/REGISTRY.md).
 
 ## Release, upgrade and branding contract
 
@@ -166,10 +188,11 @@ npm run check:contribution-templates
 npm run check:branding-policy
 npm run check:phase-10-release
 npm run check:container
+npm run check:registry-provenance
 npm run verify
 ```
 
-See [`docs/RELEASES.md`](docs/RELEASES.md), [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md), [`docs/UPGRADES.md`](docs/UPGRADES.md), [`docs/DEPRECATIONS.md`](docs/DEPRECATIONS.md), [`docs/CONTRIBUTION-TEMPLATES.md`](docs/CONTRIBUTION-TEMPLATES.md), [`TRADEMARKS.md`](TRADEMARKS.md), [`docs/CONTAINERS.md`](docs/CONTAINERS.md) and [`docs/PHASE-10-RELEASE-AUDIT.md`](docs/PHASE-10-RELEASE-AUDIT.md).
+See [`docs/RELEASES.md`](docs/RELEASES.md), [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md), [`docs/UPGRADES.md`](docs/UPGRADES.md), [`docs/DEPRECATIONS.md`](docs/DEPRECATIONS.md), [`docs/CONTRIBUTION-TEMPLATES.md`](docs/CONTRIBUTION-TEMPLATES.md), [`TRADEMARKS.md`](TRADEMARKS.md), [`docs/CONTAINERS.md`](docs/CONTAINERS.md), [`docs/REGISTRY.md`](docs/REGISTRY.md) and [`docs/PHASE-10-RELEASE-AUDIT.md`](docs/PHASE-10-RELEASE-AUDIT.md).
 
 ## Documentation
 
@@ -192,6 +215,8 @@ See [`docs/RELEASES.md`](docs/RELEASES.md), [`docs/MIGRATIONS.md`](docs/MIGRATIO
 - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 - [`docs/CONTAINERS.md`](docs/CONTAINERS.md)
 - [`docs/CONTAINERS.es.md`](docs/CONTAINERS.es.md)
+- [`docs/REGISTRY.md`](docs/REGISTRY.md)
+- [`docs/REGISTRY.es.md`](docs/REGISTRY.es.md)
 
 ### Extensions
 
@@ -214,16 +239,17 @@ npm run check:contribution-templates
 npm run check:branding-policy
 npm run check:phase-10-release
 npm run check:container
+npm run check:registry-provenance
 npm run verify
 ```
 
-Dedicated workflows protect extension contracts, releases/migrations, upgrades/deprecations, contribution templates, branding, release identity and container distribution.
+Dedicated workflows protect extension contracts, releases/migrations, upgrades/deprecations, contribution templates, branding, release identity, container distribution and registry/provenance policy.
 
 ## Phase completion rule
 
 A phase/slice is not complete until implementation and tests are finished, EN/ES documentation/README/ROADMAP/CHANGELOG are synchronized, PR scope is reviewed, required CI is green, the PR is merged to `main`, and `main` is verified before subsequent roadmap work begins.
 
-Phase 10 is closed by the audited v1.1.0 release. Phase 11.1 follows the same permanent gate before any later distribution slice begins.
+Phase 10 is closed by the audited v1.1.0 release. Phase 11.1 and 11.2 follow the same permanent gate before any later distribution slice begins.
 
 ## License and branding
 

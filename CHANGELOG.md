@@ -5,30 +5,42 @@ All notable project changes are documented here.
 ## [Unreleased]
 
 ### Added
-- Phase 11 distribution/deployment ecosystem tracking through issues #133 and #134.
+- Phase 11 distribution/deployment ecosystem tracking through issues #133, #134 and #136.
 - Phase 11.1 provider-neutral multi-stage `Dockerfile` built from the existing Next.js standalone runtime.
 - Non-root final container runtime (`app`, UID/GID `10001:10001`), built-in `/api/health/live` Docker healthcheck and runtime-only privileged configuration.
 - `.dockerignore` build-context hardening that excludes local environment and generated runtime artifacts.
 - Bilingual container deployment guidance through `docs/CONTAINERS.md` and `docs/CONTAINERS.es.md`.
 - Permanent container-distribution gate through `scripts/container-distribution-check.mjs` and `npm run check:container`.
 - Blocking `Container distribution` GitHub Actions workflow performing a real Docker build/start, non-root inspection, health validation and representative HTTP/static-asset smoke.
+- Phase 11.2 audited GHCR publication workflow downstream of `Publish audited release`.
+- Immutable public image identities using exact `vX.Y.Z` and `sha-<full-source-sha>` tags only.
+- OCI source/revision/version/license metadata, BuildKit `provenance: mode=max`, SBOM generation and GitHub artifact attestation bound to the pushed OCI digest.
+- Bilingual registry/provenance guidance through `docs/REGISTRY.md` and `docs/REGISTRY.es.md`, including digest-pinned pulls and `gh attestation verify`.
+- Permanent registry/provenance gate through `scripts/registry-provenance-check.mjs` and `npm run check:registry-provenance`.
+- Dedicated `Registry publication and provenance` workflow preserving registry policy together with the prior container and release invariants.
 
 ### Changed
-- **Phase 11 — Distribution & deployment ecosystem is IN PROGRESS**; Phase 11.1 is documented as COMPLETE subject to the permanent PR/CI/merge/`main` verification gate.
-- `npm run verify` now includes `check:container` alongside the existing fresh-clone and standalone deployment gates.
-- Release consistency now requires the bilingual container deployment documents.
-- README and ROADMAP EN/ES document Phase 11 and the completed 11.1 scope; 11.2 registry/provenance, 11.3 deployment recipes and 11.4 distribution release verification remain PLANNED.
-- Registry publication is explicitly outside Phase 11.1 so the public core does not gain an implicit registry dependency.
+- **Phase 11 — Distribution & deployment ecosystem is IN PROGRESS**; Phase 11.1 and Phase 11.2 are documented as COMPLETE subject to the permanent PR/CI/merge/`main` verification gate.
+- `npm run verify` includes both `check:container` and `check:registry-provenance` alongside the existing fresh-clone and standalone deployment gates.
+- README and ROADMAP EN/ES document completed 11.1 container distribution and 11.2 registry/provenance; 11.3 deployment recipes and 11.4 distribution release verification remain PLANNED.
+- `docs/CONTAINERS.md` and `docs/CONTAINERS.es.md` now mark Phase 11.1 COMPLETE and delegate audited registry publication to the Phase 11.2 registry guides.
+- GHCR is the public reference registry but remains a distribution choice rather than a runtime dependency; operators may build or mirror OCI artifacts elsewhere.
+- Container publication requires the release SemVer tag to resolve to the exact audited `main` SHA before pushing.
+- Historical `v1.1.0` is deliberately excluded from retroactive container publication because its immutable source tag predates the Dockerfile and registry workflow.
 
 ### Security
 - Container builds exclude local `.env*`, `.next`, `node_modules` and repository/runtime artifacts from the build context while retaining only reviewed public environment examples.
 - The Dockerfile does not bake MongoDB, SMTP, PSP, Traveller Data, integration or adapter credentials into image layers.
 - The final runtime executes as a fixed non-root user; privileged capability configuration must be injected at runtime.
+- Container publication actions are pinned to full commit SHAs and use only `contents: read`, `packages: write`, `attestations: write` and `id-token: write` permissions.
+- Moving image aliases such as `latest`, major-only and minor-only tags are prohibited; production deployment is expected to record/use immutable OCI digests.
+- Private Kairoseth/customer adapters, credentials and deployment configuration remain outside the public GHCR package.
 
 ### Compatibility
-- No public repository/adapter contract, REST/event/signature identifier or persistent-data schema changes are introduced by Phase 11.1.
+- No public repository/adapter contract, REST/event/signature identifier or persistent-data schema changes are introduced by Phase 11.1 or 11.2.
 - No migration is required.
 - The image path reuses the existing supported Next.js standalone runtime and does not create a second application execution model.
+- Registry publication is additive and provider-neutral; GHCR does not become mandatory for self-build or mirrored deployments.
 
 ## [1.1.0] - 2026-08-28
 

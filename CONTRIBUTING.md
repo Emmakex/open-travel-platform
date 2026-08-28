@@ -26,10 +26,11 @@ npm run check:contribution-templates
 npm run check:branding-policy
 npm run check:phase-10-release
 npm run check:container
+npm run check:registry-provenance
 npm run verify
 ```
 
-The permanent gates protect extension architecture, release/migration conventions, upgrade/deprecation lifecycle, contribution/release templates, branding/trademark separation, the audited Phase 10 release baseline and the container-distribution contract. `verify` includes them plus the other project checks, TypeScript validation and production build.
+The permanent gates protect extension architecture, release/migration conventions, upgrade/deprecation lifecycle, contribution/release templates, branding/trademark separation, the audited Phase 10 release baseline, container distribution and registry/provenance policy. `verify` includes them plus the other project checks, TypeScript validation and production build.
 
 GitHub Actions additionally exercises real MongoDB replica sets, local HTTP adapter contracts, privacy, accessibility, recovery, performance/resource baselines and a real provider-neutral Docker build/start/health/HTTP smoke.
 
@@ -165,7 +166,6 @@ Container changes must preserve:
 - privileged configuration and secrets supplied only at runtime;
 - `/api/health/live` for process liveness and `/api/health/ready` for production traffic readiness;
 - provider-neutral operation with the infrastructure-free demo profile;
-- no required registry dependency until an explicit later Phase 11 slice introduces publication;
 - no private Kairoseth/customer adapters or credentials in the public image.
 
 Validate the static contract with:
@@ -175,6 +175,33 @@ npm run check:container
 ```
 
 The dedicated `Container distribution` workflow performs the real Docker build/start/non-root/health/HTTP validation in CI.
+
+## Registry and provenance changes
+
+**Phase 11.2** defines the public registry/provenance contribution contract. Read [`docs/REGISTRY.md`](docs/REGISTRY.md) before changing GHCR publication, OCI tags/labels, BuildKit attestations, SBOM generation or GitHub artifact attestations.
+
+Registry changes must preserve:
+
+- publication only after the audited source-release workflow succeeds;
+- exact SemVer tag ↔ audited `main` SHA equality before a push;
+- immutable `vX.Y.Z` and `sha-<full-source-sha>` image tags only;
+- no moving `latest`, major-only, minor-only or `stable` aliases;
+- deployment identity by OCI digest;
+- OCI source/revision/version/license metadata;
+- BuildKit `provenance: mode=max` and SBOM from the publishing build;
+- GitHub artifact attestation tied to the pushed digest;
+- full-SHA pinning for publishing Actions;
+- minimal package/attestation/OIDC permissions;
+- no retroactive image for historical `v1.1.0`;
+- no private Kairoseth/customer adapters, credentials or configuration in the public image.
+
+Validate the static policy with:
+
+```bash
+npm run check:registry-provenance
+```
+
+The dedicated `Registry publication and provenance` workflow protects these invariants in PRs and on `main`.
 
 ## Pull requests
 
@@ -188,6 +215,7 @@ A PR should explain:
 - upgrade/deprecation impact;
 - **Branding / trademark impact** when public identity changes;
 - container/distribution impact when the deployable artifact changes;
+- registry/provenance impact when image publication or supply-chain identity changes;
 - configuration/migration requirements;
 - rollback/recovery when state changes;
 - how the change was validated.

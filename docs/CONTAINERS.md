@@ -2,13 +2,13 @@
 
 <p align="center"><strong>English</strong> · <a href="./CONTAINERS.es.md">Español</a></p>
 
-Status: **Phase 11.1 — ACTIVE until merged and verified on `main`**
+Status: **Phase 11.1 — COMPLETE**
 
 ## Purpose
 
 Open Travel Platform can be packaged as a provider-neutral OCI/Docker image using the same Next.js standalone runtime already validated by the self-host workflow. The container path does not introduce a second application runtime or a provider-specific deployment dependency.
 
-Phase 11.1 covers local/container-host deployment and CI validation only. **Registry publication is intentionally outside this slice** and will require a later Phase 11 scope.
+Phase 11.1 covers the reproducible local/container-host image baseline and CI validation. Phase 11.2 adds the separate audited registry/provenance layer documented in `REGISTRY.md`.
 
 ## Build the image
 
@@ -100,15 +100,21 @@ The full project gate remains:
 npm run verify
 ```
 
+## Registry publication
+
+Audited public GHCR publication, immutable SemVer/SHA image identities, digest-pinned deployment, SBOM, provenance and GitHub artifact attestations are defined separately in `REGISTRY.md`.
+
+The historical `v1.1.0` source tag predates this Dockerfile and is intentionally not retroactively rebuilt as a public container image.
+
 ## Production deployment notes
 
 - place TLS termination/reverse proxying in front of the container as described in `DEPLOYMENT.md`;
 - inject production secrets at runtime through the deployment platform, never through image layers;
-- use immutable image references/digests when a registry publication phase is introduced;
+- prefer immutable image digests as described in `REGISTRY.md`;
 - keep MongoDB and other stateful services outside the application container unless a deployment-specific architecture explicitly manages them;
 - preserve the existing provider-neutral repository/adapter authority boundaries;
 - validate `/api/health/ready` before production traffic;
-- record the exact Open Travel Platform version/tag and image digest in deployment records.
+- record the exact Open Travel Platform version/tag, source revision and image digest in deployment records.
 
 ## Kairoseth boundary
 

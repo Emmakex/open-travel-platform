@@ -79,6 +79,46 @@ The dedicated blocking workflow is:
 .github/workflows/release-migrations.yml
 ```
 
+## Rule 5 — Container and registry supply chain must remain immutable
+
+Container changes must preserve the Phase 11.1 non-root/runtime-secret baseline, and registry publication changes must preserve the Phase 11.2 immutable source-to-digest chain.
+
+Run:
+
+```bash
+npm run check:container
+npm run check:registry-provenance
+```
+
+The permanent gates protect:
+
+- reuse of the verified standalone runtime;
+- non-root final image execution;
+- no privileged secrets baked into image layers;
+- liveness/readiness semantics;
+- audited-release-only GHCR publication;
+- exact SemVer tag ↔ audited source SHA identity;
+- no moving `latest`, major or minor image aliases;
+- OCI source/revision/version/license metadata;
+- BuildKit `provenance: mode=max` and SBOM generation;
+- GitHub artifact attestation bound to the pushed OCI digest;
+- full-SHA pinning for publishing Actions;
+- separation of public MIT artifacts from private Kairoseth/customer implementation.
+
+See:
+
+- [`CONTAINERS.md`](CONTAINERS.md)
+- [`REGISTRY.md`](REGISTRY.md)
+
+Dedicated workflows:
+
+```text
+.github/workflows/container-distribution.yml
+.github/workflows/registry-provenance.yml
+```
+
+The write-capable `.github/workflows/publish-container.yml` is downstream of the audited release workflow and is not a PR validation path.
+
 ## Automated enforcement
 
 Important project-level commands include:
@@ -88,14 +128,16 @@ npm run check:ux
 npm run check:extension-contracts
 npm run check:release
 npm run check:release-migrations
+npm run check:container
+npm run check:registry-provenance
 npm run verify
 ```
 
-`npm run verify` is the complete local static/build validation path and includes the extension and release/migration gates.
+`npm run verify` is the complete local static/build validation path and includes the extension, release/migration, container and registry/provenance gates.
 
-GitHub Actions additionally runs dedicated MongoDB, HTTP contract, recovery, privacy, accessibility and performance/resource workflows.
+GitHub Actions additionally runs dedicated MongoDB, HTTP contract, recovery, privacy, accessibility, performance/resource, container and registry-policy workflows.
 
-Automated checks do not replace human UX review, compatibility classification or deployment/migration review.
+Automated checks do not replace human UX review, compatibility classification or deployment/migration/supply-chain review.
 
 ## Pull-request gate
 
@@ -103,7 +145,7 @@ Every PR should complete the relevant checklist before merge. The required proje
 
 1. implement the scoped change;
 2. run focused tests/checks;
-3. classify authority/compatibility/release/migration impact;
+3. classify authority/compatibility/release/migration/distribution impact;
 4. visually validate affected screens when applicable;
 5. synchronize relevant EN/ES docs, README, ROADMAP and CHANGELOG;
 6. review the final diff;
@@ -114,4 +156,4 @@ Every PR should complete the relevant checklist before merge. The required proje
 
 ## Definition of Done
 
-A change is done only when functionality, security, data integrity, UX, public-contract compatibility, release/migration safety and documentation are acceptable for production.
+A change is done only when functionality, security, data integrity, UX, public-contract compatibility, release/migration safety, distribution supply-chain integrity and documentation are acceptable for production.

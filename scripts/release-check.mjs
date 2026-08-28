@@ -20,6 +20,8 @@ const requiredFiles = [
   "docs/DEPLOYMENT.md",
   "docs/CONTAINERS.md",
   "docs/CONTAINERS.es.md",
+  "docs/REGISTRY.md",
+  "docs/REGISTRY.es.md",
   "docs/RELEASES.md",
   "docs/RELEASES.es.md",
   "docs/MIGRATIONS.md",
