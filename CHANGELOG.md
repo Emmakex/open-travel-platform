@@ -2,6 +2,25 @@
 
 All notable project changes are documented here.
 
+## [Unreleased] - 2026-08-28
+
+### Added
+- Phase 10.3 extension-contract documentation in English and Spanish.
+- Explicit authority model for repository, workflow-sync, downstream CRM/ERP and delivery/observability extensions.
+- Phase 10.3 compatibility/versioning guidance and completion criteria.
+- Contributor-facing reference-adapter checklist covering server-only credentials, bounded transports, runtime validation, idempotency, allowlists and cross-domain authority protection.
+
+### Changed
+- Phase 10 is now documented as **IN PROGRESS**, with 10.1 and 10.2 complete and 10.3 active.
+- README and ROADMAP EN/ES are synchronized with the real Phase 10 status.
+- README runtime badge reflects Next.js 16.3.2.
+- Quick-start and contribution workflows now use reproducible `npm ci` + non-destructive `npm run setup:demo` instead of ad-hoc `npm install` setup.
+- Adapter guidance now covers CRM, ERP/accounting, delivery/failure visibility, compatibility/versioning and explicit authority boundaries.
+- Phase 10.3.1 is the active delivery slice: extension-point inventory and authority mapping.
+
+### External validation still pending
+- Credentialed Stripe/Redsys TEST/LIVE end-to-end validation remains pending suitable provider accounts. This does not reopen the completed Phase 9 engineering baseline.
+
 ## [1.0.0] - 2026-08-18
 
 ### Added
