@@ -36,21 +36,30 @@ Slices completados:
 - **10.2 Despliegue standalone provider-neutral — COMPLETADA**
 - **10.3 Contratos de extensión/adapters de referencia — COMPLETADA**
 - **10.4 Convenciones de release y migraciones — COMPLETADA**
-- **10.5 Lifecycle de upgrades y deprecaciones — COMPLETADA**
+- **10.5 Política de lifecycle de upgrades y deprecaciones — COMPLETADA**
 - **10.6 Plantillas de contribución y release — COMPLETADA**
 
-La Fase 10.6 establece:
+La Fase 10.5 establece:
 
-- una única plantilla canónica `.github/PULL_REQUEST_TEMPLATE.md`;
-- issue forms con versión exacta, compatibilidad/contrato público y seguridad de datos;
-- `.github/RELEASE_TEMPLATE.md` reutilizable y alineada con SemVer, migraciones, upgrades y deprecaciones;
-- protección explícita para no solicitar credenciales, datos privados de clientes ni Traveller Data protegido;
-- gate permanente `npm run check:contribution-templates` y workflow dedicado.
+- última release estable del major actual como target soportado principal;
+- sin compromiso LTS/backports salvo anuncio explícito;
+- rutas soportadas dentro del mismo major y desde el major inmediatamente anterior;
+- saltos de major solo si están documentados explícitamente;
+- lifecycle público `ACTIVE → DEPRECATED → REMOVED`;
+- retirada ordinaria pública únicamente en una release **MAJOR**;
+- replacement + primera release deprecated + earliest removal como metadatos obligatorios;
+- excepción acelerada solo por seguridad documentada;
+- reglas provider-neutral para configuración, APIs/eventos, interfaces y datos persistentes;
+- gate permanente `npm run check:upgrade-deprecations`.
 
-Documentación autoritativa:
+Documentación autoritativa 10.4–10.5:
 
-- [`docs/CONTRIBUTION-TEMPLATES.es.md`](docs/CONTRIBUTION-TEMPLATES.es.md)
-- [`docs/CONTRIBUTION-TEMPLATES.md`](docs/CONTRIBUTION-TEMPLATES.md)
+- [`docs/RELEASES.es.md`](docs/RELEASES.es.md)
+- [`docs/MIGRATIONS.es.md`](docs/MIGRATIONS.es.md)
+- [`docs/UPGRADES.es.md`](docs/UPGRADES.es.md)
+- [`docs/DEPRECATIONS.es.md`](docs/DEPRECATIONS.es.md)
+
+La Fase 10.6 añade una plantilla PR canónica, issue forms enriquecidos, una plantilla reutilizable de release notes y validación permanente mediante `npm run check:contribution-templates`. Consulta [`docs/CONTRIBUTION-TEMPLATES.es.md`](docs/CONTRIBUTION-TEMPLATES.es.md).
 
 La validación TEST/LIVE con credenciales Stripe/Redsys sigue siendo una dependencia externa separada.
 
@@ -93,7 +102,7 @@ node .next/standalone/server.js
 
 Para producción consulta [`docs/DEPLOYMENT.es.md`](docs/DEPLOYMENT.es.md) y [`docs/PRODUCTION-CHECKLIST.md`](docs/PRODUCTION-CHECKLIST.md).
 
-## Contrato de release, upgrade y contribución
+## Contrato de release, upgrade y deprecación
 
 Releases estables:
 
@@ -103,7 +112,15 @@ Git tag       -> vX.Y.Z
 CHANGELOG     -> ## [X.Y.Z] - YYYY-MM-DD
 ```
 
-Lifecycle público: `ACTIVE → DEPRECATED → REMOVED`; la retirada ordinaria ocurre solo en/después del límite MAJOR anunciado.
+Un upgrade productivo identifica versiones/SHAs exactos origen/destino, revisa migraciones/deprecaciones, valida un entorno representativo y declara recuperación antes de cambios persistentes.
+
+Lifecycle público:
+
+```text
+ACTIVE → DEPRECATED → REMOVED
+```
+
+La retirada ordinaria ocurre solo en/después del límite MAJOR anunciado. PATCH/MINOR no eliminan ni reinterpretan silenciosamente superficies públicas soportadas.
 
 Validación:
 
@@ -120,20 +137,28 @@ Consulta [`docs/RELEASES.es.md`](docs/RELEASES.es.md), [`docs/MIGRATIONS.es.md`]
 
 ## Documentación
 
+### Proyecto y entrega
+
 - [`ROADMAP.es.md`](ROADMAP.es.md)
+- [`ROADMAP.md`](ROADMAP.md)
 - [`CHANGELOG.md`](CHANGELOG.md)
 - [`CONTRIBUTING.md`](CONTRIBUTING.md)
 - [`SUPPORT.md`](SUPPORT.md)
-- [`docs/CONTRIBUTION-TEMPLATES.es.md`](docs/CONTRIBUTION-TEMPLATES.es.md)
 - [`docs/RELEASES.es.md`](docs/RELEASES.es.md)
 - [`docs/MIGRATIONS.es.md`](docs/MIGRATIONS.es.md)
 - [`docs/UPGRADES.es.md`](docs/UPGRADES.es.md)
 - [`docs/DEPRECATIONS.es.md`](docs/DEPRECATIONS.es.md)
+- [`docs/CONTRIBUTION-TEMPLATES.es.md`](docs/CONTRIBUTION-TEMPLATES.es.md)
 - [`docs/DEPLOYMENT.es.md`](docs/DEPLOYMENT.es.md)
+
+### Extensiones
+
 - [`docs/EXTENSION-POINT-INVENTORY.es.md`](docs/EXTENSION-POINT-INVENTORY.es.md)
 - [`docs/EXTENSION-COMPATIBILITY.es.md`](docs/EXTENSION-COMPATIBILITY.es.md)
 - [`docs/REFERENCE-ADAPTERS.es.md`](docs/REFERENCE-ADAPTERS.es.md)
 - [`docs/EXTENSION-VALIDATION.es.md`](docs/EXTENSION-VALIDATION.es.md)
+- [`docs/EXTENSION-CONTRACTS.es.md`](docs/EXTENSION-CONTRACTS.es.md)
+- [`docs/ADAPTER-GUIDE.md`](docs/ADAPTER-GUIDE.md)
 
 ## Validación permanente
 
@@ -145,7 +170,7 @@ npm run check:contribution-templates
 npm run verify
 ```
 
-Workflows dedicados protegen contratos de extensión, releases/migraciones, lifecycle de upgrades/deprecaciones y plantillas de contribución/release.
+Workflows dedicados protegen contratos de extensión, releases/migraciones, lifecycle de upgrades/deprecaciones y plantillas de contribución/release en PR y `main`.
 
 ## Regla de cierre de fases
 
