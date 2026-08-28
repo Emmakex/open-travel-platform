@@ -3,231 +3,198 @@
 <p align="center"><strong>English</strong> · <a href="./EXTENSION-CONTRACTS.es.md">Español</a></p>
 
 Status: **Phase 10.3 — ACTIVE**  
-Current slice: **10.3.3 — contributor-facing reference adapters/examples**  
-Scope: public extension boundaries of the MIT core  
+Current slice after this merge: **10.3.4 — permanent extension-contract validation**  
+Completed slices: **10.3.1, 10.3.2, 10.3.3**  
 Reference deployment: **Kairoseth Travel** at `travel.kairoseth.com`
 
 ## Purpose
 
-Phase 10.3 turns the adapter boundaries that already exist in Open Travel Platform into an explicit public extension contract for contributors, self-hosters and future ecosystem integrations.
+Phase 10.3 formalizes the provider-neutral extension boundaries already present in Open Travel Platform so contributors and self-hosters can extend the MIT core without leaking vendor payloads or silently changing domain authority.
 
-The goal is not to expose every internal module as a plugin API. The goal is to make the existing provider-neutral boundaries predictable, versionable and safe to extend without allowing an external system to silently become authoritative over unrelated core domains.
+The phase artifacts are now:
 
-Phase 10.3.1 completed the code-backed extension inventory. Phase 10.3.2 completed the compatibility/versioning policy. See:
+- [`EXTENSION-POINT-INVENTORY.md`](EXTENSION-POINT-INVENTORY.md) — code-backed public extension inventory and authority map;
+- [`EXTENSION-COMPATIBILITY.md`](EXTENSION-COMPATIBILITY.md) — compatibility, versioning, deprecation and migration policy;
+- [`REFERENCE-ADAPTERS.md`](REFERENCE-ADAPTERS.md) — contributor-facing reference implementations and extension patterns.
 
-- [`EXTENSION-POINT-INVENTORY.md`](EXTENSION-POINT-INVENTORY.md) — verified interfaces, composition paths, implementations, wire contracts and authority map;
-- [`EXTENSION-COMPATIBILITY.md`](EXTENSION-COMPATIBILITY.md) — SemVer, wire-version, event-schema, signature, deprecation and migration rules.
+## Core authority rule
 
-## Core rule: authority stays explicit
+An adapter receives authority only for the capability it explicitly implements.
 
-An adapter can translate, transport or synchronize data only inside the capability it implements. It does not gain authority over another domain because a remote provider returned a value.
+- catalogue adapters cannot become booking/payment authority;
+- booking implementations remain bounded by booking ownership, scope, inventory and trusted-pricing rules;
+- `PaymentRepository` remains the provider-neutral local payment/refund ledger boundary;
+- Stripe/Redsys are PSP/checkout integrations, not `PaymentRepository` replacements;
+- supplier results re-enter local audit and workflow validation before application;
+- CRM and ERP/accounting remain downstream-only;
+- failure transport and generic webhooks remain non-authoritative delivery surfaces;
+- payment browser returns are never authoritative confirmation;
+- provider-specific payloads stay inside adapters and are normalized before entering shared domain types.
 
-Examples:
+## Verified extension inventory — COMPLETE (10.3.1)
 
-- a catalogue adapter may source catalogue data but does not gain booking or payment authority;
-- a booking adapter may persist or source booking data, but it must still satisfy the booking contract and server-authoritative ownership/scope/inventory/pricing rules;
-- `PaymentRepository` remains the provider-neutral local financial-ledger boundary; Stripe/Redsys are PSP integrations, not replacements for that repository;
-- a supplier adapter can request, cancel and synchronize fulfilment state, but it cannot rewrite customer totals, payment history or traveller records;
-- CRM is downstream-only and cannot mutate local booking, pricing, inventory, fulfilment or payment-ledger authority;
-- ERP/accounting is downstream-only and cannot mutate local reservations, inventory or authoritative payment/refund history;
-- payment-provider browser returns are never authoritative confirmation;
-- provider-specific payloads stay inside adapters and must be normalized before entering shared domain types.
+Phase 10.3.1 verified **9 first-class interfaces under `repositories/`** plus the signed-webhook delivery surface.
 
-## Extension classes
-
-### 1. Source / repository extensions
-
-Verified examples:
-
-- `TravelRepository`
-- `IdentityRepository`
-- `BookingRepository`
-- `OperationsRepository`
-- `PaymentRepository`
-
-These interfaces replace a bounded source or persistence capability. Their implementation may be demo, MongoDB, REST/API where supported, disabled, or another future provider. Page/component/domain code should consume the stable domain-facing contract rather than vendor payloads.
-
-Not every repository currently has an external network implementation. In particular, `PaymentRepository` is currently MongoDB/disabled in the bundled core; Stripe and Redsys operate through the separate payment-provider/checkout boundary.
-
-### 2. Downstream synchronization extensions
-
-Verified examples:
-
-- `CrmSyncAdapter`
-- `ErpAccountingAdapter`
-
-These receive normalized events/data from the core. They are deliberately subordinate to local authority and must not introduce reverse mutation paths unless a separate explicit capability contract is designed and reviewed.
-
-### 3. Workflow synchronization extensions
-
-Verified example:
-
-- `SupplierFulfilmentAdapter`
-
-External state is audited/validated and then re-enters the existing local workflow/state machine. The external response never bypasses local transition rules.
-
-### 4. Delivery / observability extensions
-
-Verified examples:
-
-- signed outbound webhooks;
-- `FailureTransport`.
-
-These transport normalized information outside the application. They are non-authoritative and must use explicit data allowlists, bounded network behavior and server-only credentials where applicable.
-
-## Verified public contract inventory
-
-Phase 10.3.1 verified **9 first-class interfaces under `repositories/`** plus the generic signed-webhook delivery surface.
-
-| Capability | Primary boundary | Current bundled implementation(s) | Authority model |
+| Capability | Boundary | Bundled implementation(s) | Authority |
 |---|---|---|---|
-| Catalogue | `TravelRepository` | demo / HTTP API / MongoDB | bounded catalogue source authority |
-| Identity | `IdentityRepository` | demo / MongoDB / disabled | trusted server-side identity/profile source |
-| Booking | `BookingRepository` | demo / MongoDB / REST v1 / disabled | bounded booking authority; server invariants remain mandatory |
-| Operations | `OperationsRepository` | demo / MongoDB / disabled | local/server-side staff workflow authority |
-| Payments / ledger | `PaymentRepository` | MongoDB / disabled | local authoritative payment/refund ledger |
-| Supplier fulfilment | `SupplierFulfilmentAdapter` | disabled / REST v1 | external synchronization subordinate to local workflow |
+| Catalogue | `TravelRepository` | demo / HTTP API / MongoDB | bounded catalogue source |
+| Identity | `IdentityRepository` | demo / MongoDB / disabled | trusted identity/profile source |
+| Booking | `BookingRepository` | demo / MongoDB / REST v1 / disabled | bounded booking authority |
+| Operations | `OperationsRepository` | demo / MongoDB / disabled | local staff workflow authority |
+| Payment ledger | `PaymentRepository` | MongoDB / disabled | local authoritative ledger |
+| Supplier fulfilment | `SupplierFulfilmentAdapter` | disabled / REST v1 | workflow-subordinate synchronization |
 | CRM | `CrmSyncAdapter` | disabled / REST v1 | downstream-only |
-| ERP/accounting | `ErpAccountingAdapter` | disabled / REST v1 | downstream-only from authoritative local `succeeded` ledger movements |
-| Failure visibility | `FailureTransport` | disabled / REST | monitoring-only, best effort, non-authoritative |
-| Generic webhooks | integration outbox + signed HTTPS delivery | built-in delivery pipeline | downstream event delivery only |
+| ERP/accounting | `ErpAccountingAdapter` | disabled / REST v1 | downstream-only |
+| Failure visibility | `FailureTransport` | disabled / REST | monitoring-only |
+| Generic webhooks | outbox + signed HTTPS | built-in | downstream delivery only |
 
-The detailed inventory, composition environment variables and network-contract map live in [`EXTENSION-POINT-INVENTORY.md`](EXTENSION-POINT-INVENTORY.md).
+Explicit non-extension surfaces include SMTP/email internals, MongoDB helpers, arbitrary `lib/*`/`app/*` modules and PSP modules as replacements for `PaymentRepository`.
 
-## Explicit non-extension surfaces
-
-Phase 10.3.1 also records what is **not** a supported public extension contract today:
-
-- `lib/email.ts` / SMTP is an internal service implementation, not a `repositories/*` contract;
-- Stripe/Redsys modules are PSP integrations, not `PaymentRepository` implementations;
-- MongoDB helpers and arbitrary `lib/*`, `app/*` or component modules are not automatically plugin APIs;
-- proprietary Kairoseth/customer adapters may consume public contracts, but the MIT core must not depend on them.
-
-## Compatibility/versioning policy — COMPLETE (10.3.2)
+## Compatibility/versioning — COMPLETE (10.3.2)
 
 The authoritative policy is [`EXTENSION-COMPATIBILITY.md`](EXTENSION-COMPATIBILITY.md).
 
-Phase 10.3.2 established these rules:
+Key rules:
 
-- no artificial global extension-version constant;
-- in-process interfaces follow core release SemVer;
-- existing REST v1 paths and headers remain unchanged;
-- Booking/Supplier/CRM sharing `X-OTP-Contract-Version` does not make them one schema family;
-- ERP/accounting keeps `X-OTP-Accounting-Contract-Version: 1`;
-- FailureTransport keeps `X-OTP-Failure-Contract-Version: 1` and independently versions `FailureTransportEvent.schemaVersion`;
-- the unversioned HTTP catalogue is frozen as legacy-v1 semantics and cannot be broken in place;
-- `IntegrationEventEnvelope.version` and webhook signature `v1=` are independent compatibility dimensions;
-- authority, authentication, idempotency, state semantics and protected-data allowlists are contract semantics;
+- no synthetic global extension-version constant;
+- in-process public interfaces follow core SemVer;
+- existing REST v1 routes/headers remain stable;
+- the unversioned read-only catalogue is treated as legacy-v1 semantics and cannot break in place;
+- `IntegrationEventEnvelope.version` and webhook-signature `v1=` are separate compatibility dimensions;
+- authority, authentication, idempotency, state semantics and outbound protected-data allowlists are contract semantics;
 - mutating adapters may not silently downgrade protocol versions;
-- ordinary removal requires deprecation and migration guidance;
-- breaking changes require a core major release or a deliberate parallel/new wire contract as appropriate.
+- breaking public changes require an explicit new version/major path and migration guidance;
+- provider API version churn should be absorbed inside adapters whenever the normalized core contract can remain stable.
 
-### Compatible evolution
+## Contributor-facing reference adapters — COMPLETE (10.3.3)
 
-Normally compatible:
+The authoritative guide is [`REFERENCE-ADAPTERS.md`](REFERENCE-ADAPTERS.md).
 
-- optional additive fields with safe absence;
-- new opt-in implementations behind an unchanged interface;
-- new endpoints that do not change existing ones;
-- new explicitly subscribed event types;
-- provider API upgrades absorbed inside adapters while the normalized core contract remains stable.
+Phase 10.3.3 deliberately uses **real, already-tested generic implementations** rather than parallel toy code that could drift from production behavior.
 
-### Breaking evolution
+### Reference A — bounded repository authority
 
-Normally breaking:
+`RestBookingRepository` demonstrates:
 
-- removing/renaming required fields or methods;
-- adding required methods to public interfaces implemented by third parties;
-- changing auth/version headers or endpoint methods/paths;
-- changing state meanings, authority boundaries or idempotency semantics;
-- widening protected-data exposure;
-- converting downstream-only/workflow-subordinate behavior into reverse mutation authority.
+- explicit `BookingRepository` implementation;
+- server-only configuration;
+- versioned `/v1` transport;
+- runtime schema/content-type/version validation;
+- bounded timeout/response size and redirect rejection;
+- normalized errors;
+- request correlation;
+- deterministic idempotency for mutations;
+- transient retry with stable mutation identity;
+- identity/trip/departure scope validation.
 
-See the full compatibility matrix, deprecation lifecycle and migration requirements in [`EXTENSION-COMPATIBILITY.md`](EXTENSION-COMPATIBILITY.md).
+### Reference B — workflow-subordinate synchronization
 
-## Reference adapter requirements — active Phase 10.3.3
+`RestSupplierFulfilmentAdapter` plus `performSupplierAdapterOperation()` demonstrates:
 
-A contributor-facing reference adapter should demonstrate the minimum correct behavior rather than embed a specific commercial vendor.
+- explicit outbound allowlists;
+- server-only credentials;
+- versioned contract and bounded transport;
+- deterministic idempotency for mutating operations;
+- response normalization;
+- **audit-before-apply**;
+- application through the existing local state-transition path;
+- conflict rejection when an external status is invalid locally.
 
-Reference implementations/examples must show:
+### Reference C — downstream-only synchronization
 
-1. explicit opt-in composition/configuration;
-2. server-only credentials for privileged transports;
-3. HTTPS enforcement for production external transports;
-4. redirect rejection where redirects could cross trust boundaries;
-5. bounded timeout and response size;
-6. runtime validation before provider data becomes domain data;
-7. normalized stable application errors;
-8. deterministic idempotency for mutating operations when applicable;
-9. audit-before-apply when an external response affects a local workflow;
-10. explicit outbound data allowlists;
-11. no protected Traveller Data, secrets or raw provider payload leakage;
-12. no cross-domain authority escalation;
-13. compatibility with the existing public version identifier;
-14. provider-version changes absorbed internally when the core contract can remain stable;
-15. explicit migration behavior when a deliberate v1 → v2 transition is required.
+`RestCrmSyncAdapter` demonstrates:
+
+- allowlisted normalized customer/reservation snapshots;
+- no raw provider/MongoDB payload forwarding;
+- versioned `/v1` contract;
+- event-derived idempotency;
+- bounded transport and runtime response validation;
+- stable acknowledgement/error normalization;
+- no reverse booking/payment/inventory authority.
+
+`RestFailureTransport` is documented as an optional fourth monitoring-only pattern.
+
+The reference guide also includes:
+
+- a reusable adapter file-layout pattern;
+- a v1 → v2 migration example;
+- proprietary/private adapter separation;
+- contributor verification checklist;
+- network-contract test expectations.
+
+### Existing test protection
+
+The reference network adapters are already exercised by `tests/rest-adapter-contracts.ts`, including applicable cases for:
+
+- successful normalized responses;
+- wrong contract versions;
+- invalid content type/schema;
+- scope rejection;
+- response-size bounds;
+- transient retries;
+- stable idempotency keys across retries;
+- non-retry of rejected client operations.
+
+This is why Phase 10.3.3 designates the existing implementations instead of introducing a second untested example stack.
 
 ## Proprietary adapter boundary
 
-The MIT core should contain generic contracts and provider-neutral reference examples. Kairoseth-specific, customer-specific or commercially sensitive integrations may remain in private repositories/packages when appropriate.
+The public MIT core owns generic contracts and provider-neutral references. Kairoseth/customer/vendor-specific implementations may remain private.
 
-A proprietary adapter may depend on the public extension contract. The public core must not depend on that proprietary adapter.
+A private adapter may import public OTP interfaces/types. The MIT core must not import the private adapter or require private credentials to build, test, demo or self-host.
 
-## Validation target — 10.3.4
+## Permanent validation — ACTIVE next slice (10.3.4)
 
-Phase 10.3 will add permanent automated validation to protect these boundaries.
+Phase 10.3.4 must add a permanent automated gate protecting the model formalized in 10.3.1–10.3.3.
 
 Expected coverage:
 
-- extension inventory/reference paths remain present;
-- public contract version declarations stay synchronized with documentation;
-- provider-specific payload types do not leak into shared domain interfaces;
-- downstream CRM/ERP adapters cannot expose reverse booking/payment mutation authority;
-- supplier responses continue to re-enter local workflow validation;
-- reference adapter examples use server-only credentials and bounded transports;
-- README, ROADMAP, ADAPTER-GUIDE and the Phase 10.3 documents remain consistent;
-- the final extension-contract gate is registered in `npm run verify`.
+- verified extension interfaces/reference paths remain present;
+- version declarations stay synchronized with policy/docs;
+- provider payload types do not leak into shared domain interfaces;
+- CRM/ERP remain downstream-only;
+- supplier external responses still re-enter audit/local transition validation;
+- reference adapters retain server-only credentials, bounded transport and normalized runtime parsing;
+- README/ROADMAP/ADAPTER-GUIDE/Phase 10.3 docs remain synchronized;
+- the final gate is registered in `npm run verify` and CI.
 
-The exact script/test name will be chosen when the implementation lands. Documentation must not claim a gate exists before it is committed and running in CI.
+Documentation must not claim that gate exists until its implementation is committed and running.
 
 ## Phase 10.3 delivery sequence
 
 ```text
-10.3.1  Inventory public extension points + authority map   COMPLETE
-   ↓
+10.3.1  Extension inventory + authority map                 COMPLETE
 10.3.2  Compatibility/versioning policy                    COMPLETE
+10.3.3  Contributor-facing reference adapters              COMPLETE
+10.3.4  Permanent extension-contract validation            ACTIVE after merge
    ↓
-10.3.3  Contributor-facing reference adapters/examples     ACTIVE
-   ↓
-10.3.4  Permanent automated contract validation            PLANNED
-   ↓
-10.3     Documentation sync + green CI                     completion gate
+10.3     Final documentation sync + green CI + merge       completion gate
 ```
 
-## Completion criteria
+## Phase 10.3 completion criteria
 
-Phase 10.3 is complete only when all of the following are true:
+Phase 10.3 can be marked COMPLETE only when:
 
-- the public extension inventory matches the implementation;
-- authority boundaries are documented in English and Spanish;
-- compatibility/versioning rules are explicit;
-- contributor-facing reference examples exist;
-- automated validation protects the extension boundaries;
-- relevant docs are synchronized;
-- proprietary Kairoseth/customer adapters remain decoupled from the MIT core;
-- CI is green with the new validation enabled.
+1. the public extension inventory matches the implementation;
+2. authority boundaries are documented EN/ES;
+3. compatibility/versioning/deprecation rules are explicit;
+4. provider-neutral contributor references exist;
+5. permanent automated validation protects the boundaries;
+6. project/adapter/contract documentation is synchronized;
+7. proprietary Kairoseth/customer adapters remain decoupled;
+8. CI is green with the permanent validation enabled;
+9. the closing PR is merged to `main`.
 
 ## Related documentation
 
 - [`EXTENSION-POINT-INVENTORY.md`](EXTENSION-POINT-INVENTORY.md)
 - [`EXTENSION-COMPATIBILITY.md`](EXTENSION-COMPATIBILITY.md)
-- [`../ROADMAP.md`](../ROADMAP.md)
+- [`REFERENCE-ADAPTERS.md`](REFERENCE-ADAPTERS.md)
 - [`ADAPTER-GUIDE.md`](ADAPTER-GUIDE.md)
-- [`API-CONTRACT.md`](API-CONTRACT.md)
 - [`REST-BOOKING-ADAPTER.md`](REST-BOOKING-ADAPTER.md)
 - [`SUPPLIER-FULFILMENT-ADAPTER.md`](SUPPLIER-FULFILMENT-ADAPTER.md)
 - [`CRM-SYNC-ADAPTER.md`](CRM-SYNC-ADAPTER.md)
 - [`ERP-ACCOUNTING-ADAPTER.md`](ERP-ACCOUNTING-ADAPTER.md)
 - [`OUTBOUND-INTEGRATIONS.md`](OUTBOUND-INTEGRATIONS.md)
 - [`FAILURE-TRANSPORT.md`](FAILURE-TRANSPORT.md)
-- [`ARCHITECTURE.md`](ARCHITECTURE.md)
+- [`../ROADMAP.md`](../ROADMAP.md)
