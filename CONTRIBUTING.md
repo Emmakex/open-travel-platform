@@ -178,7 +178,7 @@ The dedicated `Container distribution` workflow performs the real Docker build/s
 
 ## Registry and provenance changes
 
-Read [`docs/REGISTRY.md`](docs/REGISTRY.md) before changing GHCR publication, OCI tags/labels, BuildKit attestations, SBOM generation or GitHub artifact attestations.
+**Phase 11.2** defines the public registry/provenance contribution contract. Read [`docs/REGISTRY.md`](docs/REGISTRY.md) before changing GHCR publication, OCI tags/labels, BuildKit attestations, SBOM generation or GitHub artifact attestations.
 
 Registry changes must preserve:
 
