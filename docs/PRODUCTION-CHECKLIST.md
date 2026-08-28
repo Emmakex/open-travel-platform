@@ -19,6 +19,22 @@ Use this checklist before changing `KTRAVEL_DEPLOYMENT_PROFILE` to `live` or pro
 - [ ] Take and verify the required backup/restore point before destructive or high-risk persistent changes.
 - [ ] Record migration completion and active release identity without recording secrets.
 
+## Container artifact and registry verification
+
+When deploying a container, review `docs/CONTAINERS.md`; when using a published image, also review `docs/REGISTRY.md`.
+
+- [ ] Run `npm run check:container` and `npm run check:registry-provenance` on the exact source revision when applicable.
+- [ ] Confirm the release source tag resolves to the expected audited `main` commit.
+- [ ] Use only exact SemVer/source-SHA image tags for discovery; do not depend on `latest`, major-only, minor-only or `stable` aliases.
+- [ ] Resolve and record the exact OCI digest before rollout.
+- [ ] Deploy the image by `ghcr.io/emmakex/open-travel-platform@sha256:<digest>` or an explicitly verified mirror of that digest.
+- [ ] Confirm OCI source/revision/version/license metadata matches the intended release and source SHA.
+- [ ] Confirm SBOM and BuildKit provenance are present for the published release image.
+- [ ] Verify the GitHub artifact attestation for the OCI digest with `gh attestation verify`.
+- [ ] Confirm the final image remains non-root and no production credentials/private Kairoseth/customer adapters are baked into layers.
+- [ ] Record release/tag/source SHA/image digest together in deployment records.
+- [ ] For rollback, select a previously verified immutable digest rather than moving an existing tag.
+
 ## Application and deployment profile
 
 - [ ] Set `KTRAVEL_PUBLIC_URL` to the canonical public HTTPS URL.
@@ -119,7 +135,7 @@ Use this checklist before changing `KTRAVEL_DEPLOYMENT_PROFILE` to `live` or pro
 - [ ] Configure uptime checks for `/api/health/live` and `/api/health/ready`.
 - [ ] Configure centralized structured logs/error reporting.
 - [ ] Define alerts for payment failures, integration dead letters and sustained readiness failures.
-- [ ] Maintain a known-good immutable release artifact/tag for emergency rollback.
+- [ ] Maintain a known-good immutable release artifact/tag/digest for emergency rollback.
 - [ ] Define code and database rollback/recovery procedures.
 - [ ] Confirm dependency/security update ownership.
 - [ ] Run a disaster-recovery exercise covering application release, MongoDB restore and encryption-key recovery.
@@ -130,5 +146,5 @@ Use this checklist before changing `KTRAVEL_DEPLOYMENT_PROFILE` to `live` or pro
 - [ ] Run browser E2E registration → booking → payment → Operator workflow.
 - [ ] Review privileged-action audit coverage.
 - [ ] Complete applicable travel/privacy/payment/invoicing/consumer-law review.
-- [ ] Review `SECURITY.md`, `docs/DEPLOYMENT.md`, `docs/RELEASES.md`, `docs/MIGRATIONS.md` and adapter threat models.
-- [ ] Record exact release/tag/SHA and migration result used for launch without recording secrets.
+- [ ] Review `SECURITY.md`, `docs/DEPLOYMENT.md`, `docs/RELEASES.md`, `docs/MIGRATIONS.md`, `docs/CONTAINERS.md`, `docs/REGISTRY.md` and adapter threat models.
+- [ ] Record exact release/tag/SHA/digest and migration result used for launch without recording secrets.
