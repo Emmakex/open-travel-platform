@@ -12,75 +12,30 @@ _Última actualización: 28 de agosto de 2026._
 **Fase 9 — Baseline de hardening productivo: COMPLETADA.**  
 **Fase 10 — Productización open-source: EN CURSO.**
 
-Slices completados de Fase 10:
+Slices completados:
 
 ```text
 10.1     Bootstrap demo/fresh-clone reproducible -------------- COMPLETADA
 10.2     Despliegue standalone provider-neutral --------------- COMPLETADA
 10.3     Contratos de extensión/adapters referencia ----------- COMPLETADA
 10.4     Convenciones de release y migración ------------------ COMPLETADA
+10.5     Lifecycle de upgrades y deprecaciones ---------------- COMPLETADA
 ```
 
 La validación Stripe/Redsys TEST/LIVE con credenciales sigue siendo una dependencia externa separada y no reabre la Fase 9.
 
 ---
 
-# Bases completadas
-
-## Catálogo, identidad y booking — COMPLETADO
-
-- foundation Next.js / React / TypeScript;
-- adapters MongoDB;
-- superficies públicas/Operator EN/ES;
-- destinos, viajes, itinerarios, salidas e inventario;
-- identidad persistente cliente/staff y RBAC;
-- booking transaccional con pricing/inventario confiable;
-- viajeros/menores/tutores y snapshots históricos.
-
-## Comercio, post-compra y operaciones — COMPLETADO
-
-- ledger provider-neutral y checkout Stripe/Redsys;
-- depósitos/cuotas/saldo pendiente;
-- Actividades, Transporte y Protección de viaje;
-- Traveller Data cifrado y modificaciones;
-- alojamiento/habitaciones y suplementos;
-- workflows Operator, fulfilment, documentos, exportaciones y reporting.
-
----
-
-# Fase 8 — Integraciones externas — COMPLETADA
-
-- eventos versionados y outbox MongoDB transaccional;
-- webhooks HTTPS firmados, retry/dead-letter y worker durable;
-- `BookingRepository` REST;
-- fulfilment REST;
-- CRM y ERP/contabilidad downstream-only;
-- validación contractual HTTP real.
-
----
-
-# Fase 9 — Hardening productivo — COMPLETADA
-
-- CSP/headers, HSTS, Origin y throttling;
-- liveness/readiness y perfiles `demo|live`;
-- concurrencia/rollback MongoDB e idempotencia;
-- observabilidad, recovery y auditoría privilegiada;
-- privacidad/retención;
-- gates WCAG 2.2 AA-oriented;
-- baselines de lectura, throughput y recursos runtime.
-
----
-
 # Fase 10 — Productización open-source — EN CURSO
 
-Objetivo: hacer el core MIT fácil de adoptar, desplegar, extender, publicar y contribuir sin dependencias ocultas de Kairoseth.
+Objetivo: hacer el core MIT fácil de adoptar, desplegar, extender, publicar, actualizar y contribuir sin dependencias ocultas de Kairoseth.
 
 ## 10.1 — Bootstrap demo reproducible — COMPLETADA
 
 - `npm ci` bloqueado;
 - bootstrap demo seguro/no destructivo;
 - evaluación sin infraestructura externa obligatoria;
-- smoke de build/start/HTTP;
+- smoke build/start/HTTP;
 - onboarding EN/ES.
 
 ## 10.2 — Despliegue standalone provider-neutral — COMPLETADA
@@ -92,76 +47,90 @@ Objetivo: hacer el core MIT fácil de adoptar, desplegar, extender, publicar y c
 
 ## 10.3 — Contratos de extensión y adapters de referencia — COMPLETADA
 
-Documentos autoritativos:
+Documentos:
 
 - [`docs/EXTENSION-POINT-INVENTORY.es.md`](docs/EXTENSION-POINT-INVENTORY.es.md)
 - [`docs/EXTENSION-COMPATIBILITY.es.md`](docs/EXTENSION-COMPATIBILITY.es.md)
 - [`docs/REFERENCE-ADAPTERS.es.md`](docs/REFERENCE-ADAPTERS.es.md)
 - [`docs/EXTENSION-VALIDATION.es.md`](docs/EXTENSION-VALIDATION.es.md)
 
-Entregado:
-
-- nueve interfaces públicas provider-neutral verificadas;
-- mapa explícito de autoridad;
-- política de compatibilidad/versionado/deprecación;
-- adapters reales de referencia;
-- gate permanente `check:extension-contracts` y workflow bloqueante.
+Entregado: nueve interfaces provider-neutral verificadas, mapa de autoridad, versionado/compatibilidad, referencias reales y gate `check:extension-contracts`.
 
 ## 10.4 — Convenciones de release y migraciones — COMPLETADA
 
-Documentos autoritativos:
+Documentos:
 
-- [`docs/RELEASES.md`](docs/RELEASES.md)
 - [`docs/RELEASES.es.md`](docs/RELEASES.es.md)
-- [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md)
+- [`docs/RELEASES.md`](docs/RELEASES.md)
 - [`docs/MIGRATIONS.es.md`](docs/MIGRATIONS.es.md)
+- [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md)
 
-Contrato de release:
+Entregado:
 
-- releases públicos estables siguen Semantic Versioning;
-- `package.json` usa `X.Y.Z` y Git tags inmutables `vX.Y.Z`;
-- package, badge README, CHANGELOG y tag deben coincidir;
-- releases únicamente desde `main` verificado;
-- `npm ci` + `npm run verify` obligatorio;
-- tags y entradas históricas son registros inmutables.
+- Semantic Versioning estable y tags inmutables `vX.Y.Z`;
+- identidad package/README/CHANGELOG/tag alineada;
+- releases solo desde `main` verificado;
+- clasificación de migraciones de configuración, datos, wire, claves y cambios destructivos;
+- patrón **expand → migrate → contract**;
+- sin migraciones destructivas ocultas en startup;
+- `check:release-migrations` y workflow bloqueante.
 
-Contrato de migración:
+## 10.5 — Política de lifecycle de upgrades y deprecaciones — COMPLETADA
 
-- cambios de configuración, datos persistentes, wire, cifrado/claves y destructivos se clasifican explícitamente;
-- evolución compatible usa **expand → migrate → contract**;
-- migraciones operativas son deterministas, acotadas, retry-safe/idempotentes o resumibles y verificables;
-- prohibidas migraciones destructivas ocultas en startup;
-- protecciones explícitas para pagos/historial, booking/inventario y Traveller Data protegido;
-- toda migración no trivial declara rollback/recuperación.
+Documentos:
 
-Automatización permanente:
+- [`docs/UPGRADES.es.md`](docs/UPGRADES.es.md)
+- [`docs/UPGRADES.md`](docs/UPGRADES.md)
+- [`docs/DEPRECATIONS.es.md`](docs/DEPRECATIONS.es.md)
+- [`docs/DEPRECATIONS.md`](docs/DEPRECATIONS.md)
+
+Contrato de soporte/upgrade:
+
+- la última release estable del major actual es el target soportado principal;
+- no hay LTS/backports garantizados salvo anuncio explícito;
+- upgrades del mismo major están soportados aplicando migraciones documentadas;
+- un major upgrade parte de la última release estable del major inmediatamente anterior cuando la ruta está documentada;
+- saltos de major solo si se documentan explícitamente;
+- operadores registran versiones/SHAs origen/destino y recuperación exactos.
+
+Lifecycle:
+
+```text
+ACTIVE → DEPRECATED → REMOVED
+```
+
+- retirada ordinaria de superficies públicas únicamente en una release **MAJOR**;
+- avisos indican reemplazo, primera release deprecated y earliest ordinary removal;
+- PATCH/MINOR no eliminan ni reinterpretan silenciosamente contratos/configuración soportados;
+- configuración, interfaces de extensión, wire contracts y datos persistentes siguen el mismo lifecycle;
+- seguridad puede acelerar retirada solo mediante excepción documentada;
+- warnings nunca filtran secretos ni datos protegidos.
+
+Automatización:
 
 ```bash
-npm run check:release
-npm run check:release-migrations
+npm run check:upgrade-deprecations
 npm run verify
 ```
 
 Entregado:
 
-- `scripts/release-migration-check.mjs`;
-- `check:release-migrations` dentro de `verify`;
-- `release-check.mjs` exige las políticas EN/ES;
-- workflow bloqueante `.github/workflows/release-migrations.yml`;
-- CONTRIBUTING exige clasificación explícita de impacto release/migración.
+- `scripts/upgrade-deprecation-check.mjs`;
+- `check:upgrade-deprecations` dentro de `verify`;
+- workflow `.github/workflows/upgrade-deprecations.yml`;
+- integración con releases, migraciones, compatibilidad, SUPPORT y CONTRIBUTING.
 
-## Trabajo planificado de Fase 10
+## Trabajo posterior planificado
 
-Que un slice aparezca aquí no significa que ya esté activo. Cada uno tendrá rama propia y gate completo cuando empiece.
+Ningún bloque posterior está activo por aparecer aquí. Cada uno recibe su rama y gate completo al iniciarse.
 
-Posibles siguientes slices:
+Posibles slices:
 
-- **10.5 — política de ciclo de vida de upgrades y deprecaciones**;
 - templates más completos de contribución/release;
 - política de trademark/branding entre Open Travel Platform y Kairoseth Travel;
 - adapters opcionales según demanda comercial/comunitaria.
 
-## Gate permanente de fases
+## Gate permanente
 
 ```text
 implementación
@@ -175,6 +144,6 @@ implementación
 → siguiente fase
 ```
 
-## No-objetivos del core
+## No-objetivos
 
 El core público no debe quedar ligado permanentemente a un PSP, proveedor, CRM/ERP, CMS, vendor de identidad, monitorización, hosting o infraestructura exclusiva de Kairoseth.
