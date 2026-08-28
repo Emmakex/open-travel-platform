@@ -1,70 +1,126 @@
 # Preparación de rendimiento y carga
 
-La Fase **9D-5** establece evidencia repetible de rendimiento/carga para Open Travel Platform y el despliegue de referencia Kairoseth Travel sin acoplar el core a un proveedor de hosting ni añadir índices de base de datos especulativos.
+La Fase **9D-5** establece evidencia repetible de rendimiento/carga para Open Travel Platform y el despliegue de referencia Kairoseth Travel sin acoplar el core MIT a un proveedor de hosting ni añadir índices de base de datos especulativos.
 
-## 9D-5.1 — Baseline HTTP en CI
+Los baselines de CI son señales de regresión. Separan deliberadamente el comportamiento local de la aplicación de la capacidad productiva específica de cada despliegue y de la latencia de proveedores externos.
 
-El primer bloque es un baseline bloqueante de **solo lectura** ejecutado en CI contra un build de producción y un replica set MongoDB local y desechable.
+## 9D-5.1 — Baseline HTTP público/solo lectura
 
-El baseline cubre superficies representativas:
+Un baseline bloqueante contra el build productivo ejecuta GET representativos sobre un replica set MongoDB local y desechable:
 
-- liveness del proceso: `/api/health/live`;
-- catálogo público: `/`;
-- ruta de lectura/render del booking: `/trips/barcelona-city-break/book`;
-- entrada de autenticación de cliente: `/account/sign-in`;
-- entrada de autenticación de Operator: `/operator/sign-in`.
+- `/api/health/live`;
+- `/`;
+- `/trips/barcelona-city-break/book`;
+- `/account/sign-in`;
+- `/operator/sign-in`.
 
-No envía reservas, pagos, cambios de perfil de cliente ni acciones Operator bajo carga concurrente en CI. La corrección de mutaciones/concurrencia con estado ya está cubierta por las suites dedicadas de transacciones e idempotencia MongoDB y no debe mezclarse con este baseline de latencia HTTP.
+Cada escenario realiza warm-up y emite latencia mínima/media, p50/p95/p99/máxima, requests por segundo, concurrencia y número de fallos. Cualquier estado inesperado o fallo de transporte bloquea el gate.
 
-## Métricas
+La primera evidencia aceptada completó **150 peticiones con 0 fallos**. En ese runner los p95 observados estuvieron aproximadamente entre 35 y 59 ms en las rutas medidas, con liveness alrededor de 52 ms. Son datos históricos del runner, no expectativas fijas de producción.
 
-Cada escenario realiza un warm-up corto y después un número acotado de requests concurrentes. El test emite JSON estructurado con:
+## 9D-5.2 — Lecturas críticas autenticadas
 
-- latencia mínima y media;
-- latencia **p50**, **p95** y **p99**;
-- latencia máxima;
-- requests por segundo;
-- número de requests, concurrencia configurada y número de fallos.
+El baseline autenticado prepara un cliente, una sesión Admin y una reserva real MongoDB antes de medir. Usa las mismas APIs persistentes de sesión y los mismos nombres de cookie que la aplicación; no existe bypass de autenticación para tests.
 
-Cualquier respuesta HTTP inesperada o fallo de transporte hace fallar el baseline. Cada escenario también aplica un presupuesto p95 de CI deliberadamente conservador.
+La carga medida sigue siendo GET/solo lectura y cubre:
+
+- `/account`;
+- `/account/reservations`;
+- detalle de reserva de cliente;
+- `/operator`;
+- `/operator/reservations`;
+- detalle de reserva Operator;
+- workflow de reserva Operator.
+
+La primera evidencia aceptada completó **156 peticiones autenticadas con 0 fallos y sin redirects de autenticación**. Los p95 observados estuvieron entre aproximadamente 45,58 ms y 111,26 ms en ese runner.
+
+## 9D-5.3 — Throughput acotado de mutaciones y corrección post-carga
+
+El rendimiento de mutaciones se aísla de los baselines HTTP/read. Un replica set MongoDB 8 local y desechable recibe **32 intentos concurrentes de reserva contra exactamente 16 plazas disponibles**.
+
+El resultado aceptado debe ser matemáticamente exacto:
+
+- 16 reservas confirmadas en la transacción;
+- 16 rechazos esperados `DEPARTURE_UNAVAILABLE`;
+- ningún oversell;
+- IDs de reserva confirmados únicos;
+- exactamente un evento de creación en el outbox transaccional por commit;
+- cancelación concurrente de todas las reservas confirmadas;
+- inventario final de la salida exactamente en cero;
+- exactamente un evento de cancelación por reserva confirmada.
+
+La primera ejecución aceptada registró p95 de creación **554,78 ms**, p95 de cancelación **323,5 ms**, resultado de capacidad 16/16 esperado y `postLoadCorrectness: passed`.
+
+La Fase 9B sigue siendo la autoridad funcional más amplia para rollback, protección contra oversell y cancelación duplicada. 9D-5.3 añade evidencia repetible de tiempos bajo un nivel mayor pero acotado de contención.
+
+## 9D-5.4 — Recursos del runtime, pico acotado y recuperación
+
+El bloque de cierre gestiona un proceso productivo `next start` en Linux, muestrea `/proc` y ejecuta dos fases de carga mixta solo lectura:
+
+- carga sostenida: **240 peticiones / concurrencia 12**;
+- pico acotado: **320 peticiones / concurrencia 32**.
+
+Observa:
+
+- memoria residente (**RSS / VmRSS**);
+- máximo histórico de RSS del proceso (**VmHWM**);
+- descriptores de archivo abiertos;
+- número de threads del proceso;
+- latencia p50/p95/p99 y throughput.
+
+El servidor debe sobrevivir al pico, cada request medido debe devolver HTTP 200, el liveness posterior debe seguir funcionando, el crecimiento de recursos debe permanecer dentro de límites conservadores de CI y los descriptores deben recuperar cerca del baseline previo. Consulta `PERFORMANCE-RUNTIME-RESOURCE.es.md` para el contrato detallado.
+
+La primera ejecución aceptada completó **560 peticiones con 0 fallos**. La carga sostenida registró p95 **109,10 ms** a aproximadamente **184,01 requests/segundo**; el pico de mayor concurrencia registró p95 **233,10 ms** a aproximadamente **227,17 requests/segundo**. El RSS del proceso pasó de **193,78 MB** en el baseline calentado a un máximo/valor post-carga medido de **395,74 MB** (**+201,96 MB**), los descriptores pasaron de **40 a 84** y los threads se mantuvieron **15 → 15**. La aplicación permaneció viva y el liveness post-carga pasó correctamente. Son observaciones aceptadas del runner de GitHub, no cifras de dimensionamiento productivo.
 
 ## Los presupuestos de CI no son SLO de producción
 
-Los runners alojados de GitHub son variables y no representan la infraestructura productiva, distancia de red, comportamiento CDN, dimensionamiento de Atlas ni distribución real del tráfico. Los umbrales p95 actuales son presupuestos de regresión para detectar degradaciones grandes en un entorno repetible; **no son SLO de producción, compromisos de capacidad ni garantías de latencia para clientes**.
+Los runners alojados de GitHub son variables y no representan la infraestructura productiva, distancia de red, comportamiento CDN, dimensionamiento de Atlas ni distribución real del tráfico. Los límites de CI son presupuestos de regresión para detectar deterioros grandes, fugas o crecimiento descontrolado en un entorno repetible. **No son SLO de producción, compromisos de capacidad ni garantías de latencia para clientes**.
 
-El seguimiento de producción deberá definir objetivos específicos del entorno a partir de tráfico e infraestructura observados. Señales iniciales recomendadas:
+Los objetivos de producción deben calibrarse con el despliegue real de Kairoseth Travel y con cualquier otro despliegue que use este core.
 
-- latencia p50/p95/p99 de respuesta del servidor por familia de rutas críticas;
-- tasa de requests/errores y saturación en periodos punta;
-- presión del pool de conexiones MongoDB y evidencia de queries lentas;
-- saturación de CPU/memoria/event loop del runtime;
-- retraso de colas/workers de integraciones;
-- latencia de pagos/proveedores separada de la latencia local de la aplicación.
+## Señales de capacidad en producción
+
+Como mínimo, la monitorización productiva debe establecer baselines móviles y alertas para:
+
+- latencia p50/p95/p99 por familia de rutas críticas;
+- tasa de requests, 4xx/5xx y fallos de transporte;
+- RSS, heap, CPU y retraso del event loop;
+- presión de descriptores/sockets;
+- peticiones activas y número de conexiones;
+- presión del pool MongoDB, queries lentas y saturación de Atlas;
+- profundidad/retraso de la cola de workers de integración;
+- latencia externa de Stripe/Redsys/proveedores separada de la latencia local.
+
+Hay que repetir pruebas similares a producción tras cambios relevantes de tamaño de catálogo, distribución del tráfico, tier de hosting, tier de base de datos, runtime Node/Next o topología de integraciones.
 
 ## Supuestos de capacidad
 
-El baseline de CI asume intencionadamente:
+La evidencia bloqueante de CI asume intencionadamente:
 
 - un proceso de aplicación en un runner Linux de GitHub;
 - un miembro local de replica set MongoDB 8;
 - catálogo y salida controlados mediante seed;
-- ninguna llamada externa a Stripe, Redsys, CRM, ERP o proveedores;
-- concurrencia acotada (actualmente 6–8 workers por escenario);
-- ninguna capa CDN/cache adicional más allá de lo que proporcione el propio build productivo de Next.js.
+- ninguna llamada de red externa a Stripe, Redsys, CRM, ERP o proveedores;
+- concurrencia sintética acotada;
+- ninguna capa CDN/cache adicional más allá del build productivo de Next.js.
 
-Estos supuestos permiten comparar regresiones de forma repetible. No describen la topología productiva final.
+Estos supuestos permiten comparar regresiones. No describen la topología productiva final ni el máximo tráfico seguro.
 
 ## Límite de base de datos
 
-La Fase 9C ya valida el inventario de índices MongoDB soportado y planes representativos de consulta usando evidencia real de `explain("executionStats")`. La Fase 9D-5 debe apoyarse en ese baseline. Un escenario HTTP lento no justifica por sí solo añadir un índice. Cualquier cambio de base de datos requiere evidencia de query plan y debe conservar los gates existentes de rendimiento de índices.
+La Fase 9C-8 ya valida los índices MongoDB soportados y planes representativos mediante evidencia real de `explain("executionStats")`. Un escenario HTTP o de recursos lento no justifica por sí solo añadir un índice. Los cambios de base de datos requieren evidencia de query plan y deben conservar los gates de rendimiento existentes.
 
-## Bloques siguientes
+## Límite de proveedores
 
-Después de este baseline de solo lectura, 9D-5 deberá añadir:
+La validación E2E TEST/LIVE de Stripe/Redsys con credenciales continúa siendo un requisito separado de hardening dependiente de proveedores. Los harnesses de rendimiento no simulan el comportamiento externo de PSP y su latencia no debe interpretarse como capacidad local de la aplicación.
 
-1. carga persistente autenticada de rutas de lectura de cuenta cliente y Operator usando sesiones/datos controlados;
-2. pruebas acotadas de throughput de mutaciones en bases aisladas donde se pueda revalidar la corrección transaccional después de la carga;
-3. observación de memoria/CPU/event loop y pool de conexiones cuando el runtime de despliegue exponga telemetría fiable;
-4. umbrales de seguimiento productivo basados en tráfico y características reales de hosting de Kairoseth Travel.
+## Conjunto de evidencia de la Fase 9D-5
 
-La validación E2E TEST/LIVE de Stripe/Redsys con credenciales sigue siendo un requisito separado dependiente de proveedores y no se simula con este harness de carga.
+El baseline de ingeniería completado queda formado por:
+
+1. **9D-5.1** latencia/throughput HTTP público y solo lectura;
+2. **9D-5.2** carga autenticada de cliente y Operator con sesiones persistentes reales;
+3. **9D-5.3** throughput acotado de reservas/cancelaciones con corrección transaccional post-carga;
+4. **9D-5.4** observación de RSS/descriptores/threads, supervivencia/recuperación ante pico acotado y guía de capacidad productiva.
+
+Estas capas aportan evidencia repetible de regresión manteniendo el dimensionamiento real específico de cada despliegue.

@@ -17,9 +17,9 @@ _Última actualización: 28 de agosto de 2026._
 
 La plataforma está muy por encima del MVP original de catálogo/reservas. Ya están implementadas identidad persistente, reservas/inventario transaccionales, pricing por viajero, alojamiento, servicios independientes, pagos, datos post-compra, modificaciones, workflow Operator avanzado, permisos granulares, documentos, reporting y la infraestructura común de integraciones.
 
-**La Fase 8 está COMPLETADA. La Fase 9 — Endurecimiento productivo está EN PROGRESO: la Fase 9A de seguridad / operabilidad productiva, el baseline crítico de persistencia/concurrencia/contratos de la Fase 9B y la Fase 9C de observabilidad/recuperación/auditoría privilegiada están COMPLETADOS. La Fase 9D está EN PROGRESO: 9D-1 de derechos de privacidad, 9D-2 de acceso/portabilidad/limitación/supresión controlada, 9D-3 de baseline regulatorio de retención y 9D-4 de accesibilidad están COMPLETADOS. La Fase 9D-5 de rendimiento/carga es la SIGUIENTE.**
+**La Fase 8 está COMPLETADA. El baseline de ingeniería de la Fase 9 — Endurecimiento productivo está COMPLETADO: Fase 9A de seguridad/operabilidad productiva, Fase 9B de persistencia/concurrencia/contratos críticos, Fase 9C de observabilidad/recuperación/auditoría privilegiada y Fase 9D de privacidad/regulación/accesibilidad/rendimiento. La Fase 10 — Productización open-source es la SIGUIENTE.**
 
-La validación E2E TEST/LIVE con credenciales Stripe/Redsys sigue pendiente hasta disponer de cuentas proveedor adecuadas. Debe incorporarse en cuanto existan credenciales, pero no bloquea la Fase 9D. El Browser E2E general permanece como señal CI informativa/no bloqueante por política explícita del proyecto; los journeys dedicados de accesibilidad para foundation global, autenticación cliente, Traveller Data/privacidad, booking/pagos y workflows Operator se ejecutan como workflows bloqueantes. Los gates bloqueantes también cubren seguridad determinista, TypeScript/build/smoke, concurrencia/idempotencia/modificaciones MongoDB, contratos HTTP locales de adapters, observabilidad/failure transport, rollback de auditoría privilegiada, rotación de claves, recovery MongoDB, planes de consulta MongoDB reales e invariantes de privacidad/retención.
+La validación E2E TEST/LIVE con credenciales Stripe/Redsys sigue pendiente hasta disponer de cuentas proveedor adecuadas. Debe incorporarse en cuanto existan credenciales. Permanece como validación de release dependiente de proveedores y no reabre el baseline de ingeniería completado de la Fase 9. El Browser E2E general permanece como señal CI informativa/no bloqueante por política explícita del proyecto; los journeys dedicados de accesibilidad para foundation global, autenticación cliente, Traveller Data/privacidad, booking/pagos y workflows Operator se ejecutan como workflows bloqueantes. Los gates bloqueantes también cubren seguridad determinista, TypeScript/build/smoke, concurrencia/idempotencia/modificaciones MongoDB, contratos HTTP locales de adapters, observabilidad/failure transport, rollback de auditoría privilegiada, rotación de claves, recovery MongoDB, planes de consulta MongoDB reales e invariantes de privacidad/retención.
 
 ---
 
@@ -227,9 +227,9 @@ Son extensiones y no bloquean el cierre de la frontera core de la Fase 8:
 
 ---
 
-# Fase 9 — Endurecimiento productivo — EN PROGRESO
+# Fase 9 — Endurecimiento productivo — COMPLETADO (baseline de ingeniería)
 
-La prioridad es endurecer para producción la amplia superficie funcional ya construida.
+El baseline de ingeniería de endurecimiento para la amplia superficie del producto está completado. La validación con credenciales proveedor permanece separada cuando requiere cuentas externas.
 
 ## 9A — Baseline de seguridad / operabilidad productiva — COMPLETADO
 
@@ -352,7 +352,7 @@ La prioridad es endurecer para producción la amplia superficie funcional ya con
 - seguimiento Atlas Query Profiler/Performance Advisor y ciclo de vida seguro de índices documentados EN/ES;
 - gate permanente `check:mongodb-index-performance` más prueba real de query plans.
 
-## 9D — Preparación de privacidad, regulación, accesibilidad y rendimiento — EN PROGRESO
+## 9D — Preparación de privacidad, regulación, accesibilidad y rendimiento — COMPLETADO
 
 ### 9D-1 — Base de solicitudes de derechos y revisión de retención — COMPLETADO
 - solicitudes autenticadas de acceso, rectificación, supresión, limitación, oposición y portabilidad;
@@ -391,17 +391,19 @@ La prioridad es endurecer para producción la amplia superficie funcional ya con
 - documentación de ingeniería EN/ES y gates permanentes de invariantes preservan el contrato implementado;
 - es un baseline técnico orientado a WCAG 2.2 AA, no una certificación: la revisión específica de cada despliegue con teclado, lector de pantalla, contraste, zoom/reflow y contenido real sigue siendo responsabilidad de release.
 
-### 9D-5 — Preparación de rendimiento/carga — SIGUIENTE
-- establecer baselines repetibles de rendimiento/carga para reserva/cuenta cliente y paths críticos de Operator;
-- validar latencia server, comportamiento de concurrencia/recursos y fallo acotado bajo carga representativa;
-- aprovechar el baseline ya completado de query plans/índices MongoDB sin añadir índices especulativos;
-- documentar supuestos de capacidad y umbrales de seguimiento productivo.
+### 9D-5 — Preparación de rendimiento/carga — COMPLETADO
+- 9D-5.1 añade un baseline HTTP público/solo lectura bloqueante contra build productivo con p50/p95/p99, throughput y fallos estructurados; la primera ejecución aceptada completó 150 peticiones con 0 fallos;
+- 9D-5.2 usa sesiones persistentes reales cliente/Admin y una reserva MongoDB real para carga GET crítica autenticada, sin bypass de auth; la primera ejecución aceptada completó 156 peticiones con 0 fallos y p95 aproximados de 45,58–111,26 ms;
+- 9D-5.3 ejecuta 32 intentos concurrentes contra 16 plazas, exige exactamente 16 commits + 16 rechazos de capacidad esperados, cancela después todos los commits y demuestra inventario final 0 más cardinalidad exacta de outbox; los primeros p95 de creación/cancelación aceptados fueron 554,78/323,5 ms;
+- 9D-5.4 muestrea un proceso Linux productivo Next.js para RSS/VmHWM, descriptores y threads durante 240 peticiones con concurrencia 12 más un pico de 320 con concurrencia 32; la primera ejecución aceptada tuvo 0 fallos, p95 109,10/233,10 ms, RSS 193,78 → 395,74 MB, FDs 40 → 84, threads 15 → 15 y liveness post-carga correcto;
+- los budgets de CI son señales de regresión/fugas, no SLO de producción ni garantías de dimensionamiento; los umbrales reales deben calibrarse con telemetría de hosting, Atlas y tráfico;
+- la evidencia de query plans de 9C-8 sigue siendo la autoridad para cambios de base de datos/índices, por lo que un escenario de aplicación lento no justifica índices especulativos.
 
 La validación TEST/LIVE Stripe/Redsys con credenciales sigue siendo requisito de hardening productivo y debe insertarse inmediatamente cuando existan cuentas proveedor adecuadas.
 
 ---
 
-# Fase 10 — Productización open-source
+# Fase 10 — Productización open-source — SIGUIENTE
 
 - documentación de entorno productivo;
 - seed/setup demo limpio;
@@ -446,9 +448,9 @@ La validación TEST/LIVE Stripe/Redsys con credenciales sigue siendo requisito d
   ↓
 9D-4  Preparación de accesibilidad — COMPLETADO
   ↓
-9D-5  Preparación de rendimiento/carga — SIGUIENTE
+9D-5  Preparación de rendimiento/carga — COMPLETADO
   ↓
-10    Productización open-source / release
+10    Productización open-source / release — SIGUIENTE
   ↓
 adapters opcionales según necesidad comercial
 ```

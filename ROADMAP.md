@@ -17,9 +17,9 @@ _Last updated: 28 August 2026._
 
 The platform is well beyond the original catalogue/booking MVP. Persistent identity, transactional reservations/inventory, traveller pricing, accommodation, independent services, payments, post-purchase traveller data, amendments, rich Operator workflows, granular permissions, documents, reporting and the common integration infrastructure are already implemented.
 
-**Phase 8 is COMPLETE. Phase 9 — Production hardening is IN PROGRESS: Phase 9A production security / operability baseline, Phase 9B critical persistence/concurrency/contract validation baseline and Phase 9C observability/recovery/privileged-audit hardening are COMPLETE. Phase 9D is IN PROGRESS: 9D-1 privacy-rights workflow, 9D-2 access/portability/restriction/controlled erasure, 9D-3 regulatory retention-policy baseline and 9D-4 accessibility readiness are COMPLETE. Phase 9D-5 performance/load readiness is NEXT.**
+**Phase 8 is COMPLETE. The Phase 9 — Production hardening engineering baseline is COMPLETE: Phase 9A production security/operability, Phase 9B critical persistence/concurrency/contract validation, Phase 9C observability/recovery/privileged-audit hardening and Phase 9D privacy/regulatory/accessibility/performance readiness are COMPLETE. Phase 10 — Open-source productisation is NEXT.**
 
-Credentialed Stripe/Redsys TEST/LIVE end-to-end validation remains pending until suitable provider accounts are available. That provider-dependent validation should be inserted as soon as credentials exist, but it does not block Phase 9D. The broad Browser E2E journey remains an informational/non-blocking CI signal by explicit project policy; dedicated accessibility journeys for the cross-application foundation, customer authentication, Traveller Data/privacy, booking/payment and Operator workflows run as blocking workflows. Blocking gates also cover deterministic security, TypeScript/build/smoke, MongoDB concurrency/idempotency/amendments, local HTTP adapter contracts, structured observability/failure transport, privileged audit rollback, encryption-key rotation, MongoDB recovery, real MongoDB query-plan validation and privacy/retention invariants.
+Credentialed Stripe/Redsys TEST/LIVE end-to-end validation remains pending until suitable provider accounts are available. That provider-dependent validation should be inserted as soon as credentials exist. It remains an explicit external-dependency release validation and does not reopen the completed Phase 9 engineering baseline. The broad Browser E2E journey remains an informational/non-blocking CI signal by explicit project policy; dedicated accessibility journeys for the cross-application foundation, customer authentication, Traveller Data/privacy, booking/payment and Operator workflows run as blocking workflows. Blocking gates also cover deterministic security, TypeScript/build/smoke, MongoDB concurrency/idempotency/amendments, local HTTP adapter contracts, structured observability/failure transport, privileged audit rollback, encryption-key rotation, MongoDB recovery, real MongoDB query-plan validation and privacy/retention invariants.
 
 ---
 
@@ -227,9 +227,9 @@ These are extensions rather than blockers for the completed Phase 8 core integra
 
 ---
 
-# Phase 9 — Production hardening — IN PROGRESS
+# Phase 9 — Production hardening — COMPLETE (engineering baseline)
 
-The priority is to harden the already broad product surface for real production operation.
+The engineering hardening baseline for the broad product surface is complete. Provider-credential validation remains separately tracked where external accounts are required.
 
 ## 9A — Production security / operability baseline — COMPLETE
 
@@ -361,7 +361,7 @@ The priority is to harden the already broad product surface for real production 
 - Atlas Query Profiler/Performance Advisor follow-up and safe index-lifecycle guidance documented EN/ES;
 - permanent `check:mongodb-index-performance` plus real MongoDB query-plan gate.
 
-## 9D — Privacy, regulatory, accessibility and performance readiness — IN PROGRESS
+## 9D — Privacy, regulatory, accessibility and performance readiness — COMPLETE
 
 ### 9D-1 — Privacy-rights request and retention-review foundation — COMPLETE
 - authenticated customer requests for access, rectification, erasure, restriction, objection and portability;
@@ -400,17 +400,19 @@ The priority is to harden the already broad product surface for real production 
 - EN/ES engineering documentation and permanent source-invariant gates preserve the implementation contract;
 - this is a WCAG 2.2 AA-oriented engineering baseline, not a certification: deployment-specific keyboard, screen-reader, contrast, zoom/reflow and real-content review remains a release responsibility.
 
-### 9D-5 — Performance/load readiness — NEXT
-- establish repeatable performance/load baselines for customer booking/account and Operator critical paths;
-- validate server latency, concurrency/resource behavior and bounded failure under representative load;
-- build on the completed MongoDB query-plan/index baseline rather than adding speculative indexes;
-- document capacity assumptions and production follow-up thresholds.
+### 9D-5 — Performance/load readiness — COMPLETE
+- 9D-5.1 adds a blocking production-build public/read-only HTTP baseline with structured p50/p95/p99, throughput and failure counts; the first accepted run completed 150 requests with 0 failures;
+- 9D-5.2 uses real persistent customer/Admin sessions and a real MongoDB reservation fixture for authenticated critical GET load, with no auth bypass; the first accepted run completed 156 requests with 0 failures and p95 values of roughly 45.58–111.26 ms;
+- 9D-5.3 runs 32 concurrent reservation attempts against 16 spaces, requires exactly 16 commits + 16 expected capacity rejections, then cancels all commits and proves final inventory 0 plus exact transactional outbox cardinality; first accepted create/cancel p95 values were 554.78/323.5 ms;
+- 9D-5.4 samples a production Next.js Linux process for RSS/VmHWM, file descriptors and threads during 240 requests at concurrency 12 plus a 320-request spike at concurrency 32; the first accepted run had 0 failures, p95 109.10/233.10 ms, RSS 193.78 → 395.74 MB, FDs 40 → 84, threads 15 → 15 and successful post-load liveness;
+- CI budgets are regression/leak signals, not production SLOs or sizing guarantees; real deployment thresholds must be calibrated from hosting, Atlas and traffic telemetry;
+- Phase 9C-8 query-plan evidence remains authoritative for database/index changes, so slow application scenarios do not justify speculative indexes.
 
 Credentialed Stripe/Redsys TEST/LIVE validation remains a production-hardening requirement and should be inserted immediately when provider accounts are available.
 
 ---
 
-# Phase 10 — Open-source productisation
+# Phase 10 — Open-source productisation — NEXT
 
 - production environment documentation;
 - clean demo seed/setup;
@@ -455,9 +457,9 @@ Credentialed Stripe/Redsys TEST/LIVE validation remains a production-hardening r
   ↓
 9D-4  Accessibility readiness — COMPLETE
   ↓
-9D-5  Performance/load readiness — NEXT
+9D-5  Performance/load readiness — COMPLETE
   ↓
-10    Open-source productisation / release
+10    Open-source productisation / release — NEXT
   ↓
 optional adapters driven by commercial need
 ```

@@ -71,10 +71,11 @@ La plataforma está muy por encima del MVP original de catálogo/reservas. La im
 - drills reales de backup/restore MongoDB y validación de índices/planes de consulta;
 - workflows autenticados de derechos de privacidad, ejecución controlada de acceso/portabilidad/limitación/supresión y registro explícito de políticas de retención;
 - baseline técnico de accesibilidad orientado a WCAG 2.2 AA en navegación global, autenticación cliente, Traveller Data/privacidad, booking/pagos y workflows Operator, respaldado por journeys bloqueantes de navegador.
+- baselines repetibles de rendimiento/carga para lecturas públicas y autenticadas, contención acotada de mutaciones, comportamiento runtime de RSS/descriptores/threads y liveness/recuperación post-pico.
 
 La validación E2E con credenciales Stripe/Redsys sigue pendiente hasta disponer de cuentas adecuadas. Los adapters están implementados, pero la capacidad productiva no se considera validada hasta probar TEST/LIVE.
 
-**La Fase 8 — Integraciones externas está COMPLETADA. La Fase 9 — Endurecimiento productivo está EN PROGRESO: la Fase 9A de seguridad productiva, la Fase 9B de validación crítica y la Fase 9C de observabilidad/recuperación/auditoría privilegiada están COMPLETADAS. Las Fases 9D-1 derechos de privacidad, 9D-2 ejecución de privacidad, 9D-3 retención regulatoria y 9D-4 accesibilidad están COMPLETADAS. La Fase 9D-5 de rendimiento/carga es la SIGUIENTE.**
+**La Fase 8 — Integraciones externas está COMPLETADA. El baseline de ingeniería de la Fase 9 — Endurecimiento productivo está COMPLETADO: Fase 9A de seguridad productiva, Fase 9B de validación crítica, Fase 9C de observabilidad/recuperación/auditoría privilegiada y Fase 9D de privacidad/regulación/accesibilidad/rendimiento. La Fase 10 — Productización open-source es la SIGUIENTE.**
 
 ## Capacidades actuales
 
@@ -423,6 +424,9 @@ KTRAVEL_INTEGRATION_WORKER_TOKEN=
 - [`docs/OBSERVABILITY.es.md`](docs/OBSERVABILITY.es.md) / [`docs/OBSERVABILITY.md`](docs/OBSERVABILITY.md)
 - [`docs/FAILURE-TRANSPORT.es.md`](docs/FAILURE-TRANSPORT.es.md) / [`docs/FAILURE-TRANSPORT.md`](docs/FAILURE-TRANSPORT.md)
 - [`docs/ACCESSIBILITY-OPERATOR.es.md`](docs/ACCESSIBILITY-OPERATOR.es.md) / [`docs/ACCESSIBILITY-OPERATOR.md`](docs/ACCESSIBILITY-OPERATOR.md) — cierre de accesibilidad Operator, semántica de feedback/formularios y frontera de revisión manual.
+- [`docs/PERFORMANCE-LOAD-READINESS.es.md`](docs/PERFORMANCE-LOAD-READINESS.es.md) / [`docs/PERFORMANCE-LOAD-READINESS.md`](docs/PERFORMANCE-LOAD-READINESS.md) — consolidado 9D-5 de latencia, throughput, supuestos de capacidad y seguimiento productivo.
+- [`docs/PERFORMANCE-MUTATION-THROUGHPUT.es.md`](docs/PERFORMANCE-MUTATION-THROUGHPUT.es.md) / [`docs/PERFORMANCE-MUTATION-THROUGHPUT.md`](docs/PERFORMANCE-MUTATION-THROUGHPUT.md) — contención acotada de reservas/cancelaciones y corrección post-carga.
+- [`docs/PERFORMANCE-RUNTIME-RESOURCE.es.md`](docs/PERFORMANCE-RUNTIME-RESOURCE.es.md) / [`docs/PERFORMANCE-RUNTIME-RESOURCE.md`](docs/PERFORMANCE-RUNTIME-RESOURCE.md) — baseline runtime RSS/descriptores/threads, recuperación ante pico y guía de capacidad.
 - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 - [`docs/PRODUCTION-CHECKLIST.md`](docs/PRODUCTION-CHECKLIST.md)
 
@@ -456,12 +460,16 @@ check:accessibility-auth
 check:accessibility-traveller-privacy
 check:accessibility-booking-payment
 check:accessibility-operator
+check:performance-load
+check:performance-authenticated-read
+check:performance-mutation-throughput
+check:performance-runtime-resource
 check:browser-e2e
 typecheck
 build
 ```
 
-CI realiza instalación limpia, invariantes deterministas, typecheck y build productivo. Jobs bloqueantes dedicados ejercitan replica sets MongoDB 8 reales, contratos HTTP locales, rollback de auditoría privilegiada, rotación de claves, backup/restore, planes de consulta, ejecución de privacidad y journeys críticos de accesibilidad en Chromium. El Browser E2E general registro → reserva → cliente → Operator sigue siendo informativo/no bloqueante por política; los browser gates específicos de accesibilidad son bloqueantes.
+CI realiza instalación limpia, invariantes deterministas, typecheck y build productivo. Jobs bloqueantes dedicados ejercitan replica sets MongoDB 8 reales, contratos HTTP locales, rollback de auditoría privilegiada, rotación de claves, backup/restore, planes de consulta, ejecución de privacidad, journeys críticos de accesibilidad en Chromium y los cuatro slices de rendimiento/carga: lecturas públicas, lecturas autenticadas, mutaciones acotadas y recuperación del runtime tras pico. El Browser E2E general registro → reserva → cliente → Operator sigue siendo informativo/no bloqueante por política; los browser gates específicos de accesibilidad son bloqueantes.
 
 ## Estado del proyecto
 
@@ -490,21 +498,23 @@ CI realiza instalación limpia, invariantes deterministas, typecheck y build pro
 | Fase 9D-2 — Acceso/portabilidad, limitación y supresión controlada | **Completada** |
 | Fase 9D-3 — Baseline regulatorio de retención | **Completada** |
 | Fase 9D-4 — Preparación de accesibilidad | **Completada** |
-| Fase 9D-5 — Preparación de rendimiento/carga | **Siguiente** |
-| Fase 9 — Endurecimiento productivo | **En progreso** |
+| Fase 9D-5 — Preparación de rendimiento/carga | **Completada** |
+| Fase 9 — Baseline de ingeniería de endurecimiento productivo | **Completado; validación con credenciales proveedor pendiente** |
+| Fase 10 — Productización open-source | **Siguiente** |
 
 ## Siguiente prioridad
 
-El siguiente bloque es la **Fase 9D-5 — Preparación de rendimiento/carga**.
+El siguiente bloque es la **Fase 10 — Productización open-source**.
 
-El baseline de base de datos e índices ya está validado con planes de consulta MongoDB reales, por lo que esta fase debe medir el sistema antes de añadir optimizaciones especulativas. Dirección inicial:
+El baseline de ingeniería de endurecimiento productivo está completado. El siguiente trabajo debe facilitar adoptar, extender y publicar un clon limpio sin mezclar infraestructura exclusiva de Kairoseth dentro del core MIT:
 
-- definir escenarios de carga repetibles para cliente y Operator con datos persistentes MongoDB;
-- capturar distribuciones de latencia server-side y tasas de éxito/error en paths representativos;
-- probar concurrencia acotada en catálogo/búsqueda, lecturas autenticadas de cuenta, paths seguros cercanos a booking y colas Operator sin debilitar autoridad de inventario/pagos;
-- separar budgets reproducibles de CI de los objetivos reales de capacidad productiva;
-- documentar supuestos de recursos/capacidad y señales productivas que obliguen a volver a medir o escalar;
-- fallar de forma acotada bajo sobrecarga y dejar explícito qué depende del hosting/containers/MongoDB gestionado de cada despliegue.
+- validar seed/setup demo limpio desde un clon nuevo;
+- publicar instalación/despliegue desde clon limpio y un ejemplo opcional Docker/self-host;
+- formalizar adapters de referencia y contratos de extensión para capacidades externas;
+- definir convenciones versionadas de release y migraciones;
+- añadir templates de contribución y documentación pública de API/extensiones;
+- documentar reglas de trademark/branding entre el core open-source y Kairoseth Travel;
+- mantener fuera del core público los adapters propietarios Kairoseth/cliente cuando corresponda.
 
 El E2E TEST/LIVE Stripe/Redsys con credenciales sigue pendiente y debe incorporarse en cuanto existan cuentas proveedor adecuadas.
 
