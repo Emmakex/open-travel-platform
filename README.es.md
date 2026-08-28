@@ -24,6 +24,8 @@ Este repositorio es el **core MIT provider-neutral**. Kairoseth Travel es la imp
 - adapters privados Kairoseth/cliente pueden depender de contratos públicos OTP, nunca al revés;
 - sistemas downstream no reciben autoridad implícita sobre booking, inventario, pricing o pagos.
 
+La licencia MIT del software y el branding/identidad del proyecto y despliegue de referencia son cuestiones separadas. Los forks y servicios alojados independientes conservan los derechos MIT sobre el código, pero deben usar su propia identidad principal y evitar insinuar endorsement oficial de Kairoseth/Open Travel Platform. Consulta [`TRADEMARKS.es.md`](TRADEMARKS.es.md).
+
 ## Posición actual
 
 **Fase 8 — Integraciones externas: COMPLETADA.**  
@@ -38,28 +40,23 @@ Slices completados:
 - **10.4 Convenciones de release y migraciones — COMPLETADA**
 - **10.5 Política de lifecycle de upgrades y deprecaciones — COMPLETADA**
 - **10.6 Plantillas de contribución y release — COMPLETADA**
+- **10.7 Política de trademark/branding e identidad — COMPLETADA**
 
-La Fase 10.5 establece:
-
-- última release estable del major actual como target soportado principal;
-- sin compromiso LTS/backports salvo anuncio explícito;
-- rutas soportadas dentro del mismo major y desde el major inmediatamente anterior;
-- saltos de major solo si están documentados explícitamente;
-- lifecycle público `ACTIVE → DEPRECATED → REMOVED`;
-- retirada ordinaria pública únicamente en una release **MAJOR**;
-- replacement + primera release deprecated + earliest removal como metadatos obligatorios;
-- excepción acelerada solo por seguridad documentada;
-- reglas provider-neutral para configuración, APIs/eventos, interfaces y datos persistentes;
-- gate permanente `npm run check:upgrade-deprecations`.
-
-Documentación autoritativa 10.4–10.5:
-
-- [`docs/RELEASES.es.md`](docs/RELEASES.es.md)
-- [`docs/MIGRATIONS.es.md`](docs/MIGRATIONS.es.md)
-- [`docs/UPGRADES.es.md`](docs/UPGRADES.es.md)
-- [`docs/DEPRECATIONS.es.md`](docs/DEPRECATIONS.es.md)
+La Fase 10.5 establece rutas de upgrade soportadas y el lifecycle público `ACTIVE → DEPRECATED → REMOVED`, incluida retirada ordinaria solo en MAJOR y excepción explícita de seguridad. Documentos autoritativos: [`docs/RELEASES.es.md`](docs/RELEASES.es.md), [`docs/MIGRATIONS.es.md`](docs/MIGRATIONS.es.md), [`docs/UPGRADES.es.md`](docs/UPGRADES.es.md) y [`docs/DEPRECATIONS.es.md`](docs/DEPRECATIONS.es.md).
 
 La Fase 10.6 añade una plantilla PR canónica, issue forms enriquecidos, una plantilla reutilizable de release notes y validación permanente mediante `npm run check:contribution-templates`. Consulta [`docs/CONTRIBUTION-TEMPLATES.es.md`](docs/CONTRIBUTION-TEMPLATES.es.md).
+
+La Fase 10.7 establece la frontera de branding:
+
+- la licencia MIT permanece intacta y gobierna los derechos del código;
+- Open Travel Platform identifica el core upstream público;
+- Kairoseth Travel identifica la implementación oficial alojada/comercial de referencia en `travel.kairoseth.com`;
+- despliegues públicos/comerciales independientes deben usar su propia identidad principal y pueden indicar de forma veraz “Basado en Open Travel Platform” o “Powered by Open Travel Platform”;
+- no se implica estatus registrado/oficial/certificado/partner/endorsed sin base autoritativa;
+- `KTRAVEL_*` son identificadores técnicos legacy, no una concesión de branding;
+- el gate permanente es `npm run check:branding-policy`.
+
+Consulta [`TRADEMARKS.es.md`](TRADEMARKS.es.md) y [`TRADEMARKS.md`](TRADEMARKS.md).
 
 La validación TEST/LIVE con credenciales Stripe/Redsys sigue siendo una dependencia externa separada.
 
@@ -90,6 +87,8 @@ npm run dev
 
 El perfil demo no exige MongoDB, SMTP, PSP, CRM, ERP ni credenciales de proveedor.
 
+Los despliegues públicos/comerciales independientes deben configurar `NEXT_PUBLIC_SITE_NAME` y la presentación con su propia identidad principal; el default demo/upstream sigue siendo Open Travel Platform. Consulta [`TRADEMARKS.es.md`](TRADEMARKS.es.md).
+
 ## Self-host standalone
 
 ```bash
@@ -102,7 +101,7 @@ node .next/standalone/server.js
 
 Para producción consulta [`docs/DEPLOYMENT.es.md`](docs/DEPLOYMENT.es.md) y [`docs/PRODUCTION-CHECKLIST.md`](docs/PRODUCTION-CHECKLIST.md).
 
-## Contrato de release, upgrade y deprecación
+## Contrato de release, upgrade e identidad
 
 Releases estables:
 
@@ -130,10 +129,9 @@ npm run check:release
 npm run check:release-migrations
 npm run check:upgrade-deprecations
 npm run check:contribution-templates
+npm run check:branding-policy
 npm run verify
 ```
-
-Consulta [`docs/RELEASES.es.md`](docs/RELEASES.es.md), [`docs/MIGRATIONS.es.md`](docs/MIGRATIONS.es.md), [`docs/UPGRADES.es.md`](docs/UPGRADES.es.md), [`docs/DEPRECATIONS.es.md`](docs/DEPRECATIONS.es.md) y [`docs/CONTRIBUTION-TEMPLATES.es.md`](docs/CONTRIBUTION-TEMPLATES.es.md).
 
 ## Documentación
 
@@ -144,6 +142,8 @@ Consulta [`docs/RELEASES.es.md`](docs/RELEASES.es.md), [`docs/MIGRATIONS.es.md`]
 - [`CHANGELOG.md`](CHANGELOG.md)
 - [`CONTRIBUTING.md`](CONTRIBUTING.md)
 - [`SUPPORT.md`](SUPPORT.md)
+- [`TRADEMARKS.es.md`](TRADEMARKS.es.md)
+- [`TRADEMARKS.md`](TRADEMARKS.md)
 - [`docs/RELEASES.es.md`](docs/RELEASES.es.md)
 - [`docs/MIGRATIONS.es.md`](docs/MIGRATIONS.es.md)
 - [`docs/UPGRADES.es.md`](docs/UPGRADES.es.md)
@@ -167,17 +167,18 @@ npm run check:extension-contracts
 npm run check:release-migrations
 npm run check:upgrade-deprecations
 npm run check:contribution-templates
+npm run check:branding-policy
 npm run verify
 ```
 
-Workflows dedicados protegen contratos de extensión, releases/migraciones, lifecycle de upgrades/deprecaciones y plantillas de contribución/release en PR y `main`.
+Workflows dedicados protegen contratos de extensión, releases/migraciones, lifecycle de upgrades/deprecaciones, plantillas de contribución/release y branding/identidad del proyecto en PR y `main`.
 
 ## Regla de cierre de fases
 
 Una fase/slice no está completada hasta terminar implementación/pruebas, sincronizar documentación EN/ES, revisar diff, tener CI obligatorio verde, mergear a `main` y verificar `main` antes de iniciar el siguiente bloque.
 
-La Fase 10.6 sigue la misma regla; branding/trademark permanece separado hasta cerrar este slice.
+La Fase 10.7 sigue la misma regla; la auditoría/release final de Fase 10 permanece separada hasta cerrar este slice.
 
-## Licencia
+## Licencia y branding
 
-MIT. Consulta [`LICENSE`](LICENSE).
+Código: MIT. Consulta [`LICENSE`](LICENSE). Identidad del proyecto/referencia: [`TRADEMARKS.es.md`](TRADEMARKS.es.md).
