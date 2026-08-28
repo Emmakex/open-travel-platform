@@ -33,14 +33,23 @@ All notable project changes are documented here.
 - Enriched bug and feature issue forms with exact-version, compatibility/public-contract, provider-neutrality and data-safety context.
 - Permanent contribution/release template gate through `scripts/contribution-template-check.mjs` and `npm run check:contribution-templates`.
 - Dedicated blocking `Contribution and release template validation` GitHub Actions workflow.
+- Phase 10.7 bilingual branding/project-identity policy through `TRADEMARKS.md` and `TRADEMARKS.es.md`.
+- Explicit separation of MIT software rights from Open Travel Platform/Kairoseth Travel identity guidance without claiming unverified trademark registration.
+- Rules for truthful “Based on/Powered by Open Travel Platform” attribution, independent deployment branding, compatibility claims, hosted services, domains/social identities and support/consulting references.
+- Explicit classification of Kairoseth Travel as the official hosted/commercial reference implementation at `travel.kairoseth.com`.
+- Legacy `KTRAVEL_*` configuration identifiers documented as technical compatibility identifiers rather than branding rights.
+- Permanent branding policy gate through `scripts/branding-policy-check.mjs` and `npm run check:branding-policy`.
+- Dedicated blocking `Branding and identity validation` GitHub Actions workflow.
 - Explicit project phase-completion rule in `CONTRIBUTING.md`: implementation -> validation -> EN/ES documentation -> PR review -> green CI -> merge -> verify `main` before starting the next phase.
 
 ### Changed
-- Phase 10 remains **IN PROGRESS**, while **Phase 10.3, Phase 10.4, Phase 10.5 and Phase 10.6 are COMPLETE**.
-- `npm run verify` now includes `check:extension-contracts`, `check:release-migrations`, `check:upgrade-deprecations` and `check:contribution-templates`.
+- Phase 10 remains **IN PROGRESS**, while **Phase 10.3, Phase 10.4, Phase 10.5, Phase 10.6 and Phase 10.7 are COMPLETE**.
+- `npm run verify` now includes `check:extension-contracts`, `check:release-migrations`, `check:upgrade-deprecations`, `check:contribution-templates` and `check:branding-policy`.
 - The duplicate case-variant `.github/pull_request_template.md` was removed so the repository has one unambiguous canonical PR template.
-- CONTRIBUTING, README and ROADMAP EN/ES now link the Phase 10.6 template guide and permanent gate.
-- `release-check.mjs` now requires bilingual release, migration, upgrade and deprecation policy documents as permanent release artifacts.
+- CONTRIBUTING and the canonical PR/release templates now require branding/identity impact classification when names, domains, default presentation or project/reference identity change.
+- README and ROADMAP EN/ES now link the branding policy and permanent branding gate.
+- `.env.example` clarifies that the upstream/demo `Open Travel Platform` site identity should be replaced by an independent deployment's own primary branding and that `KTRAVEL_*` names are legacy technical identifiers.
+- `release-check.mjs` now requires bilingual release, migration, upgrade, deprecation and branding policy documents as permanent release artifacts.
 - Public stable releases are governed by Semantic Versioning with immutable `vX.Y.Z` Git tags and release identity aligned across `package.json`, README badge, CHANGELOG and tag.
 - Public releases are cut only from a reviewed, verified `main` commit; tags are not moved or reused after publication.
 - Migration guidance classifies configuration, persistent-data, wire-contract, encryption/key and destructive changes and requires explicit verification and rollback/recovery semantics.
@@ -52,10 +61,9 @@ All notable project changes are documented here.
 - A deprecation notice identifies the replacement, first deprecated release, earliest ordinary removal release, migration/rollback impact and any security implications.
 - Configuration, extension interfaces, REST/event/signature contracts and durable data follow the same lifecycle model.
 - Security may accelerate deprecation/removal only through an explicit documented exception; warnings must not expose secrets or protected data.
-- CONTRIBUTING now requires explicit release/migration and upgrade/deprecation impact classification and documents the canonical PR/release templates.
-- SUPPORT now defines the public support baseline and best-effort backport expectations.
-- README and ROADMAP EN/ES are synchronized through completed Phase 10.6.
-- Existing REST v1 paths/headers remain unchanged; compatibility policy now delegates ordinary retirement to the Phase 10.5 lifecycle rather than an unspecified release policy.
+- CONTRIBUTING requires explicit release/migration, upgrade/deprecation and branding/identity impact classification and documents the canonical PR/release templates.
+- SUPPORT defines the public support baseline and best-effort backport expectations.
+- Existing REST v1 paths/headers remain unchanged; compatibility policy delegates ordinary retirement to the Phase 10.5 lifecycle rather than an unspecified release policy.
 - Typed repository/adapter interfaces remain governed by core SemVer rather than a synthetic global extension version.
 - The read-only catalogue HTTP contract remains a legacy-v1 compatibility surface: additive evolution is allowed, breaking evolution requires a new versioned surface.
 - Outbound event schema version and webhook signature algorithm version remain independent compatibility dimensions.
