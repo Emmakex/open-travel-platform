@@ -17,11 +17,8 @@ jobs:
         with:
           ref: feat/phase-9d5-runtime-resource-closeout
 
-      - name: Patch current Spanish roadmap phrase in temporary updater
+      - name: Apply final documentation cleanup
         run: python scripts/status-doc-closeout-fix.py
-
-      - name: Apply exact README and ROADMAP replacements
-        run: python scripts/status-doc-closeout.py
 
       - name: Commit synchronized status docs
         run: |
@@ -30,5 +27,5 @@ jobs:
           git add README.md README.es.md ROADMAP.md ROADMAP.es.md
           git diff --cached --check
           git diff --cached --quiet && exit 0
-          git commit -m "Close Phase 9D-5 documentation status"
+          git commit -m "Polish Phase 9D-5 documentation closeout"
           git push origin HEAD:feat/phase-9d5-runtime-resource-closeout
