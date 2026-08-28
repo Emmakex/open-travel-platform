@@ -10,17 +10,16 @@ _Última actualización: 28 de agosto de 2026._
 
 **Fase 8 — Integraciones externas: COMPLETADA.**  
 **Fase 9 — Baseline de hardening productivo: COMPLETADA.**  
-**Fase 10 — Productización open-source: EN CURSO.**  
-**Fase 10.3 — Contratos de extensión y adapters de referencia: COMPLETADA.**
+**Fase 10 — Productización open-source: EN CURSO.**
+
+Slices completados de Fase 10:
 
 ```text
-10.3.1   Inventario + mapa de autoridad ----------------------- COMPLETADA
-10.3.2   Compatibilidad/versionado ---------------------------- COMPLETADA
-10.3.3   Adapters de referencia ------------------------------- COMPLETADA
-10.3.4   Validación permanente de contratos ------------------ COMPLETADA
+10.1     Bootstrap demo/fresh-clone reproducible -------------- COMPLETADA
+10.2     Despliegue standalone provider-neutral --------------- COMPLETADA
+10.3     Contratos de extensión/adapters referencia ----------- COMPLETADA
+10.4     Convenciones de release y migración ------------------ COMPLETADA
 ```
-
-El gate permanente de extensiones forma parte de `npm run verify` y dispone de un workflow bloqueante propio en GitHub Actions.
 
 La validación Stripe/Redsys TEST/LIVE con credenciales sigue siendo una dependencia externa separada y no reabre la Fase 9.
 
@@ -38,37 +37,25 @@ La validación Stripe/Redsys TEST/LIVE con credenciales sigue siendo una depende
 - booking transaccional con pricing/inventario confiable;
 - viajeros/menores/tutores y snapshots históricos.
 
-## Comercio y post-compra — COMPLETADO
+## Comercio, post-compra y operaciones — COMPLETADO
 
-- ledger provider-neutral de pagos/reembolsos;
-- integraciones checkout Stripe/Redsys;
+- ledger provider-neutral y checkout Stripe/Redsys;
 - depósitos/cuotas/saldo pendiente;
 - Actividades, Transporte y Protección de viaje;
-- Traveller Data cifrado;
-- modificaciones con inventario transaccional;
-- alojamiento/habitaciones y suplementos.
-
-## Operaciones, documentos y reporting — COMPLETADO
-
-- ownership, notas, tags, prioridad y timeline;
-- tareas/seguimientos;
-- fulfilment proveedor;
-- permisos Operator/Admin y auditoría;
-- confirmaciones, manifiestos, rooming lists, vouchers y dossier;
-- exportaciones según permisos;
-- conciliación, saldos e ingresos.
+- Traveller Data cifrado y modificaciones;
+- alojamiento/habitaciones y suplementos;
+- workflows Operator, fulfilment, documentos, exportaciones y reporting.
 
 ---
 
 # Fase 8 — Integraciones externas — COMPLETADA
 
 - eventos versionados y outbox MongoDB transaccional;
-- webhooks HTTPS firmados con retry/dead-letter;
-- worker durable y replay/diagnóstico Admin;
-- `BookingRepository` REST genérico;
+- webhooks HTTPS firmados, retry/dead-letter y worker durable;
+- `BookingRepository` REST;
 - fulfilment REST;
 - CRM y ERP/contabilidad downstream-only;
-- idempotencia estable y contratos HTTP reales.
+- validación contractual HTTP real.
 
 ---
 
@@ -77,11 +64,9 @@ La validación Stripe/Redsys TEST/LIVE con credenciales sigue siendo una depende
 - CSP/headers, HSTS, Origin y throttling;
 - liveness/readiness y perfiles `demo|live`;
 - concurrencia/rollback MongoDB e idempotencia;
-- logging, failure transport y monitorización externa;
-- auditoría privilegiada y keyrings;
-- backup/restore e índices/query plans;
+- observabilidad, recovery y auditoría privilegiada;
 - privacidad/retención;
-- gates de accesibilidad orientados a WCAG 2.2 AA;
+- gates WCAG 2.2 AA-oriented;
 - baselines de lectura, throughput y recursos runtime.
 
 ---
@@ -92,9 +77,8 @@ Objetivo: hacer el core MIT fácil de adoptar, desplegar, extender, publicar y c
 
 ## 10.1 — Bootstrap demo reproducible — COMPLETADA
 
-- instalación bloqueada con `npm ci`;
-- configuración demo segura;
-- `npm run setup:demo` no destructivo;
+- `npm ci` bloqueado;
+- bootstrap demo seguro/no destructivo;
 - evaluación sin infraestructura externa obligatoria;
 - smoke de build/start/HTTP;
 - onboarding EN/ES.
@@ -104,89 +88,92 @@ Objetivo: hacer el core MIT fácil de adoptar, desplegar, extender, publicar y c
 - runtime Next.js `output: standalone`;
 - `npm run package:standalone`;
 - smoke HTTP/static real;
-- documentación de readiness, TLS/proxy, MongoDB, workers y rollback;
-- Kairoseth Travel sigue siendo referencia, no dependencia del core.
+- guía de readiness/TLS/MongoDB/workers/rollback.
 
 ## 10.3 — Contratos de extensión y adapters de referencia — COMPLETADA
 
-### 10.3.1 — Inventario y mapa de autoridad — COMPLETADA
+Documentos autoritativos:
 
-Inventario: [`docs/EXTENSION-POINT-INVENTORY.es.md`](docs/EXTENSION-POINT-INVENTORY.es.md).
-
-- verificadas exactamente nueve interfaces públicas de primer nivel;
-- mapeadas composición, implementaciones y contratos;
-- clasificada autoridad acotada/local/workflow/downstream/monitorización;
-- módulos internos permanecen fuera del contrato público;
-- Stripe/Redsys clasificados como PSP, no repositories del ledger.
-
-### 10.3.2 — Compatibilidad/versionado — COMPLETADA
-
-Política: [`docs/EXTENSION-COMPATIBILITY.es.md`](docs/EXTENSION-COMPATIBILITY.es.md).
-
-- interfaces públicas in-process siguen SemVer;
-- rutas/headers REST v1 permanecen estables;
-- catálogo sin versión mantiene semántica legacy-v1;
-- schema de evento y firma evolucionan de forma independiente;
-- autoridad/auth/idempotencia/estados/allowlists son contractuales;
-- prohibido downgrade oculto de mutaciones;
-- breaking changes requieren migración/deprecación/versionado explícitos.
-
-### 10.3.3 — Adapters de referencia — COMPLETADA
-
-Guía: [`docs/REFERENCE-ADAPTERS.es.md`](docs/REFERENCE-ADAPTERS.es.md).
-
-- `RestBookingRepository` — referencia de autoridad acotada;
-- `RestSupplierFulfilmentAdapter` + coordinador — workflow-subordinate y audit-before-apply;
-- `RestCrmSyncAdapter` — referencia downstream-only;
-- `RestFailureTransport` — patrón opcional de monitorización;
-- referencias vinculadas a pruebas contractuales HTTP reales existentes.
-
-### 10.3.4 — Validación permanente — COMPLETADA
-
-Guía: [`docs/EXTENSION-VALIDATION.es.md`](docs/EXTENSION-VALIDATION.es.md).
+- [`docs/EXTENSION-POINT-INVENTORY.es.md`](docs/EXTENSION-POINT-INVENTORY.es.md)
+- [`docs/EXTENSION-COMPATIBILITY.es.md`](docs/EXTENSION-COMPATIBILITY.es.md)
+- [`docs/REFERENCE-ADAPTERS.es.md`](docs/REFERENCE-ADAPTERS.es.md)
+- [`docs/EXTENSION-VALIDATION.es.md`](docs/EXTENSION-VALIDATION.es.md)
 
 Entregado:
 
-- `scripts/extension-contract-check.mjs`;
-- `npm run check:extension-contracts`;
-- registro dentro de `npm run verify`;
-- workflow bloqueante `.github/workflows/extension-contracts.yml`;
-- el workflow ejecuta invariantes estáticas y `npm run test:rest-adapter-contracts`.
+- nueve interfaces públicas provider-neutral verificadas;
+- mapa explícito de autoridad;
+- política de compatibilidad/versionado/deprecación;
+- adapters reales de referencia;
+- gate permanente `check:extension-contracts` y workflow bloqueante.
 
-El gate protege:
+## 10.4 — Convenciones de release y migraciones — COMPLETADA
 
-- inventario público exacto;
-- pureza provider-neutral de interfaces;
-- autoridad downstream-only de CRM/ERP;
-- audit-before-apply y límites de Supplier;
-- frontera provider-neutral del ledger;
-- identificadores v1 de contratos/headers/schemas/firma;
-- protecciones de transporte de adapters de referencia;
-- sincronización documental EN/ES.
+Documentos autoritativos:
 
-## Registro de cierre de Fase 10.3
+- [`docs/RELEASES.md`](docs/RELEASES.md)
+- [`docs/RELEASES.es.md`](docs/RELEASES.es.md)
+- [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md)
+- [`docs/MIGRATIONS.es.md`](docs/MIGRATIONS.es.md)
 
-Todos los requisitos de cierre quedan satisfechos por el cambio final:
+Contrato de release:
 
-1. el alcance 10.3.1–10.3.4 está completo;
-2. `check:extension-contracts` está registrado en `verify` y CI bloqueante;
-3. documentación EN/ES, README, ROADMAP y CHANGELOG están sincronizados;
-4. el gate dedicado y la suite contractual runtime protegen el modelo;
-5. adapters propietarios Kairoseth/cliente siguen desacoplados del core MIT.
+- releases públicos estables siguen Semantic Versioning;
+- `package.json` usa `X.Y.Z` y Git tags inmutables `vX.Y.Z`;
+- package, badge README, CHANGELOG y tag deben coincidir;
+- releases únicamente desde `main` verificado;
+- `npm ci` + `npm run verify` obligatorio;
+- tags y entradas históricas son registros inmutables.
 
-Se mantiene la regla permanente del proyecto: CI obligatorio, merge a `main` y verificación de `main` deben completarse antes de iniciar la siguiente fase.
+Contrato de migración:
 
-## Trabajo posterior planificado de Fase 10
+- cambios de configuración, datos persistentes, wire, cifrado/claves y destructivos se clasifican explícitamente;
+- evolución compatible usa **expand → migrate → contract**;
+- migraciones operativas son deterministas, acotadas, retry-safe/idempotentes o resumibles y verificables;
+- prohibidas migraciones destructivas ocultas en startup;
+- protecciones explícitas para pagos/historial, booking/inventario y Traveller Data protegido;
+- toda migración no trivial declara rollback/recuperación.
 
-Después de la Fase 10.3 completada, futuros bloques de Fase 10 pueden incluir:
+Automatización permanente:
 
-- convenciones de release y migraciones;
-- política de upgrades/deprecaciones;
-- templates de contribución/release;
+```bash
+npm run check:release
+npm run check:release-migrations
+npm run verify
+```
+
+Entregado:
+
+- `scripts/release-migration-check.mjs`;
+- `check:release-migrations` dentro de `verify`;
+- `release-check.mjs` exige las políticas EN/ES;
+- workflow bloqueante `.github/workflows/release-migrations.yml`;
+- CONTRIBUTING exige clasificación explícita de impacto release/migración.
+
+## Trabajo planificado de Fase 10
+
+Que un slice aparezca aquí no significa que ya esté activo. Cada uno tendrá rama propia y gate completo cuando empiece.
+
+Posibles siguientes slices:
+
+- **10.5 — política de ciclo de vida de upgrades y deprecaciones**;
+- templates más completos de contribución/release;
 - política de trademark/branding entre Open Travel Platform y Kairoseth Travel;
 - adapters opcionales según demanda comercial/comunitaria.
 
-Que un bloque aparezca listado aquí no significa que ya esté iniciado; cuando empiece tendrá su propia rama y su propio gate de cierre.
+## Gate permanente de fases
+
+```text
+implementación
+→ tests/validación
+→ documentación EN/ES + README/ROADMAP/CHANGELOG
+→ revisión de diff
+→ PR
+→ CI obligatorio verde
+→ merge a main
+→ verificar main
+→ siguiente fase
+```
 
 ## No-objetivos del core
 
