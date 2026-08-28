@@ -21,10 +21,11 @@ Before opening a pull request, run:
 ```bash
 npm run check:extension-contracts
 npm run check:release-migrations
+npm run check:upgrade-deprecations
 npm run verify
 ```
 
-`check:extension-contracts` protects the public extension architecture. `check:release-migrations` protects release and migration conventions. `verify` includes both gates plus the other permanent project checks, TypeScript validation and production build.
+The permanent gates protect extension architecture, release/migration conventions and the upgrade/deprecation lifecycle. `verify` includes them plus the other project checks, TypeScript validation and production build.
 
 GitHub Actions additionally exercises real MongoDB replica sets, local HTTP adapter contracts, privacy, accessibility, recovery and performance/resource baselines.
 
@@ -50,36 +51,7 @@ Read before introducing or changing an adapter:
 - [`docs/EXTENSION-VALIDATION.md`](docs/EXTENSION-VALIDATION.md)
 - [`docs/ADAPTER-GUIDE.md`](docs/ADAPTER-GUIDE.md)
 
-Official reference patterns:
-
-- `RestBookingRepository` — bounded repository authority;
-- `RestSupplierFulfilmentAdapter` + `performSupplierAdapterOperation()` — workflow-subordinate, audit-before-apply;
-- `RestCrmSyncAdapter` — downstream-only;
-- `RestFailureTransport` — monitoring-only reference.
-
-## Permanent extension validation
-
-The static gate is implemented at:
-
-```text
-scripts/extension-contract-check.mjs
-```
-
-and exposed as:
-
-```bash
-npm run check:extension-contracts
-```
-
-It protects the public interface inventory, interface purity, authority-sensitive method surfaces, supplier audit-before-apply, v1 contract identifiers, reference-adapter transport properties and central documentation consistency.
-
-The blocking workflow `.github/workflows/extension-contracts.yml` runs both the static gate and:
-
-```bash
-npm run test:rest-adapter-contracts
-```
-
-If a legitimate public contract change requires changing a protected invariant, update the compatibility classification, inventory/authority docs, runtime tests and the gate together. Do not weaken the gate only to mirror a provider SDK.
+Official reference patterns remain `RestBookingRepository`, `RestSupplierFulfilmentAdapter` + coordinator, `RestCrmSyncAdapter` and monitoring-only `RestFailureTransport`.
 
 ## Compatibility
 
@@ -87,30 +59,51 @@ If a legitimate public contract change requires changing a protected invariant, 
 - preserve current v1 wire paths/header names unless introducing an explicit new version;
 - provider API changes should be absorbed inside the adapter whenever possible;
 - mutating adapters must not silently fall back from a newer contract to an older one;
-- breaking public changes require explicit migration/versioning guidance.
+- breaking public changes require explicit migration/versioning guidance;
+- ordinary public removal follows the Phase 10.5 deprecation lifecycle and does not occur in PATCH/MINOR releases.
 
 ## Release and migration impact
 
-Every non-trivial PR must classify whether it affects release or migration behavior.
-
 Read:
 
-- [`docs/RELEASES.md`](docs/RELEASES.md) — SemVer, immutable `vX.Y.Z` tags, CHANGELOG and release sequence;
-- [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md) — configuration/data/wire/key migration classes, expand → migrate → contract, verification and rollback.
+- [`docs/RELEASES.md`](docs/RELEASES.md) — SemVer, immutable tags, CHANGELOG and release sequence;
+- [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md) — configuration/data/wire/key migration, expand → migrate → contract, verification and recovery;
+- [`docs/UPGRADES.md`](docs/UPGRADES.md) — supported source/target paths and production upgrade sequence;
+- [`docs/DEPRECATIONS.md`](docs/DEPRECATIONS.md) — lifecycle `ACTIVE → DEPRECATED → REMOVED` and ordinary major-only removal.
 
-A PR should explicitly state when applicable:
+Every non-trivial PR must classify, when applicable:
 
 - PATCH/MINOR/MAJOR compatibility impact;
-- required environment/configuration changes;
+- configuration/environment changes;
 - persistent-data/index/backfill changes;
-- public wire/event contract migration;
+- public wire/event migration;
 - protected/encrypted data impact;
 - deployment order/compatibility window;
 - rollback/recovery path.
 
 Do not add hidden destructive database migrations to application startup. Operational migrations must be deliberate, reviewable and recoverable.
 
-A public release is cut only from verified `main`; package version, README badge, CHANGELOG entry and immutable Git tag must agree.
+## Upgrade and deprecation impact
+
+A PR that changes a public surface must state whether the lifecycle impact is:
+
+- no lifecycle change;
+- `active → deprecated`;
+- `deprecated → removed`;
+- accelerated security exception.
+
+For a deprecation/removal include:
+
+- deprecated identifier/surface;
+- replacement or migration destination;
+- first deprecated release;
+- earliest ordinary removal release;
+- supported source/target upgrade path;
+- migration/rollback impact;
+- warning/documentation changes;
+- security rationale if the normal lifecycle is being accelerated.
+
+A routine removal without a prior deprecation notice is breaking by default and must not be represented as PATCH/MINOR maintenance.
 
 ## Pull requests
 
@@ -121,7 +114,8 @@ A PR should explain:
 - authority/security implications;
 - compatibility impact;
 - **Release and migration impact**;
-- configuration or migration requirements;
+- **Upgrade and deprecation impact**;
+- configuration/migration requirements;
 - rollback/recovery when state changes;
 - how the change was validated.
 
