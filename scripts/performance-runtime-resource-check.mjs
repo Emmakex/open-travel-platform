@@ -15,9 +15,13 @@ const docsEs = read("docs/PERFORMANCE-RUNTIME-RESOURCE.es.md");
 
 assert(packageJson.scripts?.["test:performance-runtime-resource"] === "tsx tests/performance-runtime-resource-baseline.ts", "package script must expose the runtime resource baseline");
 assert(packageJson.scripts?.["check:performance-runtime-resource"] === "node scripts/performance-runtime-resource-check.mjs", "package script must expose the runtime resource invariant gate");
+assert(packageJson.scripts?.["package:standalone"] === "node scripts/prepare-standalone.mjs", "runtime resource baseline must use the shared standalone packager");
 
 for (const evidence of [
   "spawn(process.execPath",
+  'standaloneServer = path.join(process.cwd(), ".next", "standalone", "server.js")',
+  '[standaloneServer]',
+  'runtime: "standalone"',
   'process.platform !== "linux"',
   'readFileSync(`/proc/${pid}/status`',
   'readdirSync(`/proc/${pid}/fd`)',
@@ -44,6 +48,7 @@ for (const evidence of [
   'response.status === 200'
 ]) assert(test.includes(evidence), `test must preserve: ${evidence}`);
 assert(!test.includes('method: "POST"'), "runtime resource load must remain read-only");
+assert(!test.includes('nextBin'), "resource baseline must not fall back to the Next.js CLI runtime");
 assert(test.includes('"127.0.0.1"') && test.includes("PERFORMANCE_RESOURCE_PORT"), "test must bind only to local loopback");
 
 for (const evidence of [
@@ -54,6 +59,7 @@ for (const evidence of [
   "npm run test:e2e:seed",
   "npm run typecheck",
   "npm run build",
+  "npm run package:standalone",
   "npm run test:performance-runtime-resource",
   "ktravel_ci_runtime_resource_"
 ]) assert(workflow.includes(evidence), `workflow must preserve: ${evidence}`);
