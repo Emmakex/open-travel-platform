@@ -21,7 +21,7 @@ The platform is well beyond the original catalogue/booking MVP. Persistent ident
 
 **Phase 9 — Production hardening engineering baseline is COMPLETE.** This includes security/operability, critical persistence/concurrency/contract validation, observability/recovery/audit hardening, privacy/retention, accessibility and performance/load readiness.
 
-**Phase 10 — Open-source productisation is IN PROGRESS. Phase 10.1 and 10.2 are COMPLETE. Phase 10.3 — Extension contracts and reference adapters is ACTIVE: 10.3.1 extension inventory/authority map is COMPLETE and 10.3.2 compatibility/versioning policy is ACTIVE.**
+**Phase 10 — Open-source productisation is IN PROGRESS. Phase 10.1 and 10.2 are COMPLETE. Phase 10.3 — Extension contracts and reference adapters is ACTIVE: 10.3.1 extension inventory/authority map and 10.3.2 compatibility/versioning policy are COMPLETE; 10.3.3 contributor-facing reference adapters is ACTIVE.**
 
 Credentialed Stripe/Redsys TEST/LIVE E2E remains pending until suitable provider accounts are available. It remains an explicit provider-dependent release validation and does not reopen the completed Phase 9 engineering baseline.
 
@@ -186,20 +186,30 @@ Authoritative inventory: [`docs/EXTENSION-POINT-INVENTORY.md`](docs/EXTENSION-PO
 - explicitly kept SMTP/email and arbitrary internal modules outside public plugin-contract status;
 - classified Stripe/Redsys as PSP integrations rather than `PaymentRepository` replacements.
 
-### 10.3.2 — Contract compatibility and versioning — ACTIVE
+### 10.3.2 — Contract compatibility and versioning — COMPLETE
 
-- define stable public contract identifiers and compatibility expectations;
-- document backward-compatible versus breaking changes;
-- define deprecation expectations before contract removal;
-- map rules across typed interfaces, HTTP contracts and event schemas;
-- keep provider-specific payloads/versioning inside adapters whenever possible.
+Authoritative policy: [`docs/EXTENSION-COMPATIBILITY.md`](docs/EXTENSION-COMPATIBILITY.md).
 
-### 10.3.3 — Contributor-facing reference adapters — PLANNED
+- in-process repository/adapter interfaces follow core release SemVer instead of independent numeric versions;
+- current REST v1 paths and header names are preserved exactly;
+- Booking/Supplier/CRM may share `X-OTP-Contract-Version` without sharing one schema lifecycle;
+- ERP/accounting and FailureTransport retain their specialized v1 headers;
+- the current unversioned HTTP catalogue is frozen as legacy-v1 semantics and cannot be broken in place;
+- integration event schema version and webhook signature version are explicitly independent;
+- authority, authentication, idempotency, state semantics and protected-data allowlists are contract-significant;
+- automatic wire-version downgrade for mutations is prohibited;
+- ordinary public-contract removal requires deprecation and migration guidance;
+- breaking changes require a major core release or deliberate parallel/new wire contract.
 
-- provide minimal reference implementations/examples using the existing generic contracts;
-- demonstrate server-only credentials, runtime validation, bounded transport and error normalization;
+### 10.3.3 — Contributor-facing reference adapters — ACTIVE
+
+- provide minimal provider-neutral implementations/examples using the existing generic contracts;
+- demonstrate a bounded source/repository adapter and a downstream-only adapter;
+- demonstrate server-only credentials, runtime validation, bounded transport and stable error normalization;
 - demonstrate idempotency for mutations and audit-before-apply where applicable;
-- show how proprietary integrations stay outside the generic core.
+- show provider API upgrades absorbed inside adapters while the public core contract remains stable;
+- show deliberate v1 → v2 migration behavior without hidden mutation fallback;
+- show how proprietary integrations stay outside the generic MIT core.
 
 ### 10.3.4 — Permanent extension-contract validation — PLANNED
 
@@ -241,8 +251,8 @@ Phase 9  Production hardening engineering baseline ---------- COMPLETE
 10.1     Fresh-clone/demo bootstrap -------------------------- COMPLETE
 10.2     Self-host standalone deployment --------------------- COMPLETE
 10.3.1   Extension inventory + authority map ----------------- COMPLETE
-10.3.2   Compatibility/versioning policy --------------------- ACTIVE
-10.3.3   Reference adapter examples -------------------------- PLANNED
+10.3.2   Compatibility/versioning policy --------------------- COMPLETE
+10.3.3   Reference adapter examples -------------------------- ACTIVE
 10.3.4   Permanent extension-contract validation ------------ PLANNED
           ↓
 Later     Release/migration/contribution/branding conventions
