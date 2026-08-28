@@ -4,7 +4,7 @@
 
 > Base open-source reutilizable para agencias, turoperadores y productos de reserva de viajes.
 
-Open Travel Platform es una plataforma clean-room construida con **Next.js + TypeScript + MongoDB** y organizada alrededor de límites explícitos de dominio, repositorios y adapters. Soporta un perfil demo seguro sin infraestructura externa, capacidades persistentes de producción y despliegue self-host neutral respecto a proveedores.
+Open Travel Platform es una plataforma clean-room con **Next.js + TypeScript + MongoDB**, organizada alrededor de fronteras explícitas de dominio, repositories y adapters. Soporta onboarding demo sin infraestructura, capacidades persistentes y despliegue self-host provider-neutral.
 
 La implementación comercial/de referencia oficial es **Kairoseth Travel**, desplegada en **[travel.kairoseth.com](https://travel.kairoseth.com)**.
 
@@ -15,114 +15,91 @@ La implementación comercial/de referencia oficial es **Kairoseth Travel**, desp
 ![Node](https://img.shields.io/badge/Node-24_LTS-5fa04e)
 ![MongoDB](https://img.shields.io/badge/MongoDB-supported-47A248)
 ![License](https://img.shields.io/badge/license-MIT-45d6b5)
-[![Live reference](https://img.shields.io/badge/live-travel.kairoseth.com-45d6b5)](https://travel.kairoseth.com)
 
 ## Modelo del proyecto
 
-Este repositorio es el **core open-source bajo licencia MIT**. Kairoseth Travel es la implementación alojada/comercial oficial construida encima.
+Este repositorio es el **core MIT provider-neutral**. Kairoseth Travel es la implementación alojada/comercial de referencia.
 
-La separación es intencional:
-
-- Open Travel Platform sigue siendo reutilizable, provider-neutral y self-hostable;
-- Kairoseth Travel puede añadir hosting gestionado, soporte, servicios comerciales e integraciones privadas;
 - datos de clientes, credenciales productivas e integraciones propietarias permanecen fuera del repositorio público;
-- los sistemas downstream nunca reciben autoridad implícita sobre reservas, inventario o pagos del core.
+- adapters privados Kairoseth/cliente pueden depender de contratos públicos OTP, nunca al revés;
+- sistemas downstream no reciben autoridad implícita de booking, inventario, pricing o pagos.
 
 ## Posición actual
 
-El MVP original de catálogo/reservas ha evolucionado a una plataforma amplia de operaciones turísticas. El baseline de ingeniería de endurecimiento productivo está completado y la productización open-source está en marcha.
-
 **Fase 8 — Integraciones externas: COMPLETADA.**  
-**Fase 9 — Baseline de ingeniería de endurecimiento productivo: COMPLETADA.**  
+**Fase 9 — Baseline de hardening productivo: COMPLETADA.**  
 **Fase 10 — Productización open-source: EN CURSO.**
 
-Estado de la Fase 10:
+Estado de la Fase 10 después de este merge:
 
-- **10.1 Bootstrap demo reproducible desde clon limpio — COMPLETADO**
-- **10.2 Despliegue self-host standalone provider-neutral — COMPLETADO**
+- **10.1 Bootstrap demo reproducible — COMPLETADA**
+- **10.2 Despliegue self-host standalone — COMPLETADA**
 - **10.3 Contratos de extensión y adapters de referencia — ACTIVA**
-  - **10.3.1 Inventario de puntos de extensión y mapa de autoridad — COMPLETADA**
-  - **10.3.2 Política de compatibilidad y versionado — COMPLETADA**
-  - **10.3.3 Adapters de referencia para contribuidores — ACTIVA**
-  - **10.3.4 Validación permanente de contratos — PLANIFICADA**
+  - **10.3.1 Inventario y mapa de autoridad — COMPLETADA**
+  - **10.3.2 Compatibilidad/versionado — COMPLETADA**
+  - **10.3.3 Adapters de referencia para contribuidores — COMPLETADA**
+  - **10.3.4 Validación permanente de contratos — ACTIVA**
 
-La Fase 10.3 ya dispone tanto de un inventario de extensiones respaldado por código como de una política formal de compatibilidad/versionado. El inventario verifica nueve interfaces de primer nivel bajo `repositories/`, y la política define cómo evolucionan interfaces tipadas, contratos REST, schemas de eventos y versiones de firma sin romper silenciosamente autoridad ni formatos wire. Consulta [`docs/EXTENSION-POINT-INVENTORY.es.md`](docs/EXTENSION-POINT-INVENTORY.es.md), [`docs/EXTENSION-COMPATIBILITY.es.md`](docs/EXTENSION-COMPATIBILITY.es.md) y [`docs/EXTENSION-CONTRACTS.es.md`](docs/EXTENSION-CONTRACTS.es.md).
+La Fase 10.3 ya dispone de inventario respaldado por código, política formal de compatibilidad/versionado y referencias para contribuidores basadas en adapters reales y probados. Consulta:
 
-El E2E TEST/LIVE de Stripe/Redsys con credenciales sigue siendo una validación de release dependiente de proveedores y debe completarse cuando existan cuentas adecuadas.
+- [`docs/EXTENSION-POINT-INVENTORY.es.md`](docs/EXTENSION-POINT-INVENTORY.es.md)
+- [`docs/EXTENSION-COMPATIBILITY.es.md`](docs/EXTENSION-COMPATIBILITY.es.md)
+- [`docs/REFERENCE-ADAPTERS.es.md`](docs/REFERENCE-ADAPTERS.es.md)
+- [`docs/EXTENSION-CONTRACTS.es.md`](docs/EXTENSION-CONTRACTS.es.md)
 
-## Capacidades actuales
+La validación E2E TEST/LIVE con credenciales Stripe/Redsys sigue siendo una dependencia externa separada hasta disponer de cuentas proveedor adecuadas.
+
+## Capacidades principales
 
 ### Catálogo y comercio
 
-- catálogo público y experiencia Operator bilingües EN/ES;
-- destinos, viajes, itinerarios estructurados, salidas e inventario vivo;
-- alojamientos, habitaciones, pricing estacional/ocupación y galerías;
-- productos independientes de Actividades, Transporte y Protección de viaje;
-- reservas transaccionales de viajes/servicios con pricing e inventario autoritativos en servidor;
-- viajeros, menores, bandas de edad, tutores y snapshots históricos de pricing;
-- suplementos opcionales y modificaciones post-reserva.
+- catálogo/Operator bilingüe EN/ES;
+- destinos, viajes, itinerarios, salidas e inventario;
+- alojamiento/habitaciones y pricing estacional/ocupación;
+- Actividades, Transporte y Protección de viaje;
+- reservas transaccionales con pricing/inventario server-authoritative;
+- viajeros, menores, bandas de edad, tutores y snapshots históricos;
+- suplementos y modificaciones post-reserva.
 
 ### Identidad y operaciones
 
-- autenticación persistente de cliente y personal;
-- sesiones cliente/personal separadas;
-- RBAC y capacidades granulares Operator/Admin;
-- responsable de reserva, notas, prioridad, tags y timeline operativo;
-- tareas/seguimientos y workflows de fulfilment de proveedor;
-- colas operativas, filtros, orden y paginación;
-- cambios privilegiados unidos a auditoría persistente cuando corresponde.
+- autenticación persistente cliente/staff;
+- sesiones separadas;
+- RBAC y capacidades Operator/Admin;
+- ownership, notas, prioridad, tags y timeline;
+- tareas/seguimientos y fulfilment;
+- colas/filtros avanzados;
+- auditoría privilegiada cuando corresponde.
 
 ### Pagos y finanzas
 
-- ledger provider-neutral de pago/reembolso independiente del estado de reserva;
+- ledger provider-neutral de pagos/reembolsos;
 - transferencia, efectivo y terminal externo;
-- adapters Stripe y Redsys detrás de checkout unificado;
-- depósitos, cuotas, saldo pendiente y próximo pago;
-- conciliación e ingresos agrupados de forma segura por moneda;
-- sincronización downstream ERP/contabilidad solo de movimientos finalizados.
+- integraciones checkout Stripe/Redsys;
+- depósitos/cuotas/saldo pendiente;
+- conciliación/reporting de ingresos;
+- ERP/contabilidad downstream-only.
 
-### Traveller Data, privacidad y accesibilidad
+### Traveller Data y hardening
 
-- Traveller Data post-compra cifrado con rotación escalonada de claves;
-- solicitudes autenticadas de derechos de privacidad y revisión Admin;
-- exports aprobados de acceso/portabilidad;
-- limitación y supresión controladas con revisión de retención;
-- registro explícito de políticas de retención y holds;
-- baseline técnico de accesibilidad orientado a WCAG 2.2 AA en journeys críticos de cliente y Operator;
-- workflows Chromium dedicados y bloqueantes.
+- Traveller Data cifrado y rotación de claves;
+- workflows de privacidad y retención;
+- baseline de accesibilidad orientado a WCAG 2.2 AA;
+- CSP/headers, Origin y throttling;
+- liveness/readiness y perfiles `demo|live`;
+- concurrencia/idempotencia MongoDB, backup/restore e índices;
+- baselines de rendimiento/recursos.
 
-### Documentos y reporting
-
-- PDFs de confirmación de reserva;
-- manifiestos de viajeros y rooming lists;
-- vouchers seguros para cliente;
-- expediente interno Operator;
-- exportaciones CSV/XLSX según permisos;
-- conciliación, saldos e ingresos;
-- exportación auditada de datos protegidos para uso operativo legítimo.
-
-### Integraciones y adapters
+### Integraciones
 
 - outbox transaccional MongoDB;
-- webhooks HTTPS firmados con secretos cifrados, retries y dead-letter;
-- worker durable server-only con locking, replay y retención;
-- adapter REST genérico de `BookingRepository`;
-- adapter provider-neutral de fulfilment;
-- adapter CRM exclusivamente downstream;
-- adapter ERP/contabilidad exclusivamente downstream;
-- logs operativos estructurados y transporte opcional provider-neutral de fallos;
-- protecciones SSRF/DNS rebinding y transportes externos acotados.
-
-### Endurecimiento productivo
-
-- CSP global y headers HTTP defensivos;
-- throttling persistente de autenticación y validación explícita de Origin;
-- endpoints liveness/readiness y perfiles `demo|live`;
-- validación real MongoDB de concurrencia, idempotencia y modificaciones;
-- contratos de adapters probados sobre HTTP local real;
-- drills de backup/restore y disaster recovery MongoDB;
-- validación real de índices y planes de consulta;
-- baselines repetibles de lecturas públicas/autenticadas, throughput de mutaciones y recursos runtime.
+- webhooks HTTPS firmados con retry/dead-letter;
+- worker durable;
+- `BookingRepository` REST;
+- fulfilment REST;
+- CRM y ERP downstream;
+- failure transport provider-neutral;
+- protección SSRF/DNS rebinding y transportes acotados.
 
 ## Arquitectura
 
@@ -135,30 +112,26 @@ BookingRepository (demo / MongoDB / REST v1)
         |
 reservas + inventario transaccional
         |
-PaymentRepository -> ledger provider-neutral -> Stripe / Redsys / manual
-        |                                      |
-        |                              movimientos succeeded
-        |                                      |
-eventos cliente/reserva                       |
-        |                                      |
-        +------------ outbox transaccional de integraciones ------------+
-                                |
-                         worker durable
-                    /             |              \
-             webhooks firmados  CRM REST      ERP/contabilidad REST
+PaymentRepository -> ledger local provider-neutral -> PSP/manual
+        |
+outbox transaccional de integraciones
+        |
+        +--> webhooks firmados
+        +--> CRM REST (downstream-only)
+        +--> ERP/contabilidad REST (downstream-only)
+
+Operator/Admin
+        |
+OperationsRepository + auditoría/tareas/documentos/reporting
+        |
+SupplierFulfilmentAdapter -> audit-before-apply -> workflow local
 
 Fallos operativos
         |
-logs JSON estructurados -> FailureTransport opcional -> monitorización
-
-Operator/Admin
-    |
-Operations / RBAC / auditoría / documentos / informes / tareas
-    |
-SupplierFulfilmentAdapter -> disabled / REST v1
+logs estructurados -> FailureTransport opcional
 ```
 
-Los payloads específicos de proveedores permanecen dentro de adapters. Las reglas del core siguen siendo autoritativas en servidor.
+Los payloads específicos de proveedor permanecen dentro de adapters y la autoridad del core sigue explícita.
 
 ## Inicio rápido
 
@@ -172,13 +145,9 @@ npm run setup:demo
 npm run dev
 ```
 
-Abre `http://localhost:3000`.
-
-El bootstrap demo no exige infraestructura: MongoDB, SMTP, PSP, CRM, ERP y credenciales de proveedor no son necesarios para evaluación. `setup:demo` es no destructivo y rechaza sobrescribir `.env.local` salvo que se fuerce explícitamente.
+El perfil demo no exige MongoDB, SMTP, PSP, CRM, ERP ni credenciales de proveedor.
 
 ## Self-host standalone
-
-El proyecto usa `output: standalone` de Next.js como runtime productivo provider-neutral.
 
 ```bash
 npm ci
@@ -188,52 +157,51 @@ npm run package:standalone
 node .next/standalone/server.js
 ```
 
-Para producción real usa secretos solo en runtime y el perfil de readiness `live`. Revisa [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) y el checklist productivo antes de exponer el servicio públicamente.
+Para producción real usa secretos solo runtime y el perfil `live`. Consulta [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) y [`docs/PRODUCTION-CHECKLIST.md`](docs/PRODUCTION-CHECKLIST.md).
 
-## Configuración
+## Modelo de extensiones
 
-La plantilla productiva completa vive en [`.env.example`](.env.example). La plantilla de evaluación sin infraestructura vive en [`.env.demo.example`](.env.demo.example).
+### Interfaces públicas verificadas
 
-Reglas importantes:
+- `TravelRepository`
+- `IdentityRepository`
+- `BookingRepository`
+- `OperationsRepository`
+- `PaymentRepository`
+- `SupplierFulfilmentAdapter`
+- `CrmSyncAdapter`
+- `ErpAccountingAdapter`
+- `FailureTransport`
 
-- `KTRAVEL_DEPLOYMENT_PROFILE=live` es un contrato fail-closed de readiness;
-- los destinos REST productivos deben usar HTTPS;
-- credenciales de proveedores, worker tokens y claves de cifrado son server-only;
-- nunca coloques secretos en variables `NEXT_PUBLIC_*`;
-- las claves productivas deben ser estables, de alta entropía y seguir el procedimiento documentado de rotación/recovery;
-- adapters exclusivos de Kairoseth/cliente deben permanecer fuera del core MIT cuando corresponda.
+Los webhooks firmados genéricos son una superficie downstream separada.
+
+### Referencias oficiales — 10.3.3 COMPLETADA
+
+- `RestBookingRepository` — autoridad acotada de repository;
+- `RestSupplierFulfilmentAdapter` + `performSupplierAdapterOperation()` — subordinado a workflow y audit-before-apply;
+- `RestCrmSyncAdapter` — downstream-only;
+- `RestFailureTransport` — patrón opcional de monitorización.
+
+Las implementaciones existentes ya están cubiertas por la suite contractual HTTP local cuando aplica. La guía incluye patrón de copia, ejemplo v1→v2 y frontera de adapters propietarios.
+
+Consulta [`docs/REFERENCE-ADAPTERS.es.md`](docs/REFERENCE-ADAPTERS.es.md).
 
 ## Documentación
 
-### Proyecto y onboarding
+### Proyecto
 
-- [`ROADMAP.es.md`](ROADMAP.es.md) — estado y prioridades.
-- [`ROADMAP.md`](ROADMAP.md) — roadmap en inglés.
-- [`CHANGELOG.md`](CHANGELOG.md) — cambios relevantes.
-- [`CONTRIBUTING.md`](CONTRIBUTING.md) — reglas de contribución.
-- [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — modelo de despliegue provider-neutral.
-- [`docs/PRODUCTION-CHECKLIST.md`](docs/PRODUCTION-CHECKLIST.md) — revisión productiva.
+- [`ROADMAP.es.md`](ROADMAP.es.md)
+- [`ROADMAP.md`](ROADMAP.md)
+- [`CHANGELOG.md`](CHANGELOG.md)
+- [`CONTRIBUTING.md`](CONTRIBUTING.md)
 
-### Fase 10.3 activa
+### Fase 10.3
 
-- [`docs/EXTENSION-POINT-INVENTORY.es.md`](docs/EXTENSION-POINT-INVENTORY.es.md) — superficies públicas verificadas y mapa de autoridad.
-- [`docs/EXTENSION-POINT-INVENTORY.md`](docs/EXTENSION-POINT-INVENTORY.md) — inventario en inglés.
-- [`docs/EXTENSION-COMPATIBILITY.es.md`](docs/EXTENSION-COMPATIBILITY.es.md) — política completada de compatibilidad, versionado, deprecación y migración.
-- [`docs/EXTENSION-COMPATIBILITY.md`](docs/EXTENSION-COMPATIBILITY.md) — política en inglés.
-- [`docs/EXTENSION-CONTRACTS.es.md`](docs/EXTENSION-CONTRACTS.es.md) — autoridad y contrato de cierre de 10.3.
-- [`docs/EXTENSION-CONTRACTS.md`](docs/EXTENSION-CONTRACTS.md) — versión inglesa.
-- [`docs/ADAPTER-GUIDE.md`](docs/ADAPTER-GUIDE.md) — implementación de adapters.
-- [`docs/API-CONTRACT.md`](docs/API-CONTRACT.md) — contrato HTTP público de catálogo.
-
-### Dominios y operaciones
-
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
-- [`docs/BOOKING.md`](docs/BOOKING.md)
-- [`docs/PAYMENTS.md`](docs/PAYMENTS.md)
-- [`docs/TRAVELLER-DATA.md`](docs/TRAVELLER-DATA.md)
-- [`docs/ACCOMMODATION.md`](docs/ACCOMMODATION.md)
-- [`docs/OPERATIONS.md`](docs/OPERATIONS.md)
-- [`docs/REPORTING-EXPORTS.es.md`](docs/REPORTING-EXPORTS.es.md)
+- [`docs/EXTENSION-POINT-INVENTORY.es.md`](docs/EXTENSION-POINT-INVENTORY.es.md)
+- [`docs/EXTENSION-COMPATIBILITY.es.md`](docs/EXTENSION-COMPATIBILITY.es.md)
+- [`docs/REFERENCE-ADAPTERS.es.md`](docs/REFERENCE-ADAPTERS.es.md)
+- [`docs/EXTENSION-CONTRACTS.es.md`](docs/EXTENSION-CONTRACTS.es.md)
+- [`docs/ADAPTER-GUIDE.md`](docs/ADAPTER-GUIDE.md)
 
 ### Contratos de integración
 
@@ -242,103 +210,37 @@ Reglas importantes:
 - [`docs/CRM-SYNC-ADAPTER.es.md`](docs/CRM-SYNC-ADAPTER.es.md)
 - [`docs/ERP-ACCOUNTING-ADAPTER.es.md`](docs/ERP-ACCOUNTING-ADAPTER.es.md)
 - [`docs/OUTBOUND-INTEGRATIONS.es.md`](docs/OUTBOUND-INTEGRATIONS.es.md)
-- [`docs/INTEGRATION-OPERATIONS.es.md`](docs/INTEGRATION-OPERATIONS.es.md)
-
-### Ingeniería productiva
-
-- [`docs/PRODUCTION-SECURITY.es.md`](docs/PRODUCTION-SECURITY.es.md)
-- [`docs/OBSERVABILITY.es.md`](docs/OBSERVABILITY.es.md)
 - [`docs/FAILURE-TRANSPORT.es.md`](docs/FAILURE-TRANSPORT.es.md)
-- [`docs/ACCESSIBILITY-OPERATOR.es.md`](docs/ACCESSIBILITY-OPERATOR.es.md)
-- [`docs/PERFORMANCE-LOAD-READINESS.es.md`](docs/PERFORMANCE-LOAD-READINESS.es.md)
-- [`docs/PERFORMANCE-MUTATION-THROUGHPUT.es.md`](docs/PERFORMANCE-MUTATION-THROUGHPUT.es.md)
-- [`docs/PERFORMANCE-RUNTIME-RESOURCE.es.md`](docs/PERFORMANCE-RUNTIME-RESOURCE.es.md)
 
 ## Quality gates
 
-La validación completa es:
+Ejecuta:
 
 ```bash
 npm run verify
 ```
 
-Entre los gates permanentes se incluyen:
+CI también prueba replica sets MongoDB reales, contratos HTTP locales, privacidad, accesibilidad, recovery y baselines de rendimiento/recursos.
 
-```text
-check:fresh-clone
-check:self-host
-check:production-security
-check:mongodb-concurrency
-check:payment-idempotency
-check:traveller-amendment-validation
-check:adapter-contract-validation
-check:observability
-check:failure-transport
-check:external-monitoring
-check:privileged-audit
-check:encryption-keyring
-check:traveller-key-rotation
-check:mongodb-recovery
-check:mongodb-index-performance
-check:privacy-rights
-check:privacy-execution
-check:privacy-retention-policy
-check:accessibility-foundation
-check:accessibility-auth
-check:accessibility-traveller-privacy
-check:accessibility-booking-payment
-check:accessibility-operator
-check:performance-load
-check:performance-authenticated-read
-check:performance-mutation-throughput
-check:performance-runtime-resource
-check:browser-e2e
-typecheck
-build
-```
+## Regla de cierre de fases
 
-Jobs CI dedicados ejercitan además replica sets MongoDB reales, contratos HTTP locales, ejecución de privacidad, journeys de accesibilidad y baselines de rendimiento/recursos. El journey general registro -> reserva -> cliente -> Operator permanece informativo/no bloqueante por política explícita.
+Una fase/slice no está completada hasta que:
 
-## Estado del proyecto
+1. implementación/alcance estén terminados;
+2. validaciones estén completas;
+3. documentación EN/ES, README, ROADMAP y CHANGELOG estén sincronizados;
+4. el diff del PR coincida con el alcance;
+5. CI obligatorio esté verde;
+6. el PR esté mergeado a `main`;
+7. `main` se verifique antes de iniciar la siguiente fase.
 
-| Área | Estado |
-|---|---|
-| Foundation, arquitectura y CI | **Completado** |
-| Catálogo, identidad, reservas e inventario | **Completado** |
-| Pagos, finanzas y condiciones de pago | **Completado** |
-| Alojamiento y composición de paquetes | **Completado** |
-| Workflows Operator y permisos | **Completado** |
-| Documentos, exportaciones y reporting | **Completado** |
-| Fase 8 — Integraciones externas | **Completada** |
-| Fase 9 — Baseline de ingeniería de endurecimiento productivo | **Completada** |
-| Validación Stripe/Redsys TEST/LIVE con credenciales | **Pendiente de cuentas proveedor** |
-| Fase 10.1 — Bootstrap demo desde clon limpio | **Completada** |
-| Fase 10.2 — Despliegue self-host standalone | **Completada** |
-| Fase 10.3.1 — Inventario de extensiones / autoridad | **Completada** |
-| Fase 10.3.2 — Compatibilidad / versionado | **Completada** |
-| Fase 10.3.3 — Adapters de referencia para contribuidores | **Activa** |
-| Fase 10.3 — Contratos de extensión/adapters de referencia | **Activa** |
-| Fase 10 — Productización open-source | **En curso** |
+## Prioridad activa — Fase 10.3.4
 
-## Prioridad activa — Fase 10.3.3
+Después del merge de cierre de 10.3.3, el único slice activo será **10.3.4 — validación permanente de contratos de extensión**.
 
-El bloque actual es **Fase 10.3.3 — adapters de referencia para contribuidores**.
+Debe añadir un gate estático/runtime permanente que proteja presencia de interfaces/referencias, consistencia de versiones/documentación, aislamiento de payloads provider, límites de autoridad downstream, audit-before-apply de proveedor y seguridad de adapters de referencia, registrándolo en `npm run verify`/CI.
 
-La Fase 10.3.2 está completada. Su política de compatibilidad gobierna las interfaces tipadas in-process mediante el SemVer del core, conserva los contratos REST v1 actuales, trata el contrato HTTP read-only de catálogo existente como superficie legacy-v1, separa las versiones de schema de eventos de las versiones de firma de webhook y exige migración/deprecación explícita para cambios breaking.
-
-Los siguientes objetivos de entrega son:
-
-1. añadir implementaciones/ejemplos mínimos provider-neutral usando los contratos públicos existentes;
-2. demostrar composición opt-in explícita y credenciales server-only cuando interviene transporte privilegiado;
-3. demostrar timeout/tamaño de respuesta acotados, seguridad frente a redirects, validación runtime y errores normalizados;
-4. demostrar idempotencia determinista en mutaciones y audit-before-apply para estado externo de workflow;
-5. mostrar cómo absorber cambios de versión de una API proveedor dentro del adapter manteniendo estable el contrato core;
-6. mostrar un patrón explícito de migración v1→v2 sin downgrade oculto;
-7. mantener implementaciones propietarias Kairoseth/cliente fuera del core MIT genérico.
-
-Los documentos rectores son [`docs/EXTENSION-CONTRACTS.es.md`](docs/EXTENSION-CONTRACTS.es.md), [`docs/EXTENSION-POINT-INVENTORY.es.md`](docs/EXTENSION-POINT-INVENTORY.es.md), [`docs/EXTENSION-COMPATIBILITY.es.md`](docs/EXTENSION-COMPATIBILITY.es.md) y [`ROADMAP.es.md`](ROADMAP.es.md).
-
-Después de la Fase 10.3.3, la Fase 10.3.4 añadirá el gate automatizado permanente de contratos de extensión. Ningún slice de Fase 10.3 se considera completado hasta satisfacer documentación, validación y merge.
+La rama de cierre 10.3.3 no incluye implementación de 10.3.4.
 
 ## Licencia
 
