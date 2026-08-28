@@ -13,20 +13,25 @@ All notable project changes are documented here.
 - Phase 10.3.2 compatibility/versioning policy in English and Spanish through `docs/EXTENSION-COMPATIBILITY.md` and `docs/EXTENSION-COMPATIBILITY.es.md`.
 - Compatibility matrix covering typed in-process interfaces, REST/HTTP contracts, event envelopes, failure-event schemas and webhook signature versions.
 - Explicit migration/deprecation rules for breaking public contract changes, including no hidden downgrade fallback for mutating v2-to-v1 flows.
-- Contributor-facing reference-adapter checklist covering server-only credentials, bounded transports, runtime validation, idempotency, allowlists and cross-domain authority protection.
+- Phase 10.3.3 contributor-facing reference-adapter guides in English and Spanish through `docs/REFERENCE-ADAPTERS.md` and `docs/REFERENCE-ADAPTERS.es.md`.
+- Official reference patterns backed by existing real implementations: `RestBookingRepository`, `RestSupplierFulfilmentAdapter` + `performSupplierAdapterOperation()`, `RestCrmSyncAdapter`, and optional monitoring-only `RestFailureTransport`.
+- Reference guidance for server-only credentials, bounded transport, runtime validation, stable error normalization, deterministic idempotency, audit-before-apply, provider-version absorption and deliberate v1-to-v2 migration.
+- Explicit project phase-completion rule in `CONTRIBUTING.md`: implementation -> validation -> EN/ES documentation -> PR review -> green CI -> merge -> verify `main` before starting the next phase.
 
 ### Changed
 - Phase 10 is documented as **IN PROGRESS**, with 10.1 and 10.2 complete and 10.3 active.
-- **Phase 10.3.1 and 10.3.2 are COMPLETE; Phase 10.3.3 contributor-facing reference adapters is ACTIVE.**
-- README and ROADMAP EN/ES are synchronized with the completed extension inventory and completed compatibility/versioning policy.
+- **Phase 10.3.1, 10.3.2 and 10.3.3 are COMPLETE; Phase 10.3.4 permanent extension-contract validation becomes ACTIVE only after the 10.3.3 closing PR merges.**
+- README and ROADMAP EN/ES are synchronized with the completed extension inventory, compatibility policy and contributor reference adapters.
 - Existing REST v1 paths/headers remain unchanged; compatibility policy documents them instead of silently rewriting deployed contracts.
 - Typed repository/adapter interfaces are governed by the SemVer/release lifecycle of the core rather than a synthetic global extension version.
 - The read-only catalogue HTTP contract is treated as a legacy-v1 compatibility surface: additive evolution is allowed, while breaking evolution requires a new versioned surface.
 - Outbound event schema version and webhook signature algorithm version are explicitly treated as independent compatibility dimensions.
+- Adapter guidance now identifies real tested implementations as the canonical contributor references instead of introducing parallel toy adapters.
+- The reference network adapters are explicitly tied to the existing `tests/rest-adapter-contracts.ts` coverage for contract version, invalid schema/content type, scope, size bounds, retries and idempotency where applicable.
 - README runtime badge reflects Next.js 16.3.2.
 - Quick-start and contribution workflows use reproducible `npm ci` + non-destructive `npm run setup:demo` instead of ad-hoc `npm install` setup.
-- Adapter guidance now covers `PaymentRepository`, CRM, ERP/accounting, supplier fulfilment, failure visibility, generic webhooks and explicit authority boundaries.
-- Stripe/Redsys are explicitly classified as PSP/checkout integrations rather than `PaymentRepository` implementations.
+- Adapter guidance covers `PaymentRepository`, CRM, ERP/accounting, supplier fulfilment, failure visibility, generic webhooks and explicit authority boundaries.
+- Stripe/Redsys are classified as PSP/checkout integrations rather than `PaymentRepository` implementations.
 - SMTP/email and arbitrary internal modules are explicitly not promoted to public plugin contracts.
 
 ### External validation still pending

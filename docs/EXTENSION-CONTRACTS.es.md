@@ -3,232 +3,198 @@
 <p align="center"><a href="./EXTENSION-CONTRACTS.md">English</a> · <strong>Español</strong></p>
 
 Estado: **Fase 10.3 — ACTIVA**  
-Slice actual: **10.3.3 — adapters/ejemplos de referencia para contribuidores**  
-Alcance: fronteras públicas de extensión del core MIT  
+Slice actual después de este merge: **10.3.4 — validación permanente de contratos de extensión**  
+Slices completados: **10.3.1, 10.3.2, 10.3.3**  
 Despliegue de referencia: **Kairoseth Travel** en `travel.kairoseth.com`
 
 ## Propósito
 
-La Fase 10.3 convierte las fronteras de adapters ya existentes en Open Travel Platform en un contrato público explícito para contribuidores, despliegues self-host y futuras integraciones del ecosistema.
+La Fase 10.3 formaliza las fronteras provider-neutral ya presentes en Open Travel Platform para que contribuidores y despliegues self-host puedan extender el core MIT sin filtrar payloads de vendors ni cambiar silenciosamente la autoridad de dominio.
 
-El objetivo no es exponer cada módulo interno como API de plugins. El objetivo es hacer predecibles, versionables y seguras de extender las fronteras provider-neutral existentes sin permitir que un sistema externo se convierta silenciosamente en autoridad sobre dominios centrales que no le corresponden.
+Los artefactos de la fase son:
 
-La Fase 10.3.1 completó el inventario respaldado por código y la Fase 10.3.2 completó la política de compatibilidad/versionado. Consulta:
+- [`EXTENSION-POINT-INVENTORY.es.md`](EXTENSION-POINT-INVENTORY.es.md) — inventario público respaldado por código y mapa de autoridad;
+- [`EXTENSION-COMPATIBILITY.es.md`](EXTENSION-COMPATIBILITY.es.md) — política de compatibilidad, versionado, deprecación y migración;
+- [`REFERENCE-ADAPTERS.es.md`](REFERENCE-ADAPTERS.es.md) — implementaciones de referencia y patrones para contribuidores.
 
-- [`EXTENSION-POINT-INVENTORY.es.md`](EXTENSION-POINT-INVENTORY.es.md) — interfaces verificadas, composición, implementaciones, contratos de red y mapa de autoridad;
-- [`EXTENSION-COMPATIBILITY.es.md`](EXTENSION-COMPATIBILITY.es.md) — SemVer, versiones wire, schemas de eventos, firma, deprecación y reglas de migración.
+## Regla central de autoridad
 
-## Regla principal: la autoridad debe permanecer explícita
+Un adapter recibe autoridad únicamente sobre la capacidad que implementa explícitamente.
 
-Un adapter puede traducir, transportar o sincronizar datos únicamente dentro de la capacidad que implementa. No obtiene autoridad sobre otro dominio porque un proveedor remoto devuelva un valor.
+- catálogo no se convierte en autoridad de booking/pagos;
+- booking sigue sujeto a ownership, alcance, inventario y pricing confiable;
+- `PaymentRepository` sigue siendo la frontera provider-neutral del ledger local;
+- Stripe/Redsys son integraciones PSP/checkout, no reemplazos de `PaymentRepository`;
+- resultados de proveedor vuelven por auditoría y validación del workflow local;
+- CRM y ERP/contabilidad siguen siendo downstream-only;
+- failure transport y webhooks genéricos son superficies de entrega no autoritativas;
+- retornos de navegador de pagos nunca confirman de forma autoritativa;
+- payloads provider permanecen dentro de adapters y se normalizan antes de entrar al dominio.
 
-Ejemplos:
+## Inventario verificado — COMPLETADA (10.3.1)
 
-- un adapter de catálogo puede aportar datos de catálogo, pero no obtiene autoridad de booking o pagos;
-- un adapter de reservas puede persistir o aportar datos de booking, pero sigue obligado a cumplir el contrato y las reglas server-authoritative de ownership/alcance/inventario/pricing;
-- `PaymentRepository` sigue siendo la frontera provider-neutral del ledger financiero local; Stripe/Redsys son integraciones PSP, no sustitutos de ese repository;
-- un adapter de proveedor puede solicitar, cancelar y sincronizar fulfilment, pero no puede reescribir totales de cliente, historial de pagos ni registros de viajeros;
-- CRM es exclusivamente downstream y no puede mutar autoridad local de reservas, pricing, inventario, fulfilment ni ledger;
-- ERP/contabilidad es exclusivamente downstream y no puede mutar reservas locales, inventario ni historial autoritativo de pagos/reembolsos;
-- los retornos de navegador de proveedores de pago nunca son confirmación autoritativa;
-- los payloads específicos de proveedor permanecen dentro de adapters y deben normalizarse antes de entrar en tipos compartidos de dominio.
+La Fase 10.3.1 verificó **9 interfaces de primer nivel bajo `repositories/`** más la superficie de webhooks firmados.
 
-## Clases de extensión
-
-### 1. Extensiones de source / repository
-
-Ejemplos verificados:
-
-- `TravelRepository`
-- `IdentityRepository`
-- `BookingRepository`
-- `OperationsRepository`
-- `PaymentRepository`
-
-Estas interfaces sustituyen una fuente o capacidad de persistencia acotada. La implementación puede ser demo, MongoDB, REST/API cuando exista soporte, disabled u otro proveedor futuro. El código de páginas/componentes/dominio debe consumir el contrato estable orientado al dominio, no payloads del vendor.
-
-No todos los repositories tienen hoy una implementación externa de red. En particular, `PaymentRepository` actualmente se compone como MongoDB/disabled en el core incluido; Stripe y Redsys operan mediante la frontera separada de proveedor de pago/checkout.
-
-### 2. Extensiones de sincronización downstream
-
-Ejemplos verificados:
-
-- `CrmSyncAdapter`
-- `ErpAccountingAdapter`
-
-Reciben eventos/datos normalizados desde el core. Están deliberadamente subordinadas a la autoridad local y no deben introducir rutas de mutación inversa salvo que se diseñe y revise un contrato de capacidad explícito separado.
-
-### 3. Extensiones de sincronización de workflow
-
-Ejemplo verificado:
-
-- `SupplierFulfilmentAdapter`
-
-El estado externo se audita/valida y vuelve a entrar por el workflow/máquina de estados local existente. La respuesta externa nunca evita las reglas locales de transición.
-
-### 4. Extensiones de entrega / observabilidad
-
-Ejemplos verificados:
-
-- webhooks salientes firmados;
-- `FailureTransport`.
-
-Transportan información normalizada fuera de la aplicación. Son no autoritativas y deben usar allowlists explícitas, comportamiento de red acotado y credenciales server-only cuando corresponda.
-
-## Inventario público verificado
-
-La Fase 10.3.1 verificó **9 interfaces de primer nivel bajo `repositories/`** más la superficie de entrega de webhooks genéricos firmados.
-
-| Capacidad | Frontera principal | Implementaciones incluidas actuales | Modelo de autoridad |
+| Capacidad | Frontera | Implementaciones incluidas | Autoridad |
 |---|---|---|---|
-| Catálogo | `TravelRepository` | demo / API HTTP / MongoDB | autoridad acotada como fuente de catálogo |
-| Identidad | `IdentityRepository` | demo / MongoDB / disabled | fuente confiable server-side de identidad/perfil |
-| Reservas | `BookingRepository` | demo / MongoDB / REST v1 / disabled | autoridad acotada de booking; invariantes server-side obligatorios |
-| Operaciones | `OperationsRepository` | demo / MongoDB / disabled | autoridad local/server-side de workflow staff |
-| Pagos / ledger | `PaymentRepository` | MongoDB / disabled | ledger local autoritativo de pagos/reembolsos |
-| Fulfilment proveedor | `SupplierFulfilmentAdapter` | disabled / REST v1 | sincronización externa subordinada al workflow local |
+| Catálogo | `TravelRepository` | demo / HTTP API / MongoDB | fuente acotada de catálogo |
+| Identidad | `IdentityRepository` | demo / MongoDB / disabled | fuente confiable de identidad/perfil |
+| Booking | `BookingRepository` | demo / MongoDB / REST v1 / disabled | autoridad acotada de reservas |
+| Operaciones | `OperationsRepository` | demo / MongoDB / disabled | autoridad local de workflow staff |
+| Ledger de pagos | `PaymentRepository` | MongoDB / disabled | ledger local autoritativo |
+| Fulfilment | `SupplierFulfilmentAdapter` | disabled / REST v1 | sincronización subordinada al workflow |
 | CRM | `CrmSyncAdapter` | disabled / REST v1 | solo downstream |
-| ERP/contabilidad | `ErpAccountingAdapter` | disabled / REST v1 | downstream desde movimientos locales `succeeded` autoritativos |
-| Visibilidad de fallos | `FailureTransport` | disabled / REST | solo monitorización, best effort, no autoritativa |
-| Webhooks genéricos | outbox de integración + entrega HTTPS firmada | pipeline de entrega incluido | solo entrega downstream de eventos |
+| ERP/contabilidad | `ErpAccountingAdapter` | disabled / REST v1 | solo downstream |
+| Visibilidad de fallos | `FailureTransport` | disabled / REST | solo monitorización |
+| Webhooks genéricos | outbox + HTTPS firmada | built-in | solo entrega downstream |
 
-El inventario detallado, las variables de composición y el mapa de contratos de red están en [`EXTENSION-POINT-INVENTORY.es.md`](EXTENSION-POINT-INVENTORY.es.md).
+Entre las superficies explícitamente no públicas están SMTP/email interno, helpers MongoDB, módulos arbitrarios `lib/*`/`app/*` y módulos PSP usados como si fueran reemplazos de `PaymentRepository`.
 
-## Superficies que no son contratos públicos de extensión
-
-La Fase 10.3.1 también deja explícito qué **no** es un contrato público soportado hoy:
-
-- `lib/email.ts` / SMTP es un servicio interno, no un contrato `repositories/*`;
-- los módulos Stripe/Redsys son integraciones PSP, no implementaciones de `PaymentRepository`;
-- helpers MongoDB y módulos arbitrarios `lib/*`, `app/*` o componentes no se convierten automáticamente en APIs de plugins;
-- adapters propietarios de Kairoseth/cliente pueden consumir contratos públicos, pero el core MIT no debe depender de ellos.
-
-## Política de compatibilidad/versionado — COMPLETADA (10.3.2)
+## Compatibilidad/versionado — COMPLETADA (10.3.2)
 
 La política autoritativa es [`EXTENSION-COMPATIBILITY.es.md`](EXTENSION-COMPATIBILITY.es.md).
 
-La Fase 10.3.2 establece:
+Reglas principales:
 
-- no se introduce una constante global artificial de versión de extensiones;
-- las interfaces in-process siguen el SemVer del release del core;
-- las rutas y headers REST v1 existentes permanecen sin cambios;
-- que Booking/Supplier/CRM compartan `X-OTP-Contract-Version` no los convierte en una única familia de schema;
-- ERP/contabilidad conserva `X-OTP-Accounting-Contract-Version: 1`;
-- FailureTransport conserva `X-OTP-Failure-Contract-Version: 1` y versiona de forma independiente `FailureTransportEvent.schemaVersion`;
-- el catálogo HTTP sin versión queda congelado como semántica legacy-v1 y no puede romperse in-place;
-- `IntegrationEventEnvelope.version` y la firma webhook `v1=` son dimensiones de compatibilidad independientes;
-- autoridad, autenticación, idempotencia, semántica de estados y allowlists de datos protegidos forman parte del contrato;
-- los adapters de mutación no pueden hacer downgrade silencioso de versiones de protocolo;
-- la retirada ordinaria exige deprecación y guía de migración;
-- los breaking changes requieren release major del core o un contrato wire paralelo/nuevo cuando corresponda.
+- no existe una versión global artificial de extensiones;
+- interfaces públicas in-process siguen el SemVer del core;
+- rutas/headers REST v1 existentes permanecen estables;
+- el catálogo read-only sin versión se trata como semántica legacy-v1 y no puede romperse in-place;
+- `IntegrationEventEnvelope.version` y la firma webhook `v1=` son dimensiones separadas;
+- autoridad, autenticación, idempotencia, estados y allowlists de datos protegidos forman parte del contrato;
+- los adapters de mutación no pueden hacer downgrade silencioso;
+- los breaking changes necesitan ruta explícita de versión/major y guía de migración;
+- cambios de versión de APIs vendor se absorben dentro del adapter siempre que el contrato normalizado del core pueda mantenerse.
 
-### Evolución compatible
+## Adapters de referencia para contribuidores — COMPLETADA (10.3.3)
 
-Normalmente compatible:
+La guía autoritativa es [`REFERENCE-ADAPTERS.es.md`](REFERENCE-ADAPTERS.es.md).
 
-- campos opcionales aditivos con ausencia segura;
-- implementaciones nuevas opt-in detrás de una interfaz sin cambios;
-- endpoints nuevos sin modificar los existentes;
-- event types nuevos con suscripción explícita;
-- upgrades de APIs proveedor absorbidos dentro del adapter mientras el contrato normalizado del core permanece estable.
+La Fase 10.3.3 utiliza **implementaciones genéricas reales y ya probadas** en vez de crear ejemplos paralelos que puedan desviarse del runtime.
 
-### Evolución breaking
+### Referencia A — autoridad acotada de repository
 
-Normalmente breaking:
+`RestBookingRepository` demuestra:
 
-- eliminar/renombrar campos o métodos obligatorios;
-- añadir métodos obligatorios a interfaces públicas implementadas por terceros;
-- cambiar headers de auth/versión o rutas/métodos de endpoints;
-- cambiar significado de estados, autoridad o idempotencia;
-- ampliar exposición de datos protegidos;
-- convertir comportamiento downstream-only/subordinado a workflow en autoridad de mutación inversa.
+- implementación explícita de `BookingRepository`;
+- configuración server-only;
+- transporte `/v1` versionado;
+- validación runtime de schema/content-type/versión;
+- timeout/tamaño acotados y rechazo de redirects;
+- errores normalizados;
+- correlación de requests;
+- idempotencia determinista en mutaciones;
+- retry transitorio conservando la identidad de mutación;
+- comprobación de identidad/viaje/salida.
 
-Consulta matriz completa, ciclo de deprecación y requisitos de migración en [`EXTENSION-COMPATIBILITY.es.md`](EXTENSION-COMPATIBILITY.es.md).
+### Referencia B — sincronización subordinada al workflow
 
-## Requisitos de adapters de referencia — Fase 10.3.3 activa
+`RestSupplierFulfilmentAdapter` junto con `performSupplierAdapterOperation()` demuestra:
 
-Un adapter de referencia para contribuidores debe demostrar el comportamiento mínimo correcto y no incrustar un vendor comercial específico.
+- allowlist saliente explícita;
+- credenciales server-only;
+- contrato versionado y transporte acotado;
+- idempotencia determinista;
+- normalización de respuesta;
+- **audit-before-apply**;
+- aplicación mediante la máquina de estados local;
+- rechazo de conflictos cuando el estado externo no es válido localmente.
 
-Las implementaciones/ejemplos de referencia deben mostrar:
+### Referencia C — sincronización solo downstream
 
-1. composición/configuración opt-in explícita;
-2. credenciales server-only para transportes privilegiados;
-3. HTTPS obligatorio para transportes externos productivos;
-4. rechazo de redirects cuando puedan cruzar fronteras de confianza;
-5. timeout y tamaño de respuesta acotados;
-6. validación runtime antes de convertir datos provider en datos de dominio;
-7. normalización a errores estables de aplicación;
-8. idempotencia determinista en mutaciones cuando aplique;
-9. audit-before-apply cuando una respuesta externa afecte un workflow local;
-10. allowlists explícitas de datos salientes;
-11. ausencia de filtración de Traveller Data protegido, secretos o payloads raw;
-12. ausencia de escalado de autoridad cross-domain;
-13. compatibilidad con el identificador público de versión existente;
-14. upgrades de versión de proveedor absorbidos internamente cuando el contrato core pueda permanecer estable;
-15. comportamiento explícito cuando sea necesaria una migración deliberada v1 → v2.
+`RestCrmSyncAdapter` demuestra:
+
+- snapshots normalizados allowlisted;
+- ausencia de forwarding de payloads MongoDB/provider raw;
+- contrato `/v1` versionado;
+- idempotencia derivada de eventos;
+- transporte acotado y validación runtime;
+- acknowledgements/errores normalizados;
+- ausencia de autoridad inversa sobre booking/pagos/inventario.
+
+`RestFailureTransport` queda documentado como cuarto patrón opcional de solo monitorización.
+
+La guía también incorpora:
+
+- patrón reutilizable de estructura de archivos;
+- ejemplo de migración v1 → v2;
+- separación de adapters privados/propietarios;
+- checklist para contribuidores;
+- expectativas de pruebas contractuales de red.
+
+### Protección de pruebas existente
+
+Los adapters de red de referencia ya están ejercitados por `tests/rest-adapter-contracts.ts`, incluyendo cuando aplica:
+
+- respuestas normalizadas válidas;
+- versiones contractuales incorrectas;
+- content-type/schema inválidos;
+- rechazo de scope;
+- límites de tamaño;
+- retries transitorios;
+- reutilización de la misma idempotency key;
+- no reintentar operaciones rechazadas por el cliente.
+
+Por eso 10.3.3 designa las implementaciones existentes como referencias en lugar de introducir una segunda pila de ejemplos no probados.
 
 ## Frontera de adapters propietarios
 
-El core MIT debe contener contratos genéricos y ejemplos provider-neutral. Integraciones específicas de Kairoseth, clientes o comercialmente sensibles pueden permanecer en repositorios/paquetes privados cuando corresponda.
+El core MIT público mantiene contratos genéricos y referencias provider-neutral. Implementaciones específicas de Kairoseth/cliente/vendor pueden permanecer privadas.
 
-Un adapter propietario puede depender del contrato público. El core público no debe depender de ese adapter propietario.
+Un adapter privado puede importar interfaces/tipos públicos OTP. El core MIT no debe importar el adapter privado ni exigir credenciales privadas para build, test, demo o self-host.
 
-## Objetivo de validación — 10.3.4
+## Validación permanente — siguiente slice ACTIVA (10.3.4)
 
-La Fase 10.3 añadirá validación automatizada permanente para proteger estas fronteras.
+La Fase 10.3.4 debe añadir un gate automatizado permanente que proteja lo formalizado en 10.3.1–10.3.3.
 
 Cobertura esperada:
 
-- inventario/rutas de referencia de extensiones permanecen presentes;
-- declaraciones públicas de versión permanecen sincronizadas con documentación;
-- tipos de payload provider no se filtran a interfaces centrales de dominio;
-- CRM/ERP downstream no pueden exponer autoridad inversa de reservas/pagos;
-- respuestas de proveedores siguen reentrando por validación local de workflow;
-- ejemplos de adapters usan credenciales server-only y transportes acotados;
-- README, ROADMAP, ADAPTER-GUIDE y los documentos de Fase 10.3 permanecen consistentes;
-- el gate final de contratos de extensión queda registrado en `npm run verify`.
+- interfaces/rutas de referencia verificadas siguen presentes;
+- declaraciones de versión permanecen sincronizadas;
+- payloads provider no se filtran a interfaces compartidas;
+- CRM/ERP siguen siendo downstream-only;
+- respuestas supplier continúan entrando por auditoría/transición local;
+- adapters de referencia conservan credenciales server-only, transporte acotado y parsing runtime;
+- README/ROADMAP/ADAPTER-GUIDE/documentos de 10.3 permanecen alineados;
+- el gate final queda registrado en `npm run verify` y CI.
 
-El nombre exacto del script/test se decidirá cuando llegue la implementación. La documentación no debe afirmar que un gate existe antes de que esté committeado y ejecutándose en CI.
+La documentación no debe afirmar que el gate existe antes de que esté implementado y ejecutándose.
 
-## Secuencia de entrega de Fase 10.3
+## Secuencia de Fase 10.3
 
 ```text
-10.3.1  Inventario público + mapa de autoridad              COMPLETADA
+10.3.1  Inventario de extensiones + mapa de autoridad       COMPLETADA
+10.3.2  Política de compatibilidad/versionado              COMPLETADA
+10.3.3  Adapters de referencia para contribuidores         COMPLETADA
+10.3.4  Validación permanente de contratos                 ACTIVA después del merge
    ↓
-10.3.2  Política de compatibilidad/versionado               COMPLETADA
-   ↓
-10.3.3  Adapters/ejemplos para contribuidores               ACTIVA
-   ↓
-10.3.4  Validación automatizada permanente                  PLANIFICADA
-   ↓
-10.3     Sincronización documental + CI verde               gate de cierre
+10.3     Documentación final + CI verde + merge            gate de cierre
 ```
 
-## Criterios de cierre
+## Criterios de cierre de Fase 10.3
 
-La Fase 10.3 solo está completada cuando:
+La Fase 10.3 solo puede marcarse COMPLETADA cuando:
 
-- el inventario público coincide con la implementación;
-- las fronteras de autoridad están documentadas en inglés y español;
-- las reglas de compatibilidad/versionado son explícitas;
-- existen ejemplos de referencia para contribuidores;
-- una validación automatizada protege las fronteras;
-- la documentación relevante está sincronizada;
-- adapters propietarios Kairoseth/cliente siguen desacoplados del core MIT;
-- CI está verde con la nueva validación habilitada.
+1. el inventario coincide con la implementación;
+2. las fronteras de autoridad están documentadas EN/ES;
+3. compatibilidad/versionado/deprecación son explícitos;
+4. existen referencias provider-neutral para contribuidores;
+5. una validación automatizada permanente protege las fronteras;
+6. documentación de proyecto/adapters/contratos está sincronizada;
+7. adapters Kairoseth/cliente siguen desacoplados;
+8. CI está verde con el gate permanente habilitado;
+9. el PR de cierre está mergeado a `main`.
 
 ## Documentación relacionada
 
 - [`EXTENSION-POINT-INVENTORY.es.md`](EXTENSION-POINT-INVENTORY.es.md)
 - [`EXTENSION-COMPATIBILITY.es.md`](EXTENSION-COMPATIBILITY.es.md)
-- [`EXTENSION-POINT-INVENTORY.md`](EXTENSION-POINT-INVENTORY.md)
-- [`../ROADMAP.es.md`](../ROADMAP.es.md)
+- [`REFERENCE-ADAPTERS.es.md`](REFERENCE-ADAPTERS.es.md)
 - [`ADAPTER-GUIDE.md`](ADAPTER-GUIDE.md)
-- [`API-CONTRACT.md`](API-CONTRACT.md)
 - [`REST-BOOKING-ADAPTER.es.md`](REST-BOOKING-ADAPTER.es.md)
 - [`SUPPLIER-FULFILMENT-ADAPTER.es.md`](SUPPLIER-FULFILMENT-ADAPTER.es.md)
 - [`CRM-SYNC-ADAPTER.es.md`](CRM-SYNC-ADAPTER.es.md)
 - [`ERP-ACCOUNTING-ADAPTER.es.md`](ERP-ACCOUNTING-ADAPTER.es.md)
 - [`OUTBOUND-INTEGRATIONS.es.md`](OUTBOUND-INTEGRATIONS.es.md)
 - [`FAILURE-TRANSPORT.es.md`](FAILURE-TRANSPORT.es.md)
-- [`ARCHITECTURE.md`](ARCHITECTURE.md)
+- [`../ROADMAP.es.md`](../ROADMAP.es.md)
