@@ -60,17 +60,21 @@ La plataforma está muy por encima del MVP original de catálogo/reservas. La im
 - worker de integraciones server-only con locking durable, replay y retención;
 - adapter REST genérico y versionado de `BookingRepository`;
 - adapter opcional y neutral de fulfilment de proveedores con sincronización auditada request/status/cancel;
-- adapter CRM exclusivamente downstream que reutiliza el mismo worker durable y mantiene los eventos de cliente/perfil fuera de las suscripciones webhook genéricas;
+- adapter CRM exclusivamente downstream que reutiliza el mismo worker durable y mantiene los eventos de cliente/perfil fuera de suscripciones webhook genéricas;
 - adapter ERP/contabilidad exclusivamente downstream que exporta solo movimientos finalizados de pago/reembolso mediante el mismo worker durable sin dar al ERP autoridad sobre reservas ni historial financiero local;
-- CSP/headers de seguridad globales, throttling persistente de autenticación, comprobaciones explícitas de Origin para Route Handlers autenticados por cookie y endpoints de health/readiness;
-- perfiles explícitos de readiness `demo|live` que fallan de forma segura si un despliegue live conserva capacidades demo o no dispone de infraestructura requerida;
-- validación determinista con MongoDB real de concurrencia/idempotencia/modificaciones y tests HTTP locales reales de contratos de adapters;
-- logs operativos JSON estructurados y neutrales con correlación validada mediante `X-Request-Id` y redacción central de datos sensibles;
-- transporte centralizado opcional de fallos con allowlist externa estricta, fingerprints SHA-256 estables para agrupación y entrega best-effort de un solo intento.
+- CSP/headers globales, throttling persistente de autenticación, validación explícita de Origin y health/readiness;
+- perfiles `demo|live` que fallan cerrados ante capacidades demo o infraestructura requerida no disponible en producción;
+- validación real MongoDB de concurrencia/idempotencia/modificaciones y contratos HTTP locales de adapters;
+- logs JSON estructurados con correlación `X-Request-Id` y redacción central de datos sensibles;
+- transporte opcional de fallos con allowlist estricta y fingerprints SHA-256;
+- contrato de monitorización externa, routing de alertas accionables, auditoría privilegiada fail-closed y rotación escalonada de claves de cifrado;
+- drills reales de backup/restore MongoDB y validación de índices/planes de consulta;
+- workflows autenticados de derechos de privacidad, ejecución controlada de acceso/portabilidad/limitación/supresión y registro explícito de políticas de retención;
+- baseline técnico de accesibilidad orientado a WCAG 2.2 AA en navegación global, autenticación cliente, Traveller Data/privacidad, booking/pagos y workflows Operator, respaldado por journeys bloqueantes de navegador.
 
 La validación E2E con credenciales Stripe/Redsys sigue pendiente hasta disponer de cuentas adecuadas. Los adapters están implementados, pero la capacidad productiva no se considera validada hasta probar TEST/LIVE.
 
-**La Fase 8 — Integraciones externas está COMPLETADA. La Fase 9 — Endurecimiento productivo está EN PROGRESO: la Fase 9A y el baseline core de la Fase 9B están COMPLETADOS; la Fase 9C está EN PROGRESO con 9C-1 observabilidad estructurada y 9C-2 visibilidad centralizada de fallos COMPLETADAS. La Fase 9C-3 — monitorización externa de uptime/readiness y routing de alertas accionables es la SIGUIENTE.**
+**La Fase 8 — Integraciones externas está COMPLETADA. La Fase 9 — Endurecimiento productivo está EN PROGRESO: la Fase 9A de seguridad productiva, la Fase 9B de validación crítica y la Fase 9C de observabilidad/recuperación/auditoría privilegiada están COMPLETADAS. Las Fases 9D-1 derechos de privacidad, 9D-2 ejecución de privacidad, 9D-3 retención regulatoria y 9D-4 accesibilidad están COMPLETADAS. La Fase 9D-5 de rendimiento/carga es la SIGUIENTE.**
 
 ## Capacidades actuales
 
@@ -126,7 +130,8 @@ La validación E2E con credenciales Stripe/Redsys sigue pendiente hasta disponer
 - estados, deadlines, referencias y costes internos opcionales;
 - búsqueda, filtros, colas, orden y paginación;
 - capacidades granulares server-side;
-- cambios de permisos auditados.
+- cambios de permisos auditados;
+- regiones vivas accesibles para éxito/error, nombres contextuales en formularios repetidos y relaciones dirigidas con controles inválidos en workflows críticos de reservas/tareas/proveedores.
 
 ### Identidad, seguridad y observabilidad operativa
 
@@ -134,27 +139,38 @@ La validación E2E con credenciales Stripe/Redsys sigue pendiente hasta disponer
 - autenticación separada Operator/Admin;
 - separación de sesiones cliente/personal;
 - tokens de sesión opacos almacenados únicamente como hash SHA-256, con expiración TTL y revocación server-side;
-- cookies de sesión `HttpOnly`, `Secure` en producción, `SameSite=Lax` para cliente y `SameSite=Strict` para personal;
-- bloqueo por intentos repetidos;
-- throttling persistente MongoDB para login cliente/staff, registro y solicitudes de reset de contraseña;
-- buckets de rate limit con identificadores SHA-256, sin guardar email ni IP en claro;
-- throttling adicional por cliente solo cuando se habilita explícitamente la confianza en headers IP del proxy;
-- cambio/recuperación de contraseña por SMTP con respuestas que no revelan si la cuenta existe;
+- cookies `HttpOnly`, `Secure` en producción, `SameSite=Lax` para cliente y `SameSite=Strict` para personal;
+- bloqueo por intentos repetidos y throttling persistente MongoDB;
+- buckets de rate limit con identificadores SHA-256, sin email ni IP en claro;
+- cambio/recuperación de contraseña por SMTP con respuestas no enumerables;
 - auditoría de autenticación;
-- Content Security Policy y headers HTTP defensivos globales;
+- Content Security Policy y headers HTTP defensivos;
 - HSTS y upgrade de requests inseguras en producción;
-- comprobación de Origin confiable para mutaciones en Route Handlers autenticados por cookie, manteniendo firma de proveedor para webhooks externos;
-- endpoints operativos `/api/health/live` y `/api/health/ready`;
-- contrato de readiness `KTRAVEL_DEPLOYMENT_PROFILE=demo|live`;
-- secretos PSP cifrados AES-256-GCM;
-- datos avanzados del viajero almacenados aparte y cifrados AES-256-GCM;
-- secretos de firma de integraciones salientes cifrados con clave AES-256-GCM dedicada;
-- configuración privilegiada protegida por capacidades server-side;
-- logs operativos JSON versionados en stdout/stderr con correlación segura de requests;
-- excepciones genéricas limitadas a tipo/código seguros, nunca `message` ni `stack`;
-- `FailureTransport` neutral opcional para eventos operativos `warning`, `error` y `critical`;
-- payloads externos de fallo con allowlist explícita que excluye credenciales, datos cliente/viajero, referencias de proveedor, payloads raw y valores monetarios;
-- caídas del collector nunca cambian la autoridad de reservas/pagos/integraciones/readiness y nunca disparan retries automáticos.
+- comprobación de Origin confiable para mutaciones cookie-authenticated manteniendo firmas de proveedor en webhooks;
+- `/api/health/live`, `/api/health/ready` y superficies versionadas para monitorización externa independiente;
+- contrato `KTRAVEL_DEPLOYMENT_PROFILE=demo|live`;
+- credenciales de pago y secretos de integración protegidos con keyring AES-256-GCM versionado y rotación escalonada;
+- Traveller Data separado y cifrado con rotación/re-cifrado transaccional acotado;
+- mutaciones privilegiadas unidas transaccionalmente a su evento persistente de auditoría;
+- procedimiento neutral de backup/restore y disaster recovery MongoDB con drill real en base aislada;
+- baseline aditivo de índices MongoDB validado mediante `explain("executionStats")` real;
+- logs operativos JSON versionados con correlación segura;
+- excepciones genéricas limitadas a tipo/código seguros;
+- `FailureTransport` neutral opcional con allowlist explícita;
+- fallos del collector nunca cambian la autoridad de reservas/pagos/integraciones/readiness.
+
+### Privacidad y accesibilidad
+
+- solicitudes autenticadas de acceso, rectificación, supresión, limitación, oposición y portabilidad;
+- revisión solo Admin con plazos/prórrogas acotados y revisión explícita de retención;
+- exports JSON aprobados de acceso/portabilidad con alcance de portabilidad más limitado y tratamiento fail-closed de datos protegidos;
+- limitación y supresión controladas que preservan estructura necesaria de reserva/inventario/finanzas mientras anonimizan o seudonimizan identidad elegible;
+- registry de retención para cada área del inventario de datos personales con estrategias `ttl`, case-review, business-record-review o security-review;
+- holds prevalecen sobre expiración y el evaluador genérico nunca emite una orden automática de borrado legal;
+- skip navigation bilingüe, foco visible, reduced motion/forced colors y checks de reflow estrecho;
+- autenticación cliente, Traveller Data/privacidad, booking/pagos y workflows Operator con semántica estable `alert`/`status`;
+- journeys Chromium dedicados y bloqueantes respaldados por MongoDB para slices críticos de accesibilidad;
+- el trabajo de accesibilidad es un baseline de ingeniería, no una certificación: cada despliegue requiere revisión manual con teclado, lector de pantalla, contraste, zoom/reflow y contenido real.
 
 ### Pagos y finanzas
 
@@ -169,8 +185,8 @@ La validación E2E con credenciales Stripe/Redsys sigue pendiente hasta disponer
 - perfiles TEST/LIVE gestionados por Admin;
 - snapshots de pago completo, depósito y cuotas;
 - cálculo de saldo pendiente y próximo pago;
-- totales financieros agrupados por moneda, nunca sumados entre monedas diferentes;
-- movimientos finalizados `succeeded` pueden sincronizarse downstream con ERP/contabilidad sin cambiar la autoridad financiera local.
+- totales financieros agrupados por moneda;
+- movimientos finalizados `succeeded` sincronizables downstream con ERP/contabilidad sin cambiar autoridad local.
 
 ### Documentos
 
@@ -180,9 +196,9 @@ La validación E2E con credenciales Stripe/Redsys sigue pendiente hasta disponer
 - vouchers de alojamiento/servicio seguros para cliente;
 - expediente consolidado interno;
 - versión/estado del documento y timestamp UTC;
-- finanzas en documentos internos solo con permiso Finanzas;
-- sección de proveedor solo con permiso Proveedores;
-- referencias proveedor en vouchers cliente únicamente tras aprobar la referencia exacta actual;
+- finanzas internas solo con permiso Finanzas;
+- sección proveedor solo con permiso Proveedores;
+- referencias proveedor en vouchers únicamente tras aprobar la referencia exacta actual;
 - cambiar el localizador invalida la aprobación anterior;
 - aprobaciones guardadas separadamente y auditadas;
 - notas internas, costes proveedor y valores post-compra protegidos excluidos de renderers cliente;
@@ -198,10 +214,10 @@ La validación E2E con credenciales Stripe/Redsys sigue pendiente hasta disponer
 - mitigación de inyección de fórmulas;
 - XLSX OOXML con cabecera congelada/autofiltro;
 - respuestas privadas `no-store` + `nosniff`;
-- auditoría de actor/tipo/formato/filtros/columnas/filas/timestamp sin valores exportados;
-- exportación protegida requiere Datos de viajeros + Reservas, reserva activa y motivo operativo;
+- auditoría sin guardar valores exportados;
+- exportación protegida ligada a capacidades, reserva activa y motivo operativo;
 - exportación protegida POST-only y fail-closed ante fallo de auditoría;
-- métricas financieras siempre agrupadas por moneda.
+- métricas financieras agrupadas por moneda.
 
 ### Integraciones salientes
 
@@ -210,19 +226,18 @@ La validación E2E con credenciales Stripe/Redsys sigue pendiente hasta disponer
 - outbox transaccional confirmado junto con la mutación de origen;
 - entregas idempotentes por evento/endpoint;
 - adapter webhook HTTPS firmado HMAC-SHA256;
-- secretos write-only cifrados con `INTEGRATION_SECRETS_KEY`;
-- destinos HTTPS, rechazo de redes privadas/locales/reservadas y revalidación DNS;
+- secretos write-only cifrados;
+- destinos HTTPS con rechazo de redes privadas/locales/reservadas y revalidación DNS;
 - conexión a IP validada manteniendo SNI/Host original;
-- redirects desactivados, timeout y tamaño de respuesta limitados;
-- leasing, recuperación tras caída, retries/backoff, historial de intentos y dead-letter;
-- `POST /api/internal/integrations/process` server-only con Bearer;
+- redirects desactivados, timeout y respuesta limitados;
+- leasing, recuperación, retries/backoff, historial y dead-letter;
+- worker `POST /api/internal/integrations/process` server-only con Bearer;
 - lock global durable para scheduler/ejecución manual;
 - límites de lote/frecuencia y `Retry-After`;
-- métricas de salud y diagnóstico Admin de evento/entrega;
-- replay dead-letter auditado conservando historial;
-- retención limitada de éxitos antiguos;
-- valores protegidos, secretos de firma y credenciales del worker excluidos de diagnósticos;
-- CRM y ERP/contabilidad reutilizan la misma infraestructura como destinos virtuales aislados, sin crear colas separadas.
+- métricas y diagnóstico Admin;
+- replay dead-letter auditado y retención limitada de éxitos antiguos;
+- datos protegidos/secretos excluidos de diagnósticos;
+- CRM y ERP/contabilidad reutilizan la misma infraestructura como destinos virtuales aislados.
 
 ### Adapters de negocio
 
@@ -239,45 +254,33 @@ La validación E2E con credenciales Stripe/Redsys sigue pendiente hasta disponer
 #### Fulfilment de proveedores
 
 - `SUPPLIER_FULFILMENT_ADAPTER_MODE=rest` habilita un adapter externo sin sustituir el almacén local;
-- operaciones REST v1 explícitas `request`, `status` y `cancel`;
-- request solo normaliza a `requested`; cancel solo a `cancelled`; confirmación/rechazo llega mediante `status`;
-- request/cancel usan idempotencia determinista y retries limitados;
-- respuestas externas se auditan persistentemente antes de aplicarse y luego vuelven a `saveSupplierFulfilment()`;
-- transiciones inválidas se registran como conflicto y nunca se fuerzan;
-- payload externo excluye totales cliente, ledger, costes proveedor, instrucciones de inventario y datos protegidos;
-- coste/moneda local de proveedor se preservan;
-- referencias recibidas siguen internas hasta la aprobación separada para voucher cliente.
+- operaciones REST v1 `request`, `status` y `cancel`;
+- respuestas auditadas antes de aplicación local;
+- transiciones inválidas se registran y nunca se fuerzan;
+- payload externo excluye totales cliente, ledger, costes, inventario y datos protegidos;
+- referencias siguen internas hasta aprobación separada de voucher.
 
 #### Sincronización CRM
 
 - `CRM_SYNC_MODE=rest` activa un `CrmSyncAdapter` neutral y exclusivamente downstream;
-- endpoints REST v1 `/v1/crm/contacts/upsert` y `/v1/crm/reservations/upsert`;
-- registro/actualización de perfil encolan `customer.created` / `customer.profile.updated` en la misma transacción MongoDB que la escritura del cliente;
-- eventos `customer.*` no están disponibles para suscripciones webhook genéricas;
-- CRM reutiliza outbox, worker, retry/backoff, dead-letter, replay y métricas mediante el destino virtual `crm-rest:primary`;
-- eventos de reserva hacen upsert del contacto antes del upsert de reserva;
-- `Idempotency-Key` deriva del evento y permanece estable en retries/replay;
-- snapshots de contacto/reserva usan allowlists explícitas;
-- snapshots de reserva excluyen precios, moneda/condiciones de pago, proveedores, mutaciones de inventario, arrays de viajeros y datos post-compra protegidos;
-- IDs externos se guardan aparte en `travel_crm_sync_links`;
-- outcomes normalizados se auditan sin PII en `travel_crm_sync_audit`;
-- diagnóstico Admin en `/operator/integrations/crm`;
+- endpoints REST v1 de contactos y reservas;
+- registro/perfil encolan eventos CRM transaccionalmente;
+- eventos `customer.*` no están disponibles para webhooks genéricos;
+- CRM reutiliza outbox/worker/retries/dead-letter/replay/métricas;
+- allowlists excluyen pagos, proveedores, inventario mutable, arrays de viajeros y datos post-compra protegidos;
+- IDs externos y auditoría sin PII se almacenan por separado;
 - CRM no puede mutar reservas, pricing, inventario, fulfilment ni ledger local.
 
 #### Sincronización ERP / contabilidad
 
 - `ERP_ACCOUNTING_MODE=rest` activa un `ErpAccountingAdapter` neutral y exclusivamente downstream;
-- endpoint REST v1 `/v1/accounting/movements/upsert`;
-- solo movimientos locales autoritativos de pago/reembolso con estado `succeeded` son elegibles;
-- tanto un movimiento creado como `succeeded` como una transición `pending → succeeded` confirman el movimiento y su trigger ERP en la misma transacción MongoDB;
-- IDs de evento deterministas (`intevt-payment-{transactionId}-succeeded`) e idempotency keys derivadas del evento evitan duplicados downstream en retries/replay;
-- eventos ERP no están disponibles en webhooks genéricos ni son consumidos por CRM;
-- importe, moneda, provider, método/referencia y timestamp salen del movimiento inmutable del ledger local;
-- IDs externos se almacenan aparte en `travel_erp_accounting_links`;
-- `travel_erp_accounting_audit` guarda acknowledgements sin importe, moneda, referencia del provider, PII ni cuerpos HTTP crudos;
-- diagnóstico Admin en `/operator/integrations/erp`;
-- acknowledgements ERP no pueden mutar reservas, inventario ni historial de pagos/reembolsos;
-- el contrato genérico representa movimientos preparados para contabilidad, no facturas legales específicas de una jurisdicción; identidad fiscal, numeración y mapping tributario requieren modelado autoritativo separado y adapters de mercado/vendor.
+- solo movimientos locales `succeeded` son elegibles;
+- movimiento y trigger ERP se confirman transaccionalmente;
+- IDs/idempotency keys deterministas evitan duplicados downstream;
+- eventos ERP quedan fuera de webhooks genéricos y CRM;
+- IDs externos/auditoría se almacenan separadamente;
+- acknowledgements ERP no pueden mutar reservas, inventario ni historial financiero;
+- el contrato genérico representa movimientos preparados para contabilidad, no facturas legales específicas de jurisdicción.
 
 Los payloads específicos de proveedor deben normalizarse dentro de adapters y no filtrarse a dominios centrales.
 
@@ -306,7 +309,7 @@ eventos cliente/reserva                 |
 
 Fallos operativos
         |
-logs JSON estructurados → FailureTransport REST opcional → stack de monitorización del despliegue
+logs JSON estructurados → FailureTransport REST opcional → stack de monitorización
 
 Operator/Admin
     |
@@ -362,12 +365,10 @@ npm run dev
 /operator/integrations                 webhooks/cola solo Admin
 /operator/integrations/crm             estado/auditoría CRM solo Admin
 /operator/integrations/erp             estado/auditoría ERP/contabilidad solo Admin
-/operator/integrations/events/[eventId] diagnóstico Admin de eventos
-/operator/integrations/deliveries/[deliveryId] diagnóstico/replay Admin
 /operator/staff                        personal/permisos
 
-/api/health/live                       liveness del proceso
-/api/health/ready                      readiness de configuración/infraestructura
+/api/health/live                       liveness
+/api/health/ready                      readiness
 /api/internal/integrations/process     worker programado server-only (POST)
 ```
 
@@ -383,69 +384,45 @@ KTRAVEL_TRUST_PROXY_IP_HEADERS=false
 BOOKING_MODE=demo
 REST_BOOKING_BASE_URL=
 REST_BOOKING_BEARER_TOKEN=
-REST_BOOKING_TIMEOUT_MS=10000
-REST_BOOKING_MAX_RESPONSE_BYTES=2000000
 SUPPLIER_FULFILMENT_ADAPTER_MODE=disabled
 REST_SUPPLIER_FULFILMENT_BASE_URL=
 REST_SUPPLIER_FULFILMENT_BEARER_TOKEN=
-REST_SUPPLIER_FULFILMENT_TIMEOUT_MS=10000
-REST_SUPPLIER_FULFILMENT_MAX_RESPONSE_BYTES=262144
 CRM_SYNC_MODE=disabled
 REST_CRM_BASE_URL=
 REST_CRM_BEARER_TOKEN=
-REST_CRM_TIMEOUT_MS=10000
-REST_CRM_MAX_RESPONSE_BYTES=262144
 ERP_ACCOUNTING_MODE=disabled
 REST_ERP_ACCOUNTING_BASE_URL=
 REST_ERP_ACCOUNTING_BEARER_TOKEN=
-REST_ERP_ACCOUNTING_TIMEOUT_MS=10000
-REST_ERP_ACCOUNTING_MAX_RESPONSE_BYTES=262144
 FAILURE_TRANSPORT_MODE=disabled
 REST_FAILURE_TRANSPORT_URL=
 REST_FAILURE_TRANSPORT_BEARER_TOKEN=
-REST_FAILURE_TRANSPORT_TIMEOUT_MS=3000
-REST_FAILURE_TRANSPORT_MAX_RESPONSE_BYTES=65536
 PAYMENT_SECRETS_KEY=
 TRAVELLER_DATA_KEY=
 INTEGRATION_SECRETS_KEY=
 KTRAVEL_INTEGRATION_WORKER_TOKEN=
-INTEGRATION_WORKER_BATCH_SIZE=10
-INTEGRATION_WORKER_MIN_INTERVAL_SECONDS=60
-INTEGRATION_COMPLETED_RETENTION_DAYS=180
 ```
 
-`KTRAVEL_DEPLOYMENT_PROFILE=live` convierte readiness en un contrato productivo más estricto: capacidades demo, configuración HTTPS canónica inválida, MongoDB requerido no disponible o falta de autenticación del worker outbound hacen que `/api/health/ready` responda 503. `KTRAVEL_ALLOWED_BROWSER_ORIGINS` solo acepta orígenes exactos adicionales. Mantén `KTRAVEL_TRUST_PROXY_IP_HEADERS=false` salvo que el edge elimine headers de forwarding falsificables y escriba la IP real del cliente de forma confiable.
-
-`REST_BOOKING_BEARER_TOKEN`, `REST_SUPPLIER_FULFILMENT_BEARER_TOKEN`, `REST_CRM_BEARER_TOKEN`, `REST_ERP_ACCOUNTING_BEARER_TOKEN` y `REST_FAILURE_TRANSPORT_BEARER_TOKEN` son server-only y nunca deben usar `NEXT_PUBLIC_*`. Los endpoints REST de reservas, proveedores, CRM, ERP/contabilidad y collector de fallos en producción deben usar HTTPS. Las tres claves maestras deben ser estables, de alta entropía y 32 bytes. `KTRAVEL_INTEGRATION_WORKER_TOKEN` es una credencial Bearer server-only independiente. No se deben rotar claves de cifrado sin un plan de migración/re-cifrado.
+`KTRAVEL_DEPLOYMENT_PROFILE=live` convierte readiness en un contrato productivo estricto. Los Bearer tokens y claves de cifrado son server-only; los destinos REST productivos deben usar HTTPS. Las claves deben ser estables, de alta entropía y seguir el procedimiento documentado de keyring/rotación/re-cifrado. `NEXT_PUBLIC_*` nunca debe contener secretos.
 
 ## Documentación
 
 - [`ROADMAP.es.md`](ROADMAP.es.md) — estado y prioridades.
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — fronteras de capacidad/evento/confianza.
 - [`docs/BOOKING.md`](docs/BOOKING.md)
-- [`docs/REST-BOOKING-ADAPTER.es.md`](docs/REST-BOOKING-ADAPTER.es.md) — contrato REST genérico de `BookingRepository`.
-- [`docs/SUPPLIER-FULFILMENT-ADAPTER.es.md`](docs/SUPPLIER-FULFILMENT-ADAPTER.es.md) — request/status/cancel y auditoría antes de aplicar.
-- [`docs/CRM-SYNC-ADAPTER.es.md`](docs/CRM-SYNC-ADAPTER.es.md) — CRM downstream, allowlists, arquitectura de una sola cola, idempotencia y auditoría.
-- [`docs/ERP-ACCOUNTING-ADAPTER.es.md`](docs/ERP-ACCOUNTING-ADAPTER.es.md) — movimiento contable downstream, outbox transaccional de pagos, autoridad y separación de facturación fiscal.
+- [`docs/REST-BOOKING-ADAPTER.es.md`](docs/REST-BOOKING-ADAPTER.es.md)
+- [`docs/SUPPLIER-FULFILMENT-ADAPTER.es.md`](docs/SUPPLIER-FULFILMENT-ADAPTER.es.md)
+- [`docs/CRM-SYNC-ADAPTER.es.md`](docs/CRM-SYNC-ADAPTER.es.md)
+- [`docs/ERP-ACCOUNTING-ADAPTER.es.md`](docs/ERP-ACCOUNTING-ADAPTER.es.md)
 - [`docs/OPERATIONS.md`](docs/OPERATIONS.md)
-- [`docs/CATALOGUE-BACKOFFICE.md`](docs/CATALOGUE-BACKOFFICE.md)
-- [`docs/DEPARTURES.md`](docs/DEPARTURES.md)
-- [`docs/MEDIA.md`](docs/MEDIA.md)
 - [`docs/PAYMENTS.md`](docs/PAYMENTS.md)
 - [`docs/TRAVELLER-DATA.md`](docs/TRAVELLER-DATA.md)
-- [`docs/ACCOMMODATION.md`](docs/ACCOMMODATION.md)
-- [`docs/TRIP-PACKAGE-ADDONS.es.md`](docs/TRIP-PACKAGE-ADDONS.es.md)
-- [`docs/STAFF-PERMISSIONS.es.md`](docs/STAFF-PERMISSIONS.es.md)
-- [`docs/BOOKING-DOCUMENTS.es.md`](docs/BOOKING-DOCUMENTS.es.md)
-- [`docs/DEPARTURE-DOCUMENTS.es.md`](docs/DEPARTURE-DOCUMENTS.es.md)
-- [`docs/VOUCHERS-DOSSIERS.es.md`](docs/VOUCHERS-DOSSIERS.es.md)
 - [`docs/REPORTING-EXPORTS.es.md`](docs/REPORTING-EXPORTS.es.md)
 - [`docs/OUTBOUND-INTEGRATIONS.es.md`](docs/OUTBOUND-INTEGRATIONS.es.md)
 - [`docs/INTEGRATION-OPERATIONS.es.md`](docs/INTEGRATION-OPERATIONS.es.md)
-- [`docs/PRODUCTION-SECURITY.es.md`](docs/PRODUCTION-SECURITY.es.md) / [`docs/PRODUCTION-SECURITY.md`](docs/PRODUCTION-SECURITY.md) — baseline 9A de HTTP, Origin/CSRF, rate limiting, sesiones y readiness.
-- [`docs/OBSERVABILITY.es.md`](docs/OBSERVABILITY.es.md) / [`docs/OBSERVABILITY.md`](docs/OBSERVABILITY.md) — logging estructurado, correlación de requests y frontera de redacción.
-- [`docs/FAILURE-TRANSPORT.es.md`](docs/FAILURE-TRANSPORT.es.md) / [`docs/FAILURE-TRANSPORT.md`](docs/FAILURE-TRANSPORT.md) — entrega centralizada neutral de fallos, severidad, allowlists y semántica best-effort.
-- [`docs/ADAPTER-GUIDE.md`](docs/ADAPTER-GUIDE.md)
+- [`docs/PRODUCTION-SECURITY.es.md`](docs/PRODUCTION-SECURITY.es.md) / [`docs/PRODUCTION-SECURITY.md`](docs/PRODUCTION-SECURITY.md)
+- [`docs/OBSERVABILITY.es.md`](docs/OBSERVABILITY.es.md) / [`docs/OBSERVABILITY.md`](docs/OBSERVABILITY.md)
+- [`docs/FAILURE-TRANSPORT.es.md`](docs/FAILURE-TRANSPORT.es.md) / [`docs/FAILURE-TRANSPORT.md`](docs/FAILURE-TRANSPORT.md)
+- [`docs/ACCESSIBILITY-OPERATOR.es.md`](docs/ACCESSIBILITY-OPERATOR.es.md) / [`docs/ACCESSIBILITY-OPERATOR.md`](docs/ACCESSIBILITY-OPERATOR.md) — cierre de accesibilidad Operator, semántica de feedback/formularios y frontera de revisión manual.
 - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 - [`docs/PRODUCTION-CHECKLIST.md`](docs/PRODUCTION-CHECKLIST.md)
 
@@ -455,31 +432,9 @@ INTEGRATION_COMPLETED_RETENTION_DAYS=180
 npm run verify
 ```
 
-Incluye:
+Además de los gates permanentes de dominios, seguridad e integraciones, el baseline actual incluye:
 
 ```text
-check:safety
-check:ux
-check:release
-check:amendments
-check:accommodation
-check:package-addons
-check:package-addon-amendments
-check:operations
-check:tasks
-check:fulfilment
-check:operations-queue
-check:staff-permissions
-check:booking-documents
-check:departure-documents
-check:voucher-documents
-check:reporting-exports
-check:outbound-integrations
-check:integration-operations
-check:rest-booking-adapter
-check:supplier-fulfilment-adapter
-check:crm-sync-adapter
-check:erp-accounting-adapter
 check:production-security
 check:mongodb-concurrency
 check:payment-idempotency
@@ -487,12 +442,26 @@ check:traveller-amendment-validation
 check:adapter-contract-validation
 check:observability
 check:failure-transport
+check:external-monitoring
+check:privileged-audit
+check:encryption-keyring
+check:traveller-key-rotation
+check:mongodb-recovery
+check:mongodb-index-performance
+check:privacy-rights
+check:privacy-execution
+check:privacy-retention-policy
+check:accessibility-foundation
+check:accessibility-auth
+check:accessibility-traveller-privacy
+check:accessibility-booking-payment
+check:accessibility-operator
 check:browser-e2e
 typecheck
 build
 ```
 
-CI realiza instalación limpia, invariantes, typecheck, build productivo, smoke HTTP de headers/health/rechazo cross-origin y auditoría de dependencias. La validación bloqueante ejecuta además `test:rest-adapter-contracts`, `test:observability` y `test:failure-transport`; un job con replica set MongoDB 8 real prueba concurrencia/rollback de reservas, idempotencia de pagos/webhooks y modificaciones de viajeros. Chromium Browser E2E permanece en un job independiente informativo/no bloqueante.
+CI realiza instalación limpia, invariantes deterministas, typecheck y build productivo. Jobs bloqueantes dedicados ejercitan replica sets MongoDB 8 reales, contratos HTTP locales, rollback de auditoría privilegiada, rotación de claves, backup/restore, planes de consulta, ejecución de privacidad y journeys críticos de accesibilidad en Chromium. El Browser E2E general registro → reserva → cliente → Operator sigue siendo informativo/no bloqueante por política; los browser gates específicos de accesibilidad son bloqueantes.
 
 ## Estado del proyecto
 
@@ -513,37 +482,31 @@ CI realiza instalación limpia, invariantes, typecheck, build productivo, smoke 
 | PDFs, vouchers y expediente | Completado |
 | CSV/XLSX y conciliación/reporting | Completado |
 | Fase 7B — Documentos, exportaciones y reporting | **Completada** |
-| Fase 8A — Integraciones salientes neutrales | **Completada** |
-| Fase 8B — Scheduler, replay y observabilidad | **Completada** |
-| Fase 8C-1 — Adapter REST genérico de reservas | **Completada** |
-| Fase 8C-2 — Fulfilment de proveedores | **Completada** |
-| Fase 8C-3 — Sincronización CRM | **Completada** |
-| Fase 8C-4 — ERP/contabilidad | **Completada** |
-| Fase 8C — Adapters de negocio | **Completada** |
 | Fase 8 — Integraciones externas | **Completada** |
-| Fase 9A — Baseline de seguridad / operabilidad productiva | **Completada** |
-| Fase 9B — Baseline crítico de persistencia/concurrencia/contratos | **Completada** |
-| Fase 9C-1 — Observabilidad operativa estructurada | **Completada** |
-| Fase 9C-2 — Transporte centralizado de visibilidad de fallos | **Completada** |
-| Fase 9C-3 — Monitorización externa uptime/readiness + routing de alertas | **Siguiente** |
-| Fase 9C — Observabilidad, recuperación y auditoría privilegiada | **En progreso** |
+| Fase 9A — Seguridad / operabilidad productiva | **Completada** |
+| Fase 9B — Persistencia/concurrencia/contratos críticos | **Completada** |
+| Fase 9C — Observabilidad, recuperación y auditoría privilegiada | **Completada** |
+| Fase 9D-1 — Derechos de privacidad y revisión de retención | **Completada** |
+| Fase 9D-2 — Acceso/portabilidad, limitación y supresión controlada | **Completada** |
+| Fase 9D-3 — Baseline regulatorio de retención | **Completada** |
+| Fase 9D-4 — Preparación de accesibilidad | **Completada** |
+| Fase 9D-5 — Preparación de rendimiento/carga | **Siguiente** |
 | Fase 9 — Endurecimiento productivo | **En progreso** |
 
 ## Siguiente prioridad
 
-El siguiente bloque es la **Fase 9C-3 — Monitorización externa de uptime/readiness y routing de alertas accionables**.
+El siguiente bloque es la **Fase 9D-5 — Preparación de rendimiento/carga**.
 
-La Fase 9C-1 estableció logs operativos estructurados seguros y correlación de requests. La Fase 9C-2 añadió un transporte neutral y best-effort de fallos que puede alimentar el stack de monitorización de cada despliegue sin convertir ese stack en autoridad de reservas/pagos. La siguiente prioridad es definir el contrato de monitorización externa alrededor de `/api/health/live`, `/api/health/ready` y los eventos de fallo normalizados.
+El baseline de base de datos e índices ya está validado con planes de consulta MongoDB reales, por lo que esta fase debe medir el sistema antes de añadir optimizaciones especulativas. Dirección inicial:
 
-Dirección inicial de 9C-3:
+- definir escenarios de carga repetibles para cliente y Operator con datos persistentes MongoDB;
+- capturar distribuciones de latencia server-side y tasas de éxito/error en paths representativos;
+- probar concurrencia acotada en catálogo/búsqueda, lecturas autenticadas de cuenta, paths seguros cercanos a booking y colas Operator sin debilitar autoridad de inventario/pagos;
+- separar budgets reproducibles de CI de los objetivos reales de capacidad productiva;
+- documentar supuestos de recursos/capacidad y señales productivas que obliguen a volver a medir o escalar;
+- fallar de forma acotada bajo sobrecarga y dejar explícito qué depende del hosting/containers/MongoDB gestionado de cada despliegue.
 
-- definir comportamiento exacto de probes externos de liveness/readiness y ventanas recomendadas de polling/timeout;
-- definir reglas accionables de severidad/escalado para degradación de readiness y fingerprints de fallo normalizados;
-- documentar routing/runbooks neutrales para que cada despliegue pueda usar Grafana/Alertmanager, Sentry, Datadog u otra plataforma sin acoplarla al core MIT;
-- mantener infraestructura de monitorización fuera de la autoridad de la aplicación y sin datos protegidos de cliente/viajero;
-- añadir invariantes deterministas de configuración/runbook cuando protejan materialmente el contrato productivo.
-
-Las siguientes partes de 9C cubrirán revisión de auditoría privilegiada, recuperación/rotación de claves, drills MongoDB de backup/restore y disaster recovery, rollback y revisión de índices/rendimiento. La Fase 9D cubrirá después GDPR/privacidad/regulación, accesibilidad y rendimiento. El E2E TEST/LIVE Stripe/Redsys con credenciales sigue pendiente y debe incorporarse en cuanto existan cuentas proveedor adecuadas.
+El E2E TEST/LIVE Stripe/Redsys con credenciales sigue pendiente y debe incorporarse en cuanto existan cuentas proveedor adecuadas.
 
 ## Principios
 
@@ -557,15 +520,13 @@ Las siguientes partes de 9C cubrirán revisión de auditoría privilegiada, recu
 - documentos cliente sin notas internas, datos protegidos ni costes proveedor;
 - exportaciones sensibles limitadas por permisos/finalidad y auditadas antes de entregarse;
 - webhooks genéricos sin datos protegidos ni payloads específicos;
-- eventos CRM de cliente y eventos financieros ERP no disponibles para webhooks genéricos;
+- CRM y ERP permanecen downstream y sin autoridad sobre reservas/inventario/ledger;
 - ejecución programada autenticada server-side, limitada y observable;
-- APIs externos de reservas deben cumplir contrato runtime, ownership e idempotencia;
-- APIs de proveedores no pueden saltarse transiciones locales ni auto-publicar referencias;
-- CRM es downstream y no puede mutar reservas, pricing, inventario, proveedores ni ledger autoritativo;
-- ERP/contabilidad es downstream y no puede reescribir historial de pagos/reembolsos; la facturación legal no se infiere de datos fiscales incompletos;
-- CSP/headers, Origin checks, rate limiting y readiness permanecen como baseline permanente de seguridad productiva;
-- observabilidad/failure transport no pueden filtrar PII, secretos, payloads raw, referencias provider ni valores monetarios en el canal genérico;
-- la monitorización externa nunca se convierte en dependencia autoritativa ni en requisito de readiness por sí misma;
+- APIs externas deben cumplir contratos runtime, ownership, transiciones e idempotencia;
+- CSP/headers, Origin checks, rate limiting y readiness permanecen como baseline permanente;
+- observabilidad/failure transport no pueden filtrar PII, secretos, payloads raw, referencias provider ni importes en el canal genérico;
+- monitorización externa nunca se convierte en autoridad ni dependencia por sí misma;
+- accesibilidad automatizada no sustituye validación manual de cada despliegue;
 - UX pública bilingüe y responsive;
 - integraciones propietarias fuera del core MIT cuando corresponda.
 
