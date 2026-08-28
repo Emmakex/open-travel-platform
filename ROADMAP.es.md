@@ -12,16 +12,16 @@ _Última actualización: 28 de agosto de 2026._
 **Fase 9 — Baseline de hardening productivo: COMPLETADA.**  
 **Fase 10 — Productización open-source: EN CURSO.**
 
-Estado de Fase 10 después del merge de cierre de 10.3.3:
+Estado de cierre de Fase 10.3:
 
 ```text
-10.1     Bootstrap demo desde clon limpio --------------------- COMPLETADA
-10.2     Despliegue self-host standalone ---------------------- COMPLETADA
-10.3.1   Inventario de extensiones + mapa de autoridad -------- COMPLETADA
-10.3.2   Política de compatibilidad/versionado ---------------- COMPLETADA
-10.3.3   Adapters de referencia para contribuidores ----------- COMPLETADA
-10.3.4   Validación permanente de contratos ------------------- ACTIVA
+10.3.1   Inventario + mapa de autoridad ----------------------- COMPLETADA
+10.3.2   Compatibilidad/versionado ---------------------------- COMPLETADA
+10.3.3   Adapters de referencia ------------------------------- COMPLETADA
+10.3.4   Validación permanente de contratos ------------------ candidata a COMPLETADA
 ```
+
+**La Fase 10.3 solo será oficialmente COMPLETADA cuando el PR de cierre 10.3.4 tenga CI verde, esté mergeado a `main` y `main` haya sido verificado.** No empieza ningún bloque posterior de Fase 10 antes de ese gate.
 
 La validación Stripe/Redsys TEST/LIVE con credenciales sigue siendo una dependencia externa separada y no reabre la Fase 9.
 
@@ -45,9 +45,9 @@ La validación Stripe/Redsys TEST/LIVE con credenciales sigue siendo una depende
 - integraciones checkout Stripe/Redsys;
 - depósitos/cuotas/saldo pendiente;
 - Actividades, Transporte y Protección de viaje;
-- Traveller Data post-compra cifrado;
-- modificaciones con manejo transaccional de inventario;
-- alojamiento/habitaciones y suplementos de paquete.
+- Traveller Data cifrado;
+- modificaciones con inventario transaccional;
+- alojamiento/habitaciones y suplementos.
 
 ## Operaciones, documentos y reporting — COMPLETADO
 
@@ -56,7 +56,7 @@ La validación Stripe/Redsys TEST/LIVE con credenciales sigue siendo una depende
 - fulfilment proveedor;
 - permisos Operator/Admin y auditoría;
 - confirmaciones, manifiestos, rooming lists, vouchers y dossier;
-- exportaciones CSV/XLSX según permisos;
+- exportaciones según permisos;
 - conciliación, saldos e ingresos.
 
 ---
@@ -65,128 +65,120 @@ La validación Stripe/Redsys TEST/LIVE con credenciales sigue siendo una depende
 
 - eventos versionados y outbox MongoDB transaccional;
 - webhooks HTTPS firmados con retry/dead-letter;
-- worker durable autenticado y replay/diagnóstico Admin;
+- worker durable y replay/diagnóstico Admin;
 - `BookingRepository` REST genérico;
-- adapter REST de fulfilment;
+- fulfilment REST;
 - CRM y ERP/contabilidad downstream-only;
-- idempotencia estable y validación contractual sobre HTTP local real.
+- idempotencia estable y contratos HTTP reales.
 
 ---
 
 # Fase 9 — Hardening productivo — COMPLETADA
 
 - CSP/headers, HSTS, Origin y throttling;
-- liveness/readiness y perfiles fail-closed `demo|live`;
-- concurrencia/rollback MongoDB e idempotencia pagos/webhooks;
-- logging estructurado, failure transport y monitorización externa;
-- auditoría privilegiada y keyrings de cifrado;
-- backup/restore MongoDB e índices/query plans;
-- derechos de privacidad y retención;
+- liveness/readiness y perfiles `demo|live`;
+- concurrencia/rollback MongoDB e idempotencia;
+- logging, failure transport y monitorización externa;
+- auditoría privilegiada y keyrings;
+- backup/restore e índices/query plans;
+- privacidad/retención;
 - gates de accesibilidad orientados a WCAG 2.2 AA;
-- baselines de lecturas, throughput y recursos runtime.
+- baselines de lectura, throughput y recursos runtime.
 
 ---
 
 # Fase 10 — Productización open-source — EN CURSO
 
-Objetivo: hacer que el core MIT sea fácil de adoptar, desplegar, extender, publicar y contribuir sin dependencias ocultas de Kairoseth.
+Objetivo: hacer el core MIT fácil de adoptar, desplegar, extender, publicar y contribuir sin dependencias ocultas de Kairoseth.
 
 ## 10.1 — Bootstrap demo reproducible — COMPLETADA
 
 - instalación bloqueada con `npm ci`;
-- `.env.demo.example` seguro;
+- configuración demo segura;
 - `npm run setup:demo` no destructivo;
-- sin infraestructura externa obligatoria para evaluación;
-- smoke de build/start/HTTP desde checkout limpio;
+- evaluación sin infraestructura externa obligatoria;
+- smoke de build/start/HTTP;
 - onboarding EN/ES.
 
 ## 10.2 — Despliegue standalone provider-neutral — COMPLETADA
 
 - runtime Next.js `output: standalone`;
 - `npm run package:standalone`;
-- smoke HTTP/static real del standalone;
-- documentación de secretos runtime, readiness, TLS/proxy, MongoDB, workers y rollback;
+- smoke HTTP/static real;
+- documentación de readiness, TLS/proxy, MongoDB, workers y rollback;
 - Kairoseth Travel sigue siendo referencia, no dependencia del core.
 
-## 10.3 — Contratos de extensión y adapters de referencia — ACTIVA
-
-Documento autoritativo: [`docs/EXTENSION-CONTRACTS.es.md`](docs/EXTENSION-CONTRACTS.es.md).
+## 10.3 — Contratos de extensión y adapters de referencia — candidata a cierre
 
 ### 10.3.1 — Inventario y mapa de autoridad — COMPLETADA
 
-Inventario autoritativo: [`docs/EXTENSION-POINT-INVENTORY.es.md`](docs/EXTENSION-POINT-INVENTORY.es.md).
+Inventario: [`docs/EXTENSION-POINT-INVENTORY.es.md`](docs/EXTENSION-POINT-INVENTORY.es.md).
 
-Completado:
-
-- verificadas las 9 interfaces de primer nivel bajo `repositories/`;
-- mapeadas composición, implementaciones y contratos de red;
-- incorporado `PaymentRepository` al inventario formal;
-- clasificada la autoridad acotada/local/workflow/downstream/monitorización;
-- mantenidos SMTP/módulos internos fuera del contrato público;
-- clasificados Stripe/Redsys como PSP, no repositories del ledger.
+- verificadas exactamente nueve interfaces públicas de primer nivel;
+- mapeadas composición, implementaciones y contratos;
+- clasificada autoridad acotada/local/workflow/downstream/monitorización;
+- módulos internos permanecen fuera del contrato público;
+- Stripe/Redsys clasificados como PSP, no repositories del ledger.
 
 ### 10.3.2 — Compatibilidad/versionado — COMPLETADA
 
-Política autoritativa: [`docs/EXTENSION-COMPATIBILITY.es.md`](docs/EXTENSION-COMPATIBILITY.es.md).
+Política: [`docs/EXTENSION-COMPATIBILITY.es.md`](docs/EXTENSION-COMPATIBILITY.es.md).
 
-Completado:
-
-- interfaces in-process públicas siguen SemVer del core;
-- rutas/headers REST v1 existentes permanecen estables;
-- catálogo sin versión congelado como semántica legacy-v1;
-- versión de schema de evento y firma webhook son independientes;
+- interfaces públicas in-process siguen SemVer;
+- rutas/headers REST v1 permanecen estables;
+- catálogo sin versión mantiene semántica legacy-v1;
+- schema de evento y firma evolucionan de forma independiente;
 - autoridad/auth/idempotencia/estados/allowlists son contractuales;
 - prohibido downgrade oculto de mutaciones;
-- breaking changes requieren ruta explícita de versión/migración/deprecación.
+- breaking changes requieren migración/deprecación/versionado explícitos.
 
-### 10.3.3 — Adapters de referencia para contribuidores — COMPLETADA
+### 10.3.3 — Adapters de referencia — COMPLETADA
 
-Guía autoritativa: [`docs/REFERENCE-ADAPTERS.es.md`](docs/REFERENCE-ADAPTERS.es.md).
+Guía: [`docs/REFERENCE-ADAPTERS.es.md`](docs/REFERENCE-ADAPTERS.es.md).
 
-Completado:
+- `RestBookingRepository` — referencia de autoridad acotada;
+- `RestSupplierFulfilmentAdapter` + coordinador — workflow-subordinate y audit-before-apply;
+- `RestCrmSyncAdapter` — referencia downstream-only;
+- `RestFailureTransport` — patrón opcional de monitorización;
+- referencias vinculadas a pruebas contractuales HTTP reales existentes.
 
-- `RestBookingRepository` designado como referencia de repository con autoridad acotada;
-- `RestSupplierFulfilmentAdapter` + `performSupplierAdapterOperation()` como referencia workflow-subordinate/audit-before-apply;
-- `RestCrmSyncAdapter` como referencia downstream-only;
-- `RestFailureTransport` como patrón opcional de monitorización;
-- documentadas credenciales server-only, HTTPS/redirect safety, transporte acotado, validación runtime y errores estables;
-- documentadas idempotencia determinista y audit-before-apply;
-- documentada absorción de cambios vendor dentro del adapter;
-- documentada migración deliberada v1→v2 sin fallback oculto;
-- documentada frontera de adapters privados Kairoseth/cliente;
-- confirmada cobertura existente en `tests/rest-adapter-contracts.ts` para las referencias de red.
+### 10.3.4 — Validación permanente — candidata a COMPLETADA
 
-### 10.3.4 — Validación permanente de contratos — ACTIVA después del merge
+Guía: [`docs/EXTENSION-VALIDATION.es.md`](docs/EXTENSION-VALIDATION.es.md).
 
-Siguiente trabajo: añadir un gate automatizado permanente que proteja el modelo formalizado en 10.3.1–10.3.3.
+Implementado:
 
-Cobertura objetivo:
+- `scripts/extension-contract-check.mjs`;
+- `npm run check:extension-contracts`;
+- registro dentro de `npm run verify`;
+- workflow bloqueante `.github/workflows/extension-contracts.yml`;
+- el workflow ejecuta invariantes estáticas y `npm run test:rest-adapter-contracts`.
 
-- interfaces/rutas públicas verificadas siguen presentes;
-- versiones y documentación permanecen sincronizadas;
-- payloads provider no pueden filtrarse a interfaces compartidas;
-- CRM/ERP siguen siendo downstream-only;
-- respuestas supplier siguen pasando por auditoría/transición local;
-- adapters de referencia conservan credenciales server-only, transporte acotado y parsing runtime;
-- documentación de proyecto/contratos/adapters permanece consistente;
-- gate final registrado en `npm run verify` y CI.
+El gate protege:
 
-## Gate de cierre de Fase 10.3
+- inventario público exacto;
+- pureza provider-neutral de interfaces;
+- autoridad downstream-only de CRM/ERP;
+- audit-before-apply y límites de Supplier;
+- frontera provider-neutral del ledger;
+- identificadores v1 de contratos/headers/schemas/firma;
+- protecciones de transporte de adapters de referencia;
+- sincronización documental EN/ES.
 
-10.3 no se considera completada hasta que:
+## Gate final de Fase 10.3
 
-1. 10.3.1–10.3.4 estén completadas;
-2. documentación EN/ES, README, ROADMAP y CHANGELOG estén sincronizados;
-3. validación permanente esté ejecutándose en `npm run verify` y CI;
+Fase 10.3 será COMPLETADA solo cuando:
+
+1. 10.3.1–10.3.4 estén implementadas;
+2. `check:extension-contracts` esté en `verify` y CI;
+3. documentación EN/ES, README, ROADMAP y CHANGELOG estén sincronizados;
 4. CI obligatorio esté verde;
 5. PR de cierre esté mergeado a `main`;
-6. `main` se verifique antes de empezar otro slice de Fase 10.
+6. `main` esté verificado.
 
----
+## Trabajo posterior planificado de Fase 10
 
-# Siguientes bloques de Fase 10
-
-Después de cerrar 10.3:
+Solo después del cierre y verificación de Fase 10.3:
 
 - convenciones de release y migraciones;
 - política de upgrades/deprecaciones;
