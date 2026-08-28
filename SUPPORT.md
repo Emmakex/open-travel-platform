@@ -17,6 +17,16 @@ Upgrade expectations are defined in [`docs/UPGRADES.md`](docs/UPGRADES.md):
 
 A deployment can remain on an older release, but maintainers may ask for reproduction on the latest stable release before diagnosing a bug that could already be fixed.
 
+## Project support vs official commercial status
+
+Open-source support status and commercial/branding status are separate.
+
+Using, forking, self-hosting or contributing to Open Travel Platform does not make a deployment **official Kairoseth Travel** and does not imply Kairoseth sponsorship, certification or commercial support.
+
+The official commercial/reference deployment is `https://travel.kairoseth.com`. Third-party deployments may truthfully describe themselves as based on or compatible with Open Travel Platform, but official-status wording and Kairoseth/Kairoseth Travel branding follow [`TRADEMARKS.md`](TRADEMARKS.md).
+
+A separately agreed commercial support or partnership relationship, if any, is governed by that separate agreement and is not created by the MIT software license or this public support document.
+
 ## Questions and implementation help
 
 Use GitHub issues for reproducible project bugs and focused feature proposals. For general implementation questions, include enough context for another contributor to understand the environment, adapter mode and expected behavior.
