@@ -9,7 +9,7 @@ The roadmap keeps two goals aligned:
 1. keep the public core portable, provider-neutral and useful to other agencies/developers;
 2. keep hardening Kairoseth Travel without coupling the core to one PSP, supplier, CRM, ERP, CMS, identity vendor or hosting provider.
 
-_Last updated: 27 August 2026._
+_Last updated: 28 August 2026._
 
 ---
 
@@ -17,9 +17,9 @@ _Last updated: 27 August 2026._
 
 The platform is well beyond the original catalogue/booking MVP. Persistent identity, transactional reservations/inventory, traveller pricing, accommodation, independent services, payments, post-purchase traveller data, amendments, rich Operator workflows, granular permissions, documents, reporting and the common integration infrastructure are already implemented.
 
-**Phase 8 is COMPLETE. Phase 9 — Production hardening is IN PROGRESS: Phase 9A production security / operability baseline, Phase 9B critical persistence/concurrency/contract validation baseline and Phase 9C observability/recovery/privileged-audit hardening are COMPLETE. Phase 9D is IN PROGRESS: 9D-1 privacy-rights workflow, 9D-2 access/portability/restriction/controlled erasure and 9D-3 regulatory retention-policy baseline are COMPLETE. Phase 9D-4 accessibility readiness is NEXT.**
+**Phase 8 is COMPLETE. Phase 9 — Production hardening is IN PROGRESS: Phase 9A production security / operability baseline, Phase 9B critical persistence/concurrency/contract validation baseline and Phase 9C observability/recovery/privileged-audit hardening are COMPLETE. Phase 9D is IN PROGRESS: 9D-1 privacy-rights workflow, 9D-2 access/portability/restriction/controlled erasure, 9D-3 regulatory retention-policy baseline and 9D-4 accessibility readiness are COMPLETE. Phase 9D-5 performance/load readiness is NEXT.**
 
-Credentialed Stripe/Redsys TEST/LIVE end-to-end validation remains pending until suitable provider accounts are available. That provider-dependent validation should be inserted as soon as credentials exist, but it does not block Phase 9D. Browser E2E remains an informational/non-blocking CI signal by explicit project policy; blocking gates cover deterministic security, TypeScript/build/smoke, MongoDB concurrency/idempotency/amendments, local HTTP adapter contracts, structured observability/failure transport, privileged audit rollback, encryption-key rotation, MongoDB recovery, real MongoDB query-plan validation and privacy/retention invariants.
+Credentialed Stripe/Redsys TEST/LIVE end-to-end validation remains pending until suitable provider accounts are available. That provider-dependent validation should be inserted as soon as credentials exist, but it does not block Phase 9D. The broad Browser E2E journey remains an informational/non-blocking CI signal by explicit project policy; dedicated accessibility journeys for the cross-application foundation, customer authentication, Traveller Data/privacy, booking/payment and Operator workflows run as blocking workflows. Blocking gates also cover deterministic security, TypeScript/build/smoke, MongoDB concurrency/idempotency/amendments, local HTTP adapter contracts, structured observability/failure transport, privileged audit rollback, encryption-key rotation, MongoDB recovery, real MongoDB query-plan validation and privacy/retention invariants.
 
 ---
 
@@ -390,14 +390,17 @@ The priority is to harden the already broad product surface for real production 
 - EN/ES deployment guidance references official GDPR, Spanish commercial/tax and EU/Spanish package-travel/consumer sources without claiming legal certification;
 - blocking `check:privacy-retention-policy`, unit test and dedicated CI workflow.
 
-### 9D-4 — Accessibility readiness — NEXT
-- audit public booking, account and Operator critical paths against WCAG 2.2 AA-oriented criteria;
-- keyboard operation, focus order/visibility, semantic landmarks, labels, form errors and status messaging;
-- contrast, zoom/reflow and mobile/touch behavior;
-- automated checks plus explicit manual review where automation cannot establish conformance;
-- document residual accessibility risks rather than claiming certification from automated tests alone.
+### 9D-4 — Accessibility readiness — COMPLETE
+- application-wide keyboard baseline with bilingual skip navigation, visible `:focus-visible`, reduced-motion support, forced-colors support and 320px reflow smoke coverage;
+- customer sign-in, registration and password-recovery/reset forms expose server errors, invalid controls, help relationships and actionable focus behavior;
+- Traveller Data and customer privacy-rights workflows expose stable labels, error/status live regions, contextual action names and targeted invalid/focus recovery semantics;
+- trip/service booking and authenticated payment flows expose assertive errors, polite payment states, named payment summaries/method groups and provider-return status semantics without changing payment authority;
+- protected Operator reservation workflow, tasks/follow-ups and supplier fulfilment expose contextual form/group names, `aria-invalid`, error relationships and status-versus-alert semantics;
+- dedicated blocking Playwright/Chromium workflows exercise persistent MongoDB-backed customer/staff journeys for the critical feature slices;
+- EN/ES engineering documentation and permanent source-invariant gates preserve the implementation contract;
+- this is a WCAG 2.2 AA-oriented engineering baseline, not a certification: deployment-specific keyboard, screen-reader, contrast, zoom/reflow and real-content review remains a release responsibility.
 
-### 9D-5 — Performance/load readiness — AFTER 9D-4
+### 9D-5 — Performance/load readiness — NEXT
 - establish repeatable performance/load baselines for customer booking/account and Operator critical paths;
 - validate server latency, concurrency/resource behavior and bounded failure under representative load;
 - build on the completed MongoDB query-plan/index baseline rather than adding speculative indexes;
@@ -450,9 +453,9 @@ Credentialed Stripe/Redsys TEST/LIVE validation remains a production-hardening r
   ↓
 9D-3  Regulatory retention-policy baseline — COMPLETE
   ↓
-9D-4  Accessibility readiness — NEXT
+9D-4  Accessibility readiness — COMPLETE
   ↓
-9D-5  Performance/load readiness
+9D-5  Performance/load readiness — NEXT
   ↓
 10    Open-source productisation / release
   ↓

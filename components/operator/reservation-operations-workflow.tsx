@@ -85,27 +85,33 @@ export function ReservationOperationsWorkflow({
     ...events.map((event) => ({ kind: "event" as const, at: event.occurredAt, event }))
   ].sort((a, b) => b.at.localeCompare(a.at));
   const currentOwnerIncluded = !state.ownerStaffId || staffOptions.some((item) => item.id === state.ownerStaffId);
+  const hasError = Boolean(error && errors[error]);
+  const workflowError = hasError && error !== "invalid-note";
+  const noteError = error === "invalid-note";
+  const ownerInvalid = error === "invalid-owner" || error === "invalid-request";
+  const priorityInvalid = error === "invalid-priority" || error === "invalid-request";
+  const tagsInvalid = error === "invalid-tags" || error === "invalid-request";
 
   return (
-    <section className={styles.panel} id="internal-workflow" style={{ marginTop: "1rem" }}>
+    <section className={styles.panel} id="internal-workflow" style={{ marginTop: "1rem" }} aria-labelledby="internal-workflow-title">
       <div className="eyebrow">{tr(locale, "Internal workflow", "Gestión interna")}</div>
-      <h2>{tr(locale, "Owner, priority and notes", "Responsable, prioridad y notas")}</h2>
+      <h2 id="internal-workflow-title">{tr(locale, "Owner, priority and notes", "Responsable, prioridad y notas")}</h2>
       <p className={styles.lead}>{tr(
         locale,
         "This area is visible only to authorized staff. Internal notes and workflow labels are never shown in the customer account.",
         "Esta área solo es visible para personal autorizado. Las notas internas y etiquetas operativas nunca se muestran en la cuenta del cliente."
       )}</p>
 
-      {updated === "workflow" ? <div className={styles.notice}>{tr(locale, "Internal workflow updated.", "Gestión interna actualizada.")}</div> : null}
-      {updated === "note" ? <div className={styles.notice}>{tr(locale, "Internal note added.", "Nota interna añadida.")}</div> : null}
-      {error && errors[error] ? <div className={styles.notice}>{errors[error]}</div> : null}
+      {updated === "workflow" ? <div id="operations-status" className={styles.notice} role="status" aria-live="polite">{tr(locale, "Internal workflow updated.", "Gestión interna actualizada.")}</div> : null}
+      {updated === "note" ? <div id="operations-status" className={styles.notice} role="status" aria-live="polite">{tr(locale, "Internal note added.", "Nota interna añadida.")}</div> : null}
+      {hasError ? <div id="operations-error" className={styles.notice} role="alert" aria-live="assertive">{errors[error!]}</div> : null}
 
-      <form action={saveReservationOperationsAction} className={styles.editorForm}>
+      <form action={saveReservationOperationsAction} className={styles.editorForm} aria-label={tr(locale, "Reservation internal workflow", "Gestión interna de la reserva")} aria-describedby={workflowError ? "operations-error" : undefined}>
         <input type="hidden" name="reservationId" value={reservationId} />
         <div className={styles.formGrid}>
           <label className={styles.field}>
             <span>{tr(locale, "Reservation owner", "Responsable de la reserva")}</span>
-            <select name="ownerStaffId" defaultValue={state.ownerStaffId ?? ""} disabled={!writesEnabled}>
+            <select name="ownerStaffId" defaultValue={state.ownerStaffId ?? ""} disabled={!writesEnabled} aria-invalid={ownerInvalid ? "true" : undefined}>
               <option value="">{tr(locale, "Unassigned", "Sin asignar")}</option>
               {!currentOwnerIncluded && state.ownerStaffId ? (
                 <option value={state.ownerStaffId}>{state.ownerDisplayName ?? state.ownerStaffId} · {tr(locale, "inactive", "inactivo")}</option>
@@ -120,7 +126,7 @@ export function ReservationOperationsWorkflow({
 
           <label className={styles.field}>
             <span>{tr(locale, "Priority", "Prioridad")}</span>
-            <select name="priority" defaultValue={state.priority} disabled={!writesEnabled}>
+            <select name="priority" defaultValue={state.priority} disabled={!writesEnabled} aria-invalid={priorityInvalid ? "true" : undefined}>
               <option value="low">{priorityLabel("low", locale)}</option>
               <option value="normal">{priorityLabel("normal", locale)}</option>
               <option value="high">{priorityLabel("high", locale)}</option>
@@ -130,8 +136,8 @@ export function ReservationOperationsWorkflow({
 
           <label className={styles.field}>
             <span>{tr(locale, "Tags", "Etiquetas")}</span>
-            <input name="tags" defaultValue={state.tags.join(", ")} maxLength={420} disabled={!writesEnabled} placeholder={tr(locale, "VIP, documents pending, supplier", "VIP, documentación pendiente, proveedor")} />
-            <small>{tr(locale, "Separate tags with commas. Maximum 10.", "Separa las etiquetas con comas. Máximo 10.")}</small>
+            <input name="tags" defaultValue={state.tags.join(", ")} maxLength={420} disabled={!writesEnabled} placeholder={tr(locale, "VIP, documents pending, supplier", "VIP, documentación pendiente, proveedor")} aria-invalid={tagsInvalid ? "true" : undefined} aria-describedby={`operations-tags-help${workflowError ? " operations-error" : ""}`} />
+            <small id="operations-tags-help">{tr(locale, "Separate tags with commas. Maximum 10.", "Separa las etiquetas con comas. Máximo 10.")}</small>
           </label>
         </div>
         {writesEnabled ? <button className="button button-primary" type="submit">{tr(locale, "Save internal workflow", "Guardar gestión interna")}</button> : null}
@@ -140,13 +146,13 @@ export function ReservationOperationsWorkflow({
       <div className={styles.editorSection}>
         <div>
           <div className="eyebrow">{tr(locale, "Internal note", "Nota interna")}</div>
-          <p className={styles.muted}>{tr(locale, "Add operational context that should remain available to the team. Notes are added to the timeline and are not sent to the customer.", "Añade contexto operativo que deba permanecer disponible para el equipo. Las notas se añaden al timeline y no se envían al cliente.")}</p>
+          <p className={styles.muted} id="operations-note-help">{tr(locale, "Add operational context that should remain available to the team. Notes are added to the timeline and are not sent to the customer.", "Añade contexto operativo que deba permanecer disponible para el equipo. Las notas se añaden al timeline y no se envían al cliente.")}</p>
         </div>
-        <form action={addReservationInternalNoteAction} className={styles.editorForm}>
+        <form action={addReservationInternalNoteAction} className={styles.editorForm} aria-label={tr(locale, "Add internal reservation note", "Añadir nota interna de reserva")} aria-describedby={noteError ? "operations-note-help operations-error" : "operations-note-help"}>
           <input type="hidden" name="reservationId" value={reservationId} />
           <label className={styles.field}>
             <span>{tr(locale, "Note", "Nota")}</span>
-            <textarea name="body" rows={4} maxLength={2000} required disabled={!writesEnabled} placeholder={tr(locale, "Example: supplier confirmation pending; follow up before Friday.", "Ejemplo: confirmación del proveedor pendiente; hacer seguimiento antes del viernes.")} />
+            <textarea name="body" rows={4} maxLength={2000} required disabled={!writesEnabled} placeholder={tr(locale, "Example: supplier confirmation pending; follow up before Friday.", "Ejemplo: confirmación del proveedor pendiente; hacer seguimiento antes del viernes.")} aria-invalid={noteError ? "true" : undefined} />
           </label>
           {writesEnabled ? <button className="button button-secondary" type="submit">{tr(locale, "Add internal note", "Añadir nota interna")}</button> : null}
         </form>
@@ -156,7 +162,7 @@ export function ReservationOperationsWorkflow({
         <div className="eyebrow">{tr(locale, "Operational timeline", "Timeline operativo")}</div>
         <h3>{tr(locale, "Internal activity", "Actividad interna")}</h3>
         {timeline.length ? (
-          <div className={styles.auditList}>
+          <div className={styles.auditList} aria-label={tr(locale, "Internal workflow activity", "Actividad de gestión interna")}>
             {timeline.map((item) => item.kind === "note" ? (
               <div className={styles.auditItem} key={item.note.id}>
                 <strong>{tr(locale, "Internal note", "Nota interna")}</strong><br />

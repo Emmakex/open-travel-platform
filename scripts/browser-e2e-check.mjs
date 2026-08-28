@@ -12,12 +12,22 @@ const config = read("playwright.config.ts");
 const seed = read("tests/e2e/seed.ts");
 const journey = read("tests/e2e/persistent-booking.spec.ts");
 const workflow = read(".github/workflows/ci.yml");
+const regressionGuide = read("docs/E2E-REGRESSION-GUIDE.md");
+const regressionGuideEs = read("docs/E2E-REGRESSION-GUIDE.es.md");
 
 assert(packageJson.devDependencies?.["@playwright/test"] === "1.62.1", "Playwright Test must remain exactly pinned to the reviewed stable version");
 assert(
   packageJson.scripts?.["test:e2e"] === "playwright test tests/e2e/persistent-booking.spec.ts --project=chromium",
   "historical browser E2E script must execute only the persistent Chromium booking journey",
 );
+
+// PR #115 regression guard: every Playwright package script must name one exact spec and Chromium project.
+for (const [name, command] of Object.entries(packageJson.scripts ?? {})) {
+  if (typeof command !== "string" || !command.startsWith("playwright test")) continue;
+  assert(command !== "playwright test", `${name} must not discover every Playwright spec implicitly`);
+  assert(/playwright test tests\/e2e\/[^\s]+\.spec\.ts --project=chromium$/.test(command), `${name} must execute one explicit E2E spec under Chromium`);
+}
+
 assert(packageJson.scripts?.["test:e2e:seed"] === "tsx tests/e2e/seed.ts", "package script must expose the protected Mongo E2E seed");
 assert(config.includes('baseURL: process.env.PLAYWRIGHT_BASE_URL?.trim() || "http://localhost:3000"'), "browser test must use the controlled localhost application origin");
 assert(config.includes('command: "npm start"'), "browser E2E must run the production Next.js server rather than next dev");
@@ -33,6 +43,7 @@ assert(journey.includes('name: "Confirm reservation"'), "journey must create the
 assert(journey.includes('goto("/operator/sign-in")'), "journey must authenticate staff through the browser");
 assert(journey.includes('name: "Sign in to operations"'), "journey must submit persistent staff authentication");
 assert(journey.includes("/operator/reservations/"), "journey must verify the same reservation in Operator");
+assert(journey.includes("Pending|Pendiente"), "PR #115 locale regression: persistent Operator status expectation must remain EN/ES-safe");
 assert(workflow.includes("browser-e2e:"), "CI must contain a dedicated browser E2E job");
 assert(workflow.includes("name: Browser E2E (non-blocking)"), "browser E2E must remain clearly identified as non-blocking");
 assert(workflow.includes("continue-on-error: true"), "browser E2E must remain non-blocking while it is informational");
@@ -41,5 +52,11 @@ assert(workflow.includes("npm run test:e2e:seed"), "CI must seed the disposable 
 assert(workflow.includes("npm run test:e2e"), "CI must execute the Playwright journey");
 assert(workflow.includes("IDENTITY_MODE: mongodb") && workflow.includes("STAFF_AUTH_MODE: mongodb"), "browser E2E must use persistent customer and staff identity");
 assert(workflow.includes("BOOKING_MODE: mongodb") && workflow.includes("OPERATIONS_MODE: mongodb"), "browser E2E must use persistent booking and operations repositories");
+
+for (const [name, guide] of [["English", regressionGuide], ["Spanish", regressionGuideEs]]) {
+  assert(guide.includes("PR #115"), `${name} E2E regression guide must preserve PR #115 as the historical reference`);
+  assert(guide.includes("test:e2e") && guide.includes("--project=chromium"), `${name} E2E regression guide must document explicit spec isolation`);
+  assert(guide.includes("Pending") && guide.includes("Pendiente"), `${name} E2E regression guide must document locale-safe Operator expectations`);
+}
 
 console.log("Persistent browser registration, booking and Operator E2E invariants passed (informational CI check).");

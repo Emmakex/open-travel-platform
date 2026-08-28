@@ -66,11 +66,15 @@ The platform is well beyond the original catalogue/booking MVP. The implementati
 - explicit `demo|live` deployment readiness profiles that fail closed when a live configuration still relies on demo capabilities or required infrastructure is unavailable;
 - deterministic real-MongoDB concurrency/idempotency/amendment validation and real-local-HTTP adapter contract tests;
 - provider-neutral structured JSON operational logs with validated `X-Request-Id` correlation and central sensitive-data redaction;
-- an optional centralized failure transport with strict outbound allowlists, stable SHA-256 grouping fingerprints and best-effort single-attempt delivery.
+- an optional centralized failure transport with strict outbound allowlists, stable SHA-256 grouping fingerprints and best-effort single-attempt delivery;
+- external uptime/readiness monitoring contracts, actionable alert routing, fail-closed privileged-action audit integrity and staged encryption-key rotation;
+- real MongoDB backup/restore disaster-recovery drills and query-plan/index validation;
+- authenticated privacy-right workflows, controlled access/portability/restriction/erasure execution and an explicit retention-policy registry;
+- a WCAG 2.2 AA-oriented accessibility engineering baseline across global navigation, customer authentication, Traveller Data/privacy, booking/payment and Operator workflows, backed by dedicated blocking browser journeys.
 
 Stripe and Redsys credentialed end-to-end validation remains intentionally pending until suitable provider accounts are available. The adapters are implemented, but production payment capability is not considered validated until provider TEST/LIVE flows have been exercised.
 
-**Phase 8 — External integrations is COMPLETE. Phase 9 — Production hardening is IN PROGRESS: Phase 9A and the Phase 9B core validation baseline are COMPLETE; Phase 9C is IN PROGRESS with 9C-1 structured observability and 9C-2 centralized failure visibility COMPLETE. Phase 9C-3 external uptime/readiness monitoring and actionable alert routing is NEXT.**
+**Phase 8 — External integrations is COMPLETE. Phase 9 — Production hardening is IN PROGRESS: Phase 9A production security, Phase 9B critical validation and Phase 9C observability/recovery/privileged-audit hardening are COMPLETE. Phase 9D-1 privacy rights, 9D-2 privacy execution, 9D-3 regulatory retention and 9D-4 accessibility readiness are COMPLETE. Phase 9D-5 performance/load readiness is NEXT.**
 
 ## Current capabilities
 
@@ -126,7 +130,8 @@ Stripe and Redsys credentialed end-to-end validation remains intentionally pendi
 - supplier confirmation states, deadlines, references and optional internal costs;
 - advanced search, filters, quick queues, sorting and pagination;
 - server-authoritative granular staff capabilities;
-- audited permission changes.
+- audited permission changes;
+- accessible success/error live regions, contextual repeated-form names and targeted invalid-control relationships on critical reservation/task/supplier workflows.
 
 ### Identity, security and operational observability
 
@@ -144,17 +149,31 @@ Stripe and Redsys credentialed end-to-end validation remains intentionally pendi
 - global Content Security Policy and defensive HTTP security headers;
 - production HSTS and insecure-request upgrade;
 - explicit trusted-Origin checks for cookie-authenticated Route Handler mutations while provider webhooks retain signature-based authentication;
-- `/api/health/live` and `/api/health/ready` operational probes;
+- `/api/health/live`, `/api/health/ready` and versioned monitoring surfaces for independent external probes;
 - `KTRAVEL_DEPLOYMENT_PROFILE=demo|live` readiness contract;
-- payment-provider secrets encrypted with AES-256-GCM;
-- advanced traveller data stored separately and encrypted with AES-256-GCM;
-- outbound integration signing secrets encrypted with a dedicated AES-256-GCM master key;
-- privileged configuration and sensitive data protected by server-side capabilities;
+- payment-provider and integration secrets protected by a versioned AES-256-GCM keyring with staged rotation support;
+- advanced traveller data stored separately with AES-256-GCM keyring rotation and bounded transactional re-encryption;
+- privileged configuration mutations coupled transactionally with their persistent audit event;
+- provider-neutral MongoDB backup/restore and disaster-recovery procedure with a real isolated recovery drill;
+- additive query-aligned MongoDB index baseline validated using real `explain("executionStats")` runs;
 - versioned JSON operational logs to stdout/stderr with safe request correlation;
 - generic exception logging limited to safe error type/code, never exception `message` or `stack`;
 - optional provider-neutral `FailureTransport` for warning/error/critical operational events;
 - external failure payloads use an explicit allowlist and exclude credentials, customer/traveller data, provider references, raw payloads and monetary values;
 - failure-collector outages never alter booking/payment/integration/readiness authority and never trigger automatic retries.
+
+### Privacy and accessibility
+
+- authenticated customer requests for access, rectification, erasure, restriction, objection and portability;
+- Admin-only privacy review with bounded deadlines/extensions and explicit retention review;
+- approved access/portability JSON exports with narrower portability scope and fail-closed protected-data handling;
+- controlled restriction and erasure execution that preserves required booking/inventory/financial structure while anonymising or pseudonymising eligible identity data;
+- explicit retention registry for every personal-data inventory area with `ttl`, case-review, business-record-review or security-review ownership;
+- holds override expiry eligibility and the generic evaluator never emits an automatic legal delete instruction;
+- bilingual skip navigation, visible keyboard focus, reduced-motion/forced-colors support and narrow reflow checks;
+- accessible customer authentication, Traveller Data/privacy, booking/payment and Operator workflow feedback with stable alert/status semantics;
+- dedicated blocking Chromium journeys backed by MongoDB for critical accessibility slices;
+- accessibility work is an engineering baseline, not a certification; each deployment still requires manual keyboard, screen-reader, contrast, zoom/reflow and content review.
 
 ### Payments and finance
 
@@ -454,7 +473,7 @@ INTEGRATION_COMPLETED_RETENTION_DAYS=180
 
 `KTRAVEL_DEPLOYMENT_PROFILE=live` turns readiness into a stricter production contract: demo capabilities, invalid canonical HTTPS configuration, unavailable required MongoDB and missing outbound worker authentication make `/api/health/ready` fail with 503. `KTRAVEL_ALLOWED_BROWSER_ORIGINS` accepts exact additional browser origins only. Leave `KTRAVEL_TRUST_PROXY_IP_HEADERS=false` unless the deployment edge strips spoofed forwarding headers and writes trusted client IP values.
 
-`REST_BOOKING_BEARER_TOKEN`, `REST_SUPPLIER_FULFILMENT_BEARER_TOKEN`, `REST_CRM_BEARER_TOKEN`, `REST_ERP_ACCOUNTING_BEARER_TOKEN` and `REST_FAILURE_TRANSPORT_BEARER_TOKEN` are server-only and must never use `NEXT_PUBLIC_*` variables. Production REST booking, supplier, CRM, ERP/accounting and failure-collector targets must use HTTPS. `PAYMENT_SECRETS_KEY`, `TRAVELLER_DATA_KEY` and `INTEGRATION_SECRETS_KEY` should be stable high-entropy 32-byte keys. `KTRAVEL_INTEGRATION_WORKER_TOKEN` is a separate server-only Bearer credential and must contain at least 32 high-entropy characters. Do not rotate encryption keys without a migration/re-encryption plan. `NEXT_PUBLIC_*` variables are browser-visible and must never contain secrets.
+`REST_BOOKING_BEARER_TOKEN`, `REST_SUPPLIER_FULFILMENT_BEARER_TOKEN`, `REST_CRM_BEARER_TOKEN`, `REST_ERP_ACCOUNTING_BEARER_TOKEN` and `REST_FAILURE_TRANSPORT_BEARER_TOKEN` are server-only and must never use `NEXT_PUBLIC_*` variables. Production REST booking, supplier, CRM, ERP/accounting and failure-collector targets must use HTTPS. Encryption keys must be stable high-entropy 32-byte keys and should follow the documented staged keyring rotation/re-encryption procedure. `KTRAVEL_INTEGRATION_WORKER_TOKEN` is a separate server-only Bearer credential and must contain at least 32 high-entropy characters. `NEXT_PUBLIC_*` variables are browser-visible and must never contain secrets.
 
 ## Documentation
 
@@ -480,9 +499,10 @@ INTEGRATION_COMPLETED_RETENTION_DAYS=180
 - [`docs/REPORTING-EXPORTS.md`](docs/REPORTING-EXPORTS.md) — CSV/XLSX, finance reports and audited protected-data exports.
 - [`docs/OUTBOUND-INTEGRATIONS.md`](docs/OUTBOUND-INTEGRATIONS.md) — event contract, signed webhooks, transactional outbox and delivery security.
 - [`docs/INTEGRATION-OPERATIONS.md`](docs/INTEGRATION-OPERATIONS.md) — scheduler, replay, queue health, diagnostics and retention.
-- [`docs/PRODUCTION-SECURITY.md`](docs/PRODUCTION-SECURITY.md) / [`docs/PRODUCTION-SECURITY.es.md`](docs/PRODUCTION-SECURITY.es.md) — Phase 9A HTTP, Origin/CSRF, rate-limit, session and readiness baseline.
+- [`docs/PRODUCTION-SECURITY.md`](docs/PRODUCTION-SECURITY.md) / [`docs/PRODUCTION-SECURITY.es.md`](docs/PRODUCTION-SECURITY.es.md) — production HTTP, Origin/CSRF, rate-limit, session and readiness baseline.
 - [`docs/OBSERVABILITY.md`](docs/OBSERVABILITY.md) / [`docs/OBSERVABILITY.es.md`](docs/OBSERVABILITY.es.md) — structured operational logging, request correlation and redaction boundary.
 - [`docs/FAILURE-TRANSPORT.md`](docs/FAILURE-TRANSPORT.md) / [`docs/FAILURE-TRANSPORT.es.md`](docs/FAILURE-TRANSPORT.es.md) — provider-neutral centralized failure delivery, severity, allowlists and best-effort semantics.
+- [`docs/ACCESSIBILITY-OPERATOR.md`](docs/ACCESSIBILITY-OPERATOR.md) / [`docs/ACCESSIBILITY-OPERATOR.es.md`](docs/ACCESSIBILITY-OPERATOR.es.md) — Operator accessibility closeout, live-region/form semantics and manual review boundary.
 - [`docs/ADAPTER-GUIDE.md`](docs/ADAPTER-GUIDE.md) — adding integrations.
 - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — deployment model.
 - [`docs/PRODUCTION-CHECKLIST.md`](docs/PRODUCTION-CHECKLIST.md) — production review.
@@ -495,31 +515,9 @@ The complete validation command is:
 npm run verify
 ```
 
-It currently includes:
+It includes the long-lived domain/security gates plus the current production-hardening checks. The latest critical additions include:
 
 ```text
-check:safety
-check:ux
-check:release
-check:amendments
-check:accommodation
-check:package-addons
-check:package-addon-amendments
-check:operations
-check:tasks
-check:fulfilment
-check:operations-queue
-check:staff-permissions
-check:booking-documents
-check:departure-documents
-check:voucher-documents
-check:reporting-exports
-check:outbound-integrations
-check:integration-operations
-check:rest-booking-adapter
-check:supplier-fulfilment-adapter
-check:crm-sync-adapter
-check:erp-accounting-adapter
 check:production-security
 check:mongodb-concurrency
 check:payment-idempotency
@@ -527,12 +525,26 @@ check:traveller-amendment-validation
 check:adapter-contract-validation
 check:observability
 check:failure-transport
+check:external-monitoring
+check:privileged-audit
+check:encryption-keyring
+check:traveller-key-rotation
+check:mongodb-recovery
+check:mongodb-index-performance
+check:privacy-rights
+check:privacy-execution
+check:privacy-retention-policy
+check:accessibility-foundation
+check:accessibility-auth
+check:accessibility-traveller-privacy
+check:accessibility-booking-payment
+check:accessibility-operator
 check:browser-e2e
 typecheck
 build
 ```
 
-CI performs a clean install, runs the invariant checks, type-checks, builds the production application, validates security headers/health/cross-origin rejection with HTTP smoke tests and audits dependencies. Blocking integration validation additionally runs `test:rest-adapter-contracts`, `test:observability` and `test:failure-transport`, while a real MongoDB 8 replica-set job exercises booking concurrency/rollback, payment/webhook idempotency and traveller amendments. Chromium Browser E2E remains a separate informational/non-blocking signal.
+CI performs a clean install, runs deterministic invariants, type-checks and builds the production application. Dedicated blocking jobs exercise real MongoDB 8 replica sets, local HTTP adapter contracts, privileged-audit rollback, key rotation, backup/restore, query plans, privacy execution and critical accessibility journeys in Chromium. The broad registration → booking → customer → Operator Browser E2E remains a separate informational/non-blocking signal by policy; feature-specific accessibility browser gates are blocking.
 
 ## Project status
 
@@ -553,36 +565,30 @@ CI performs a clean install, runs the invariant checks, type-checks, builds the 
 | Booking/departure PDFs, vouchers and dossier | Done |
 | CSV/XLSX exports and reconciliation/reporting | Done |
 | Phase 7B — Documents, exports and reporting | **Complete** |
-| Phase 8A — Provider-neutral outbound integrations | **Complete** |
-| Phase 8B — Scheduled integration delivery, replay and observability | **Complete** |
-| Phase 8C-1 — Generic REST booking adapter | **Complete** |
-| Phase 8C-2 — Supplier fulfilment adapter boundary | **Complete** |
-| Phase 8C-3 — CRM synchronization adapter | **Complete** |
-| Phase 8C-4 — ERP/accounting adapter | **Complete** |
-| Phase 8C — Business adapters | **Complete** |
 | Phase 8 — External integrations | **Complete** |
 | Phase 9A — Production security / operability baseline | **Complete** |
 | Phase 9B — Critical persistence/concurrency/contract validation baseline | **Complete** |
-| Phase 9C-1 — Structured operational observability | **Complete** |
-| Phase 9C-2 — Centralized failure visibility transport | **Complete** |
-| Phase 9C-3 — External uptime/readiness monitoring + alert routing | **Next** |
-| Phase 9C — Observability, recovery and privileged audit hardening | **In progress** |
+| Phase 9C — Observability, recovery and privileged audit hardening | **Complete** |
+| Phase 9D-1 — Privacy rights and retention review | **Complete** |
+| Phase 9D-2 — Access/portability, restriction and controlled erasure | **Complete** |
+| Phase 9D-3 — Regulatory retention-policy baseline | **Complete** |
+| Phase 9D-4 — Accessibility readiness | **Complete** |
+| Phase 9D-5 — Performance/load readiness | **Next** |
 | Phase 9 — Production hardening | **In progress** |
 
 Future work is tracked in **[ROADMAP.md](ROADMAP.md)** · **[ROADMAP.es.md](ROADMAP.es.md)**.
 
 ## Next development priority
 
-The next block is **Phase 9C-3 — External uptime/readiness monitoring and actionable alert routing**.
+The next block is **Phase 9D-5 — Performance/load readiness**.
 
-Phase 9C-1 established safe structured operational logs and request correlation. Phase 9C-2 added a provider-neutral, best-effort failure transport that can feed a deployment monitoring stack without making that stack part of booking/payment authority. The next priority is to define the external monitoring contract around the existing `/api/health/live`, `/api/health/ready` and normalized failure events.
+The database/index baseline is already validated with real MongoDB query plans, so this phase is about measuring the system rather than adding speculative optimization. The initial direction is:
 
-Initial Phase 9C-3 direction:
+- establish repeatable customer and Operator load scenarios using persistent MongoDB-backed data;
+- capture server-side latency distributions and request success/error rates for representative read and mutation paths;
+- exercise bounded concurrency around catalogue/search, authenticated account reads, booking-adjacent safe paths and Operator queues without weakening existing inventory/payment authority;
+- define explicit CI-friendly baseline budgets separately from production capacity targets;
+- record resource/capacity assumptions and the production observability signals that should trigger remeasurement or scaling;
+- fail safely under overload and document what remains deployment-specific for Hostinger/containers/managed MongoDB or other hosting choices.
 
-- define exact external liveness/readiness probe behavior and recommended polling/timeout windows;
-- define actionable severity/escalation rules for readiness degradation and normalized failure fingerprints;
-- document provider-neutral alert routing/runbooks so deployments can use Grafana/Alertmanager, Sentry, Datadog or another platform without vendor coupling in the MIT core;
-- keep monitoring infrastructure outside application authority and outside protected customer/traveller data;
-- add deterministic configuration/runbook invariants where they materially protect the production contract.
-
-Later Phase 9C slices cover privileged-action audit review, key recovery/rotation, MongoDB backup/restore and disaster-recovery drills, rollback procedures and database index/performance review. Phase 9D then covers GDPR/privacy/regulatory workflows, accessibility and performance. Credentialed Stripe/Redsys TEST/LIVE E2E should still be inserted as soon as suitable provider accounts become available.
+Credentialed Stripe/Redsys TEST/LIVE E2E remains an external-dependency production-hardening requirement and should be inserted as soon as suitable provider accounts are available.

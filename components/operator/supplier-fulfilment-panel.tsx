@@ -153,11 +153,16 @@ export async function SupplierFulfilmentPanel({
     ? await listSupplierAdapterAuditForTarget(firstComponent.targetType, firstComponent.targetId).catch(() => [])
     : [];
   const today = supplierFulfilmentDateKey();
+  const hasError = Boolean(error && errors[error]);
+  const supplierInvalid = error === "supplier-required" || error === "invalid-fulfilment";
+  const statusInvalid = error === "invalid-transition" || error === "invalid-fulfilment";
+  const costInvalid = error === "invalid-cost" || error === "invalid-fulfilment";
+  const noteInvalid = error === "invalid-note";
 
   return (
-    <section className={styles.panel} id="fulfilment" style={{ marginTop: "1rem" }}>
+    <section className={styles.panel} id="fulfilment" style={{ marginTop: "1rem" }} aria-labelledby="fulfilment-title">
       <div className="eyebrow">{tr(locale, "Supplier fulfilment", "Gestión de proveedores")}</div>
-      <h2>{tr(locale, "Supplier confirmations", "Confirmaciones de proveedores")}</h2>
+      <h2 id="fulfilment-title">{tr(locale, "Supplier confirmations", "Confirmaciones de proveedores")}</h2>
       <p className={styles.lead}>{tr(
         locale,
         "Track each operational component without changing the customer's booking price or payment ledger. Supplier costs and notes always remain staff-only. A supplier reference appears on customer vouchers only after explicit approval below.",
@@ -166,11 +171,11 @@ export async function SupplierFulfilmentPanel({
       <p className={styles.muted}>{adapterConfigured
         ? tr(locale, "External supplier API synchronization is enabled. External responses still pass local transition rules and are audited before application.", "La sincronización con API externa de proveedores está habilitada. Las respuestas externas siguen pasando por las reglas locales de transición y se auditan antes de aplicarse.")
         : tr(locale, "External supplier API synchronization is disabled; manual supplier tracking remains fully available.", "La sincronización con API externa de proveedores está desactivada; el seguimiento manual sigue totalmente disponible.")}</p>
-      {updated === "saved" ? <div className={styles.notice}>{tr(locale, "Supplier tracking updated.", "Seguimiento del proveedor actualizado.")}</div> : null}
-      {updated === "note" ? <div className={styles.notice}>{tr(locale, "Supplier note added.", "Nota del proveedor añadida.")}</div> : null}
-      {updated === "reference-disclosure" ? <div className={styles.notice}>{tr(locale, "Customer voucher reference policy updated.", "Política de referencia para vouchers del cliente actualizada.")}</div> : null}
-      {updated?.startsWith("adapter-") ? <div className={styles.notice}>{tr(locale, "External supplier synchronization completed.", "Sincronización externa con proveedor completada.")}</div> : null}
-      {error && errors[error] ? <div className={styles.notice}>{errors[error]}</div> : null}
+      {updated === "saved" ? <div id="fulfilment-status" className={styles.notice} role="status" aria-live="polite">{tr(locale, "Supplier tracking updated.", "Seguimiento del proveedor actualizado.")}</div> : null}
+      {updated === "note" ? <div id="fulfilment-status" className={styles.notice} role="status" aria-live="polite">{tr(locale, "Supplier note added.", "Nota del proveedor añadida.")}</div> : null}
+      {updated === "reference-disclosure" ? <div id="fulfilment-status" className={styles.notice} role="status" aria-live="polite">{tr(locale, "Customer voucher reference policy updated.", "Política de referencia para vouchers del cliente actualizada.")}</div> : null}
+      {updated?.startsWith("adapter-") ? <div id="fulfilment-status" className={styles.notice} role="status" aria-live="polite">{tr(locale, "External supplier synchronization completed.", "Sincronización externa con proveedor completada.")}</div> : null}
+      {hasError ? <div id="fulfilment-error" className={styles.notice} role="alert" aria-live="assertive">{errors[error!]}</div> : null}
 
       <div className={styles.managementList}>
         {components.map((component) => {
@@ -190,13 +195,14 @@ export async function SupplierFulfilmentPanel({
             disclosure?.visible === true &&
             disclosure.approvedReference === item.supplierReference
           );
+          const componentTitleId = `fulfilment-${component.componentKey}-title`;
 
           return (
-            <article className={styles.editorSection} key={component.componentKey}>
+            <article className={styles.editorSection} key={component.componentKey} aria-labelledby={componentTitleId}>
               <div>
                 <div className="eyebrow">{componentTypeLabel(component, locale)}</div>
-                <h3>{component.componentLabel}</h3>
-                <div className={styles.actions}>
+                <h3 id={componentTitleId}>{component.componentLabel}</h3>
+                <div className={styles.actions} aria-label={tr(locale, `Current supplier state for ${component.componentLabel}`, `Estado actual del proveedor para ${component.componentLabel}`)}>
                   <span className={styles.badge}>{supplierFulfilmentStatusLabel(status, locale)}</span>
                   {overdue ? <span className={styles.badge}>{tr(locale, "Overdue", "Vencido")}</span> : null}
                   {item?.supplierName ? <span>{item.supplierName}</span> : null}
@@ -204,7 +210,7 @@ export async function SupplierFulfilmentPanel({
                 </div>
               </div>
 
-              <form action={saveSupplierFulfilmentAction} className={styles.editorForm}>
+              <form action={saveSupplierFulfilmentAction} className={styles.editorForm} aria-label={tr(locale, `Supplier tracking for ${component.componentLabel}`, `Seguimiento de proveedor para ${component.componentLabel}`)} aria-describedby={hasError && !noteInvalid ? "fulfilment-error" : undefined}>
                 <input type="hidden" name="targetType" value={component.targetType} />
                 <input type="hidden" name="targetId" value={component.targetId} />
                 <input type="hidden" name="componentKey" value={component.componentKey} />
@@ -212,13 +218,13 @@ export async function SupplierFulfilmentPanel({
                 <div className={styles.formGrid}>
                   <label className={styles.field}>
                     <span>{tr(locale, "Status", "Estado")}</span>
-                    <select name="status" defaultValue={status} disabled={!writesEnabled || status === "cancelled"}>
+                    <select name="status" defaultValue={status} disabled={!writesEnabled || status === "cancelled"} aria-invalid={statusInvalid ? "true" : undefined}>
                       {allowedStatuses(status).map((option) => <option value={option} key={option}>{supplierFulfilmentStatusLabel(option, locale)}</option>)}
                     </select>
                   </label>
                   <label className={styles.field}>
                     <span>{tr(locale, "Supplier", "Proveedor")}</span>
-                    <input name="supplierName" defaultValue={item?.supplierName ?? ""} maxLength={160} disabled={!writesEnabled || status === "cancelled"} placeholder={tr(locale, "Supplier or hotel company", "Proveedor o empresa hotelera")} />
+                    <input name="supplierName" defaultValue={item?.supplierName ?? ""} maxLength={160} disabled={!writesEnabled || status === "cancelled"} placeholder={tr(locale, "Supplier or hotel company", "Proveedor o empresa hotelera")} aria-invalid={supplierInvalid ? "true" : undefined} />
                   </label>
                   <label className={styles.field}>
                     <span>{tr(locale, "Supplier reference", "Referencia del proveedor")}</span>
@@ -226,11 +232,11 @@ export async function SupplierFulfilmentPanel({
                   </label>
                   <label className={styles.field}>
                     <span>{tr(locale, "Supplier cost", "Coste proveedor")}</span>
-                    <input name="supplierCost" type="number" min="0" max="1000000000" step="0.01" defaultValue={item?.supplierCost ?? ""} disabled={!writesEnabled || status === "cancelled"} />
+                    <input name="supplierCost" type="number" min="0" max="1000000000" step="0.01" defaultValue={item?.supplierCost ?? ""} disabled={!writesEnabled || status === "cancelled"} aria-invalid={costInvalid ? "true" : undefined} />
                   </label>
                   <label className={styles.field}>
                     <span>{tr(locale, "Cost currency", "Moneda del coste")}</span>
-                    <select name="supplierCurrency" defaultValue={item?.supplierCurrency ?? component.customerCurrency} disabled={!writesEnabled || status === "cancelled"}>
+                    <select name="supplierCurrency" defaultValue={item?.supplierCurrency ?? component.customerCurrency} disabled={!writesEnabled || status === "cancelled"} aria-invalid={costInvalid ? "true" : undefined}>
                       <option value="EUR">EUR</option>
                       <option value="USD">USD</option>
                       <option value="GBP">GBP</option>
@@ -249,7 +255,7 @@ export async function SupplierFulfilmentPanel({
 
               {adapterConfigured && writesEnabled ? (
                 item ? (
-                  <div className={styles.editorForm}>
+                  <div className={styles.editorForm} role="group" aria-label={tr(locale, `External supplier actions for ${component.componentLabel}`, `Acciones externas de proveedor para ${component.componentLabel}`)}>
                     <strong>{tr(locale, "External supplier API", "API externa del proveedor")}</strong>
                     <p className={styles.muted}>{tr(locale, "Only operational component identifiers, supplier name/reference and deadline are sent. Prices, payment ledger and protected traveller data are excluded.", "Solo se envían identificadores operativos del componente, proveedor/referencia y fecha límite. Se excluyen precios, historial de pagos y datos protegidos del viajero.")}</p>
                     <div className={styles.actions}>
@@ -285,7 +291,7 @@ export async function SupplierFulfilmentPanel({
               ) : null}
 
               {itemAdapterAudit.length ? (
-                <div className={styles.auditList}>
+                <div className={styles.auditList} aria-label={tr(locale, `External supplier audit for ${component.componentLabel}`, `Auditoría externa de proveedor para ${component.componentLabel}`)}>
                   {itemAdapterAudit.map((entry) => (
                     <div className={styles.auditItem} key={entry.id}>
                       <strong>{adapterOperationLabel(entry, locale)} · {adapterOutcomeLabel(entry, locale)}</strong><br />
@@ -302,14 +308,14 @@ export async function SupplierFulfilmentPanel({
 
               {item?.supplierReference ? (
                 <div className={styles.editorForm}>
-                  <div className={styles.notice}>
+                  <div className={styles.notice} role="status" aria-live="polite">
                     <strong>{tr(locale, "Customer voucher reference", "Referencia en voucher del cliente")}: {referenceIsApproved ? tr(locale, "APPROVED", "APROBADA") : tr(locale, "HIDDEN", "OCULTA")}</strong><br />
                     {referenceIsApproved
                       ? tr(locale, "This exact reference may be printed on customer-facing vouchers. If the supplier reference changes, this approval automatically becomes invalid.", "Esta referencia exacta puede imprimirse en vouchers orientados al cliente. Si cambia la referencia del proveedor, la aprobación queda invalidada automáticamente.")
                       : tr(locale, "The reference remains internal. Approve it only after confirming that the locator is safe and useful for the customer.", "La referencia permanece interna. Apruébala solo después de confirmar que el localizador es seguro y útil para el cliente.")}
                   </div>
                   {writesEnabled ? (
-                    <form action={setSupplierReferenceDisclosureAction}>
+                    <form action={setSupplierReferenceDisclosureAction} aria-label={tr(locale, `Customer voucher reference for ${component.componentLabel}`, `Referencia de voucher de cliente para ${component.componentLabel}`)}>
                       <input type="hidden" name="fulfilmentId" value={item.id} />
                       <input type="hidden" name="visible" value={referenceIsApproved ? "0" : "1"} />
                       <input type="hidden" name="returnTo" value={returnTo} />
@@ -324,12 +330,12 @@ export async function SupplierFulfilmentPanel({
               ) : null}
 
               {item ? (
-                <form action={addSupplierFulfilmentNoteAction} className={styles.editorForm}>
+                <form action={addSupplierFulfilmentNoteAction} className={styles.editorForm} aria-label={tr(locale, `Add supplier note for ${component.componentLabel}`, `Añadir nota de proveedor para ${component.componentLabel}`)} aria-describedby={noteInvalid ? "fulfilment-error" : undefined}>
                   <input type="hidden" name="fulfilmentId" value={item.id} />
                   <input type="hidden" name="returnTo" value={returnTo} />
                   <label className={styles.field}>
                     <span>{tr(locale, "Internal supplier note", "Nota interna de proveedor")}</span>
-                    <textarea name="body" rows={3} maxLength={2000} required disabled={!writesEnabled} placeholder={tr(locale, "Example: hotel asked for rooming list before Friday.", "Ejemplo: el hotel solicita la rooming list antes del viernes.")} />
+                    <textarea name="body" rows={3} maxLength={2000} required disabled={!writesEnabled} placeholder={tr(locale, "Example: hotel asked for rooming list before Friday.", "Ejemplo: el hotel solicita la rooming list antes del viernes.")} aria-invalid={noteInvalid ? "true" : undefined} />
                   </label>
                   {writesEnabled ? <button className="button button-secondary" type="submit">{tr(locale, "Add supplier note", "Añadir nota de proveedor")}</button> : null}
                 </form>
@@ -338,7 +344,7 @@ export async function SupplierFulfilmentPanel({
               )}
 
               {timeline.length ? (
-                <div className={styles.auditList}>
+                <div className={styles.auditList} aria-label={tr(locale, `Supplier history for ${component.componentLabel}`, `Historial de proveedor para ${component.componentLabel}`)}>
                   {timeline.map((entry) => entry.kind === "note" ? (
                     <div className={styles.auditItem} key={entry.note.id}>
                       <strong>{tr(locale, "Supplier note", "Nota de proveedor")}</strong><br />
