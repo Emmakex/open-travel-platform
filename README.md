@@ -37,26 +37,20 @@ Completed Phase 10 slices:
 - **10.3 Extension contracts and reference adapters — COMPLETE**
 - **10.4 Release and migration conventions — COMPLETE**
 - **10.5 Upgrade and deprecation lifecycle policy — COMPLETE**
+- **10.6 Contribution and release templates — COMPLETE**
 
-Phase 10.5 establishes:
+Phase 10.6 establishes:
 
-- latest stable release in the current major as the primary supported target;
-- no guaranteed LTS/backport promise unless explicitly announced;
-- supported same-major and adjacent-major upgrade paths;
-- skip-major upgrades only when explicitly documented;
-- public lifecycle `ACTIVE → DEPRECATED → REMOVED`;
-- ordinary public removal only in a **MAJOR** release;
-- replacement + first deprecated release + earliest removal version as required deprecation metadata;
-- an explicit accelerated security exception rather than silent incompatible changes;
-- provider-neutral rules for configuration, APIs/events, extension interfaces and persistent data;
-- permanent validation through `npm run check:upgrade-deprecations`.
+- exactly one canonical `.github/PULL_REQUEST_TEMPLATE.md`;
+- issue forms that capture exact version, compatibility/public-contract and safety context;
+- reusable `.github/RELEASE_TEMPLATE.md` aligned with SemVer, migrations, upgrades and deprecations;
+- explicit protection against asking for credentials, private customer data or protected Traveller Data;
+- permanent validation through `npm run check:contribution-templates` and a dedicated workflow.
 
-Authoritative Phase 10.4–10.5 documentation:
+Authoritative contribution-template documentation:
 
-- [`docs/RELEASES.md`](docs/RELEASES.md)
-- [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md)
-- [`docs/UPGRADES.md`](docs/UPGRADES.md)
-- [`docs/DEPRECATIONS.md`](docs/DEPRECATIONS.md)
+- [`docs/CONTRIBUTION-TEMPLATES.md`](docs/CONTRIBUTION-TEMPLATES.md)
+- [`docs/CONTRIBUTION-TEMPLATES.es.md`](docs/CONTRIBUTION-TEMPLATES.es.md)
 
 Credentialed Stripe/Redsys TEST/LIVE E2E remains a separate provider-dependent release validation until suitable provider accounts are available.
 
@@ -134,7 +128,7 @@ node .next/standalone/server.js
 
 For production deployment see [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) and [`docs/PRODUCTION-CHECKLIST.md`](docs/PRODUCTION-CHECKLIST.md).
 
-## Release, upgrade and deprecation contract
+## Release, upgrade and contribution contract
 
 Stable releases use:
 
@@ -144,27 +138,20 @@ Git tag       -> vX.Y.Z
 CHANGELOG     -> ## [X.Y.Z] - YYYY-MM-DD
 ```
 
-A production upgrade identifies exact source/target versions and SHAs, reviews all intervening migrations/deprecations, validates a representative target environment and declares recovery before persistent changes.
+Public lifecycle is `ACTIVE → DEPRECATED → REMOVED`; ordinary removal happens only at/after the announced MAJOR boundary.
 
-Public lifecycle:
-
-```text
-ACTIVE → DEPRECATED → REMOVED
-```
-
-Ordinary removal occurs only at/after the announced MAJOR boundary. PATCH/MINOR releases do not silently remove or reinterpret supported public surfaces.
-
-Before release/upgrade validation:
+Contributor/release validation:
 
 ```bash
 npm ci
 npm run check:release
 npm run check:release-migrations
 npm run check:upgrade-deprecations
+npm run check:contribution-templates
 npm run verify
 ```
 
-See [`docs/RELEASES.md`](docs/RELEASES.md), [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md), [`docs/UPGRADES.md`](docs/UPGRADES.md) and [`docs/DEPRECATIONS.md`](docs/DEPRECATIONS.md).
+See [`docs/RELEASES.md`](docs/RELEASES.md), [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md), [`docs/UPGRADES.md`](docs/UPGRADES.md), [`docs/DEPRECATIONS.md`](docs/DEPRECATIONS.md) and [`docs/CONTRIBUTION-TEMPLATES.md`](docs/CONTRIBUTION-TEMPLATES.md).
 
 ## Documentation
 
@@ -179,6 +166,7 @@ See [`docs/RELEASES.md`](docs/RELEASES.md), [`docs/MIGRATIONS.md`](docs/MIGRATIO
 - [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md)
 - [`docs/UPGRADES.md`](docs/UPGRADES.md)
 - [`docs/DEPRECATIONS.md`](docs/DEPRECATIONS.md)
+- [`docs/CONTRIBUTION-TEMPLATES.md`](docs/CONTRIBUTION-TEMPLATES.md)
 - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 
 ### Extensions
@@ -198,16 +186,17 @@ Important project-level gates include:
 npm run check:extension-contracts
 npm run check:release-migrations
 npm run check:upgrade-deprecations
+npm run check:contribution-templates
 npm run verify
 ```
 
-Dedicated workflows protect extension contracts, release/migration conventions and the upgrade/deprecation lifecycle in pull requests and on `main`.
+Dedicated workflows protect extension contracts, release/migration conventions, upgrade/deprecation lifecycle and contribution/release templates in pull requests and on `main`.
 
 ## Phase completion rule
 
 A phase/slice is not complete until implementation and tests are finished, EN/ES documentation/README/ROADMAP/CHANGELOG are synchronized, the PR scope is reviewed, required CI is green, the PR is merged to `main`, and `main` is verified before the next phase starts.
 
-Phase 10.5 follows the same rule; later Phase 10 work remains separate until explicitly started.
+Phase 10.6 follows the same rule; branding/trademark work remains separate until this slice is merged and verified.
 
 ## License
 
