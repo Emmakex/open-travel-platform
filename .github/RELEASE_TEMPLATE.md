@@ -75,6 +75,7 @@ If none, state `None` explicitly.
 - [ ] `npm run check:upgrade-deprecations`
 - [ ] `npm run check:contribution-templates`
 - [ ] `npm run check:branding-policy`
+- [ ] `npm run check:phase-10-release` when closing/auditing the Phase 10 release baseline
 - [ ] `npm run verify`
 - [ ] `npm run package:standalone`
 - [ ] Fresh-clone/demo validation passed
@@ -92,12 +93,14 @@ State any provider-dependent checks that could not be completed. Do not represen
 - [ ] ROADMAP EN/ES updated when project state changed
 - [ ] Upgrade/migration/deprecation docs updated when applicable
 - [ ] Branding/trademark policy updated when public names, logos or official-status claims changed
+- [ ] Final release audit/release notes updated when closing a major project phase
 - [ ] Release notes contain no credentials, private customer data or protected Traveller Data
 
 ## Publication record
 
 - [ ] Closing PR merged to `main`
 - [ ] `main` verified after merge
-- [ ] Immutable `vX.Y.Z` tag created on verified `main` commit
+- [ ] Required dedicated release-audit workflow succeeded on the merged revision when applicable
+- [ ] Immutable `vX.Y.Z` tag created on the audited `main` commit
 - [ ] GitHub release published from that tag
 - [ ] Deployment/consumer rollouts tracked separately with exact version/SHA
