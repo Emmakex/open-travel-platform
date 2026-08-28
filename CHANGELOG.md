@@ -22,8 +22,8 @@ All notable project changes are documented here.
 - Explicit project phase-completion rule in `CONTRIBUTING.md`: implementation -> validation -> EN/ES documentation -> PR review -> green CI -> merge -> verify `main` before starting the next phase.
 
 ### Changed
-- Phase 10 remains **IN PROGRESS** while Phase 10.3 is a completion candidate pending green CI, merge and verification of `main`.
-- **Phase 10.3.1, 10.3.2 and 10.3.3 are COMPLETE; Phase 10.3.4 implementation/documentation is complete in its closing branch and becomes officially COMPLETE only after its closing PR is green and merged.**
+- Phase 10 remains **IN PROGRESS**, while **Phase 10.3 — extension contracts and reference adapters is COMPLETE**.
+- **Phase 10.3.1, 10.3.2, 10.3.3 and 10.3.4 are COMPLETE**, with the permanent extension gate delivered and validated through blocking CI.
 - README and ROADMAP EN/ES are synchronized with the extension inventory, compatibility policy, contributor references and permanent validation gate.
 - Existing REST v1 paths/headers remain unchanged; compatibility policy documents them instead of silently rewriting deployed contracts.
 - Typed repository/adapter interfaces are governed by the SemVer/release lifecycle of the core rather than a synthetic global extension version.
