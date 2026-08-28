@@ -16,18 +16,23 @@ All notable project changes are documented here.
 - Phase 10.3.3 contributor-facing reference-adapter guides in English and Spanish through `docs/REFERENCE-ADAPTERS.md` and `docs/REFERENCE-ADAPTERS.es.md`.
 - Official reference patterns backed by existing real implementations: `RestBookingRepository`, `RestSupplierFulfilmentAdapter` + `performSupplierAdapterOperation()`, `RestCrmSyncAdapter`, and optional monitoring-only `RestFailureTransport`.
 - Reference guidance for server-only credentials, bounded transport, runtime validation, stable error normalization, deterministic idempotency, audit-before-apply, provider-version absorption and deliberate v1-to-v2 migration.
+- Phase 10.3.4 permanent architecture-level extension gate through `scripts/extension-contract-check.mjs` and `npm run check:extension-contracts`.
+- Dedicated blocking `Extension contract validation` GitHub Actions workflow running both the static extension gate and the real local-HTTP adapter contract suite.
+- Bilingual permanent-gate documentation through `docs/EXTENSION-VALIDATION.md` and `docs/EXTENSION-VALIDATION.es.md`.
 - Explicit project phase-completion rule in `CONTRIBUTING.md`: implementation -> validation -> EN/ES documentation -> PR review -> green CI -> merge -> verify `main` before starting the next phase.
 
 ### Changed
-- Phase 10 is documented as **IN PROGRESS**, with 10.1 and 10.2 complete and 10.3 active.
-- **Phase 10.3.1, 10.3.2 and 10.3.3 are COMPLETE; Phase 10.3.4 permanent extension-contract validation becomes ACTIVE only after the 10.3.3 closing PR merges.**
-- README and ROADMAP EN/ES are synchronized with the completed extension inventory, compatibility policy and contributor reference adapters.
+- Phase 10 remains **IN PROGRESS** while Phase 10.3 is a completion candidate pending green CI, merge and verification of `main`.
+- **Phase 10.3.1, 10.3.2 and 10.3.3 are COMPLETE; Phase 10.3.4 implementation/documentation is complete in its closing branch and becomes officially COMPLETE only after its closing PR is green and merged.**
+- README and ROADMAP EN/ES are synchronized with the extension inventory, compatibility policy, contributor references and permanent validation gate.
 - Existing REST v1 paths/headers remain unchanged; compatibility policy documents them instead of silently rewriting deployed contracts.
 - Typed repository/adapter interfaces are governed by the SemVer/release lifecycle of the core rather than a synthetic global extension version.
 - The read-only catalogue HTTP contract is treated as a legacy-v1 compatibility surface: additive evolution is allowed, while breaking evolution requires a new versioned surface.
 - Outbound event schema version and webhook signature algorithm version are explicitly treated as independent compatibility dimensions.
-- Adapter guidance now identifies real tested implementations as the canonical contributor references instead of introducing parallel toy adapters.
-- The reference network adapters are explicitly tied to the existing `tests/rest-adapter-contracts.ts` coverage for contract version, invalid schema/content type, scope, size bounds, retries and idempotency where applicable.
+- Adapter guidance identifies real tested implementations as the canonical contributor references instead of introducing parallel toy adapters.
+- `npm run verify` now includes `check:extension-contracts`, protecting the nine-interface inventory, public authority surfaces, version identifiers, audit-before-apply ordering, provider-neutral repository purity and reference-adapter transport properties.
+- Reference and compatibility documents now link to the permanent validation contract instead of describing Phase 10.3.4 as future work.
+- The reference network adapters remain tied to `tests/rest-adapter-contracts.ts` coverage for contract version, invalid schema/content type, scope, size bounds, retries and idempotency where applicable.
 - README runtime badge reflects Next.js 16.3.2.
 - Quick-start and contribution workflows use reproducible `npm ci` + non-destructive `npm run setup:demo` instead of ad-hoc `npm install` setup.
 - Adapter guidance covers `PaymentRepository`, CRM, ERP/accounting, supplier fulfilment, failure visibility, generic webhooks and explicit authority boundaries.
