@@ -2,7 +2,7 @@
 
 <p align="center"><strong>English</strong> · <a href="./RELEASES.es.md">Español</a></p>
 
-Status: **Phase 10.4 — ACTIVE until closing PR is green, merged, and `main` is verified**
+Status: **Phase 10.4 — COMPLETE**
 
 ## Purpose
 
@@ -187,6 +187,6 @@ npm run verify
 
 The Phase 10.4 gate validates required docs, release identity conventions, migration safety language and CI registration.
 
-## Phase completion rule
+## Phase completion record
 
-Phase 10.4 is complete only after implementation, validation, EN/ES documentation, README/ROADMAP/CHANGELOG synchronization, green required CI, merge to `main`, and verification of `main`.
+Phase 10.4 satisfies the project completion rule: implementation, validation, EN/ES documentation, README/ROADMAP/CHANGELOG synchronization, required CI, merge to `main`, and verification of `main` are mandatory before any later Phase 10 slice is considered active.
