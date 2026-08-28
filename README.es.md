@@ -20,9 +20,9 @@ La implementación comercial/de referencia oficial es **Kairoseth Travel**, desp
 
 Este repositorio es el **core MIT provider-neutral**. Kairoseth Travel es la implementación alojada/comercial de referencia.
 
-- datos de clientes, credenciales productivas e integraciones propietarias permanecen fuera del repositorio público;
+- datos de clientes e integraciones propietarias permanecen fuera del repositorio público;
 - adapters privados Kairoseth/cliente pueden depender de contratos públicos OTP, nunca al revés;
-- sistemas downstream no reciben autoridad implícita de booking, inventario, pricing o pagos.
+- sistemas downstream no reciben autoridad implícita sobre booking, inventario, pricing o pagos.
 
 ## Posición actual
 
@@ -30,35 +30,43 @@ Este repositorio es el **core MIT provider-neutral**. Kairoseth Travel es la imp
 **Fase 9 — Baseline de hardening productivo: COMPLETADA.**  
 **Fase 10 — Productización open-source: EN CURSO.**
 
-Estado de la Fase 10 después de este merge:
+Estado de cierre de Fase 10.3:
 
-- **10.1 Bootstrap demo reproducible — COMPLETADA**
-- **10.2 Despliegue self-host standalone — COMPLETADA**
-- **10.3 Contratos de extensión y adapters de referencia — ACTIVA**
-  - **10.3.1 Inventario y mapa de autoridad — COMPLETADA**
-  - **10.3.2 Compatibilidad/versionado — COMPLETADA**
-  - **10.3.3 Adapters de referencia para contribuidores — COMPLETADA**
-  - **10.3.4 Validación permanente de contratos — ACTIVA**
+- **10.3.1 Inventario y mapa de autoridad — COMPLETADA**
+- **10.3.2 Compatibilidad/versionado — COMPLETADA**
+- **10.3.3 Adapters de referencia — COMPLETADA**
+- **10.3.4 Validación permanente de contratos — candidata a COMPLETADA**
 
-La Fase 10.3 ya dispone de inventario respaldado por código, política formal de compatibilidad/versionado y referencias para contribuidores basadas en adapters reales y probados. Consulta:
+**La Fase 10.3 solo será oficialmente COMPLETADA cuando el PR de cierre 10.3.4 tenga CI verde, esté mergeado a `main` y `main` haya sido verificado.**
+
+Gate permanente:
+
+```bash
+npm run check:extension-contracts
+```
+
+Forma parte de `npm run verify` y dispone de un workflow bloqueante dedicado que además ejecuta la suite contractual HTTP real.
+
+Documentación de Fase 10.3:
 
 - [`docs/EXTENSION-POINT-INVENTORY.es.md`](docs/EXTENSION-POINT-INVENTORY.es.md)
 - [`docs/EXTENSION-COMPATIBILITY.es.md`](docs/EXTENSION-COMPATIBILITY.es.md)
 - [`docs/REFERENCE-ADAPTERS.es.md`](docs/REFERENCE-ADAPTERS.es.md)
+- [`docs/EXTENSION-VALIDATION.es.md`](docs/EXTENSION-VALIDATION.es.md)
 - [`docs/EXTENSION-CONTRACTS.es.md`](docs/EXTENSION-CONTRACTS.es.md)
 
-La validación E2E TEST/LIVE con credenciales Stripe/Redsys sigue siendo una dependencia externa separada hasta disponer de cuentas proveedor adecuadas.
+La validación TEST/LIVE con credenciales Stripe/Redsys sigue siendo una dependencia externa separada hasta disponer de cuentas proveedor adecuadas.
 
 ## Capacidades principales
 
 ### Catálogo y comercio
 
-- catálogo/Operator bilingüe EN/ES;
+- catálogo y experiencia Operator EN/ES;
 - destinos, viajes, itinerarios, salidas e inventario;
 - alojamiento/habitaciones y pricing estacional/ocupación;
 - Actividades, Transporte y Protección de viaje;
 - reservas transaccionales con pricing/inventario server-authoritative;
-- viajeros, menores, bandas de edad, tutores y snapshots históricos;
+- viajeros/menores/tutores y snapshots históricos;
 - suplementos y modificaciones post-reserva.
 
 ### Identidad y operaciones
@@ -77,7 +85,7 @@ La validación E2E TEST/LIVE con credenciales Stripe/Redsys sigue siendo una dep
 - transferencia, efectivo y terminal externo;
 - integraciones checkout Stripe/Redsys;
 - depósitos/cuotas/saldo pendiente;
-- conciliación/reporting de ingresos;
+- conciliación/reporting;
 - ERP/contabilidad downstream-only.
 
 ### Traveller Data y hardening
@@ -92,20 +100,18 @@ La validación E2E TEST/LIVE con credenciales Stripe/Redsys sigue siendo una dep
 
 ### Integraciones
 
-- outbox transaccional MongoDB;
+- outbox MongoDB transaccional;
 - webhooks HTTPS firmados con retry/dead-letter;
 - worker durable;
 - `BookingRepository` REST;
 - fulfilment REST;
 - CRM y ERP downstream;
 - failure transport provider-neutral;
-- protección SSRF/DNS rebinding y transportes acotados.
+- protección SSRF/DNS rebinding y transporte acotado.
 
-## Arquitectura
+## Arquitectura de extensiones
 
 ```text
-Catálogo público / área cliente
-        |
 TravelRepository + IdentityRepository
         |
 BookingRepository (demo / MongoDB / REST v1)
@@ -114,24 +120,20 @@ reservas + inventario transaccional
         |
 PaymentRepository -> ledger local provider-neutral -> PSP/manual
         |
-outbox transaccional de integraciones
+outbox transaccional
         |
         +--> webhooks firmados
         +--> CRM REST (downstream-only)
         +--> ERP/contabilidad REST (downstream-only)
 
-Operator/Admin
-        |
-OperationsRepository + auditoría/tareas/documentos/reporting
+OperationsRepository
         |
 SupplierFulfilmentAdapter -> audit-before-apply -> workflow local
 
-Fallos operativos
-        |
-logs estructurados -> FailureTransport opcional
+Fallos operativos -> FailureTransport opcional
 ```
 
-Los payloads específicos de proveedor permanecen dentro de adapters y la autoridad del core sigue explícita.
+Los payloads provider permanecen dentro de adapters y la autoridad del core sigue explícita.
 
 ## Inicio rápido
 
@@ -157,11 +159,11 @@ npm run package:standalone
 node .next/standalone/server.js
 ```
 
-Para producción real usa secretos solo runtime y el perfil `live`. Consulta [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) y [`docs/PRODUCTION-CHECKLIST.md`](docs/PRODUCTION-CHECKLIST.md).
+Para producción consulta [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) y [`docs/PRODUCTION-CHECKLIST.md`](docs/PRODUCTION-CHECKLIST.md).
 
-## Modelo de extensiones
+## Modelo público de extensiones
 
-### Interfaces públicas verificadas
+Interfaces de primer nivel verificadas:
 
 - `TravelRepository`
 - `IdentityRepository`
@@ -173,18 +175,36 @@ Para producción real usa secretos solo runtime y el perfil `live`. Consulta [`d
 - `ErpAccountingAdapter`
 - `FailureTransport`
 
-Los webhooks firmados genéricos son una superficie downstream separada.
-
-### Referencias oficiales — 10.3.3 COMPLETADA
+Referencias oficiales:
 
 - `RestBookingRepository` — autoridad acotada de repository;
 - `RestSupplierFulfilmentAdapter` + `performSupplierAdapterOperation()` — subordinado a workflow y audit-before-apply;
 - `RestCrmSyncAdapter` — downstream-only;
 - `RestFailureTransport` — patrón opcional de monitorización.
 
-Las implementaciones existentes ya están cubiertas por la suite contractual HTTP local cuando aplica. La guía incluye patrón de copia, ejemplo v1→v2 y frontera de adapters propietarios.
+## Validación permanente
 
-Consulta [`docs/REFERENCE-ADAPTERS.es.md`](docs/REFERENCE-ADAPTERS.es.md).
+`check:extension-contracts` protege:
+
+- inventario público exacto;
+- pureza provider-neutral de interfaces;
+- autoridad downstream-only de CRM/ERP;
+- audit-before-apply y límites de Supplier;
+- neutralidad provider de `PaymentRepository`;
+- identificadores v1 documentados de headers/schemas/firma;
+- protecciones de transporte de adapters de referencia;
+- consistencia de documentación EN/ES.
+
+Ejecuta localmente:
+
+```bash
+npm run check:extension-contracts
+npm run verify
+```
+
+CI dedicado: `.github/workflows/extension-contracts.yml`.
+
+Consulta [`docs/EXTENSION-VALIDATION.es.md`](docs/EXTENSION-VALIDATION.es.md).
 
 ## Documentación
 
@@ -195,52 +215,20 @@ Consulta [`docs/REFERENCE-ADAPTERS.es.md`](docs/REFERENCE-ADAPTERS.es.md).
 - [`CHANGELOG.md`](CHANGELOG.md)
 - [`CONTRIBUTING.md`](CONTRIBUTING.md)
 
-### Fase 10.3
+### Extensiones
 
 - [`docs/EXTENSION-POINT-INVENTORY.es.md`](docs/EXTENSION-POINT-INVENTORY.es.md)
 - [`docs/EXTENSION-COMPATIBILITY.es.md`](docs/EXTENSION-COMPATIBILITY.es.md)
 - [`docs/REFERENCE-ADAPTERS.es.md`](docs/REFERENCE-ADAPTERS.es.md)
+- [`docs/EXTENSION-VALIDATION.es.md`](docs/EXTENSION-VALIDATION.es.md)
 - [`docs/EXTENSION-CONTRACTS.es.md`](docs/EXTENSION-CONTRACTS.es.md)
 - [`docs/ADAPTER-GUIDE.md`](docs/ADAPTER-GUIDE.md)
 
-### Contratos de integración
-
-- [`docs/REST-BOOKING-ADAPTER.es.md`](docs/REST-BOOKING-ADAPTER.es.md)
-- [`docs/SUPPLIER-FULFILMENT-ADAPTER.es.md`](docs/SUPPLIER-FULFILMENT-ADAPTER.es.md)
-- [`docs/CRM-SYNC-ADAPTER.es.md`](docs/CRM-SYNC-ADAPTER.es.md)
-- [`docs/ERP-ACCOUNTING-ADAPTER.es.md`](docs/ERP-ACCOUNTING-ADAPTER.es.md)
-- [`docs/OUTBOUND-INTEGRATIONS.es.md`](docs/OUTBOUND-INTEGRATIONS.es.md)
-- [`docs/FAILURE-TRANSPORT.es.md`](docs/FAILURE-TRANSPORT.es.md)
-
-## Quality gates
-
-Ejecuta:
-
-```bash
-npm run verify
-```
-
-CI también prueba replica sets MongoDB reales, contratos HTTP locales, privacidad, accesibilidad, recovery y baselines de rendimiento/recursos.
-
 ## Regla de cierre de fases
 
-Una fase/slice no está completada hasta que:
+Una fase/slice no está completada hasta que implementación y pruebas terminen, documentación EN/ES/README/ROADMAP/CHANGELOG esté sincronizada, el alcance del PR sea revisado, CI obligatorio esté verde, el PR esté mergeado a `main` y `main` sea verificado antes de iniciar la siguiente fase.
 
-1. implementación/alcance estén terminados;
-2. validaciones estén completas;
-3. documentación EN/ES, README, ROADMAP y CHANGELOG estén sincronizados;
-4. el diff del PR coincida con el alcance;
-5. CI obligatorio esté verde;
-6. el PR esté mergeado a `main`;
-7. `main` se verifique antes de iniciar la siguiente fase.
-
-## Prioridad activa — Fase 10.3.4
-
-Después del merge de cierre de 10.3.3, el único slice activo será **10.3.4 — validación permanente de contratos de extensión**.
-
-Debe añadir un gate estático/runtime permanente que proteja presencia de interfaces/referencias, consistencia de versiones/documentación, aislamiento de payloads provider, límites de autoridad downstream, audit-before-apply de proveedor y seguridad de adapters de referencia, registrándolo en `npm run verify`/CI.
-
-La rama de cierre 10.3.3 no incluye implementación de 10.3.4.
+Ningún bloque posterior de Fase 10 está activo hasta superar el cierre de Fase 10.3.
 
 ## Licencia
 
