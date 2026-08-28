@@ -22,7 +22,10 @@ This repository is the **MIT-licensed provider-neutral core**. Kairoseth Travel 
 
 - customer data and proprietary customer integrations stay outside the public repository;
 - private Kairoseth/customer adapters may depend on public OTP contracts, never the reverse;
-- downstream providers never receive implicit booking, inventory, pricing or payment authority.
+- downstream providers never receive implicit booking, inventory, pricing or payment authority;
+- the MIT software license does not by itself grant permission to present an independent fork/service as official Kairoseth Travel.
+
+Branding and trademark usage is documented separately in [`TRADEMARKS.md`](TRADEMARKS.md).
 
 ## Current position
 
@@ -38,28 +41,21 @@ Completed Phase 10 slices:
 - **10.4 Release and migration conventions — COMPLETE**
 - **10.5 Upgrade and deprecation lifecycle policy — COMPLETE**
 - **10.6 Contribution and release templates — COMPLETE**
+- **10.7 Branding and trademark policy — COMPLETE**
 
-Phase 10.5 establishes:
+Phase 10.7 establishes:
 
-- latest stable release in the current major as the primary supported target;
-- no guaranteed LTS/backport promise unless explicitly announced;
-- supported same-major and adjacent-major upgrade paths;
-- skip-major upgrades only when explicitly documented;
-- public lifecycle `ACTIVE → DEPRECATED → REMOVED`;
-- ordinary public removal only in a **MAJOR** release;
-- replacement + first deprecated release + earliest removal version as required deprecation metadata;
-- an explicit accelerated security exception rather than silent incompatible changes;
-- provider-neutral rules for configuration, APIs/events, extension interfaces and persistent data;
-- permanent validation through `npm run check:upgrade-deprecations`.
+- explicit separation between MIT software rights and project/commercial branding;
+- **Open Travel Platform** as the public provider-neutral core/project name;
+- **Kairoseth Travel** as the official hosted/commercial reference implementation;
+- `https://travel.kairoseth.com` as the official reference deployment;
+- truthful descriptive use such as “based on Open Travel Platform” / “compatible with Open Travel Platform”;
+- distinct primary branding for independently operated forks/services;
+- no implied sponsorship, certification or official status from use of the MIT code;
+- separate permission expectations for Kairoseth/Kairoseth Travel logos, wordmarks and official-status claims;
+- permanent validation through `npm run check:branding-policy`.
 
-Authoritative Phase 10.4–10.5 documentation:
-
-- [`docs/RELEASES.md`](docs/RELEASES.md)
-- [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md)
-- [`docs/UPGRADES.md`](docs/UPGRADES.md)
-- [`docs/DEPRECATIONS.md`](docs/DEPRECATIONS.md)
-
-Phase 10.6 adds one canonical PR template, richer issue forms, a reusable release-notes template and permanent validation through `npm run check:contribution-templates`. See [`docs/CONTRIBUTION-TEMPLATES.md`](docs/CONTRIBUTION-TEMPLATES.md).
+This policy does not claim that any mark is registered in every jurisdiction; it defines the project's usage rules for project/commercial branding. See [`TRADEMARKS.md`](TRADEMARKS.md) and [`TRADEMARKS.es.md`](TRADEMARKS.es.md).
 
 Credentialed Stripe/Redsys TEST/LIVE E2E remains a separate provider-dependent release validation until suitable provider accounts are available.
 
@@ -137,7 +133,7 @@ node .next/standalone/server.js
 
 For production deployment see [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) and [`docs/PRODUCTION-CHECKLIST.md`](docs/PRODUCTION-CHECKLIST.md).
 
-## Release, upgrade and deprecation contract
+## Release, upgrade and branding contract
 
 Stable releases use:
 
@@ -157,7 +153,7 @@ ACTIVE → DEPRECATED → REMOVED
 
 Ordinary removal occurs only at/after the announced MAJOR boundary. PATCH/MINOR releases do not silently remove or reinterpret supported public surfaces.
 
-Before release/upgrade validation:
+Before release validation:
 
 ```bash
 npm ci
@@ -165,10 +161,11 @@ npm run check:release
 npm run check:release-migrations
 npm run check:upgrade-deprecations
 npm run check:contribution-templates
+npm run check:branding-policy
 npm run verify
 ```
 
-See [`docs/RELEASES.md`](docs/RELEASES.md), [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md), [`docs/UPGRADES.md`](docs/UPGRADES.md), [`docs/DEPRECATIONS.md`](docs/DEPRECATIONS.md) and [`docs/CONTRIBUTION-TEMPLATES.md`](docs/CONTRIBUTION-TEMPLATES.md).
+See [`docs/RELEASES.md`](docs/RELEASES.md), [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md), [`docs/UPGRADES.md`](docs/UPGRADES.md), [`docs/DEPRECATIONS.md`](docs/DEPRECATIONS.md), [`docs/CONTRIBUTION-TEMPLATES.md`](docs/CONTRIBUTION-TEMPLATES.md) and [`TRADEMARKS.md`](TRADEMARKS.md).
 
 ## Documentation
 
@@ -179,6 +176,8 @@ See [`docs/RELEASES.md`](docs/RELEASES.md), [`docs/MIGRATIONS.md`](docs/MIGRATIO
 - [`CHANGELOG.md`](CHANGELOG.md)
 - [`CONTRIBUTING.md`](CONTRIBUTING.md)
 - [`SUPPORT.md`](SUPPORT.md)
+- [`TRADEMARKS.md`](TRADEMARKS.md)
+- [`TRADEMARKS.es.md`](TRADEMARKS.es.md)
 - [`docs/RELEASES.md`](docs/RELEASES.md)
 - [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md)
 - [`docs/UPGRADES.md`](docs/UPGRADES.md)
@@ -204,17 +203,20 @@ npm run check:extension-contracts
 npm run check:release-migrations
 npm run check:upgrade-deprecations
 npm run check:contribution-templates
+npm run check:branding-policy
 npm run verify
 ```
 
-Dedicated workflows protect extension contracts, release/migration conventions, the upgrade/deprecation lifecycle and contribution/release templates in pull requests and on `main`.
+Dedicated workflows protect extension contracts, release/migration conventions, upgrade/deprecation lifecycle, contribution/release templates and branding/trademark separation in pull requests and on `main`.
 
 ## Phase completion rule
 
 A phase/slice is not complete until implementation and tests are finished, EN/ES documentation/README/ROADMAP/CHANGELOG are synchronized, the PR scope is reviewed, required CI is green, the PR is merged to `main`, and `main` is verified before the next phase starts.
 
-Phase 10.6 follows the same rule; branding/trademark work remains separate until this slice is merged and verified.
+Phase 10.7 follows the same rule; the final Phase 10 documentation/release audit remains separate until this slice is merged and verified.
 
-## License
+## License and branding
 
-MIT. See [`LICENSE`](LICENSE).
+Software: MIT. See [`LICENSE`](LICENSE).
+
+Project/commercial names and visual identity are governed separately by [`TRADEMARKS.md`](TRADEMARKS.md). The branding policy does not silently relicense the software.
