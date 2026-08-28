@@ -42,11 +42,11 @@ Estado de la Fase 10:
 - **10.2 Despliegue self-host standalone provider-neutral — COMPLETADO**
 - **10.3 Contratos de extensión y adapters de referencia — ACTIVA**
   - **10.3.1 Inventario de puntos de extensión y mapa de autoridad — COMPLETADA**
-  - **10.3.2 Política de compatibilidad y versionado — ACTIVA**
-  - **10.3.3 Adapters de referencia para contribuidores — PLANIFICADA**
+  - **10.3.2 Política de compatibilidad y versionado — COMPLETADA**
+  - **10.3.3 Adapters de referencia para contribuidores — ACTIVA**
   - **10.3.4 Validación permanente de contratos — PLANIFICADA**
 
-La Fase 10.3 ya dispone de un inventario respaldado por código de las superficies públicas de extensión. La auditoría verificó nueve interfaces de primer nivel bajo `repositories/`, corrigió la omisión preliminar de `PaymentRepository` y formalizó qué integraciones tienen autoridad acotada, están subordinadas al workflow, son solo downstream o solo monitorización. Consulta [`docs/EXTENSION-POINT-INVENTORY.es.md`](docs/EXTENSION-POINT-INVENTORY.es.md) y [`docs/EXTENSION-CONTRACTS.es.md`](docs/EXTENSION-CONTRACTS.es.md).
+La Fase 10.3 ya dispone tanto de un inventario de extensiones respaldado por código como de una política formal de compatibilidad/versionado. El inventario verifica nueve interfaces de primer nivel bajo `repositories/`, y la política define cómo evolucionan interfaces tipadas, contratos REST, schemas de eventos y versiones de firma sin romper silenciosamente autoridad ni formatos wire. Consulta [`docs/EXTENSION-POINT-INVENTORY.es.md`](docs/EXTENSION-POINT-INVENTORY.es.md), [`docs/EXTENSION-COMPATIBILITY.es.md`](docs/EXTENSION-COMPATIBILITY.es.md) y [`docs/EXTENSION-CONTRACTS.es.md`](docs/EXTENSION-CONTRACTS.es.md).
 
 El E2E TEST/LIVE de Stripe/Redsys con credenciales sigue siendo una validación de release dependiente de proveedores y debe completarse cuando existan cuentas adecuadas.
 
@@ -218,7 +218,9 @@ Reglas importantes:
 
 - [`docs/EXTENSION-POINT-INVENTORY.es.md`](docs/EXTENSION-POINT-INVENTORY.es.md) — superficies públicas verificadas y mapa de autoridad.
 - [`docs/EXTENSION-POINT-INVENTORY.md`](docs/EXTENSION-POINT-INVENTORY.md) — inventario en inglés.
-- [`docs/EXTENSION-CONTRACTS.es.md`](docs/EXTENSION-CONTRACTS.es.md) — autoridad, compatibilidad/versionado y contrato de cierre de 10.3.
+- [`docs/EXTENSION-COMPATIBILITY.es.md`](docs/EXTENSION-COMPATIBILITY.es.md) — política completada de compatibilidad, versionado, deprecación y migración.
+- [`docs/EXTENSION-COMPATIBILITY.md`](docs/EXTENSION-COMPATIBILITY.md) — política en inglés.
+- [`docs/EXTENSION-CONTRACTS.es.md`](docs/EXTENSION-CONTRACTS.es.md) — autoridad y contrato de cierre de 10.3.
 - [`docs/EXTENSION-CONTRACTS.md`](docs/EXTENSION-CONTRACTS.md) — versión inglesa.
 - [`docs/ADAPTER-GUIDE.md`](docs/ADAPTER-GUIDE.md) — implementación de adapters.
 - [`docs/API-CONTRACT.md`](docs/API-CONTRACT.md) — contrato HTTP público de catálogo.
@@ -313,28 +315,30 @@ Jobs CI dedicados ejercitan además replica sets MongoDB reales, contratos HTTP 
 | Fase 10.1 — Bootstrap demo desde clon limpio | **Completada** |
 | Fase 10.2 — Despliegue self-host standalone | **Completada** |
 | Fase 10.3.1 — Inventario de extensiones / autoridad | **Completada** |
-| Fase 10.3.2 — Compatibilidad / versionado | **Activa** |
+| Fase 10.3.2 — Compatibilidad / versionado | **Completada** |
+| Fase 10.3.3 — Adapters de referencia para contribuidores | **Activa** |
 | Fase 10.3 — Contratos de extensión/adapters de referencia | **Activa** |
 | Fase 10 — Productización open-source | **En curso** |
 
-## Prioridad activa — Fase 10.3.2
+## Prioridad activa — Fase 10.3.3
 
-El bloque actual es **Fase 10.3.2 — política de compatibilidad y versionado**.
+El bloque actual es **Fase 10.3.3 — adapters de referencia para contribuidores**.
 
-La Fase 10.3.1 está completada: el inventario respaldado por código verificó las nueve interfaces de primer nivel bajo `repositories/`, mapeó superficies de red/entrega y documentó la autoridad de cada frontera.
+La Fase 10.3.2 está completada. Su política de compatibilidad gobierna las interfaces tipadas in-process mediante el SemVer del core, conserva los contratos REST v1 actuales, trata el contrato HTTP read-only de catálogo existente como superficie legacy-v1, separa las versiones de schema de eventos de las versiones de firma de webhook y exige migración/deprecación explícita para cambios breaking.
 
-Los objetivos activos son ahora:
+Los siguientes objetivos de entrega son:
 
-1. definir reglas de compatibilidad para interfaces tipadas de repository/adapter;
-2. definir reglas de compatibilidad y deprecación para contratos REST/HTTP;
-3. definir reglas de compatibilidad para versiones de eventos/schemas como integraciones salientes y `FailureTransportEvent`;
-4. distinguir evolución aditiva compatible de cambios de autoridad, idempotencia, autenticación o estados que exigen versión breaking;
-5. definir una ruta práctica de deprecación/migración antes de eliminar un contrato público;
-6. mantener cambios de versión específicos de APIs proveedor dentro del adapter siempre que el contrato estable del core pueda mantenerse.
+1. añadir implementaciones/ejemplos mínimos provider-neutral usando los contratos públicos existentes;
+2. demostrar composición opt-in explícita y credenciales server-only cuando interviene transporte privilegiado;
+3. demostrar timeout/tamaño de respuesta acotados, seguridad frente a redirects, validación runtime y errores normalizados;
+4. demostrar idempotencia determinista en mutaciones y audit-before-apply para estado externo de workflow;
+5. mostrar cómo absorber cambios de versión de una API proveedor dentro del adapter manteniendo estable el contrato core;
+6. mostrar un patrón explícito de migración v1→v2 sin downgrade oculto;
+7. mantener implementaciones propietarias Kairoseth/cliente fuera del core MIT genérico.
 
-El alcance e inventario están en [`docs/EXTENSION-CONTRACTS.es.md`](docs/EXTENSION-CONTRACTS.es.md), [`docs/EXTENSION-POINT-INVENTORY.es.md`](docs/EXTENSION-POINT-INVENTORY.es.md) y [`ROADMAP.es.md`](ROADMAP.es.md).
+Los documentos rectores son [`docs/EXTENSION-CONTRACTS.es.md`](docs/EXTENSION-CONTRACTS.es.md), [`docs/EXTENSION-POINT-INVENTORY.es.md`](docs/EXTENSION-POINT-INVENTORY.es.md), [`docs/EXTENSION-COMPATIBILITY.es.md`](docs/EXTENSION-COMPATIBILITY.es.md) y [`ROADMAP.es.md`](ROADMAP.es.md).
 
-Después de 10.3, la Fase 10 continuará con convenciones de releases/migraciones, templates de contribución/release y política de marca/trademark.
+Después de la Fase 10.3.3, la Fase 10.3.4 añadirá el gate automatizado permanente de contratos de extensión. Ningún slice de Fase 10.3 se considera completado hasta satisfacer documentación, validación y merge.
 
 ## Licencia
 
