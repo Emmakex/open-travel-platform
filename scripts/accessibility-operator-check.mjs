@@ -37,7 +37,10 @@ for (const evidence of [
   "#operations-status",
   "#tasks-error",
   "#fulfilment-error",
-  'form[aria-label^="Supplier tracking for "]'
+  "Reservation internal workflow|Gestión interna de la reserva",
+  "Create internal task|Crear tarea interna",
+  "Supplier tracking for|Seguimiento de proveedor para",
+  "PR #115 regression guard"
 ]) {
   assert(browser.includes(evidence), `blocking browser coverage must include: ${evidence}`);
 }
