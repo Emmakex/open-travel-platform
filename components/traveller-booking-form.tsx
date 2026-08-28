@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, type FormEvent } from "react";
 import { createReservationAction } from "@/app/reservations/actions";
 import styles from "@/app/trips/[slug]/book/booking.module.css";
 import type { Accommodation } from "@/domain/accommodation/types";
@@ -27,6 +27,30 @@ type TravellerRow = {
   guardianTravellerId: string;
   guardianRelationship: GuardianRelationship | "";
 };
+
+type TravellerField = "firstName" | "lastName" | "dateOfBirth" | "nationality" | "guardianTravellerId" | "guardianRelationship";
+type FieldErrors = Record<string, string>;
+
+const fieldNamePrefixes: Record<TravellerField, string> = {
+  firstName: "travellerFirstName",
+  lastName: "travellerLastName",
+  dateOfBirth: "travellerDateOfBirth",
+  nationality: "travellerNationality",
+  guardianTravellerId: "travellerGuardian",
+  guardianRelationship: "travellerGuardianRelationship"
+};
+
+function fieldKey(id: string, field: TravellerField) {
+  return `${id}:${field}`;
+}
+
+function fieldErrorId(id: string, field: TravellerField) {
+  return `traveller-${id}-${field}-error`;
+}
+
+function fieldControlName(id: string, field: TravellerField) {
+  return `${fieldNamePrefixes[field]}__${id}`;
+}
 
 function blankTraveller(id: string): TravellerRow {
   return {
@@ -84,6 +108,7 @@ export function TravellerBookingForm({
   const [selectedOptionalAccommodationIds, setSelectedOptionalAccommodationIds] = useState<string[]>([]);
   const [selectedBookingAddOnIds, setSelectedBookingAddOnIds] = useState<string[]>([]);
   const [selectedTravellerAddOnIds, setSelectedTravellerAddOnIds] = useState<Record<string, string[]>>({});
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [travellers, setTravellers] = useState<TravellerRow[]>([
     blankTraveller("traveller-1"),
     blankTraveller("traveller-2")
@@ -116,14 +141,6 @@ export function TravellerBookingForm({
   const leadAge = calculated[0]?.age ?? null;
   const leadIsMinor = leadAge !== null && leadAge < 18;
   const inventoryExceeded = Boolean(selectedAvailability && inventorySpaces > selectedAvailability.remainingSpaces);
-  const complete = calculated.every((item) => {
-    const row = item.traveller;
-    if (!row.firstName.trim() || !row.lastName.trim() || !row.dateOfBirth || !row.nationality.trim() || item.age === null || !item.band) return false;
-    if (item.age < 18) {
-      return Boolean(row.guardianTravellerId && row.guardianRelationship && adultChoices.some((adult) => adult.traveller.id === row.guardianTravellerId));
-    }
-    return true;
-  });
 
   const accommodationReadyForPreview = Boolean(
     selectedAvailability &&
@@ -223,15 +240,30 @@ export function TravellerBookingForm({
   const total = Number((travellerTotal + accommodationTotals.accommodationAdditionalTotal + packageAddOnPreview.packageAddOnTotal).toFixed(2));
   const canSubmit = Boolean(
     selectedAvailability &&
-    complete &&
     !leadIsMinor &&
     !inventoryExceeded &&
     !accommodationInvalid &&
     !packageAddOnPreview.error
   );
 
+  function clearFieldErrors(id: string, fields: TravellerField[]) {
+    setFieldErrors((current) => {
+      let changed = false;
+      const next = { ...current };
+      for (const field of fields) {
+        const key = fieldKey(id, field);
+        if (key in next) {
+          delete next[key];
+          changed = true;
+        }
+      }
+      return changed ? next : current;
+    });
+  }
+
   function update(id: string, patch: Partial<TravellerRow>) {
     setTravellers((current) => current.map((item) => item.id === id ? { ...item, ...patch } : item));
+    clearFieldErrors(id, Object.keys(patch).filter((field): field is TravellerField => field !== "id") as TravellerField[]);
   }
 
   function addTraveller() {
@@ -249,6 +281,7 @@ export function TravellerBookingForm({
     setSelectedTravellerAddOnIds((current) => Object.fromEntries(
       Object.entries(current).map(([addOnId, ids]) => [addOnId, ids.filter((travellerId) => travellerId !== id)])
     ));
+    setFieldErrors((current) => Object.fromEntries(Object.entries(current).filter(([key]) => !key.startsWith(`${id}:`))));
   }
 
   function toggleOptionalAccommodation(id: string, checked: boolean) {
@@ -283,8 +316,48 @@ export function TravellerBookingForm({
     }).join(", ");
   }
 
+  function validateTravellerFields() {
+    const next: FieldErrors = {};
+    for (const item of calculated) {
+      const { traveller, age, band } = item;
+      if (!traveller.firstName.trim()) next[fieldKey(traveller.id, "firstName")] = t("Enter the traveller's first name.", "Introduce el nombre del viajero.");
+      if (!traveller.lastName.trim()) next[fieldKey(traveller.id, "lastName")] = t("Enter the traveller's last name.", "Introduce los apellidos del viajero.");
+      if (!traveller.dateOfBirth) {
+        next[fieldKey(traveller.id, "dateOfBirth")] = t("Enter the traveller's date of birth.", "Introduce la fecha de nacimiento del viajero.");
+      } else if (age === null || !band) {
+        next[fieldKey(traveller.id, "dateOfBirth")] = t("Enter a valid date of birth for this departure.", "Introduce una fecha de nacimiento válida para esta salida.");
+      }
+      if (!traveller.nationality.trim()) next[fieldKey(traveller.id, "nationality")] = t("Enter the traveller's nationality.", "Introduce la nacionalidad del viajero.");
+      if (age !== null && age < 18) {
+        const validGuardian = traveller.guardianTravellerId && adultChoices.some((adult) => adult.traveller.id === traveller.guardianTravellerId);
+        if (!validGuardian) next[fieldKey(traveller.id, "guardianTravellerId")] = t("Choose an adult travelling on this booking.", "Selecciona un adulto que viaje en esta reserva.");
+        if (!traveller.guardianRelationship) next[fieldKey(traveller.id, "guardianRelationship")] = t("Choose the relationship with the responsible adult.", "Selecciona la relación con el adulto responsable.");
+      }
+    }
+    return next;
+  }
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    const nextErrors = validateTravellerFields();
+    const firstKey = Object.keys(nextErrors)[0];
+    if (!firstKey) {
+      setFieldErrors({});
+      return;
+    }
+
+    event.preventDefault();
+    setFieldErrors(nextErrors);
+    const separator = firstKey.indexOf(":");
+    const travellerId = firstKey.slice(0, separator);
+    const field = firstKey.slice(separator + 1) as TravellerField;
+    const control = event.currentTarget.elements.namedItem(fieldControlName(travellerId, field));
+    if (control instanceof HTMLElement) control.focus();
+  }
+
+  const fieldErrorCount = Object.keys(fieldErrors).length;
+
   return (
-    <form action={createReservationAction} className={styles.form}>
+    <form action={createReservationAction} className={styles.form} noValidate onSubmit={handleSubmit}>
       <input type="hidden" name="tripSlug" value={tripSlug} />
 
       <label className={styles.field}>
@@ -312,9 +385,22 @@ export function TravellerBookingForm({
         <div className={styles.error}>{t("The lead traveller must be at least 18 on the departure date.", "El viajero principal debe tener al menos 18 años en la fecha de salida.")}</div>
       ) : null}
 
+      {fieldErrorCount ? (
+        <div id="trip-booking-field-errors" className={styles.error} role="alert" aria-live="assertive" aria-atomic="true">
+          <strong>{t(`Review ${fieldErrorCount} highlighted traveller field${fieldErrorCount === 1 ? "" : "s"}.`, `Revisa ${fieldErrorCount} campo${fieldErrorCount === 1 ? "" : "s"} de viajero marcado${fieldErrorCount === 1 ? "" : "s"}.`)}</strong><br />
+          {t("Focus has moved to the first field that needs attention.", "El foco se ha movido al primer campo que necesita atención.")}
+        </div>
+      ) : null}
+
       <div className={styles.travellerList}>
         {calculated.map(({ traveller, index, age, band, unitPrice }) => {
           const isMinor = age !== null && age < 18;
+          const firstNameError = fieldErrors[fieldKey(traveller.id, "firstName")];
+          const lastNameError = fieldErrors[fieldKey(traveller.id, "lastName")];
+          const dateOfBirthError = fieldErrors[fieldKey(traveller.id, "dateOfBirth")];
+          const nationalityError = fieldErrors[fieldKey(traveller.id, "nationality")];
+          const guardianError = fieldErrors[fieldKey(traveller.id, "guardianTravellerId")];
+          const relationshipError = fieldErrors[fieldKey(traveller.id, "guardianRelationship")];
           return (
             <div className={styles.travellerCard} key={traveller.id}>
               <input type="hidden" name="travellerId" value={traveller.id} />
@@ -333,19 +419,23 @@ export function TravellerBookingForm({
               <div className={styles.travellerGrid}>
                 <label className={styles.field}>
                   <span>{t("First name *", "Nombre *")}</span>
-                  <input name={`travellerFirstName__${traveller.id}`} value={traveller.firstName} onChange={(event) => update(traveller.id, { firstName: event.target.value })} autoComplete="given-name" required />
+                  <input name={`travellerFirstName__${traveller.id}`} value={traveller.firstName} onChange={(event) => update(traveller.id, { firstName: event.target.value })} autoComplete="given-name" required aria-invalid={firstNameError ? "true" : undefined} aria-describedby={firstNameError ? fieldErrorId(traveller.id, "firstName") : undefined} />
+                  {firstNameError ? <span id={fieldErrorId(traveller.id, "firstName")} className={styles.fieldError}>{firstNameError}</span> : null}
                 </label>
                 <label className={styles.field}>
                   <span>{t("Last name *", "Apellidos *")}</span>
-                  <input name={`travellerLastName__${traveller.id}`} value={traveller.lastName} onChange={(event) => update(traveller.id, { lastName: event.target.value })} autoComplete="family-name" required />
+                  <input name={`travellerLastName__${traveller.id}`} value={traveller.lastName} onChange={(event) => update(traveller.id, { lastName: event.target.value })} autoComplete="family-name" required aria-invalid={lastNameError ? "true" : undefined} aria-describedby={lastNameError ? fieldErrorId(traveller.id, "lastName") : undefined} />
+                  {lastNameError ? <span id={fieldErrorId(traveller.id, "lastName")} className={styles.fieldError}>{lastNameError}</span> : null}
                 </label>
                 <label className={styles.field}>
                   <span>{t("Date of birth *", "Fecha de nacimiento *")}</span>
-                  <input name={`travellerDateOfBirth__${traveller.id}`} type="date" value={traveller.dateOfBirth} onChange={(event) => update(traveller.id, { dateOfBirth: event.target.value, guardianTravellerId: "", guardianRelationship: "" })} required />
+                  <input name={`travellerDateOfBirth__${traveller.id}`} type="date" value={traveller.dateOfBirth} onChange={(event) => update(traveller.id, { dateOfBirth: event.target.value, guardianTravellerId: "", guardianRelationship: "" })} required aria-invalid={dateOfBirthError ? "true" : undefined} aria-describedby={dateOfBirthError ? fieldErrorId(traveller.id, "dateOfBirth") : undefined} />
+                  {dateOfBirthError ? <span id={fieldErrorId(traveller.id, "dateOfBirth")} className={styles.fieldError}>{dateOfBirthError}</span> : null}
                 </label>
                 <label className={styles.field}>
                   <span>{t("Nationality *", "Nacionalidad *")}</span>
-                  <input name={`travellerNationality__${traveller.id}`} value={traveller.nationality} onChange={(event) => update(traveller.id, { nationality: event.target.value })} placeholder={t("e.g. Spanish", "p. ej. Española")} required />
+                  <input name={`travellerNationality__${traveller.id}`} value={traveller.nationality} onChange={(event) => update(traveller.id, { nationality: event.target.value })} placeholder={t("e.g. Spanish", "p. ej. Española")} required aria-invalid={nationalityError ? "true" : undefined} aria-describedby={nationalityError ? fieldErrorId(traveller.id, "nationality") : undefined} />
+                  {nationalityError ? <span id={fieldErrorId(traveller.id, "nationality")} className={styles.fieldError}>{nationalityError}</span> : null}
                 </label>
               </div>
 
@@ -356,7 +446,7 @@ export function TravellerBookingForm({
                   <div className={styles.travellerGrid}>
                     <label className={styles.field}>
                       <span>{t("Responsible adult *", "Adulto responsable *")}</span>
-                      <select name={`travellerGuardian__${traveller.id}`} value={traveller.guardianTravellerId} onChange={(event) => update(traveller.id, { guardianTravellerId: event.target.value })} required>
+                      <select name={`travellerGuardian__${traveller.id}`} value={traveller.guardianTravellerId} onChange={(event) => update(traveller.id, { guardianTravellerId: event.target.value })} required aria-invalid={guardianError ? "true" : undefined} aria-describedby={guardianError ? fieldErrorId(traveller.id, "guardianTravellerId") : undefined}>
                         <option value="">{t("Choose adult", "Seleccionar adulto")}</option>
                         {adultChoices.filter((adult) => adult.traveller.id !== traveller.id).map((adult) => (
                           <option value={adult.traveller.id} key={adult.traveller.id}>
@@ -364,15 +454,17 @@ export function TravellerBookingForm({
                           </option>
                         ))}
                       </select>
+                      {guardianError ? <span id={fieldErrorId(traveller.id, "guardianTravellerId")} className={styles.fieldError}>{guardianError}</span> : null}
                     </label>
                     <label className={styles.field}>
                       <span>{t("Relationship *", "Relación *")}</span>
-                      <select name={`travellerGuardianRelationship__${traveller.id}`} value={traveller.guardianRelationship} onChange={(event) => update(traveller.id, { guardianRelationship: event.target.value as GuardianRelationship | "" })} required>
+                      <select name={`travellerGuardianRelationship__${traveller.id}`} value={traveller.guardianRelationship} onChange={(event) => update(traveller.id, { guardianRelationship: event.target.value as GuardianRelationship | "" })} required aria-invalid={relationshipError ? "true" : undefined} aria-describedby={relationshipError ? fieldErrorId(traveller.id, "guardianRelationship") : undefined}>
                         <option value="">{t("Choose relationship", "Seleccionar relación")}</option>
                         <option value="parent">{t("Parent", "Padre / madre")}</option>
                         <option value="legal-guardian">{t("Legal guardian", "Tutor legal")}</option>
                         <option value="other">{t("Other responsible adult", "Otro adulto responsable")}</option>
                       </select>
+                      {relationshipError ? <span id={fieldErrorId(traveller.id, "guardianRelationship")} className={styles.fieldError}>{relationshipError}</span> : null}
                     </label>
                   </div>
                 </div>
