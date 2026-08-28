@@ -1,0 +1,139 @@
+name: Performance load baseline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: performance-load-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    env:
+      MONGODB_URI: mongodb://127.0.0.1:27017/?replicaSet=rs0
+      MONGODB_DB_NAME: ktravel_ci_performance_${{ github.run_id }}_${{ github.run_attempt }}
+      KTRAVEL_PUBLIC_URL: http://127.0.0.1:3000
+      KTRAVEL_DEPLOYMENT_PROFILE: demo
+      NEXT_PUBLIC_DATA_MODE: demo
+      TRAVEL_DATA_MODE: disabled
+      IDENTITY_MODE: mongodb
+      STAFF_AUTH_MODE: mongodb
+      BOOKING_MODE: mongodb
+      OPERATIONS_MODE: mongodb
+      PAYMENT_LEDGER_MODE: mongodb
+      DEMO_IDENTITY_ENABLED: false
+      DEMO_BOOKING_ENABLED: false
+      DEMO_OPERATIONS_ENABLED: false
+      CRM_SYNC_MODE: disabled
+      ERP_ACCOUNTING_MODE: disabled
+      SUPPLIER_FULFILMENT_ADAPTER_MODE: disabled
+      KTRAVEL_BOOTSTRAP_ADMIN_EMAIL: performance-admin@example.test
+      KTRAVEL_BOOTSTRAP_ADMIN_PASSWORD: Performance-Admin-2026
+      KTRAVEL_BOOTSTRAP_ADMIN_NAME: Performance Admin
+      PERFORMANCE_BASE_URL: http://127.0.0.1:3000
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Resolve dependency lock
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+
+      - name: Clean install from resolved lock
+        run: npm ci --no-fund
+
+      - name: Performance/load source invariants
+        run: npm run check:performance-load
+
+      - name: Start MongoDB 8.0 replica set
+        run: |
+          docker run --rm -d \
+            --name otp-mongo-performance \
+            -p 27017:27017 \
+            mongo:8.0.29 \
+            --replSet rs0 \
+            --bind_ip_all
+
+          reachable=false
+          for attempt in {1..30}; do
+            if docker exec otp-mongo-performance mongosh --quiet --eval 'db.adminCommand({ ping: 1 }).ok' 2>/dev/null | grep -q 1; then
+              reachable=true
+              break
+            fi
+            sleep 1
+          done
+          test "$reachable" = "true"
+
+          docker exec otp-mongo-performance mongosh --quiet --eval \
+            'rs.initiate({_id:"rs0",members:[{_id:0,host:"127.0.0.1:27017"}]})'
+
+          primary=false
+          for attempt in {1..30}; do
+            if docker exec otp-mongo-performance mongosh --quiet --eval 'db.hello().isWritablePrimary' 2>/dev/null | grep -q true; then
+              primary=true
+              break
+            fi
+            sleep 1
+          done
+          test "$primary" = "true"
+
+      - name: Seed controlled catalogue and departure
+        run: npm run test:e2e:seed
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Production build
+        run: npm run build
+
+      - name: Start production application
+        run: |
+          npm start > /tmp/ktravel-performance-server.log 2>&1 &
+          echo $! > /tmp/ktravel-performance-server.pid
+
+          ready=false
+          for attempt in {1..45}; do
+            if curl --fail --silent http://127.0.0.1:3000/api/health/live >/dev/null; then
+              ready=true
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ready" != "true" ]; then
+            cat /tmp/ktravel-performance-server.log || true
+            exit 1
+          fi
+
+      - name: Blocking HTTP performance/load baseline
+        run: npm run test:performance-load
+
+      - name: Application diagnostics on failure
+        if: failure()
+        run: cat /tmp/ktravel-performance-server.log || true
+
+      - name: MongoDB diagnostics on failure
+        if: failure()
+        run: docker logs otp-mongo-performance || true
+
+      - name: Stop production application
+        if: always()
+        run: |
+          if [ -f /tmp/ktravel-performance-server.pid ]; then
+            kill "$(cat /tmp/ktravel-performance-server.pid)" || true
+          fi
+
+      - name: Stop MongoDB test container
+        if: always()
+        run: docker rm -f otp-mongo-performance || true
