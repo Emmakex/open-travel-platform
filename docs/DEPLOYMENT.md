@@ -9,6 +9,7 @@ Before a production rollout, read:
 - [`RELEASES.md`](RELEASES.md) — release identity, SemVer, immutable tags and release sequence;
 - [`MIGRATIONS.md`](MIGRATIONS.md) — configuration/data/wire/key migration classes, verification and rollback;
 - [`CONTAINERS.md`](CONTAINERS.md) — provider-neutral OCI/Docker build, non-root runtime, runtime-only secrets and health checks when using containers;
+- [`REGISTRY.md`](REGISTRY.md) — audited GHCR publication, immutable image identities, digest deployment, SBOM/provenance and attestation verification;
 - [`PRODUCTION-CHECKLIST.md`](PRODUCTION-CHECKLIST.md) — final production review.
 
 ## Exact release identity
@@ -72,7 +73,27 @@ The final image runs as non-root user `app` (`10001:10001`). Privileged configur
 
 The image healthcheck uses `/api/health/live`; production ingress/orchestrators should use `/api/health/ready` before routing traffic. Run `npm run check:container` for the static contract and rely on the blocking `Container distribution` workflow for a real Docker build/start/health/HTTP smoke.
 
-See [`CONTAINERS.md`](CONTAINERS.md). Public registry publication is intentionally outside Phase 11.1.
+See [`CONTAINERS.md`](CONTAINERS.md).
+
+## Published container identity
+
+Phase 11.2 defines GHCR as the public reference registry for audited releases without making it a runtime dependency. When a release is eligible for registry publication, use only its exact SemVer/source-SHA tags and resolve the immutable OCI digest.
+
+```text
+ghcr.io/emmakex/open-travel-platform:vX.Y.Z
+ghcr.io/emmakex/open-travel-platform:sha-<full-source-sha>
+ghcr.io/emmakex/open-travel-platform@sha256:<digest>
+```
+
+Production should deploy the digest, verify its GitHub artifact attestation and record release/tag/source-SHA/digest together. Do not use `latest`, major-only, minor-only or other moving aliases.
+
+Run:
+
+```bash
+npm run check:registry-provenance
+```
+
+and follow [`REGISTRY.md`](REGISTRY.md) for SBOM/provenance/attestation verification. Historical `v1.1.0` is not a container release because its immutable source tag predates the Dockerfile.
 
 ## Build-time versus runtime configuration
 
@@ -269,12 +290,13 @@ npm ci
 npm run check:release
 npm run check:release-migrations
 npm run check:container
+npm run check:registry-provenance
 npm run verify
 npm run build
 npm run package:standalone
 ```
 
-When deploying the container artifact, also perform the image build/run validation described in [`CONTAINERS.md`](CONTAINERS.md).
+When deploying the container artifact, also perform the image build/run validation described in [`CONTAINERS.md`](CONTAINERS.md). For a published image, verify the exact OCI digest and attestation according to [`REGISTRY.md`](REGISTRY.md).
 
 Then verify at minimum:
 
@@ -296,6 +318,7 @@ Before launch review:
 - [`RELEASES.md`](RELEASES.md);
 - [`MIGRATIONS.md`](MIGRATIONS.md);
 - [`CONTAINERS.md`](CONTAINERS.md) when deploying a container;
+- [`REGISTRY.md`](REGISTRY.md) when deploying a published image;
 - [`PRODUCTION-CHECKLIST.md`](PRODUCTION-CHECKLIST.md);
 - [`PRODUCTION-SECURITY.md`](PRODUCTION-SECURITY.md);
 - [`EXTERNAL-MONITORING.md`](EXTERNAL-MONITORING.md);
