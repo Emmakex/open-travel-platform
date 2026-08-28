@@ -22,7 +22,10 @@ Este repositorio es el **core MIT provider-neutral**. Kairoseth Travel es la imp
 
 - datos de clientes e integraciones propietarias permanecen fuera del repositorio público;
 - adapters privados Kairoseth/cliente pueden depender de contratos públicos OTP, nunca al revés;
-- sistemas downstream no reciben autoridad implícita sobre booking, inventario, pricing o pagos.
+- sistemas downstream no reciben autoridad implícita sobre booking, inventario, pricing o pagos;
+- la licencia MIT del software no concede por sí sola permiso para presentar un fork/servicio independiente como Kairoseth Travel oficial.
+
+El uso de branding y marcas se documenta separadamente en [`TRADEMARKS.es.md`](TRADEMARKS.es.md).
 
 ## Posición actual
 
@@ -38,28 +41,21 @@ Slices completados:
 - **10.4 Convenciones de release y migraciones — COMPLETADA**
 - **10.5 Política de lifecycle de upgrades y deprecaciones — COMPLETADA**
 - **10.6 Plantillas de contribución y release — COMPLETADA**
+- **10.7 Política de branding y marcas — COMPLETADA**
 
-La Fase 10.5 establece:
+La Fase 10.7 establece:
 
-- última release estable del major actual como target soportado principal;
-- sin compromiso LTS/backports salvo anuncio explícito;
-- rutas soportadas dentro del mismo major y desde el major inmediatamente anterior;
-- saltos de major solo si están documentados explícitamente;
-- lifecycle público `ACTIVE → DEPRECATED → REMOVED`;
-- retirada ordinaria pública únicamente en una release **MAJOR**;
-- replacement + primera release deprecated + earliest removal como metadatos obligatorios;
-- excepción acelerada solo por seguridad documentada;
-- reglas provider-neutral para configuración, APIs/eventos, interfaces y datos persistentes;
-- gate permanente `npm run check:upgrade-deprecations`.
+- separación explícita entre derechos del software MIT y branding del proyecto/comercial;
+- **Open Travel Platform** como nombre del core/proyecto público provider-neutral;
+- **Kairoseth Travel** como implementación oficial alojada/comercial de referencia;
+- `https://travel.kairoseth.com` como despliegue oficial de referencia;
+- uso descriptivo veraz como “basado en Open Travel Platform” / “compatible con Open Travel Platform”;
+- branding principal diferenciado para forks/servicios operados independientemente;
+- ningún patrocinio, certificación o estado oficial implícito por usar el código MIT;
+- permiso separado para determinados usos de logos, wordmarks y claims oficiales Kairoseth/Kairoseth Travel;
+- gate permanente `npm run check:branding-policy`.
 
-Documentación autoritativa 10.4–10.5:
-
-- [`docs/RELEASES.es.md`](docs/RELEASES.es.md)
-- [`docs/MIGRATIONS.es.md`](docs/MIGRATIONS.es.md)
-- [`docs/UPGRADES.es.md`](docs/UPGRADES.es.md)
-- [`docs/DEPRECATIONS.es.md`](docs/DEPRECATIONS.es.md)
-
-La Fase 10.6 añade una plantilla PR canónica, issue forms enriquecidos, una plantilla reutilizable de release notes y validación permanente mediante `npm run check:contribution-templates`. Consulta [`docs/CONTRIBUTION-TEMPLATES.es.md`](docs/CONTRIBUTION-TEMPLATES.es.md).
+La política no afirma que ninguna marca esté registrada en todas las jurisdicciones; define las reglas del proyecto para el uso de identidad de marca. Consulta [`TRADEMARKS.es.md`](TRADEMARKS.es.md) y [`TRADEMARKS.md`](TRADEMARKS.md).
 
 La validación TEST/LIVE con credenciales Stripe/Redsys sigue siendo una dependencia externa separada.
 
@@ -102,7 +98,7 @@ node .next/standalone/server.js
 
 Para producción consulta [`docs/DEPLOYMENT.es.md`](docs/DEPLOYMENT.es.md) y [`docs/PRODUCTION-CHECKLIST.md`](docs/PRODUCTION-CHECKLIST.md).
 
-## Contrato de release, upgrade y deprecación
+## Contrato de release, upgrade y branding
 
 Releases estables:
 
@@ -130,10 +126,11 @@ npm run check:release
 npm run check:release-migrations
 npm run check:upgrade-deprecations
 npm run check:contribution-templates
+npm run check:branding-policy
 npm run verify
 ```
 
-Consulta [`docs/RELEASES.es.md`](docs/RELEASES.es.md), [`docs/MIGRATIONS.es.md`](docs/MIGRATIONS.es.md), [`docs/UPGRADES.es.md`](docs/UPGRADES.es.md), [`docs/DEPRECATIONS.es.md`](docs/DEPRECATIONS.es.md) y [`docs/CONTRIBUTION-TEMPLATES.es.md`](docs/CONTRIBUTION-TEMPLATES.es.md).
+Consulta [`docs/RELEASES.es.md`](docs/RELEASES.es.md), [`docs/MIGRATIONS.es.md`](docs/MIGRATIONS.es.md), [`docs/UPGRADES.es.md`](docs/UPGRADES.es.md), [`docs/DEPRECATIONS.es.md`](docs/DEPRECATIONS.es.md), [`docs/CONTRIBUTION-TEMPLATES.es.md`](docs/CONTRIBUTION-TEMPLATES.es.md) y [`TRADEMARKS.es.md`](TRADEMARKS.es.md).
 
 ## Documentación
 
@@ -144,6 +141,8 @@ Consulta [`docs/RELEASES.es.md`](docs/RELEASES.es.md), [`docs/MIGRATIONS.es.md`]
 - [`CHANGELOG.md`](CHANGELOG.md)
 - [`CONTRIBUTING.md`](CONTRIBUTING.md)
 - [`SUPPORT.md`](SUPPORT.md)
+- [`TRADEMARKS.es.md`](TRADEMARKS.es.md)
+- [`TRADEMARKS.md`](TRADEMARKS.md)
 - [`docs/RELEASES.es.md`](docs/RELEASES.es.md)
 - [`docs/MIGRATIONS.es.md`](docs/MIGRATIONS.es.md)
 - [`docs/UPGRADES.es.md`](docs/UPGRADES.es.md)
@@ -167,17 +166,20 @@ npm run check:extension-contracts
 npm run check:release-migrations
 npm run check:upgrade-deprecations
 npm run check:contribution-templates
+npm run check:branding-policy
 npm run verify
 ```
 
-Workflows dedicados protegen contratos de extensión, releases/migraciones, lifecycle de upgrades/deprecaciones y plantillas de contribución/release en PR y `main`.
+Workflows dedicados protegen contratos de extensión, releases/migraciones, lifecycle de upgrades/deprecaciones, plantillas de contribución/release y separación de branding/marcas en PR y `main`.
 
 ## Regla de cierre de fases
 
 Una fase/slice no está completada hasta terminar implementación/pruebas, sincronizar documentación EN/ES, revisar diff, tener CI obligatorio verde, mergear a `main` y verificar `main` antes de iniciar el siguiente bloque.
 
-La Fase 10.6 sigue la misma regla; branding/trademark permanece separado hasta cerrar este slice.
+La Fase 10.7 sigue la misma regla; la auditoría/release final de Fase 10 permanece separada hasta cerrar este slice.
 
-## Licencia
+## Licencia y branding
 
-MIT. Consulta [`LICENSE`](LICENSE).
+Software: MIT. Consulta [`LICENSE`](LICENSE).
+
+Los nombres del proyecto/comerciales y la identidad visual se regulan separadamente en [`TRADEMARKS.es.md`](TRADEMARKS.es.md). La política de branding no relicencia silenciosamente el software.
