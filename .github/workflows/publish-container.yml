@@ -1,0 +1,132 @@
+name: Publish audited container
+
+on:
+  workflow_run:
+    workflows: ["Publish audited release"]
+    types: [completed]
+
+permissions:
+  contents: read
+  packages: write
+  attestations: write
+  id-token: write
+
+concurrency:
+  group: publish-audited-container-${{ github.event.workflow_run.head_sha }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'workflow_run' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      AUDITED_SHA: ${{ github.event.workflow_run.head_sha }}
+      IMAGE: ghcr.io/${{ github.repository_owner }}/open-travel-platform
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout exact audited source revision
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - name: Resolve immutable release source
+        id: release
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(node -p "require('./package.json').version")"
+          TAG="v${VERSION}"
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+
+          # An existing audited GitHub Release is mandatory.
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null
+
+          # Resolve annotated/lightweight tag to its commit without moving history.
+          git fetch --force origin "refs/tags/${TAG}:refs/tags/${TAG}"
+          TAG_COMMIT="$(git rev-list -n 1 "$TAG")"
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "tag_commit=$TAG_COMMIT" >> "$GITHUB_OUTPUT"
+
+          if [[ "$TAG_COMMIT" != "$AUDITED_SHA" ]]; then
+            echo "Tag ${TAG} resolves to ${TAG_COMMIT}, not audited SHA ${AUDITED_SHA}; no container will be published."
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Historical v1.1.0 predates the Docker distribution baseline and is intentionally not rebuilt.
+          if [[ "$TAG" == "v1.1.0" ]]; then
+            echo "Historical ${TAG} predates container distribution; refusing retroactive image publication."
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "publish=true" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        if: steps.release.outputs.publish == 'true'
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        if: steps.release.outputs.publish == 'true'
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e
+
+      - name: Generate immutable image metadata
+        if: steps.release.outputs.publish == 'true'
+        id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=raw,value=${{ steps.release.outputs.tag }}
+            type=raw,value=sha-${{ env.AUDITED_SHA }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ env.AUDITED_SHA }}
+            org.opencontainers.image.version=${{ steps.release.outputs.version }}
+            org.opencontainers.image.licenses=MIT
+
+      - name: Build and push audited image with SBOM and provenance
+        if: steps.release.outputs.publish == 'true'
+        id: build
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          provenance: mode=max
+          sbom: true
+
+      - name: Create GitHub artifact attestation for OCI digest
+        if: steps.release.outputs.publish == 'true'
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
+        with:
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+
+      - name: Record immutable published identity
+        if: steps.release.outputs.publish == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Published ${IMAGE}:${{ steps.release.outputs.tag }}"
+          echo "Published ${IMAGE}:sha-${AUDITED_SHA}"
+          echo "Digest: ${{ steps.build.outputs.digest }}"
+          echo "Deploy by digest: ${IMAGE}@${{ steps.build.outputs.digest }}"
+
+      - name: Explain safe no-op
+        if: steps.release.outputs.publish != 'true'
+        shell: bash
+        run: echo "No new immutable release source matched this audited main SHA; registry publication skipped safely."
