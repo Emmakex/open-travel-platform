@@ -4,11 +4,12 @@ title: "bug: "
 body:
   - type: markdown
     attributes:
-      value: Thanks for helping improve the project. Do not include private customer data or protected configuration.
+      value: Thanks for helping improve the project. Do not include private customer data, credentials, protected Traveller Data or deployment secrets. Security vulnerabilities must be reported privately through the repository security policy.
   - type: input
     id: version
     attributes:
       label: Version or commit
+      description: Use an immutable release/tag or exact commit SHA when possible.
       placeholder: v1.0.0 or commit SHA
     validations:
       required: true
@@ -17,12 +18,16 @@ body:
     attributes:
       label: Area
       options:
-        - Catalogue
+        - Catalogue / travel data
         - Identity / customer account
-        - Booking / availability
+        - Booking / availability / inventory
+        - Payment / finance
+        - Traveller Data / privacy
         - Operator / admin operations
-        - Adapter / integration
-        - Build / CI / deployment
+        - Supplier / CRM / ERP / integration
+        - Public extension contract / adapter
+        - Build / CI / deployment / upgrade
+        - Accessibility / UX
         - Documentation
         - Other
     validations:
@@ -31,7 +36,7 @@ body:
     id: reproduction
     attributes:
       label: Reproduction steps
-      description: Provide the smallest reproducible sequence.
+      description: Provide the smallest reproducible sequence. Redact secrets and protected/customer data.
     validations:
       required: true
   - type: textarea
@@ -50,11 +55,27 @@ body:
     id: environment
     attributes:
       label: Environment
-      description: Node version, deployment environment and active adapter modes when relevant.
+      description: Node version, deployment mode, relevant adapter modes, browser/OS when relevant, and whether this is demo or live. Do not paste secret values.
+  - type: dropdown
+    id: regression
+    attributes:
+      label: Regression status
+      options:
+        - Unknown / not sure
+        - Present in the current release and earlier versions
+        - Worked in an earlier release/commit
+        - New installation / first use
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Compatibility or upgrade context
+      description: If this appeared after an upgrade, state exact source and target versions/SHAs and any migration performed.
   - type: checkboxes
     id: safety
     attributes:
       label: Safety check
       options:
-        - label: I removed private customer data and protected deployment values from this report.
+        - label: I removed private customer data, protected Traveller Data, credentials and protected deployment values from this report.
+          required: true
+        - label: This is not a security vulnerability that should be reported privately.
           required: true
