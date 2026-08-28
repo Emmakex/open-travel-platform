@@ -1,0 +1,42 @@
+name: Branding and trademark policy validation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: branding-policy-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Resolve dependency lock
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+
+      - name: Clean install from resolved lock
+        run: npm ci --no-fund
+
+      - name: Upgrade and deprecation lifecycle gate
+        run: npm run check:upgrade-deprecations
+
+      - name: Contribution and release template gate
+        run: npm run check:contribution-templates
+
+      - name: Branding and trademark policy gate
+        run: npm run check:branding-policy
