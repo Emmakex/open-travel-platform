@@ -44,6 +44,15 @@ For deprecations/removals state the replacement, first deprecated release, earli
 - Are browser-visible environment variables safe to expose publicly?
 - Are provider payloads still contained and normalized at adapter boundaries?
 
+## Branding / trademark impact
+
+- [ ] No project/commercial branding impact
+- [ ] Open Travel Platform project naming/attribution changes
+- [ ] Kairoseth / Kairoseth Travel wording or official-status claim changes
+- [ ] Logo/wordmark/visual-brand asset changes
+
+If branding changes, confirm [`TRADEMARKS.md`](../TRADEMARKS.md) remains accurate. MIT software rights must not be represented as permission to claim an independent service is official Kairoseth Travel.
+
 ## UX / accessibility — visible changes only
 
 - [ ] Desktop layout reviewed
@@ -60,6 +69,8 @@ For deprecations/removals state the replacement, first deprecated release, earli
 - [ ] `npm run check:extension-contracts`
 - [ ] `npm run check:release-migrations`
 - [ ] `npm run check:upgrade-deprecations`
+- [ ] `npm run check:contribution-templates`
+- [ ] `npm run check:branding-policy`
 - [ ] `npm run verify`
 - [ ] Relevant runtime/integration/E2E flow tested when applicable
 - [ ] No private customer data, credentials or protected deployment values committed
