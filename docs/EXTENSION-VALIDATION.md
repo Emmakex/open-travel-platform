@@ -2,7 +2,7 @@
 
 <p align="center"><strong>English</strong> · <a href="./EXTENSION-VALIDATION.es.md">Español</a></p>
 
-Status: **Phase 10.3.4 — COMPLETE candidate pending green CI + merge**  
+Status: **Phase 10.3.4 — COMPLETE**  
 Gate: `npm run check:extension-contracts`  
 Implementation: `scripts/extension-contract-check.mjs`  
 Dedicated CI: `.github/workflows/extension-contracts.yml`
@@ -161,7 +161,7 @@ When a legitimate change needs to alter a protected invariant:
 6. update `extension-contract-check.mjs` to encode the new intended invariant;
 7. add/adjust runtime contract tests;
 8. update EN/ES README, ROADMAP, CHANGELOG and relevant contract docs;
-9. require green CI before merge.
+9. require green CI, merge to `main`, and verify `main` before advancing.
 
 The gate is intentionally strict: updating it is part of changing the public extension contract, not a workaround for a failing test.
 
@@ -179,18 +179,19 @@ The gate is intentionally strict: updating it is part of changing the public ext
 
 Focused checks test each capability deeply; the new gate protects cross-capability extension-model consistency.
 
-## Phase 10.3 closure
+## Phase 10.3 completion
 
-After the closing PR is green and merged, all Phase 10.3 slices are complete:
+All Phase 10.3 slices are complete:
 
 ```text
 10.3.1  Inventory + authority map                 COMPLETE
 10.3.2  Compatibility/versioning                  COMPLETE
 10.3.3  Contributor reference adapters            COMPLETE
 10.3.4  Permanent automated validation            COMPLETE
+10.3     Extension contracts/reference adapters   COMPLETE
 ```
 
-Phase 10.3 itself is only considered COMPLETE after the closing PR is merged to `main` and `main` is verified.
+The permanent validation introduced here remains a required safeguard for future public extension changes. Every later phase must still satisfy the project completion rule before the next phase begins.
 
 ## Related documentation
 
