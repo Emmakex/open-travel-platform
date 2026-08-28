@@ -23,10 +23,11 @@ npm run check:extension-contracts
 npm run check:release-migrations
 npm run check:upgrade-deprecations
 npm run check:contribution-templates
+npm run check:branding-policy
 npm run verify
 ```
 
-The permanent gates protect extension architecture, release/migration conventions, upgrade/deprecation lifecycle and contribution/release templates. `verify` includes them plus the other project checks, TypeScript validation and production build.
+The permanent gates protect extension architecture, release/migration conventions, upgrade/deprecation lifecycle, contribution/release templates and project/reference branding boundaries. `verify` includes them plus the other project checks, TypeScript validation and production build.
 
 GitHub Actions additionally exercises real MongoDB replica sets, local HTTP adapter contracts, privacy, accessibility, recovery and performance/resource baselines.
 
@@ -107,17 +108,11 @@ The repository uses exactly one canonical pull request template:
 .github/PULL_REQUEST_TEMPLATE.md
 ```
 
-It turns the architecture/release policies into a practical checklist covering scope, SemVer, migrations, lifecycle, authority/security/privacy, UX/accessibility, validation and documentation.
+It turns the architecture/release policies into a practical checklist covering scope, SemVer, migrations, lifecycle, authority/security/privacy, branding/identity, UX/accessibility, validation and documentation.
 
 Issue forms under `.github/ISSUE_TEMPLATE/` collect safe triage context without asking reporters for production credentials, private customer data or protected Traveller Data. Security vulnerabilities go through `SECURITY.md` rather than public issues.
 
-Maintainers use:
-
-```text
-.github/RELEASE_TEMPLATE.md
-```
-
-as the reusable release-notes checklist. It does not automate publication: releases still require verified `main`, immutable `vX.Y.Z` tags and the procedures in `RELEASES.md`, `MIGRATIONS.md`, `UPGRADES.md` and `DEPRECATIONS.md`.
+Maintainers use `.github/RELEASE_TEMPLATE.md` as the reusable release-notes checklist. It does not automate publication: releases still require verified `main`, immutable `vX.Y.Z` tags and the procedures in `RELEASES.md`, `MIGRATIONS.md`, `UPGRADES.md` and `DEPRECATIONS.md`.
 
 The permanent template gate is:
 
@@ -126,6 +121,28 @@ npm run check:contribution-templates
 ```
 
 Do not reintroduce case-variant duplicate PR templates.
+
+## Branding and project identity
+
+Read [`TRADEMARKS.md`](TRADEMARKS.md) / [`TRADEMARKS.es.md`](TRADEMARKS.es.md) before changing public names, domains, site defaults or brand-related assets.
+
+Core rules:
+
+- the MIT software license remains separate from branding/identity guidance;
+- **Open Travel Platform** identifies the public upstream core;
+- **Kairoseth Travel** identifies the official hosted/commercial reference implementation at `travel.kairoseth.com`;
+- independent public/commercial deployments should use their own primary product identity and may truthfully say “Based on Open Travel Platform” or “Powered by Open Travel Platform”;
+- do not imply registered, official, certified, approved, partner or endorsed status without an authoritative basis;
+- do not introduce customer/vendor-specific branding as a mandatory core dependency;
+- `KTRAVEL_*` variables are legacy technical configuration identifiers, not a branding grant; renaming them requires the normal deprecation/migration lifecycle.
+
+Branding-related PRs must classify compatibility/migration impact and update the bilingual policy when behavior or guidance changes.
+
+The permanent branding gate is:
+
+```bash
+npm run check:branding-policy
+```
 
 ## Pull requests
 
@@ -137,6 +154,7 @@ A PR should explain:
 - compatibility impact;
 - release/migration impact;
 - upgrade/deprecation impact;
+- branding/identity impact;
 - configuration/migration requirements;
 - rollback/recovery when state changes;
 - how the change was validated.
