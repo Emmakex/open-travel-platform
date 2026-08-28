@@ -2,7 +2,7 @@
 
 <p align="center"><strong>English</strong> · <a href="./TRADEMARKS.es.md">Español</a></p>
 
-Status: **Phase 10.7 — COMPLETE candidate pending closing PR/CI/merge**
+Status: **Phase 10.7 — COMPLETE**
 
 ## Purpose
 
