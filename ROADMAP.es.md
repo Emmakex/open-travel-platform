@@ -9,7 +9,7 @@ El roadmap mantiene alineados dos objetivos:
 1. conservar el core público portable, neutral respecto a proveedores y útil para otras agencias/desarrolladores;
 2. continuar endureciendo Kairoseth Travel sin acoplar el core a un PSP, proveedor, CRM, ERP, CMS, vendor de identidad o hosting concreto.
 
-_Última actualización: 27 de agosto de 2026._
+_Última actualización: 28 de agosto de 2026._
 
 ---
 
@@ -17,9 +17,9 @@ _Última actualización: 27 de agosto de 2026._
 
 La plataforma está muy por encima del MVP original de catálogo/reservas. Ya están implementadas identidad persistente, reservas/inventario transaccionales, pricing por viajero, alojamiento, servicios independientes, pagos, datos post-compra, modificaciones, workflow Operator avanzado, permisos granulares, documentos, reporting y la infraestructura común de integraciones.
 
-**La Fase 8 está COMPLETADA. La Fase 9 — Endurecimiento productivo está EN PROGRESO: la Fase 9A de seguridad / operabilidad productiva, el baseline crítico de persistencia/concurrencia/contratos de la Fase 9B y la Fase 9C de observabilidad/recuperación/auditoría privilegiada están COMPLETADOS. La Fase 9D está EN PROGRESO: 9D-1 de derechos de privacidad, 9D-2 de acceso/portabilidad/limitación/supresión controlada y 9D-3 de baseline regulatorio de retención están COMPLETADOS. La Fase 9D-4 de accesibilidad es la SIGUIENTE.**
+**La Fase 8 está COMPLETADA. La Fase 9 — Endurecimiento productivo está EN PROGRESO: la Fase 9A de seguridad / operabilidad productiva, el baseline crítico de persistencia/concurrencia/contratos de la Fase 9B y la Fase 9C de observabilidad/recuperación/auditoría privilegiada están COMPLETADOS. La Fase 9D está EN PROGRESO: 9D-1 de derechos de privacidad, 9D-2 de acceso/portabilidad/limitación/supresión controlada, 9D-3 de baseline regulatorio de retención y 9D-4 de accesibilidad están COMPLETADOS. La Fase 9D-5 de rendimiento/carga es la SIGUIENTE.**
 
-La validación E2E TEST/LIVE con credenciales Stripe/Redsys sigue pendiente hasta disponer de cuentas proveedor adecuadas. Debe incorporarse en cuanto existan credenciales, pero no bloquea la Fase 9D. El Browser E2E permanece como señal CI informativa/no bloqueante por política explícita del proyecto; los gates bloqueantes cubren seguridad determinista, TypeScript/build/smoke, concurrencia/idempotencia/modificaciones MongoDB, contratos HTTP locales de adapters, observabilidad/failure transport, rollback de auditoría privilegiada, rotación de claves, recovery MongoDB, planes de consulta MongoDB reales e invariantes de privacidad/retención.
+La validación E2E TEST/LIVE con credenciales Stripe/Redsys sigue pendiente hasta disponer de cuentas proveedor adecuadas. Debe incorporarse en cuanto existan credenciales, pero no bloquea la Fase 9D. El Browser E2E general permanece como señal CI informativa/no bloqueante por política explícita del proyecto; los journeys dedicados de accesibilidad para foundation global, autenticación cliente, Traveller Data/privacidad, booking/pagos y workflows Operator se ejecutan como workflows bloqueantes. Los gates bloqueantes también cubren seguridad determinista, TypeScript/build/smoke, concurrencia/idempotencia/modificaciones MongoDB, contratos HTTP locales de adapters, observabilidad/failure transport, rollback de auditoría privilegiada, rotación de claves, recovery MongoDB, planes de consulta MongoDB reales e invariantes de privacidad/retención.
 
 ---
 
@@ -381,14 +381,17 @@ La prioridad es endurecer para producción la amplia superficie funcional ya con
 - guía EN/ES cita fuentes oficiales RGPD, mercantiles/fiscales españolas y de viajes/consumo UE/España sin afirmar certificación jurídica;
 - gate bloqueante `check:privacy-retention-policy`, test unitario y workflow CI dedicado.
 
-### 9D-4 — Preparación de accesibilidad — SIGUIENTE
-- auditar paths críticos de reserva pública, cuenta y Operator con criterios orientados a WCAG 2.2 AA;
-- operación por teclado, orden/visibilidad del foco, landmarks semánticos, labels, errores de formularios y mensajes de estado;
-- contraste, zoom/reflow y comportamiento móvil/táctil;
-- checks automatizados más revisión manual explícita donde la automatización no pueda establecer conformidad;
-- documentar riesgos residuales de accesibilidad sin afirmar certificación basándose solo en tests automáticos.
+### 9D-4 — Preparación de accesibilidad — COMPLETADO
+- baseline global de teclado con skip navigation bilingüe, `:focus-visible`, soporte de reduced motion, forced-colors y smoke de reflow a 320px;
+- formularios cliente de login, registro y recuperación/reset de contraseña exponen errores server-side, controles inválidos, relaciones de ayuda y comportamiento de foco accionable;
+- Traveller Data y workflows de derechos de privacidad exponen labels estables, regiones vivas de error/status, nombres contextuales de acciones y recuperación dirigida de foco/estado inválido;
+- reservas de viaje/servicio y flujos autenticados de pago exponen errores assertive, estados de pago polite, resúmenes/grupos de métodos nombrados y semántica de retorno de proveedor sin cambiar la autoridad de pagos;
+- workflow protegido de reservas Operator, tareas/seguimientos y fulfilment de proveedores exponen nombres contextuales de formularios/grupos, `aria-invalid`, relaciones de error y semántica diferenciada status/alert;
+- workflows Playwright/Chromium bloqueantes ejercitan journeys persistentes con MongoDB real y autenticación cliente/staff para los slices críticos;
+- documentación de ingeniería EN/ES y gates permanentes de invariantes preservan el contrato implementado;
+- es un baseline técnico orientado a WCAG 2.2 AA, no una certificación: la revisión específica de cada despliegue con teclado, lector de pantalla, contraste, zoom/reflow y contenido real sigue siendo responsabilidad de release.
 
-### 9D-5 — Preparación de rendimiento/carga — DESPUÉS DE 9D-4
+### 9D-5 — Preparación de rendimiento/carga — SIGUIENTE
 - establecer baselines repetibles de rendimiento/carga para reserva/cuenta cliente y paths críticos de Operator;
 - validar latencia server, comportamiento de concurrencia/recursos y fallo acotado bajo carga representativa;
 - aprovechar el baseline ya completado de query plans/índices MongoDB sin añadir índices especulativos;
@@ -441,9 +444,9 @@ La validación TEST/LIVE Stripe/Redsys con credenciales sigue siendo requisito d
   ↓
 9D-3  Baseline regulatorio de retención — COMPLETADO
   ↓
-9D-4  Preparación de accesibilidad — SIGUIENTE
+9D-4  Preparación de accesibilidad — COMPLETADO
   ↓
-9D-5  Preparación de rendimiento/carga
+9D-5  Preparación de rendimiento/carga — SIGUIENTE
   ↓
 10    Productización open-source / release
   ↓
