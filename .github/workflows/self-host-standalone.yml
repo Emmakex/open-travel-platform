@@ -1,0 +1,85 @@
+name: Self-host standalone
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Clean install from lockfile
+        run: npm ci --no-fund
+
+      - name: Self-host source invariants
+        run: npm run check:self-host
+
+      - name: Create safe demo build configuration
+        run: |
+          rm -f .env.local
+          npm run setup:demo
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Build standalone output
+        run: npm run build
+
+      - name: Prepare transportable standalone bundle
+        run: |
+          npm run package:standalone
+          test -f .next/standalone/server.js
+          test -d .next/standalone/.next/static
+          test -f .next/standalone/public/media/barcelona-cover.svg
+
+      - name: Start standalone server
+        run: |
+          HOSTNAME=127.0.0.1 PORT=3000 node --env-file=.env.demo.example .next/standalone/server.js > /tmp/open-travel-standalone.log 2>&1 &
+          echo $! > /tmp/open-travel-standalone.pid
+          ready=false
+          for attempt in {1..45}; do
+            if curl --fail --silent http://127.0.0.1:3000/api/health/live >/dev/null; then
+              ready=true
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ready" != "true" ]; then
+            cat /tmp/open-travel-standalone.log || true
+            exit 1
+          fi
+
+      - name: Standalone HTTP and asset smoke
+        run: |
+          curl --fail --silent --show-error http://127.0.0.1:3000/ >/dev/null
+          curl --fail --silent --show-error http://127.0.0.1:3000/trips >/dev/null
+          curl --fail --silent --show-error http://127.0.0.1:3000/destinations >/dev/null
+          curl --fail --silent --show-error http://127.0.0.1:3000/operator/sign-in >/dev/null
+          curl --fail --silent --show-error http://127.0.0.1:3000/api/health/live >/dev/null
+          curl --fail --silent --show-error http://127.0.0.1:3000/media/barcelona-cover.svg >/dev/null
+
+      - name: Standalone diagnostics on failure
+        if: failure()
+        run: cat /tmp/open-travel-standalone.log || true
+
+      - name: Stop standalone server
+        if: always()
+        run: |
+          if [ -f /tmp/open-travel-standalone.pid ]; then
+            kill "$(cat /tmp/open-travel-standalone.pid)" || true
+          fi

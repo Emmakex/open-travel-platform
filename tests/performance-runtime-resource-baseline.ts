@@ -6,7 +6,7 @@ import type { Readable } from "node:stream";
 
 const port = Number(process.env.PERFORMANCE_RESOURCE_PORT || "3100");
 const baseUrl = `http://127.0.0.1:${port}`;
-const nextBin = path.join(process.cwd(), "node_modules", "next", "dist", "bin", "next");
+const standaloneServer = path.join(process.cwd(), ".next", "standalone", "server.js");
 
 type ResourceServerProcess = ChildProcessByStdio<null, Readable, Readable>;
 
@@ -123,12 +123,12 @@ async function requestOnce(route: string) {
 
 async function waitForServer(child: ResourceServerProcess) {
   for (let attempt = 0; attempt < 120; attempt += 1) {
-    if (child.exitCode !== null) throw new Error(`Next.js server exited before becoming ready with code ${child.exitCode}.`);
+    if (child.exitCode !== null) throw new Error(`Standalone server exited before becoming ready with code ${child.exitCode}.`);
     const result = await requestOnce("/api/health/live");
     if (result.ok) return;
     await sleep(250);
   }
-  throw new Error("Next.js production server did not become ready within 30 seconds.");
+  throw new Error("Standalone production server did not become ready within 30 seconds.");
 }
 
 async function warmRoutes() {
@@ -217,7 +217,7 @@ async function main() {
   if (process.platform !== "linux") throw new Error("Runtime resource baseline requires Linux /proc telemetry.");
   if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error(`Invalid PERFORMANCE_RESOURCE_PORT: ${port}`);
 
-  const child = spawn(process.execPath, [nextBin, "start", "-H", "127.0.0.1", "-p", String(port)], {
+  const child = spawn(process.execPath, [standaloneServer], {
     cwd: process.cwd(),
     env: { ...process.env, NODE_ENV: "production", PORT: String(port), HOSTNAME: "127.0.0.1" },
     stdio: ["ignore", "pipe", "pipe"]
@@ -248,7 +248,7 @@ async function main() {
 
     if (sampler) clearInterval(sampler);
     sampler = undefined;
-    if (child.exitCode !== null) throw new Error(`Next.js server exited under load with code ${child.exitCode}.`);
+    if (child.exitCode !== null) throw new Error(`Standalone server exited under load with code ${child.exitCode}.`);
 
     const fdRecovery = await waitForFdRecovery(child.pid!, baseline.fileDescriptors);
     samples.push(...fdRecovery.samples);
@@ -268,10 +268,11 @@ async function main() {
     if (!fdRecovery.recovered) throw new Error(`Post-load file descriptors ${postLoad.fileDescriptors} did not recover near baseline ${baseline.fileDescriptors} within ${POST_FD_RECOVERY_TIMEOUT_MS}ms.`);
     if (maxThreads > baseline.threads + THREAD_GROWTH_BUDGET) throw new Error(`Threads grew from ${baseline.threads} to ${maxThreads}, exceeding bounded CI growth.`);
 
-    console.log(JSON.stringify({ event: "runtime_resource_load", ...sustained }));
-    console.log(JSON.stringify({ event: "runtime_resource_spike", ...spike }));
+    console.log(JSON.stringify({ event: "runtime_resource_load", runtime: "standalone", ...sustained }));
+    console.log(JSON.stringify({ event: "runtime_resource_spike", runtime: "standalone", ...spike }));
     console.log(JSON.stringify({
       event: "runtime_resource_complete",
+      runtime: "standalone",
       baseline,
       postLoad,
       fdRecoveryMs: fdRecovery.elapsedMs,

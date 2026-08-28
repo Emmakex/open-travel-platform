@@ -403,17 +403,27 @@ La validación TEST/LIVE Stripe/Redsys con credenciales sigue siendo requisito d
 
 ---
 
-# Fase 10 — Productización open-source — SIGUIENTE
+# Fase 10 — Productización open-source — EN CURSO
 
-- documentación de entorno productivo;
-- seed/setup demo limpio;
-- instalación/despliegue desde clon limpio;
-- adapters de referencia y contratos de extensión;
-- releases/migraciones versionadas;
-- templates de contribución y documentación pública API/extensiones;
-- ejemplo opcional Docker/self-host;
-- política de marca/trademark;
-- adapters propietarios Kairoseth/cliente fuera del core MIT cuando corresponda.
+### 10.1 — Bootstrap demo reproducible desde clon limpio — COMPLETADO
+- lockfile npm 11 versionado para que `npm ci` funcione desde un clon limpio;
+- `.env.demo.example` seguro y `npm run setup:demo` no destructivo sin exigir MongoDB, SMTP, PSP, CRM, ERP ni cuentas de proveedor;
+- guías EN/ES de primeros pasos preservan la frontera provider-neutral con Kairoseth;
+- smoke bloqueante desde checkout limpio demuestra build, arranque y HTTP del contrato público.
+
+### 10.2 — Despliegue self-host standalone provider-neutral — COMPLETADO
+- `npm run package:standalone` convierte `output: standalone` de Next.js en un runtime transportable con `.next/static` y assets de `public`;
+- CI self-host bloqueante arranca el `.next/standalone/server.js` real y valida páginas públicas, liveness y un asset sin infraestructura externa;
+- el baseline de recursos runtime mide ahora ese mismo proceso standalone en lugar del CLI de Next.js;
+- guía de despliegue bilingüe cubre configuración build/runtime, readiness live, proxy inverso/TLS, MongoDB, pagos, workers, secretos, releases inmutables y rollback;
+- `travel.kairoseth.com` sigue siendo despliegue comercial/de referencia, no dependencia del core MIT.
+
+### 10.3 — Contratos de extensión y adapters de referencia — SIGUIENTE
+- consolidar puntos públicos de extensión y contratos provider-neutral estables;
+- añadir ejemplos para contribuidores que implementen adapters sin otorgar a downstream autoridad sobre reservas/pagos del core;
+- definir expectativas de compatibilidad/versionado de contratos antes de ampliar el ecosistema.
+
+Los siguientes bloques de Fase 10 cubrirán convenciones de releases/migraciones, templates de contribución y política de marca/trademark manteniendo adapters propietarios Kairoseth/cliente fuera del core MIT cuando corresponda.
 
 ---
 
@@ -450,7 +460,11 @@ La validación TEST/LIVE Stripe/Redsys con credenciales sigue siendo requisito d
   ↓
 9D-5  Preparación de rendimiento/carga — COMPLETADO
   ↓
-10    Productización open-source / release — SIGUIENTE
+10.1  Bootstrap demo desde clon limpio — COMPLETADO
+  ↓
+10.2  Despliegue self-host standalone — COMPLETADO
+  ↓
+10.3  Contratos de extensión/adapters de referencia — SIGUIENTE
   ↓
 adapters opcionales según necesidad comercial
 ```

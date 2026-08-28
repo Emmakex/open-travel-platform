@@ -412,17 +412,27 @@ Credentialed Stripe/Redsys TEST/LIVE validation remains a production-hardening r
 
 ---
 
-# Phase 10 — Open-source productisation — NEXT
+# Phase 10 — Open-source productisation — IN PROGRESS
 
-- production environment documentation;
-- clean demo seed/setup;
-- fresh-clone install/deployment guide;
-- reference adapters and extension contracts;
-- versioned releases/migrations;
-- contribution templates and public API/extension docs;
-- optional Docker/self-host example;
-- trademark/branding policy;
-- proprietary Kairoseth/customer adapters outside the MIT core where appropriate.
+### 10.1 — Reproducible fresh-clone/demo bootstrap — COMPLETE
+- versioned npm 11 lockfile makes `npm ci` work from a clean clone;
+- safe `.env.demo.example` and non-destructive `npm run setup:demo` require no MongoDB, SMTP, PSP, CRM, ERP or supplier account;
+- EN/ES getting-started guides preserve the provider-neutral Kairoseth boundary;
+- blocking clean-checkout build/start/HTTP smoke proves the public onboarding contract.
+
+### 10.2 — Provider-neutral self-host standalone deployment — COMPLETE
+- `npm run package:standalone` turns Next.js `output: standalone` into a transportable runtime with `.next/static` and `public` assets;
+- blocking self-host CI starts the real `.next/standalone/server.js` and validates public pages, liveness and a public asset without external infrastructure;
+- the runtime resource baseline now measures that same standalone process instead of the Next.js CLI;
+- deployment guidance is bilingual and covers build-time/runtime configuration, live readiness, reverse proxy/TLS, MongoDB, payments, workers, secrets, immutable releases and rollback;
+- `travel.kairoseth.com` remains a reference/commercial deployment, not a dependency of the MIT core.
+
+### 10.3 — Extension contracts and reference adapters — NEXT
+- consolidate public extension points and stable provider-neutral adapter contracts;
+- add contributor-facing examples for implementing adapters without granting downstream systems authority over core booking/payment state;
+- define compatibility/versioning expectations for extension contracts before broader ecosystem work.
+
+Later Phase 10 slices will cover release/migration conventions, contribution templates and trademark/branding policy while keeping proprietary Kairoseth/customer adapters outside the MIT core where appropriate.
 
 ---
 
@@ -459,7 +469,11 @@ Credentialed Stripe/Redsys TEST/LIVE validation remains a production-hardening r
   ↓
 9D-5  Performance/load readiness — COMPLETE
   ↓
-10    Open-source productisation / release — NEXT
+10.1  Fresh-clone/demo bootstrap — COMPLETE
+  ↓
+10.2  Self-host standalone deployment — COMPLETE
+  ↓
+10.3  Extension contracts/reference adapters — NEXT
   ↓
 optional adapters driven by commercial need
 ```

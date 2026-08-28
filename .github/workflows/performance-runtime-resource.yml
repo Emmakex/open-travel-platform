@@ -97,6 +97,9 @@ jobs:
       - name: Production build
         run: npm run build
 
+      - name: Prepare standalone runtime
+        run: npm run package:standalone
+
       - name: Blocking runtime resource and bounded spike baseline
         run: npm run test:performance-runtime-resource
 
