@@ -1,10 +1,10 @@
 # Phase 9D-5.4 — Runtime resource and capacity baseline
 
-Phase **9D-5.4** closes the CI-side performance/load readiness baseline by observing the application process itself while a production Next.js build is under bounded sustained load and a higher-concurrency spike.
+Phase **9D-5.4** closes the CI-side performance/load readiness baseline by observing the application process itself while the same packaged Next.js standalone runtime used for self-host deployment is under bounded sustained load and a higher-concurrency spike.
 
 ## What this validates
 
-The blocking Linux CI workflow starts a disposable local MongoDB 8 replica set, seeds controlled travel data, builds the production application and then lets the test own the `next start` process lifecycle.
+The blocking Linux CI workflow starts a disposable local MongoDB 8 replica set, seeds controlled travel data, builds the production application, runs `npm run package:standalone` and then lets the test own the `.next/standalone/server.js` process lifecycle.
 
 The measured workload remains **read-only**. It mixes representative local GET requests across:
 
@@ -19,7 +19,7 @@ The test first warms these routes, records a process baseline, then runs:
 - **sustained load:** 240 requests at concurrency 12;
 - **bounded spike:** 320 requests at concurrency 32.
 
-Every request must return HTTP 200. The process must remain alive throughout the spike and `/api/health/live` must still succeed after the load.
+Every request must return HTTP 200. The standalone process must remain alive throughout the spike and `/api/health/live` must still succeed after the load.
 
 ## Runtime signals
 
@@ -30,15 +30,15 @@ Linux `/proc` is sampled while the load runs. The baseline records:
 - open **file descriptors**;
 - process thread count.
 
-The CI gate applies deliberately conservative ceilings to absolute RSS, RSS growth, file-descriptor growth, post-load descriptor recovery and thread growth. These checks are intended to catch obvious leaks, runaway resource growth and failure to recover after a bounded burst.
+The CI gate applies deliberately conservative ceilings to absolute RSS, RSS growth, file-descriptor growth, bounded post-load descriptor recovery and thread growth. These checks are intended to catch obvious leaks, runaway resource growth and failure to recover after a bounded burst.
 
 The test also emits p50/p95/p99 latency and throughput for both sustained and spike phases.
 
 ## CI budgets are not production SLOs
 
-The runtime budgets are **not production SLOs**, sizing guarantees or customer-facing capacity commitments. GitHub-hosted runners differ from the Kairoseth Travel production environment in CPU allocation, memory, network, filesystem, process model, CDN/cache behavior and MongoDB topology.
+The runtime budgets are **not production SLOs**, sizing guarantees or customer-facing capacity commitments. GitHub-hosted runners differ from a real production environment in CPU allocation, memory, network, filesystem, process model, CDN/cache behavior and MongoDB topology.
 
-A green CI run means that the reference application remains bounded and recoverable under this repeatable synthetic profile. It does not prove the maximum safe production traffic level.
+A green CI run means that the packaged standalone application remains bounded and recoverable under this repeatable synthetic profile. It does not prove the maximum safe production traffic level.
 
 ## Production capacity thresholds
 
@@ -74,6 +74,6 @@ With 9D-5.4, the performance/load readiness baseline consists of:
 - **9D-5.1:** public/read-only HTTP latency and throughput;
 - **9D-5.2:** authenticated customer and Operator read load using real persistent sessions;
 - **9D-5.3:** bounded reservation/cancellation mutation throughput with post-load correctness;
-- **9D-5.4:** runtime RSS/file-descriptor/thread observations, bounded spike survival and production capacity guidance.
+- **9D-5.4:** standalone runtime RSS/file-descriptor/thread observations, bounded spike survival and production capacity guidance.
 
 These four slices provide a repeatable regression baseline while keeping final capacity planning deployment-specific.
