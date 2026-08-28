@@ -13,6 +13,7 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
+    "setup:demo": "node scripts/setup-demo.mjs",
     "test:mongodb-concurrency": "tsx tests/mongodb-booking-concurrency.ts",
     "test:mongodb-payment-idempotency": "tsx tests/mongodb-payment-idempotency.ts",
     "test:mongodb-traveller-amendments": "tsx tests/mongodb-traveller-amendments.ts",
@@ -44,6 +45,7 @@
     "check:safety": "node scripts/public-safety-check.mjs",
     "check:ux": "node scripts/ux-content-check.mjs",
     "check:release": "node scripts/release-check.mjs",
+    "check:fresh-clone": "node scripts/fresh-clone-check.mjs",
     "check:amendments": "node scripts/reservation-amendment-check.mjs",
     "check:accommodation": "node scripts/accommodation-foundation-check.mjs",
     "check:package-addons": "node scripts/trip-package-addon-check.mjs",
@@ -89,7 +91,7 @@
     "check:performance-mutation-throughput": "node scripts/performance-mutation-throughput-check.mjs",
     "check:performance-runtime-resource": "node scripts/performance-runtime-resource-check.mjs",
     "check:browser-e2e": "node scripts/browser-e2e-check.mjs",
-    "verify": "npm run check:safety && npm run check:ux && npm run check:release && npm run check:amendments && npm run check:accommodation && npm run check:package-addons && npm run check:package-addon-amendments && npm run check:operations && npm run check:tasks && npm run check:fulfilment && npm run check:operations-queue && npm run check:staff-permissions && npm run check:booking-documents && npm run check:departure-documents && npm run check:voucher-documents && npm run check:reporting-exports && npm run check:outbound-integrations && npm run check:integration-operations && npm run check:rest-booking-adapter && npm run check:supplier-fulfilment-adapter && npm run check:crm-sync-adapter && npm run check:erp-accounting-adapter && npm run check:production-security && npm run check:mongodb-concurrency && npm run check:payment-idempotency && npm run check:traveller-amendment-validation && npm run check:adapter-contract-validation && npm run check:observability && npm run check:failure-transport && npm run check:external-monitoring && npm run check:privileged-audit && npm run check:encryption-keyring && npm run check:traveller-key-rotation && npm run check:mongodb-recovery && npm run check:mongodb-index-performance && npm run check:privacy-rights && npm run check:privacy-execution && npm run check:privacy-retention-policy && npm run test:privacy-retention-policy && npm run check:accessibility-foundation && npm run check:accessibility-auth && npm run check:accessibility-traveller-privacy && npm run check:accessibility-booking-payment && npm run check:accessibility-operator && npm run check:performance-load && npm run check:performance-authenticated-read && npm run check:performance-mutation-throughput && npm run check:performance-runtime-resource && npm run check:browser-e2e && npm run typecheck && npm run build",
+    "verify": "npm run check:safety && npm run check:ux && npm run check:release && npm run check:fresh-clone && npm run check:amendments && npm run check:accommodation && npm run check:package-addons && npm run check:package-addon-amendments && npm run check:operations && npm run check:tasks && npm run check:fulfilment && npm run check:operations-queue && npm run check:staff-permissions && npm run check:booking-documents && npm run check:departure-documents && npm run check:voucher-documents && npm run check:reporting-exports && npm run check:outbound-integrations && npm run check:integration-operations && npm run check:rest-booking-adapter && npm run check:supplier-fulfilment-adapter && npm run check:crm-sync-adapter && npm run check:erp-accounting-adapter && npm run check:production-security && npm run check:mongodb-concurrency && npm run check:payment-idempotency && npm run check:traveller-amendment-validation && npm run check:adapter-contract-validation && npm run check:observability && npm run check:failure-transport && npm run check:external-monitoring && npm run check:privileged-audit && npm run check:encryption-keyring && npm run check:traveller-key-rotation && npm run check:mongodb-recovery && npm run check:mongodb-index-performance && npm run check:privacy-rights && npm run check:privacy-execution && npm run check:privacy-retention-policy && npm run test:privacy-retention-policy && npm run check:accessibility-foundation && npm run check:accessibility-auth && npm run check:accessibility-traveller-privacy && npm run check:accessibility-booking-payment && npm run check:accessibility-operator && npm run check:performance-load && npm run check:performance-authenticated-read && npm run check:performance-mutation-throughput && npm run check:performance-runtime-resource && npm run check:browser-e2e && npm run typecheck && npm run build",
     "check": "npm run verify"
   },
   "dependencies": {
