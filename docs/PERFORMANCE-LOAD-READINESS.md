@@ -70,6 +70,8 @@ It observes:
 
 The server must survive the spike, every measured request must return HTTP 200, post-load liveness must succeed, resource growth must remain within conservative CI ceilings and file descriptors must recover near the pre-load baseline. See `PERFORMANCE-RUNTIME-RESOURCE.md` for the detailed contract.
 
+The first accepted run completed **560 requests with 0 failures**. Sustained load recorded p95 **109.10 ms** at approximately **184.01 requests/second**; the higher-concurrency spike recorded p95 **233.10 ms** at approximately **227.17 requests/second**. Process RSS moved from **193.78 MB** at the warmed baseline to a measured maximum/post-load value of **395.74 MB** (**+201.96 MB**), file descriptors moved from **40 to 84**, and the thread count remained **15 → 15**. The application remained alive and post-load liveness passed. These are accepted GitHub-runner observations, not production sizing figures.
+
 ## CI budgets are not production SLOs
 
 GitHub-hosted runners are noisy and do not represent production infrastructure, network distance, CDN behavior, Atlas tier sizing or real traffic distribution. The CI thresholds are regression budgets intended to catch large deterioration, leaks or unbounded resource growth in a repeatable environment. They are **not production SLOs, capacity promises or customer-facing latency guarantees**.
