@@ -2,7 +2,7 @@
 
 <p align="center"><strong>English</strong> · <a href="./MIGRATIONS.es.md">Español</a></p>
 
-Status: **Phase 10.4 — ACTIVE until closing PR is green, merged, and `main` is verified**
+Status: **Phase 10.4 — COMPLETE**
 
 ## Purpose
 
@@ -207,6 +207,6 @@ npm run verify
 
 The gate does not automatically prove every future migration is safe; it ensures the project cannot silently drop the required conventions and contributor/release integration points.
 
-## Phase completion rule
+## Phase completion record
 
-Phase 10.4 is complete only after implementation, validation, EN/ES documentation, README/ROADMAP/CHANGELOG synchronization, green required CI, merge to `main`, and verification of `main`.
+Phase 10.4 satisfies the project completion rule. No later Phase 10 slice is considered active until required CI is green, the closing change is merged to `main`, and `main` is verified.
