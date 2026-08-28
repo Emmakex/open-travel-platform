@@ -2,7 +2,7 @@
 
 <p align="center"><a href="./EXTENSION-VALIDATION.md">English</a> · <strong>Español</strong></p>
 
-Estado: **Fase 10.3.4 — candidata a COMPLETADA pendiente de CI verde + merge**  
+Estado: **Fase 10.3.4 — COMPLETADA**  
 Gate: `npm run check:extension-contracts`  
 Implementación: `scripts/extension-contract-check.mjs`  
 CI dedicado: `.github/workflows/extension-contracts.yml`
@@ -158,7 +158,7 @@ Cuando un cambio legítimo necesite alterar una invariante protegida:
 6. actualizar `extension-contract-check.mjs` para reflejar la nueva invariante deseada;
 7. añadir/ajustar pruebas runtime;
 8. actualizar documentación EN/ES, README, ROADMAP y CHANGELOG;
-9. exigir CI verde antes del merge.
+9. exigir CI verde, merge a `main` y verificar `main` antes de avanzar.
 
 El gate es deliberadamente estricto: actualizarlo forma parte de cambiar el contrato público; no es un atajo para silenciar un test.
 
@@ -178,16 +178,17 @@ Los checks enfocados prueban cada capacidad; el gate nuevo protege la consistenc
 
 ## Cierre de Fase 10.3
 
-Después de que el PR de cierre quede verde y mergeado:
+Todos los slices de Fase 10.3 están completados:
 
 ```text
 10.3.1  Inventario + mapa de autoridad              COMPLETADA
 10.3.2  Compatibilidad/versionado                   COMPLETADA
 10.3.3  Adapters de referencia                      COMPLETADA
 10.3.4  Validación automatizada permanente          COMPLETADA
+10.3     Contratos de extensión/adapters referencia COMPLETADA
 ```
 
-La Fase 10.3 solo se considera COMPLETADA después del merge a `main` y de verificar `main`.
+La validación permanente introducida aquí sigue siendo obligatoria para futuros cambios en extensiones públicas. Cada fase posterior debe cumplir igualmente la regla de cierre antes de iniciar la siguiente.
 
 ## Documentación relacionada
 
