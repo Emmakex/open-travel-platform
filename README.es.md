@@ -28,18 +28,17 @@ Este repositorio es el **core MIT provider-neutral**. Kairoseth Travel es la imp
 
 **Fase 8 — Integraciones externas: COMPLETADA.**  
 **Fase 9 — Baseline de hardening productivo: COMPLETADA.**  
-**Fase 10 — Productización open-source: EN CURSO.**
+**Fase 10 — Productización open-source: EN CURSO.**  
+**Fase 10.3 — Contratos de extensión y adapters de referencia: COMPLETADA.**
 
-Estado de cierre de Fase 10.3:
+Estado de Fase 10.3:
 
 - **10.3.1 Inventario y mapa de autoridad — COMPLETADA**
 - **10.3.2 Compatibilidad/versionado — COMPLETADA**
 - **10.3.3 Adapters de referencia — COMPLETADA**
-- **10.3.4 Validación permanente de contratos — candidata a COMPLETADA**
+- **10.3.4 Validación permanente de contratos — COMPLETADA**
 
-**La Fase 10.3 solo será oficialmente COMPLETADA cuando el PR de cierre 10.3.4 tenga CI verde, esté mergeado a `main` y `main` haya sido verificado.**
-
-Gate permanente:
+El modelo de extensiones completado en Fase 10.3 queda protegido por un gate arquitectónico permanente:
 
 ```bash
 npm run check:extension-contracts
@@ -228,7 +227,7 @@ Consulta [`docs/EXTENSION-VALIDATION.es.md`](docs/EXTENSION-VALIDATION.es.md).
 
 Una fase/slice no está completada hasta que implementación y pruebas terminen, documentación EN/ES/README/ROADMAP/CHANGELOG esté sincronizada, el alcance del PR sea revisado, CI obligatorio esté verde, el PR esté mergeado a `main` y `main` sea verificado antes de iniciar la siguiente fase.
 
-Ningún bloque posterior de Fase 10 está activo hasta superar el cierre de Fase 10.3.
+La Fase 10.3 cumple esta regla. Cualquier trabajo posterior de Fase 10 debe respetar el mismo gate antes de volver a avanzar.
 
 ## Licencia
 
