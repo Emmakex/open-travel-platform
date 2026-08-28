@@ -25,7 +25,7 @@ jobs:
     timeout-minutes: 30
     env:
       AUDITED_SHA: ${{ github.event.workflow_run.head_sha }}
-      IMAGE: ghcr.io/${{ github.repository_owner }}/open-travel-platform
+      IMAGE: ghcr.io/emmakex/open-travel-platform
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout exact audited source revision
