@@ -34,7 +34,7 @@ El uso de branding y marcas se documenta en [`TRADEMARKS.es.md`](TRADEMARKS.es.m
 **Fase 10 — Productización open-source: COMPLETADA.**  
 **Fase 11 — Ecosistema de distribución y despliegue: EN CURSO.**
 
-La Fase 10 se cerró con **v1.1.0**. La auditoría final está en [`docs/PHASE-10-RELEASE-AUDIT.es.md`](docs/PHASE-10-RELEASE-AUDIT.es.md).
+La Fase 10 se cerró con **v1.1.0**. Sus últimos slices permanecen registrados explícitamente como **10.7 Política de branding y marcas — COMPLETADA** y **10.8 Auditoría final de documentación/release y publicación v1.1.0 — COMPLETADA**. La auditoría final está en [`docs/PHASE-10-RELEASE-AUDIT.es.md`](docs/PHASE-10-RELEASE-AUDIT.es.md).
 
 Slice actual de Fase 11:
 
