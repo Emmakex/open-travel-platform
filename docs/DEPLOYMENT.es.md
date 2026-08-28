@@ -8,6 +8,7 @@ Antes de un rollout productivo revisa:
 
 - [`RELEASES.es.md`](RELEASES.es.md) — identidad del release, SemVer, tags inmutables y secuencia de publicación;
 - [`MIGRATIONS.es.md`](MIGRATIONS.es.md) — migraciones de configuración/datos/wire/claves, verificación y rollback;
+- [`CONTAINERS.es.md`](CONTAINERS.es.md) — build OCI/Docker provider-neutral, runtime no-root, secretos solo en runtime y health checks cuando uses contenedores;
 - [`PRODUCTION-CHECKLIST.md`](PRODUCTION-CHECKLIST.md) — revisión final de producción.
 
 ## Identidad exacta del release
@@ -53,6 +54,25 @@ HOSTNAME=0.0.0.0 PORT=3000 node .next/standalone/server.js
 No copies `.env.local` ni secretos productivos dentro del artefacto. Suministra configuración server-only desde el entorno protegido o gestor de secretos.
 
 El workflow bloqueante `Self-host standalone` valida instalación limpia → build → package → servidor standalone → smoke HTTP/assets sin secretos productivos.
+
+## Vía de despliegue en contenedor
+
+La Fase 11.1 empaqueta ese mismo runtime standalone como imagen OCI/Docker provider-neutral. No crea un segundo runtime de aplicación.
+
+```bash
+docker build -t open-travel-platform:local .
+
+docker run --rm \
+  --env-file .env.demo.example \
+  -p 127.0.0.1:3000:3000 \
+  open-travel-platform:local
+```
+
+La imagen final se ejecuta como usuario no-root `app` (`10001:10001`). La configuración privilegiada permanece inyectada en runtime; no incrustes archivos `.env` productivos, credenciales MongoDB, secretos de pago, claves de cifrado ni tokens de adapters en capas.
+
+El healthcheck de la imagen usa `/api/health/live`; ingress/orquestadores de producción deben usar `/api/health/ready` antes de enrutar tráfico. Ejecuta `npm run check:container` para el contrato estático y utiliza el workflow bloqueante `Container distribution` para build/start/health/smoke HTTP real.
+
+Consulta [`CONTAINERS.es.md`](CONTAINERS.es.md). La publicación en un registry público queda intencionadamente fuera de la Fase 11.1.
 
 ## Configuración de build y runtime
 
@@ -244,10 +264,13 @@ Para la revisión exacta a publicar/desplegar:
 npm ci
 npm run check:release
 npm run check:release-migrations
+npm run check:container
 npm run verify
 npm run build
 npm run package:standalone
 ```
+
+Cuando despliegues el artefacto de contenedor, realiza también el build/run de imagen descrito en [`CONTAINERS.es.md`](CONTAINERS.es.md).
 
 Después verifica como mínimo:
 
@@ -268,6 +291,7 @@ Antes de producción revisa:
 
 - [`RELEASES.es.md`](RELEASES.es.md);
 - [`MIGRATIONS.es.md`](MIGRATIONS.es.md);
+- [`CONTAINERS.es.md`](CONTAINERS.es.md) si despliegas contenedor;
 - [`PRODUCTION-CHECKLIST.md`](PRODUCTION-CHECKLIST.md);
 - [`PRODUCTION-SECURITY.es.md`](PRODUCTION-SECURITY.es.md);
 - [`EXTERNAL-MONITORING.es.md`](EXTERNAL-MONITORING.es.md);
