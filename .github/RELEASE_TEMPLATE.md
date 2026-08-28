@@ -26,6 +26,7 @@ Describe the release outcome in user/operator/contributor terms.
 - Authority/authentication/idempotency semantics changed: yes / no
 - New/changed configuration: yes / no
 - Container/distribution artifact changed: yes / no
+- Registry/provenance policy changed: yes / no
 - Minimum supported source release for upgrade: `<version>`
 
 ## Upgrade and migration
@@ -75,8 +76,20 @@ If none, state `None` explicitly.
 - [ ] Liveness/readiness semantics remain documented and compatible
 - [ ] `npm run check:container` passed when container/distribution behavior changed
 - [ ] Real container build/start/HTTP validation passed when applicable
-- [ ] Registry/image publication identity and digest are recorded when a later distribution phase publishes artifacts
 - [ ] N/A — no container/distribution impact
+
+## Registry / provenance
+
+- [ ] Release source tag resolves to the exact audited `main` SHA before any image publication
+- [ ] Only immutable `vX.Y.Z` and `sha-<full-source-sha>` image tags are used
+- [ ] No `latest`, major-only, minor-only or `stable` moving alias is published
+- [ ] OCI source/revision/version/license metadata is present
+- [ ] BuildKit `provenance: mode=max` and SBOM are produced by the publishing build
+- [ ] GitHub artifact attestation is bound to the pushed OCI digest
+- [ ] Publishing Actions remain pinned to full commit SHAs
+- [ ] Public image contains no private Kairoseth/customer adapters, configuration or credentials
+- [ ] `npm run check:registry-provenance` passed
+- [ ] N/A — no registry/provenance impact
 
 ## Validation
 
@@ -89,6 +102,7 @@ If none, state `None` explicitly.
 - [ ] `npm run check:branding-policy`
 - [ ] `npm run check:phase-10-release` when auditing the Phase 10 release baseline
 - [ ] `npm run check:container`
+- [ ] `npm run check:registry-provenance`
 - [ ] `npm run verify`
 - [ ] `npm run package:standalone`
 - [ ] Fresh-clone/demo validation passed
@@ -107,6 +121,7 @@ State any provider-dependent checks that could not be completed. Do not represen
 - [ ] Upgrade/migration/deprecation docs updated when applicable
 - [ ] Branding/trademark policy updated when public names, logos or official-status claims changed
 - [ ] Container deployment docs updated when image/runtime behavior changed
+- [ ] Registry/provenance docs updated when publication, tags, digest, SBOM or attestations changed
 - [ ] Final release audit/release notes updated when closing a major project phase
 - [ ] Release notes contain no credentials, private customer data or protected Traveller Data
 
@@ -117,5 +132,6 @@ State any provider-dependent checks that could not be completed. Do not represen
 - [ ] Required dedicated release-audit workflow succeeded on the merged revision when applicable
 - [ ] Immutable `vX.Y.Z` tag created on the audited `main` commit
 - [ ] GitHub release published from that tag
-- [ ] Published image tag/digest recorded when registry distribution applies
-- [ ] Deployment/consumer rollouts tracked separately with exact version/SHA
+- [ ] When registry distribution applies, exact SemVer/SHA image tags and OCI digest recorded
+- [ ] When registry distribution applies, SBOM/provenance and GitHub artifact attestation verified
+- [ ] Deployment/consumer rollouts tracked separately with exact version/SHA/digest
