@@ -10,8 +10,8 @@ const assert = (condition, message) => {
 const packageJson = JSON.parse(read("package.json"));
 const test = read("tests/performance-authenticated-read-baseline.ts");
 const workflow = read(".github/workflows/performance-authenticated-read.yml");
-const docs = read("docs/PERFORMANCE-LOAD-READINESS.md");
-const docsEs = read("docs/PERFORMANCE-LOAD-READINESS.es.md");
+const docs = read("docs/PERFORMANCE-AUTHENTICATED-READ.md");
+const docsEs = read("docs/PERFORMANCE-AUTHENTICATED-READ.es.md");
 
 assert(packageJson.scripts?.["test:performance-authenticated-read"] === "tsx tests/performance-authenticated-read-baseline.ts", "package script must expose the authenticated read baseline");
 assert(packageJson.scripts?.["check:performance-authenticated-read"] === "node scripts/performance-authenticated-read-check.mjs", "package script must expose the authenticated read invariant gate");
@@ -64,6 +64,7 @@ for (const [name, text] of [["English", docs], ["Spanish", docsEs]]) {
   assert(lower.includes("session") || lower.includes("sesión"), `${name} docs must state real persistent session usage`);
   assert(lower.includes("setup") || lower.includes("preparación"), `${name} docs must separate fixture preparation from measured load`);
   assert(lower.includes("read-only") || lower.includes("solo lectura"), `${name} docs must preserve measured read-only boundary`);
+  assert(lower.includes("not production slo") || lower.includes("no son slo") || lower.includes("no es un slo"), `${name} docs must preserve the CI-vs-production capacity boundary`);
 }
 
 console.log("Authenticated critical read performance invariants passed.");
