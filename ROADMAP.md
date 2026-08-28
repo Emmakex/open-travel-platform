@@ -10,9 +10,9 @@ _Last updated: 28 August 2026._
 
 **Phase 8 — External integrations: COMPLETE.**  
 **Phase 9 — Production hardening engineering baseline: COMPLETE.**  
-**Phase 10 — Open-source productisation: IN PROGRESS.**
+**Phase 10 — Open-source productisation — COMPLETE.**
 
-Completed Phase 10 slices:
+Phase 10 closeout release: **v1.1.0**.
 
 ```text
 10.1     Reproducible fresh-clone/demo bootstrap ------------- COMPLETE
@@ -22,9 +22,13 @@ Completed Phase 10 slices:
 10.5     Upgrade and deprecation lifecycle policy ------------ COMPLETE
 10.6     Contribution and release templates ------------------ COMPLETE
 10.7     Branding and trademark policy ----------------------- COMPLETE
+10.8     Final documentation/release audit + v1.1.0 ---------- COMPLETE
 ```
 
-Credentialed Stripe/Redsys TEST/LIVE E2E remains a separate external dependency and does not reopen Phase 9.
+Final audit: [`docs/PHASE-10-RELEASE-AUDIT.md`](docs/PHASE-10-RELEASE-AUDIT.md)  
+Release notes: [`docs/RELEASE-NOTES-1.1.0.md`](docs/RELEASE-NOTES-1.1.0.md)
+
+Credentialed Stripe/Redsys TEST/LIVE E2E remains a separate provider-dependent validation item and does not reopen Phase 9 or block the provider-neutral v1.1.0 release.
 
 ---
 
@@ -34,9 +38,9 @@ Catalogue, identity, booking, commerce, post-purchase, operations, documents/rep
 
 ---
 
-# Phase 10 — Open-source productisation — IN PROGRESS
+# Phase 10 — Open-source productisation — COMPLETE
 
-Goal: make the MIT core easy to adopt, self-host, extend, release, upgrade and contribute to without hidden Kairoseth dependencies.
+Goal achieved: the MIT core can be evaluated, self-hosted, extended, released, upgraded and contributed to without hidden Kairoseth dependencies.
 
 ## 10.1 — Reproducible demo bootstrap — COMPLETE
 
@@ -55,119 +59,73 @@ Goal: make the MIT core easy to adopt, self-host, extend, release, upgrade and c
 
 ## 10.3 — Extension contracts and reference adapters — COMPLETE
 
-Authoritative documents:
-
-- [`docs/EXTENSION-POINT-INVENTORY.md`](docs/EXTENSION-POINT-INVENTORY.md)
-- [`docs/EXTENSION-COMPATIBILITY.md`](docs/EXTENSION-COMPATIBILITY.md)
-- [`docs/REFERENCE-ADAPTERS.md`](docs/REFERENCE-ADAPTERS.md)
-- [`docs/EXTENSION-VALIDATION.md`](docs/EXTENSION-VALIDATION.md)
-
-Delivered:
-
 - nine verified provider-neutral extension interfaces;
 - explicit authority map;
 - compatibility/versioning rules;
 - real contributor reference adapters;
 - permanent `check:extension-contracts` gate and blocking workflow.
 
+Documents: [`docs/EXTENSION-POINT-INVENTORY.md`](docs/EXTENSION-POINT-INVENTORY.md), [`docs/EXTENSION-COMPATIBILITY.md`](docs/EXTENSION-COMPATIBILITY.md), [`docs/REFERENCE-ADAPTERS.md`](docs/REFERENCE-ADAPTERS.md), [`docs/EXTENSION-VALIDATION.md`](docs/EXTENSION-VALIDATION.md).
+
 ## 10.4 — Release and migration conventions — COMPLETE
-
-Authoritative documents:
-
-- [`docs/RELEASES.md`](docs/RELEASES.md)
-- [`docs/RELEASES.es.md`](docs/RELEASES.es.md)
-- [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md)
-- [`docs/MIGRATIONS.es.md`](docs/MIGRATIONS.es.md)
-
-Delivered:
 
 - stable Semantic Versioning and immutable `vX.Y.Z` tags;
 - release identity aligned across package/README/CHANGELOG/tag;
-- releases cut only from verified `main`;
-- migration classes for configuration, persistent state, wire contracts, key rotation and destructive changes;
-- **expand → migrate → contract** persistent evolution;
+- releases from verified `main`;
+- explicit migration classes and recovery;
+- **expand → migrate → contract**;
 - no hidden destructive startup migrations;
-- `check:release-migrations` and dedicated blocking workflow.
+- permanent `check:release-migrations` gate.
 
-## 10.5 — Upgrade and deprecation lifecycle policy — COMPLETE
+Documents: [`docs/RELEASES.md`](docs/RELEASES.md), [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md).
 
-Authoritative documents:
+## 10.5 — Upgrade and deprecation lifecycle — COMPLETE
 
-- [`docs/UPGRADES.md`](docs/UPGRADES.md)
-- [`docs/UPGRADES.es.md`](docs/UPGRADES.es.md)
-- [`docs/DEPRECATIONS.md`](docs/DEPRECATIONS.md)
-- [`docs/DEPRECATIONS.es.md`](docs/DEPRECATIONS.es.md)
-
-Delivered:
-
-- latest stable release of the current major as the primary support/upgrade target;
-- no guaranteed LTS/backport line unless explicitly announced;
-- supported same-major and adjacent-major upgrade paths;
+- current-major stable release as primary support target;
+- no implicit LTS/backport promise;
+- documented same-major/adjacent-major upgrade paths;
 - lifecycle `ACTIVE → DEPRECATED → REMOVED`;
-- ordinary public removal only in a MAJOR release;
-- explicit accelerated security exception;
-- `check:upgrade-deprecations` and dedicated workflow.
+- ordinary public removal only in MAJOR;
+- explicit security exception;
+- permanent `check:upgrade-deprecations` gate.
+
+Documents: [`docs/UPGRADES.md`](docs/UPGRADES.md), [`docs/DEPRECATIONS.md`](docs/DEPRECATIONS.md).
 
 ## 10.6 — Contribution and release templates — COMPLETE
 
-Authoritative documents:
+- one canonical PR template;
+- safer enriched issue forms;
+- reusable release checklist;
+- architecture/release/lifecycle/security/UX review fields;
+- permanent `check:contribution-templates` gate.
 
-- [`docs/CONTRIBUTION-TEMPLATES.md`](docs/CONTRIBUTION-TEMPLATES.md)
-- [`docs/CONTRIBUTION-TEMPLATES.es.md`](docs/CONTRIBUTION-TEMPLATES.es.md)
-
-Delivered:
-
-- one canonical pull request template;
-- enriched bug/feature issue forms;
-- reusable release template;
-- architecture/release/lifecycle/security/UX checklists;
-- `check:contribution-templates` inside `npm run verify`;
-- dedicated contribution-template workflow.
+Documents: [`docs/CONTRIBUTION-TEMPLATES.md`](docs/CONTRIBUTION-TEMPLATES.md).
 
 ## 10.7 — Branding and trademark policy — COMPLETE
 
-Authoritative documents:
+- MIT software rights separated from branding rights;
+- Open Travel Platform = public provider-neutral core/project;
+- Kairoseth Travel = official hosted/commercial reference implementation;
+- official deployment = `https://travel.kairoseth.com`;
+- truthful descriptive attribution allowed without implied official status;
+- permanent `check:branding-policy` gate.
 
-- [`TRADEMARKS.md`](TRADEMARKS.md)
-- [`TRADEMARKS.es.md`](TRADEMARKS.es.md)
+Documents: [`TRADEMARKS.md`](TRADEMARKS.md), [`TRADEMARKS.es.md`](TRADEMARKS.es.md).
 
-Policy contract:
+## 10.8 — Final audit and v1.1.0 release — COMPLETE
 
-- MIT continues to license the software and is not changed by the branding policy;
-- **Open Travel Platform** identifies the public provider-neutral core/project;
-- **Kairoseth Travel** identifies the official hosted/commercial reference implementation;
-- `https://travel.kairoseth.com` is the official reference deployment;
-- truthful descriptive attribution/compatibility references remain allowed;
-- independently operated forks/services use distinct primary branding and must not imply official Kairoseth status;
-- Kairoseth/Kairoseth Travel logos, wordmarks and official-status claims require separate authorization where applicable;
-- the policy does not claim that any mark is registered in every jurisdiction;
-- support status, software licensing and commercial/official branding are explicitly separate.
+- release classified MINOR/backward-compatible;
+- package/README/CHANGELOG release identity moved to 1.1.0;
+- final audit and bilingual release notes added;
+- `check:phase-10-release` added to `npm run verify`;
+- dedicated release-audit workflow validates the merged `main` revision;
+- publication workflow creates the immutable `v1.1.0` tag and GitHub Release only after that main audit succeeds;
+- existing tags are never moved/recreated;
+- historical 1.0.0 package state is documented honestly rather than fabricating a retroactive tag.
 
-Permanent automation:
+Documents: [`docs/PHASE-10-RELEASE-AUDIT.md`](docs/PHASE-10-RELEASE-AUDIT.md), [`docs/RELEASE-NOTES-1.1.0.md`](docs/RELEASE-NOTES-1.1.0.md).
 
-```bash
-npm run check:branding-policy
-npm run verify
-```
-
-Delivered:
-
-- `scripts/branding-policy-check.mjs`;
-- `check:branding-policy` registered in `verify`;
-- dedicated `.github/workflows/branding-policy.yml`;
-- branding review integrated into PR and release templates, CONTRIBUTING, SUPPORT and release consistency.
-
-## Planned final Phase 10 work
-
-No later slice is active merely because it is listed. It receives its own branch and full completion gate when started.
-
-Next completion slice:
-
-- **10.8 — final Phase 10 documentation/release audit and next public release cut**.
-
-Optional adapters driven by commercial/community demand remain ongoing evolution and are not a Phase 10 completion blocker unless deliberately promoted into the core roadmap.
-
-## Permanent phase gate
+## Permanent project gate
 
 ```text
 implementation
@@ -178,8 +136,15 @@ implementation
 → required CI green
 → merge to main
 → verify main
-→ next phase
+→ immutable release/tag when applicable
+→ subsequent roadmap work
 ```
+
+## Post-Phase-10 evolution
+
+Optional adapters driven by commercial/community demand and Kairoseth-specific capabilities continue as normal evolution. They are not retroactive Phase 10 blockers unless deliberately promoted into a new core roadmap phase.
+
+Potential future roadmap themes may include additional provider adapters, ecosystem packaging/distribution and new product capabilities, each with its own explicit phase/scope before implementation.
 
 ## Core non-goals
 
