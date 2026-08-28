@@ -49,7 +49,7 @@ for (const evidence of [
 for (const [name, text] of [["English", docs], ["Spanish", docsEs]]) {
   const lower = text.toLowerCase();
   assert(lower.includes("9d-5.3"), `${name} docs must identify Phase 9D-5.3`);
-  assert(lower.includes("isolated") || lower.includes("aislada"), `${name} docs must document isolated database execution`);
+  assert(lower.includes("isolated") || lower.includes("aislada") || lower.includes("aislado"), `${name} docs must document isolated database execution`);
   assert(lower.includes("inventory") || lower.includes("inventario"), `${name} docs must document post-load inventory correctness`);
   assert(lower.includes("outbox"), `${name} docs must document transactional outbox verification`);
   assert(lower.includes("not production slo") || lower.includes("no son slo") || lower.includes("no es un slo"), `${name} docs must distinguish CI budgets from production SLOs`);
