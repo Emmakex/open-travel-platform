@@ -41,8 +41,12 @@ Phase 10 status:
 - **10.1 Reproducible fresh-clone/demo bootstrap — COMPLETE**
 - **10.2 Provider-neutral self-host standalone deployment — COMPLETE**
 - **10.3 Extension contracts and reference adapters — ACTIVE**
+  - **10.3.1 Extension-point inventory and authority map — COMPLETE**
+  - **10.3.2 Compatibility and versioning policy — ACTIVE**
+  - **10.3.3 Contributor-facing reference adapters — PLANNED**
+  - **10.3.4 Permanent extension-contract validation — PLANNED**
 
-The active Phase 10.3 work formalizes public extension points, contract compatibility/versioning and contributor-facing reference adapters without weakening local domain authority. See [`docs/EXTENSION-CONTRACTS.md`](docs/EXTENSION-CONTRACTS.md).
+Phase 10.3 now has a code-backed inventory of the public extension surfaces. The audit verified nine first-class interfaces under `repositories/`, corrected the preliminary omission of `PaymentRepository`, and formalized which integrations are bounded-authority, workflow-subordinate, downstream-only or monitoring-only. See [`docs/EXTENSION-POINT-INVENTORY.md`](docs/EXTENSION-POINT-INVENTORY.md) and [`docs/EXTENSION-CONTRACTS.md`](docs/EXTENSION-CONTRACTS.md).
 
 Credentialed Stripe/Redsys TEST/LIVE E2E remains an explicit external-dependency release validation and must be completed when suitable provider accounts are available.
 
@@ -212,6 +216,8 @@ Important rules:
 
 ### Active Phase 10.3
 
+- [`docs/EXTENSION-POINT-INVENTORY.md`](docs/EXTENSION-POINT-INVENTORY.md) — verified public extension surfaces and authority map.
+- [`docs/EXTENSION-POINT-INVENTORY.es.md`](docs/EXTENSION-POINT-INVENTORY.es.md) — Spanish inventory.
 - [`docs/EXTENSION-CONTRACTS.md`](docs/EXTENSION-CONTRACTS.md) — extension authority, compatibility/versioning and Phase 10.3 completion contract.
 - [`docs/EXTENSION-CONTRACTS.es.md`](docs/EXTENSION-CONTRACTS.es.md) — Spanish version.
 - [`docs/ADAPTER-GUIDE.md`](docs/ADAPTER-GUIDE.md) — implementing provider adapters.
@@ -306,23 +312,27 @@ Dedicated CI jobs also exercise real MongoDB replica sets, local HTTP contracts,
 | Stripe/Redsys credentialed TEST/LIVE validation | **Pending external provider accounts** |
 | Phase 10.1 — Fresh-clone/demo bootstrap | **Complete** |
 | Phase 10.2 — Self-host standalone deployment | **Complete** |
+| Phase 10.3.1 — Extension inventory / authority map | **Complete** |
+| Phase 10.3.2 — Compatibility / versioning | **Active** |
 | Phase 10.3 — Extension contracts/reference adapters | **Active** |
 | Phase 10 — Open-source productisation | **In progress** |
 
-## Active development priority — Phase 10.3
+## Active development priority — Phase 10.3.2
 
-The current block is **Phase 10.3 — Extension contracts and reference adapters**.
+The current block is **Phase 10.3.2 — compatibility and versioning policy**.
 
-Delivery goals:
+Phase 10.3.1 is complete: the code-backed inventory verified the nine first-class `repositories/` interfaces, mapped network/delivery surfaces and documented the authority of each boundary.
 
-1. inventory and classify the public extension points already present in the codebase;
-2. document which side remains authoritative for booking, inventory, payments, identity, supplier fulfilment, CRM and ERP/accounting flows;
-3. define contract compatibility/versioning rules before expanding the adapter ecosystem;
-4. add contributor-facing reference implementations and examples;
-5. add permanent validation that prevents provider payload/authority leakage across extension boundaries;
-6. keep Kairoseth-only and customer-specific adapters outside the generic MIT core when appropriate.
+The active goals are now:
 
-The detailed scope and completion criteria are tracked in [`docs/EXTENSION-CONTRACTS.md`](docs/EXTENSION-CONTRACTS.md) and [`ROADMAP.md`](ROADMAP.md).
+1. define compatibility rules for typed repository/adapter interfaces;
+2. define compatibility and deprecation rules for REST/HTTP contracts;
+3. define compatibility rules for event/schema versions such as outbound integration events and `FailureTransportEvent`;
+4. distinguish additive compatible evolution from authority/idempotency/authentication/state changes that require a breaking version;
+5. define a practical deprecation/migration path before public contract removal;
+6. keep provider-specific API version churn inside adapters whenever the stable core contract can remain unchanged.
+
+The detailed scope and inventory are tracked in [`docs/EXTENSION-CONTRACTS.md`](docs/EXTENSION-CONTRACTS.md), [`docs/EXTENSION-POINT-INVENTORY.md`](docs/EXTENSION-POINT-INVENTORY.md) and [`ROADMAP.md`](ROADMAP.md).
 
 After 10.3, Phase 10 continues with release/migration conventions, contribution/release templates and trademark/branding policy.
 
