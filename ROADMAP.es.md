@@ -10,18 +10,17 @@ _Última actualización: 28 de agosto de 2026._
 
 **Fase 8 — Integraciones externas: COMPLETADA.**  
 **Fase 9 — Baseline de hardening productivo: COMPLETADA.**  
-**Fase 10 — Productización open-source: EN CURSO.**
-
-Estado de cierre de Fase 10.3:
+**Fase 10 — Productización open-source: EN CURSO.**  
+**Fase 10.3 — Contratos de extensión y adapters de referencia: COMPLETADA.**
 
 ```text
 10.3.1   Inventario + mapa de autoridad ----------------------- COMPLETADA
 10.3.2   Compatibilidad/versionado ---------------------------- COMPLETADA
 10.3.3   Adapters de referencia ------------------------------- COMPLETADA
-10.3.4   Validación permanente de contratos ------------------ candidata a COMPLETADA
+10.3.4   Validación permanente de contratos ------------------ COMPLETADA
 ```
 
-**La Fase 10.3 solo será oficialmente COMPLETADA cuando el PR de cierre 10.3.4 tenga CI verde, esté mergeado a `main` y `main` haya sido verificado.** No empieza ningún bloque posterior de Fase 10 antes de ese gate.
+El gate permanente de extensiones forma parte de `npm run verify` y dispone de un workflow bloqueante propio en GitHub Actions.
 
 La validación Stripe/Redsys TEST/LIVE con credenciales sigue siendo una dependencia externa separada y no reabre la Fase 9.
 
@@ -108,7 +107,7 @@ Objetivo: hacer el core MIT fácil de adoptar, desplegar, extender, publicar y c
 - documentación de readiness, TLS/proxy, MongoDB, workers y rollback;
 - Kairoseth Travel sigue siendo referencia, no dependencia del core.
 
-## 10.3 — Contratos de extensión y adapters de referencia — candidata a cierre
+## 10.3 — Contratos de extensión y adapters de referencia — COMPLETADA
 
 ### 10.3.1 — Inventario y mapa de autoridad — COMPLETADA
 
@@ -142,11 +141,11 @@ Guía: [`docs/REFERENCE-ADAPTERS.es.md`](docs/REFERENCE-ADAPTERS.es.md).
 - `RestFailureTransport` — patrón opcional de monitorización;
 - referencias vinculadas a pruebas contractuales HTTP reales existentes.
 
-### 10.3.4 — Validación permanente — candidata a COMPLETADA
+### 10.3.4 — Validación permanente — COMPLETADA
 
 Guía: [`docs/EXTENSION-VALIDATION.es.md`](docs/EXTENSION-VALIDATION.es.md).
 
-Implementado:
+Entregado:
 
 - `scripts/extension-contract-check.mjs`;
 - `npm run check:extension-contracts`;
@@ -165,26 +164,29 @@ El gate protege:
 - protecciones de transporte de adapters de referencia;
 - sincronización documental EN/ES.
 
-## Gate final de Fase 10.3
+## Registro de cierre de Fase 10.3
 
-Fase 10.3 será COMPLETADA solo cuando:
+Todos los requisitos de cierre quedan satisfechos por el cambio final:
 
-1. 10.3.1–10.3.4 estén implementadas;
-2. `check:extension-contracts` esté en `verify` y CI;
-3. documentación EN/ES, README, ROADMAP y CHANGELOG estén sincronizados;
-4. CI obligatorio esté verde;
-5. PR de cierre esté mergeado a `main`;
-6. `main` esté verificado.
+1. el alcance 10.3.1–10.3.4 está completo;
+2. `check:extension-contracts` está registrado en `verify` y CI bloqueante;
+3. documentación EN/ES, README, ROADMAP y CHANGELOG están sincronizados;
+4. el gate dedicado y la suite contractual runtime protegen el modelo;
+5. adapters propietarios Kairoseth/cliente siguen desacoplados del core MIT.
+
+Se mantiene la regla permanente del proyecto: CI obligatorio, merge a `main` y verificación de `main` deben completarse antes de iniciar la siguiente fase.
 
 ## Trabajo posterior planificado de Fase 10
 
-Solo después del cierre y verificación de Fase 10.3:
+Después de la Fase 10.3 completada, futuros bloques de Fase 10 pueden incluir:
 
 - convenciones de release y migraciones;
 - política de upgrades/deprecaciones;
 - templates de contribución/release;
 - política de trademark/branding entre Open Travel Platform y Kairoseth Travel;
 - adapters opcionales según demanda comercial/comunitaria.
+
+Que un bloque aparezca listado aquí no significa que ya esté iniciado; cuando empiece tendrá su propia rama y su propio gate de cierre.
 
 ## No-objetivos del core
 
