@@ -2,13 +2,13 @@
 
 <p align="center"><a href="./CONTAINERS.md">English</a> · <strong>Español</strong></p>
 
-Estado: **Fase 11.1 — ACTIVA hasta mergear y verificar en `main`**
+Estado: **Fase 11.1 — COMPLETADA**
 
 ## Objetivo
 
 Open Travel Platform puede empaquetarse como imagen OCI/Docker provider-neutral reutilizando exactamente el runtime standalone de Next.js ya validado por el workflow self-host. La vía de contenedor no introduce un segundo runtime de aplicación ni una dependencia de despliegue ligada a un proveedor.
 
-La Fase 11.1 cubre despliegue local/en hosts de contenedores y validación CI. **La publicación en un registry queda fuera de este slice** y requerirá un bloque posterior de Fase 11.
+La Fase 11.1 cubre el baseline reproducible para imagen local/hosts de contenedores y su validación CI. La Fase 11.2 añade la capa separada y auditada de registry/provenance documentada en `REGISTRY.es.md`.
 
 ## Construir la imagen
 
@@ -100,15 +100,21 @@ El gate completo del proyecto sigue siendo:
 npm run verify
 ```
 
+## Publicación en registry
+
+La publicación pública y auditada en GHCR, identidades inmutables SemVer/SHA, despliegue fijado por digest, SBOM, provenance y GitHub artifact attestations se definen separadamente en `REGISTRY.es.md`.
+
+El tag histórico `v1.1.0` es anterior a este Dockerfile y no se reconstruye retroactivamente como imagen pública.
+
 ## Notas para producción
 
 - termina TLS y proxy inverso delante del contenedor según `DEPLOYMENT.es.md`;
 - inyecta secretos productivos en runtime mediante la plataforma, nunca mediante capas de imagen;
-- utiliza referencias/digests de imagen inmutables cuando exista una fase de publicación en registry;
+- utiliza preferentemente digests inmutables según `REGISTRY.es.md`;
 - mantén MongoDB y otros servicios con estado fuera del contenedor de aplicación salvo que una arquitectura específica gestione expresamente ese estado;
 - conserva las fronteras provider-neutral de repositories/adapters;
 - valida `/api/health/ready` antes de tráfico productivo;
-- registra versión/tag exactos de Open Travel Platform y digest de imagen en los registros de despliegue.
+- registra versión/tag exactos, revisión de código y digest de imagen en los registros de despliegue.
 
 ## Frontera Kairoseth
 
