@@ -66,16 +66,20 @@ test("Operator workflow exposes accessible feedback, form names and error relati
   await expect(page.locator("#operations-error")).toHaveAttribute("role", "alert");
   await expect(page.locator("#operations-error")).toHaveAttribute("aria-live", "assertive");
   await expect(page.locator('input[name="tags"]')).toHaveAttribute("aria-invalid", "true");
-  await expect(page.locator('form[aria-label="Reservation internal workflow"]')).toHaveAttribute("aria-describedby", "operations-error");
+
+  // PR #115 regression guard: Operator copy is localized, so browser expectations must not depend on one language.
+  const workflowForm = page.getByRole("form", { name: /^(Reservation internal workflow|Gestión interna de la reserva)$/i });
+  await expect(workflowForm).toHaveAttribute("aria-describedby", "operations-error");
 
   await expect(page.locator("#tasks-status")).toHaveAttribute("role", "status");
   await expect(page.locator("#tasks-error")).toHaveAttribute("role", "alert");
-  await expect(page.locator('form[aria-label="Create internal task"]')).toBeVisible();
+  const createTaskForm = page.getByRole("form", { name: /^(Create internal task|Crear tarea interna)$/i });
+  await expect(createTaskForm).toBeVisible();
   await expect(page.locator('input[name="title"]')).toHaveAttribute("aria-invalid", "true");
 
   await expect(page.locator("#fulfilment-status")).toHaveAttribute("role", "status");
   await expect(page.locator("#fulfilment-error")).toHaveAttribute("role", "alert");
-  const supplierForm = page.locator('form[aria-label^="Supplier tracking for "]').first();
+  const supplierForm = page.getByRole("form", { name: /^(Supplier tracking for|Seguimiento de proveedor para) /i }).first();
   if (await supplierForm.count()) {
     await expect(supplierForm.locator('input[name="supplierCost"]')).toHaveAttribute("aria-invalid", "true");
   }
