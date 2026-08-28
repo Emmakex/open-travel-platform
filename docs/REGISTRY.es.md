@@ -11,7 +11,7 @@ Open Travel Platform utiliza GitHub Container Registry (GHCR) como registry púb
 El namespace público es:
 
 ```text
-ghcr.io/Emmakex/open-travel-platform
+ghcr.io/emmakex/open-travel-platform
 ```
 
 La elección de GHCR no hace que la aplicación dependa de GHCR. Un operador puede construir la imagen OCI por su cuenta o replicar un digest inmutable en otro registry.
@@ -42,8 +42,8 @@ La primera imagen pública en GHCR será una release futura cuyo tag de código 
 Para una release `vX.Y.Z` construida desde el commit `<sha>`, el workflow publica únicamente:
 
 ```text
-ghcr.io/Emmakex/open-travel-platform:vX.Y.Z
-ghcr.io/Emmakex/open-travel-platform:sha-<sha-completo-del-codigo>
+ghcr.io/emmakex/open-travel-platform:vX.Y.Z
+ghcr.io/emmakex/open-travel-platform:sha-<sha-completo-del-codigo>
 ```
 
 No se publican aliases móviles:
@@ -58,7 +58,7 @@ stable
 Los despliegues de producción deben resolver y registrar el digest OCI y desplegar por digest:
 
 ```bash
-docker pull ghcr.io/Emmakex/open-travel-platform@sha256:<digest>
+docker pull ghcr.io/emmakex/open-travel-platform@sha256:<digest>
 ```
 
 El tag SemVer sirve para localizar una release; el digest es la identidad inmutable del despliegue.
@@ -92,14 +92,14 @@ El workflow crea además una GitHub artifact attestation ligada al digest OCI pu
 Descarga por digest y no por un nombre móvil:
 
 ```bash
-docker pull ghcr.io/Emmakex/open-travel-platform@sha256:<digest>
+docker pull ghcr.io/emmakex/open-travel-platform@sha256:<digest>
 ```
 
 Verifica la attestation de GitHub para el sujeto OCI:
 
 ```bash
 gh attestation verify \
-  oci://ghcr.io/Emmakex/open-travel-platform@sha256:<digest> \
+  oci://ghcr.io/emmakex/open-travel-platform@sha256:<digest> \
   --repo Emmakex/open-travel-platform
 ```
 
