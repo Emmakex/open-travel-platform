@@ -2,7 +2,7 @@
 
 <p align="center"><a href="./CONTRIBUTION-TEMPLATES.md">English</a> · <strong>Español</strong></p>
 
-Estado: **Fase 10.6 — candidata a COMPLETADA pendiente PR/CI/merge de cierre**
+Estado: **Fase 10.6 — COMPLETADA**
 
 ## Propósito
 
@@ -93,4 +93,4 @@ Un cambio legítimo puede modificar vocabulario protegido, pero docs, gate e imp
 
 ## Regla de cierre
 
-La Fase 10.6 solo será oficialmente COMPLETADA después de CI verde, merge a `main` y verificación de `main`. No se inicia branding/trademark antes de cumplir ese gate.
+La Fase 10.6 sigue el gate permanente del proyecto: implementación, validación, documentación EN/ES sincronizada, revisión del diff, CI verde, merge a `main` y verificación de `main` antes de iniciar branding/trademark.
