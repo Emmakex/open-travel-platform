@@ -26,13 +26,14 @@ Phase 10 closeout release: **v1.1.0**.
 10.8     Final documentation/release audit + v1.1.0 ---------- COMPLETE
 
 11.1     Reproducible OCI/Docker distribution baseline ------- COMPLETE
-11.2     Registry publication + provenance ------------------- PLANNED
+11.2     Registry publication + provenance ------------------- COMPLETE
 11.3     Deployment recipes / orchestrator examples ---------- PLANNED
 11.4     Distribution release verification ------------------- PLANNED
 ```
 
 Final Phase 10 audit: [`docs/PHASE-10-RELEASE-AUDIT.md`](docs/PHASE-10-RELEASE-AUDIT.md)  
-Container deployment: [`docs/CONTAINERS.md`](docs/CONTAINERS.md)
+Container deployment: [`docs/CONTAINERS.md`](docs/CONTAINERS.md)  
+Registry/provenance: [`docs/REGISTRY.md`](docs/REGISTRY.md)
 
 Credentialed Stripe/Redsys TEST/LIVE E2E remains a separate provider-dependent validation item and does not reopen Phase 9 or block provider-neutral distribution work.
 
@@ -154,18 +155,26 @@ Delivered:
 - dedicated blocking `Container distribution` workflow performs a real image build, non-root inspection, health wait and HTTP/static-asset smoke;
 - bilingual [`docs/CONTAINERS.md`](docs/CONTAINERS.md) / [`docs/CONTAINERS.es.md`](docs/CONTAINERS.es.md).
 
-Phase 11.1 does **not** publish an image to a registry. That boundary is deliberate.
+## 11.2 — Registry publication and provenance — COMPLETE
 
-## 11.2 — Registry publication and provenance — PLANNED
+Tracked by issue **#136**.
 
-Candidate scope, not active until 11.1 is merged and verified:
+Delivered:
 
-- select the public registry/distribution target;
-- publish immutable version/tag and digest references only from audited release commits;
-- define image labels/metadata and source/revision linkage;
-- add checksums/SBOM/provenance/signing policy where supported;
-- define retention and never-move tag rules;
-- keep private Kairoseth/customer images/configuration outside the public core.
+- GHCR selected as the public reference registry without making it a core runtime dependency;
+- publication chained to the successful audited release workflow rather than mutable branch state;
+- SemVer tag must resolve to the exact audited `main` SHA before any image is published;
+- historical `v1.1.0` is explicitly excluded from retroactive image publication because its immutable source tag predates the Dockerfile;
+- only exact `vX.Y.Z` and `sha-<full-source-sha>` image tags are emitted; moving `latest`, major and minor aliases are forbidden;
+- OCI source/revision/version/license metadata links image to source;
+- Docker BuildKit emits `provenance: mode=max` and SBOM from the publishing build;
+- GitHub artifact attestation is bound to the pushed OCI digest;
+- publication actions are pinned to full commit SHAs and receive only required package/attestation/OIDC permissions;
+- `scripts/registry-provenance-check.mjs` + `npm run check:registry-provenance` are part of `npm run verify`;
+- dedicated `Registry publication and provenance` workflow protects this policy in PRs and `main`;
+- bilingual [`docs/REGISTRY.md`](docs/REGISTRY.md) / [`docs/REGISTRY.es.md`](docs/REGISTRY.es.md) document digest-pinned pulls and `gh attestation verify`.
+
+11.2 does not add orchestrator recipes or publish private Kairoseth/customer images.
 
 ## 11.3 — Deployment recipes / orchestrator examples — PLANNED
 
