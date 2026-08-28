@@ -163,30 +163,26 @@ Consulta [`EXTENSION-COMPATIBILITY.es.md`](EXTENSION-COMPATIBILITY.es.md).
 
 Adapters privados de Kairoseth/cliente/vendor pueden importar contratos/tipos públicos OTP. El core MIT no debe importar el paquete privado ni exigir sus credenciales para build, test, demo o self-host.
 
-## Cobertura existente
+## Validación permanente
 
-Las referencias de red ya están ejercitadas por `tests/rest-adapter-contracts.ts`, incluyendo cuando aplica:
-
-- respuestas válidas normalizadas;
-- versiones contractuales incorrectas;
-- content-type/schema inválidos;
-- rechazo de scope;
-- límites de tamaño;
-- retry transitorio;
-- reutilización de la misma idempotency key;
-- no reintentar operaciones rechazadas por el cliente.
-
-Antes de proponer un adapter ejecuta sus pruebas específicas y:
+El gate de la Fase 10.3.4 protege ahora estos patrones mediante:
 
 ```bash
+npm run check:extension-contracts
+npm run test:rest-adapter-contracts
 npm run verify
 ```
 
-La Fase 10.3.4 añadirá el gate permanente del modelo de extensiones. Este documento no afirma que dicho gate exista todavía.
+`check:extension-contracts` comprueba inventario público, superficies de autoridad, identificadores v1, orden audit-before-apply, propiedades de transporte server-only/acotado, documentación de referencia y registro en CI. La suite HTTP local continúa validando comportamiento runtime como rechazo de versiones, scope, límites de respuesta, retries e idempotencia.
+
+Cualquier contribuidor que añada o cambie una superficie pública debe actualizar implementación, documentación EN/ES relevante y el gate permanente en el mismo pull request.
+
+Consulta [`EXTENSION-VALIDATION.es.md`](EXTENSION-VALIDATION.es.md).
 
 ## Documentación relacionada
 
 - [`EXTENSION-POINT-INVENTORY.es.md`](EXTENSION-POINT-INVENTORY.es.md)
 - [`EXTENSION-COMPATIBILITY.es.md`](EXTENSION-COMPATIBILITY.es.md)
 - [`EXTENSION-CONTRACTS.es.md`](EXTENSION-CONTRACTS.es.md)
+- [`EXTENSION-VALIDATION.es.md`](EXTENSION-VALIDATION.es.md)
 - [`ADAPTER-GUIDE.md`](ADAPTER-GUIDE.md)
