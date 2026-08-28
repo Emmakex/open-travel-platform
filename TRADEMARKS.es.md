@@ -2,7 +2,7 @@
 
 <p align="center"><a href="./TRADEMARKS.md">English</a> · <strong>Español</strong></p>
 
-Estado: **Fase 10.7 — candidata a COMPLETADA pendiente PR/CI/merge de cierre**
+Estado: **Fase 10.7 — COMPLETADA**
 
 ## Propósito
 
