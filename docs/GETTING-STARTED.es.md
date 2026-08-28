@@ -1,11 +1,11 @@
 # Primeros pasos desde un clon limpio
 
-La Fase 10.1 hace que el core open-source pueda ejecutarse para evaluación sin infraestructura específica de Kairoseth ni cuentas de proveedores externos.
+La Fase 10.1 estableció el camino reproducible de evaluación sin infraestructura. La Fase 10.2 añadió el despliegue standalone provider-neutral y la Fase 10.3 está formalizando ahora los contratos públicos de extensión y adapters de referencia.
 
 ## Requisitos
 
 - Node.js 24 LTS
-- npm 11 (el repositorio declara la versión de npm esperada)
+- npm 11 (el repositorio declara la versión esperada)
 - Git
 
 MongoDB, SMTP, Stripe, Redsys, CRM, ERP y las integraciones de proveedores **no son necesarios** para el perfil demo local.
@@ -36,7 +36,7 @@ Es un perfil de evaluación, no una configuración productiva. Las identidades d
 
 ## Smoke test del build productivo
 
-Para probar el mismo tipo de build optimizado de Next.js utilizado por los entornos de despliegue:
+Para una comprobación local rápida del build optimizado de Next.js:
 
 ```bash
 npm run typecheck
@@ -52,7 +52,17 @@ Comprueba al menos:
 - `http://localhost:3000/operator/sign-in`
 - `http://localhost:3000/api/health/live`
 
-El workflow dedicado `Fresh clone demo` de GitHub Actions repite este recorrido desde un checkout limpio y trata cualquier fallo como bloqueante.
+El workflow `Fresh clone demo` repite el camino de evaluación desde checkout limpio y trata cualquier fallo como bloqueante.
+
+`npm start` es práctico para este smoke local, pero **no** es el entrypoint documentado para self-host productivo. Los despliegues provider-neutral usan el runtime standalone preparado:
+
+```bash
+npm run build
+npm run package:standalone
+HOSTNAME=0.0.0.0 PORT=3000 node .next/standalone/server.js
+```
+
+Consulta [`DEPLOYMENT.es.md`](DEPLOYMENT.es.md) para el modelo completo de runtime, secretos, proxy inverso/TLS, readiness y rollback.
 
 ## Pasar del demo a capacidades persistentes
 
@@ -67,6 +77,18 @@ Utiliza `.env.example` como inventario completo de configuración cuando habilit
 
 Nunca hagas commit de `.env.local`, credenciales de proveedores, claves de cifrado ni tokens.
 
+## Extender la plataforma
+
+La Fase 10.3 es el bloque activo de productización para contratos públicos de extensión.
+
+Antes de implementar una integración nueva o cambiar una frontera pública existente, revisa:
+
+- [`EXTENSION-CONTRACTS.es.md`](EXTENSION-CONTRACTS.es.md) — autoridad, compatibilidad/versionado y criterios de cierre;
+- [`ADAPTER-GUIDE.md`](ADAPTER-GUIDE.md) — checklist de implementación;
+- el documento contractual específico de la capacidad cuando corresponda.
+
+Los sistemas externos reciben únicamente la autoridad concedida explícitamente por su contrato. Los payloads específicos deben permanecer dentro de adapters y los sistemas downstream como CRM/ERP no deben convertirse silenciosamente en autoridad de reservas/pagos.
+
 ## Frontera del core
 
-El repositorio público sigue siendo provider-neutral. `travel.kairoseth.com` es el despliegue comercial/de referencia de Kairoseth, no una dependencia necesaria para un clon limpio de Open Travel Platform.
+El repositorio público sigue siendo provider-neutral. `travel.kairoseth.com` es el despliegue comercial/de referencia de Kairoseth, no una dependencia necesaria para un clon limpio. Los adapters específicos de Kairoseth/cliente pueden permanecer privados mientras consumen los contratos públicos de extensión.
