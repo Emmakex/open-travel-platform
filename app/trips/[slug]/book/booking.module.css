@@ -99,6 +99,18 @@
   white-space: nowrap;
 }
 
+.field [aria-invalid="true"] {
+  border-color: rgba(255, 120, 120, 0.72);
+  outline: 2px solid rgba(255, 120, 120, 0.32);
+  outline-offset: 2px;
+}
+
+.field .fieldError {
+  color: #ffd7d7;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
 .notice,
 .error {
   margin: 1rem 0;
