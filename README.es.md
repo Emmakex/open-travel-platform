@@ -72,10 +72,12 @@ La plataforma está muy por encima del MVP original de catálogo/reservas. La im
 - workflows autenticados de derechos de privacidad, ejecución controlada de acceso/portabilidad/limitación/supresión y registro explícito de políticas de retención;
 - baseline técnico de accesibilidad orientado a WCAG 2.2 AA en navegación global, autenticación cliente, Traveller Data/privacidad, booking/pagos y workflows Operator, respaldado por journeys bloqueantes de navegador.
 - baselines repetibles de rendimiento/carga para lecturas públicas y autenticadas, contención acotada de mutaciones, comportamiento runtime de RSS/descriptores/threads y liveness/recuperación post-pico.
+- bootstrap demo reproducible desde clon limpio con lockfile npm versionado y sin infraestructura externa obligatoria;
+- empaquetado self-host provider-neutral sobre el runtime standalone real de Next.js, con guía EN/ES y smoke bloqueante HTTP/assets.
 
 La validación E2E con credenciales Stripe/Redsys sigue pendiente hasta disponer de cuentas adecuadas. Los adapters están implementados, pero la capacidad productiva no se considera validada hasta probar TEST/LIVE.
 
-**La Fase 8 — Integraciones externas está COMPLETADA. El baseline de ingeniería de la Fase 9 — Endurecimiento productivo está COMPLETADO: Fase 9A de seguridad productiva, Fase 9B de validación crítica, Fase 9C de observabilidad/recuperación/auditoría privilegiada y Fase 9D de privacidad/regulación/accesibilidad/rendimiento. La Fase 10 — Productización open-source es la SIGUIENTE.**
+**La Fase 8 — Integraciones externas y el baseline de ingeniería de la Fase 9 — Endurecimiento productivo están COMPLETADOS. La Fase 10 — Productización open-source está EN CURSO: 10.1 bootstrap demo reproducible desde clon limpio y 10.2 despliegue self-host standalone provider-neutral están COMPLETADOS; 10.3 contratos de extensión/adapters de referencia es la SIGUIENTE.**
 
 ## Capacidades actuales
 

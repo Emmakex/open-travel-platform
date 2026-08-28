@@ -72,10 +72,12 @@ The platform is well beyond the original catalogue/booking MVP. The implementati
 - authenticated privacy-right workflows, controlled access/portability/restriction/erasure execution and an explicit retention-policy registry;
 - a WCAG 2.2 AA-oriented accessibility engineering baseline across global navigation, customer authentication, Traveller Data/privacy, booking/payment and Operator workflows, backed by dedicated blocking browser journeys.
 - repeatable performance/load baselines covering public and authenticated reads, bounded mutation contention, runtime RSS/file-descriptor/thread behavior and post-spike liveness/recovery.
+- reproducible fresh-clone demo bootstrap with a versioned npm lockfile and no mandatory external infrastructure;
+- provider-neutral self-host packaging around the real Next.js standalone runtime, with EN/ES deployment guidance and blocking HTTP/static-asset smoke.
 
 Stripe and Redsys credentialed end-to-end validation remains intentionally pending until suitable provider accounts are available. The adapters are implemented, but production payment capability is not considered validated until provider TEST/LIVE flows have been exercised.
 
-**Phase 8 — External integrations is COMPLETE. The Phase 9 — Production hardening engineering baseline is COMPLETE across Phase 9A production security, Phase 9B critical validation, Phase 9C observability/recovery/privileged-audit hardening and Phase 9D privacy/regulatory/accessibility/performance readiness. Phase 10 — Open-source productisation is NEXT.**
+**Phase 8 — External integrations and the Phase 9 — Production hardening engineering baseline are COMPLETE. Phase 10 — Open-source productisation is IN PROGRESS: 10.1 reproducible fresh-clone/demo bootstrap and 10.2 provider-neutral self-host standalone deployment are COMPLETE; 10.3 extension contracts/reference adapters is NEXT.**
 
 ## Current capabilities
 
