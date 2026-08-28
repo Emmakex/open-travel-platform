@@ -8,7 +8,7 @@ Open Travel Platform es una plataforma clean-room con **Next.js + TypeScript + M
 
 La implementación comercial/de referencia oficial es **Kairoseth Travel**, desplegada en **[travel.kairoseth.com](https://travel.kairoseth.com)**.
 
-![Version](https://img.shields.io/badge/version-1.0.0-0d1b2d)
+![Version](https://img.shields.io/badge/version-1.1.0-0d1b2d)
 ![Next.js](https://img.shields.io/badge/Next.js-16.3.2-000000)
 ![React](https://img.shields.io/badge/React-19.2.8-149eca)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178c6)
@@ -25,39 +25,30 @@ Este repositorio es el **core MIT provider-neutral**. Kairoseth Travel es la imp
 - sistemas downstream no reciben autoridad implícita sobre booking, inventario, pricing o pagos;
 - la licencia MIT del software no concede por sí sola permiso para presentar un fork/servicio independiente como Kairoseth Travel oficial.
 
-El uso de branding y marcas se documenta separadamente en [`TRADEMARKS.es.md`](TRADEMARKS.es.md).
+El uso de branding y marcas se documenta en [`TRADEMARKS.es.md`](TRADEMARKS.es.md).
 
 ## Posición actual
 
 **Fase 8 — Integraciones externas: COMPLETADA.**  
 **Fase 9 — Baseline de hardening productivo: COMPLETADA.**  
-**Fase 10 — Productización open-source: EN CURSO.**
+**Fase 10 — Productización open-source: COMPLETADA.**
 
-Slices completados:
+Cierre de Fase 10:
 
 - **10.1 Bootstrap demo/fresh-clone reproducible — COMPLETADA**
 - **10.2 Despliegue standalone provider-neutral — COMPLETADA**
 - **10.3 Contratos de extensión/adapters de referencia — COMPLETADA**
 - **10.4 Convenciones de release y migraciones — COMPLETADA**
-- **10.5 Política de lifecycle de upgrades y deprecaciones — COMPLETADA**
+- **10.5 Lifecycle de upgrades y deprecaciones — COMPLETADA**
 - **10.6 Plantillas de contribución y release — COMPLETADA**
 - **10.7 Política de branding y marcas — COMPLETADA**
+- **10.8 Auditoría final de documentación/release y publicación v1.1.0 — COMPLETADA**
 
-La Fase 10.7 establece:
+El cierre está documentado en [`docs/PHASE-10-RELEASE-AUDIT.es.md`](docs/PHASE-10-RELEASE-AUDIT.es.md). Las notas de v1.1.0 están en [`docs/RELEASE-NOTES-1.1.0.es.md`](docs/RELEASE-NOTES-1.1.0.es.md).
 
-- separación explícita entre derechos del software MIT y branding del proyecto/comercial;
-- **Open Travel Platform** como nombre del core/proyecto público provider-neutral;
-- **Kairoseth Travel** como implementación oficial alojada/comercial de referencia;
-- `https://travel.kairoseth.com` como despliegue oficial de referencia;
-- uso descriptivo veraz como “basado en Open Travel Platform” / “compatible con Open Travel Platform”;
-- branding principal diferenciado para forks/servicios operados independientemente;
-- ningún patrocinio, certificación o estado oficial implícito por usar el código MIT;
-- permiso separado para determinados usos de logos, wordmarks y claims oficiales Kairoseth/Kairoseth Travel;
-- gate permanente `npm run check:branding-policy`.
+El repositorio registraba previamente package version 1.0.0 pero no tenía Git tag/GitHub Release histórico. No se fabrica un tag retroactivo; **v1.1.0 es el primer release publicado bajo la convención completada de Fase 10**.
 
-La política no afirma que ninguna marca esté registrada en todas las jurisdicciones; define las reglas del proyecto para el uso de identidad de marca. Consulta [`TRADEMARKS.es.md`](TRADEMARKS.es.md) y [`TRADEMARKS.md`](TRADEMARKS.md).
-
-La validación TEST/LIVE con credenciales Stripe/Redsys sigue siendo una dependencia externa separada.
+La validación Stripe/Redsys TEST/LIVE con credenciales permanece como validación dependiente del proveedor. No reabre la Fase 9 ni bloquea el release provider-neutral v1.1.0.
 
 ## Capacidades principales
 
@@ -100,15 +91,13 @@ Para producción consulta [`docs/DEPLOYMENT.es.md`](docs/DEPLOYMENT.es.md) y [`d
 
 ## Contrato de release, upgrade y branding
 
-Releases estables:
-
 ```text
 package.json  -> X.Y.Z
 Git tag       -> vX.Y.Z
 CHANGELOG     -> ## [X.Y.Z] - YYYY-MM-DD
 ```
 
-Un upgrade productivo identifica versiones/SHAs exactos origen/destino, revisa migraciones/deprecaciones, valida un entorno representativo y declara recuperación antes de cambios persistentes.
+Un upgrade productivo identifica versiones/SHAs exactos, revisa migraciones/deprecaciones, valida un entorno representativo y declara recuperación antes de cambios persistentes.
 
 Lifecycle público:
 
@@ -116,7 +105,7 @@ Lifecycle público:
 ACTIVE → DEPRECATED → REMOVED
 ```
 
-La retirada ordinaria ocurre solo en/después del límite MAJOR anunciado. PATCH/MINOR no eliminan ni reinterpretan silenciosamente superficies públicas soportadas.
+La retirada ordinaria ocurre solo en/después del límite MAJOR anunciado.
 
 Validación:
 
@@ -127,10 +116,13 @@ npm run check:release-migrations
 npm run check:upgrade-deprecations
 npm run check:contribution-templates
 npm run check:branding-policy
+npm run check:phase-10-release
 npm run verify
 ```
 
-Consulta [`docs/RELEASES.es.md`](docs/RELEASES.es.md), [`docs/MIGRATIONS.es.md`](docs/MIGRATIONS.es.md), [`docs/UPGRADES.es.md`](docs/UPGRADES.es.md), [`docs/DEPRECATIONS.es.md`](docs/DEPRECATIONS.es.md), [`docs/CONTRIBUTION-TEMPLATES.es.md`](docs/CONTRIBUTION-TEMPLATES.es.md) y [`TRADEMARKS.es.md`](TRADEMARKS.es.md).
+El workflow final crea el tag inmutable únicamente después de que la auditoría dedicada termine correctamente sobre `main` ya mergeado.
+
+Consulta [`docs/RELEASES.es.md`](docs/RELEASES.es.md), [`docs/MIGRATIONS.es.md`](docs/MIGRATIONS.es.md), [`docs/UPGRADES.es.md`](docs/UPGRADES.es.md), [`docs/DEPRECATIONS.es.md`](docs/DEPRECATIONS.es.md), [`docs/CONTRIBUTION-TEMPLATES.es.md`](docs/CONTRIBUTION-TEMPLATES.es.md), [`TRADEMARKS.es.md`](TRADEMARKS.es.md) y [`docs/PHASE-10-RELEASE-AUDIT.es.md`](docs/PHASE-10-RELEASE-AUDIT.es.md).
 
 ## Documentación
 
@@ -143,6 +135,8 @@ Consulta [`docs/RELEASES.es.md`](docs/RELEASES.es.md), [`docs/MIGRATIONS.es.md`]
 - [`SUPPORT.md`](SUPPORT.md)
 - [`TRADEMARKS.es.md`](TRADEMARKS.es.md)
 - [`TRADEMARKS.md`](TRADEMARKS.md)
+- [`docs/PHASE-10-RELEASE-AUDIT.es.md`](docs/PHASE-10-RELEASE-AUDIT.es.md)
+- [`docs/RELEASE-NOTES-1.1.0.es.md`](docs/RELEASE-NOTES-1.1.0.es.md)
 - [`docs/RELEASES.es.md`](docs/RELEASES.es.md)
 - [`docs/MIGRATIONS.es.md`](docs/MIGRATIONS.es.md)
 - [`docs/UPGRADES.es.md`](docs/UPGRADES.es.md)
@@ -167,16 +161,17 @@ npm run check:release-migrations
 npm run check:upgrade-deprecations
 npm run check:contribution-templates
 npm run check:branding-policy
+npm run check:phase-10-release
 npm run verify
 ```
 
-Workflows dedicados protegen contratos de extensión, releases/migraciones, lifecycle de upgrades/deprecaciones, plantillas de contribución/release y separación de branding/marcas en PR y `main`.
+Workflows dedicados protegen contratos de extensión, release/migraciones, lifecycle de upgrades/deprecaciones, plantillas, branding y la identidad final de release.
 
 ## Regla de cierre de fases
 
-Una fase/slice no está completada hasta terminar implementación/pruebas, sincronizar documentación EN/ES, revisar diff, tener CI obligatorio verde, mergear a `main` y verificar `main` antes de iniciar el siguiente bloque.
+Una fase/slice no está completada hasta terminar implementación/pruebas, sincronizar documentación EN/ES, revisar diff, tener CI obligatorio verde, mergear a `main` y verificar `main` antes de iniciar trabajo posterior del roadmap.
 
-La Fase 10.7 sigue la misma regla; la auditoría/release final de Fase 10 permanece separada hasta cerrar este slice.
+La Fase 10 queda cerrada mediante el release auditado v1.1.0. Adapters opcionales y evolución comercial Kairoseth pasan a ser trabajo posterior salvo que se incorporen explícitamente a una nueva fase del core.
 
 ## Licencia y branding
 

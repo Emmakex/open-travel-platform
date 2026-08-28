@@ -2,72 +2,71 @@
 
 All notable project changes are documented here.
 
-## [Unreleased] - 2026-08-28
+## [Unreleased]
+
+No unreleased changes yet.
+
+## [1.1.0] - 2026-08-28
 
 ### Added
+- Phase 10 open-source productisation closeout across reproducible evaluation, self-hosting, extensions, release lifecycle, contribution tooling, branding and final release automation.
+- Phase 10.1 reproducible infrastructure-free demo bootstrap and clean-checkout validation.
+- Phase 10.2 provider-neutral standalone/self-host packaging and real runtime smoke validation.
 - Phase 10.3 extension-contract documentation in English and Spanish.
 - Explicit authority model for repository, workflow-sync, downstream CRM/ERP and delivery/observability extensions.
-- Code-backed Phase 10.3.1 public extension inventory in English and Spanish.
-- Verified map of all 9 first-class `repositories/` interfaces, composition selectors, bundled implementations and network contracts.
+- Code-backed public inventory of all 9 first-class `repositories/` interfaces, composition selectors, bundled implementations and network contracts.
 - Explicit `PaymentRepository` classification as the local provider-neutral financial-ledger boundary.
-- Phase 10.3.2 compatibility/versioning policy in English and Spanish through `docs/EXTENSION-COMPATIBILITY.md` and `docs/EXTENSION-COMPATIBILITY.es.md`.
-- Compatibility matrix covering typed in-process interfaces, REST/HTTP contracts, event envelopes, failure-event schemas and webhook signature versions.
-- Explicit migration/deprecation rules for breaking public contract changes, including no hidden downgrade fallback for mutating v2-to-v1 flows.
-- Phase 10.3.3 contributor-facing reference-adapter guides in English and Spanish through `docs/REFERENCE-ADAPTERS.md` and `docs/REFERENCE-ADAPTERS.es.md`.
-- Official reference patterns backed by existing real implementations: `RestBookingRepository`, `RestSupplierFulfilmentAdapter` + `performSupplierAdapterOperation()`, `RestCrmSyncAdapter`, and optional monitoring-only `RestFailureTransport`.
-- Reference guidance for server-only credentials, bounded transport, runtime validation, stable error normalization, deterministic idempotency, audit-before-apply, provider-version absorption and deliberate v1-to-v2 migration.
-- Phase 10.3.4 permanent architecture-level extension gate through `scripts/extension-contract-check.mjs` and `npm run check:extension-contracts`.
-- Dedicated blocking `Extension contract validation` GitHub Actions workflow running both the static extension gate and the real local-HTTP adapter contract suite.
-- Bilingual permanent-gate documentation through `docs/EXTENSION-VALIDATION.md` and `docs/EXTENSION-VALIDATION.es.md`.
-- Phase 10.4 release conventions in English and Spanish through `docs/RELEASES.md` and `docs/RELEASES.es.md`.
-- Phase 10.4 migration conventions in English and Spanish through `docs/MIGRATIONS.md` and `docs/MIGRATIONS.es.md`.
-- Permanent release/migration convention gate through `scripts/release-migration-check.mjs` and `npm run check:release-migrations`.
-- Dedicated blocking `Release and migration validation` GitHub Actions workflow.
-- Phase 10.5 upgrade policy in English and Spanish through `docs/UPGRADES.md` and `docs/UPGRADES.es.md`.
-- Phase 10.5 deprecation lifecycle policy in English and Spanish through `docs/DEPRECATIONS.md` and `docs/DEPRECATIONS.es.md`.
-- Permanent upgrade/deprecation lifecycle gate through `scripts/upgrade-deprecation-check.mjs` and `npm run check:upgrade-deprecations`.
-- Dedicated blocking `Upgrade and deprecation validation` GitHub Actions workflow that preserves the release/migration and extension-contract gates.
-- Phase 10.6 bilingual contribution/release template guidance through `docs/CONTRIBUTION-TEMPLATES.md` and `docs/CONTRIBUTION-TEMPLATES.es.md`.
-- Canonical `.github/PULL_REQUEST_TEMPLATE.md` covering capability boundaries, SemVer, migrations, deprecation lifecycle, authority/security/privacy, UX/accessibility, validation and phase closure.
-- Reusable `.github/RELEASE_TEMPLATE.md` covering release identity, compatibility, upgrade/migration, deprecations/removals, recovery, validation and publication.
-- Enriched bug and feature issue forms with exact-version, compatibility/public-contract, provider-neutrality and data-safety context.
-- Permanent contribution/release template gate through `scripts/contribution-template-check.mjs` and `npm run check:contribution-templates`.
-- Dedicated blocking `Contribution and release template validation` GitHub Actions workflow.
-- Phase 10.7 branding/trademark policies in English and Spanish through `TRADEMARKS.md` and `TRADEMARKS.es.md`.
-- Explicit separation between MIT software rights and Open Travel Platform / Kairoseth / Kairoseth Travel branding rights and official-status claims.
-- Descriptive-use guidance for forks, hosted services, adapters and integrations, including truthful “based on” / “compatible with” attribution.
-- Permanent branding/trademark gate through `scripts/branding-policy-check.mjs` and `npm run check:branding-policy`.
-- Dedicated blocking `Branding and trademark policy validation` GitHub Actions workflow.
-- Explicit project phase-completion rule in `CONTRIBUTING.md`: implementation -> validation -> EN/ES documentation -> PR review -> green CI -> merge -> verify `main` before starting the next phase.
+- Compatibility/versioning policy covering typed interfaces, REST/HTTP contracts, event envelopes, failure schemas and webhook signature versions.
+- Contributor-facing reference-adapter guides backed by real implementations: `RestBookingRepository`, `RestSupplierFulfilmentAdapter` + `performSupplierAdapterOperation()`, `RestCrmSyncAdapter` and monitoring-only `RestFailureTransport`.
+- Permanent architecture-level extension gate through `scripts/extension-contract-check.mjs`, `npm run check:extension-contracts` and its dedicated workflow.
+- Phase 10.4 release and migration conventions in English and Spanish.
+- Permanent release/migration convention gate through `scripts/release-migration-check.mjs`, `npm run check:release-migrations` and its dedicated workflow.
+- Phase 10.5 upgrade policy and deprecation lifecycle policy in English and Spanish.
+- Permanent upgrade/deprecation lifecycle gate through `scripts/upgrade-deprecation-check.mjs`, `npm run check:upgrade-deprecations` and its dedicated workflow.
+- Phase 10.6 bilingual contribution/release template guidance.
+- One canonical `.github/PULL_REQUEST_TEMPLATE.md`, enriched issue forms and reusable `.github/RELEASE_TEMPLATE.md`.
+- Permanent contribution/release template gate through `scripts/contribution-template-check.mjs`, `npm run check:contribution-templates` and its dedicated workflow.
+- Phase 10.7 bilingual branding/trademark policy through `TRADEMARKS.md` and `TRADEMARKS.es.md`.
+- Explicit separation between MIT software rights and Open Travel Platform / Kairoseth / Kairoseth Travel branding and official-status claims.
+- Permanent branding/trademark gate through `scripts/branding-policy-check.mjs`, `npm run check:branding-policy` and its dedicated workflow.
+- Phase 10.8 bilingual final audit through `docs/PHASE-10-RELEASE-AUDIT.md` and `docs/PHASE-10-RELEASE-AUDIT.es.md`.
+- Bilingual v1.1.0 release notes through `docs/RELEASE-NOTES-1.1.0.md` and `docs/RELEASE-NOTES-1.1.0.es.md`.
+- Final release identity/documentation gate through `scripts/phase-10-release-check.mjs` and `npm run check:phase-10-release`.
+- Dedicated `Phase 10 release audit` workflow that runs the final gate, full `npm run verify` and standalone packaging.
+- Audited release-publication workflow that creates an immutable version tag and GitHub Release only after the release audit succeeds on merged `main`.
 
 ### Changed
-- Phase 10 remains **IN PROGRESS**, while **Phase 10.3 through Phase 10.7 are COMPLETE**.
-- `npm run verify` now includes `check:extension-contracts`, `check:release-migrations`, `check:upgrade-deprecations`, `check:contribution-templates` and `check:branding-policy`.
-- `release-check.mjs` now requires bilingual branding/trademark policies in addition to the permanent release, migration, upgrade and deprecation policy documents.
-- The duplicate case-variant `.github/pull_request_template.md` was removed so the repository has one unambiguous canonical PR template.
-- PR and release templates now include explicit branding/trademark impact review and the branding-policy gate.
-- CONTRIBUTING and SUPPORT explicitly distinguish MIT software rights/open-source support from Kairoseth/Kairoseth Travel commercial or official status.
-- README and ROADMAP EN/ES are synchronized through completed Phase 10.7 and identify the final Phase 10 audit/release slice as the next blocker.
+- Package/release identity moves from the documented 1.0.0 baseline to **1.1.0** as a backward-compatible MINOR release.
+- **Phase 10 — Open-source productisation is COMPLETE**, including slices 10.1 through 10.8.
+- `npm run verify` includes `check:extension-contracts`, `check:release-migrations`, `check:upgrade-deprecations`, `check:contribution-templates`, `check:branding-policy` and `check:phase-10-release`.
 - Public stable releases are governed by Semantic Versioning with immutable `vX.Y.Z` Git tags and release identity aligned across `package.json`, README badge, CHANGELOG and tag.
-- Public releases are cut only from a reviewed, verified `main` commit; tags are not moved or reused after publication.
-- Migration guidance classifies configuration, persistent-data, wire-contract, encryption/key and destructive changes and requires explicit verification and rollback/recovery semantics.
+- Public releases are cut only from a reviewed, verified `main` commit; published tags are never moved or reused.
 - Compatible persistent-data evolution follows **expand -> migrate -> contract**; hidden destructive migrations during application startup are prohibited.
-- The latest stable release in the current major is the primary support/upgrade target; no LTS or old-release backport line is guaranteed unless explicitly announced.
-- Same-major upgrades are supported with documented migrations; major upgrades target the latest stable release of the immediately previous major when the target documents that path; skip-major upgrades are not guaranteed.
-- Public lifecycle is standardized as **ACTIVE -> DEPRECATED -> REMOVED**.
-- Ordinary removal of a public contract/configuration/extension surface occurs only in a MAJOR release; PATCH/MINOR releases do not silently remove or reinterpret supported public behavior.
-- A deprecation notice identifies the replacement, first deprecated release, earliest ordinary removal release, migration/rollback impact and any security implications.
-- Security may accelerate deprecation/removal only through an explicit documented exception; warnings must not expose secrets or protected data.
-- Open Travel Platform remains the public provider-neutral project/core identity, while Kairoseth Travel remains the official hosted/commercial reference implementation at `https://travel.kairoseth.com`.
-- The branding policy explicitly avoids claiming that any mark is registered in every jurisdiction and does not silently relicense MIT software.
+- The latest stable release in the current major is the primary support/upgrade target; no LTS/backport line is guaranteed unless explicitly announced.
+- Same-major upgrades are supported with documented migrations; skip-major upgrades are not guaranteed.
+- Public lifecycle is standardized as **ACTIVE -> DEPRECATED -> REMOVED** with ordinary removal only in a MAJOR release.
+- The duplicate case-variant PR template was removed; contributor and release workflows use one canonical checklist model.
+- CONTRIBUTING and SUPPORT distinguish MIT software/open-source support from Kairoseth/Kairoseth Travel commercial or official status.
+- Open Travel Platform remains the public provider-neutral core/project identity, while Kairoseth Travel remains the official hosted/commercial reference implementation at `https://travel.kairoseth.com`.
+- README and ROADMAP EN/ES are synchronized through the completed Phase 10 and v1.1.0 release identity.
 - Existing REST v1 paths/headers remain unchanged; typed repository/adapter interfaces remain governed by core SemVer.
-- The read-only catalogue HTTP contract remains a legacy-v1 compatibility surface: additive evolution is allowed, breaking evolution requires a new versioned surface.
-- Outbound event schema version and webhook signature algorithm version remain independent compatibility dimensions.
-- Stripe/Redsys remain classified as PSP/checkout integrations rather than `PaymentRepository` implementations.
+- The read-only catalogue HTTP contract remains a legacy-v1 compatibility surface; breaking evolution requires a new explicit versioned surface.
+- Event schema version and webhook-signature scheme version remain independent compatibility dimensions.
+- Stripe/Redsys remain PSP/checkout integrations rather than `PaymentRepository` implementations.
 - SMTP/email and arbitrary internal modules remain outside public plugin contracts.
 
+### Compatibility
+- v1.1.0 is classified **MINOR / backward-compatible** relative to the documented 1.0.0 package baseline.
+- No supported public repository/adapter surface is intentionally removed.
+- No required destructive persistent-data migration is introduced by the Phase 10 closeout.
+- Demo and provider-neutral self-host evaluation do not require new external provider credentials.
+
+### Release history
+- The repository recorded package version 1.0.0 before the Phase 10 release convention, but the final audit found **no historical Git tag and no GitHub Release object** for that version.
+- No retroactive `v1.0.0` tag is fabricated. v1.1.0 is the first release published under the completed immutable-tag/GitHub-Release convention.
+
 ### External validation still pending
-- Credentialed Stripe/Redsys TEST/LIVE end-to-end validation remains pending suitable provider accounts. This does not reopen the completed Phase 9 engineering baseline.
+- Credentialed Stripe/Redsys TEST/LIVE end-to-end validation remains pending suitable provider accounts. This is provider-dependent validation, does not reopen the completed Phase 9 engineering baseline and does not block the provider-neutral v1.1.0 core release.
 
 ## [1.0.0] - 2026-08-18
 
@@ -84,12 +83,12 @@ All notable project changes are documented here.
 ### Changed
 - Package version promoted to `1.0.0`.
 - README reframed around the stable reusable starter rather than an in-progress milestone.
-- CI now validates safe production capability defaults, release consistency, TypeScript, production build, HTTP routes and dependency security.
+- CI validates safe production capability defaults, release consistency, TypeScript, production build, HTTP routes and dependency security.
 - Runtime versions remain explicitly pinned for stable-release predictability.
 
 ### Security
 - Release checks require safe demo defaults in `.env.example`.
-- Source safety now rejects additional high-risk patterns such as dynamic code execution, direct cookie access and unsafe HTML injection in application source.
+- Source safety rejects high-risk patterns such as dynamic code execution, direct cookie access and unsafe HTML injection in application source.
 - Production deployment guidance requires replacing fictional identity, booking and operations persistence before using real data.
 - Smoke tests verify representative public/protected routes after the production server starts.
 
@@ -98,6 +97,8 @@ All notable project changes are documented here.
 - Next.js 16.3.1.
 - React / ReactDOM 19.2.8.
 - TypeScript 6.x.
+
+> Historical note: this repository version predates the Phase 10 immutable-tag/GitHub-Release convention and was not retrospectively tagged.
 
 ## [0.5.0] - 2026-08-18
 
@@ -146,7 +147,7 @@ All notable project changes are documented here.
 - Reservation reads and cancellation are scoped by identity.
 
 ### Changed
-- Trip detail pages now link to the booking/availability capability.
+- Trip detail pages link directly to booking/availability.
 - Customer account shows reservation summary/history.
 - React and ReactDOM aligned to 19.2.8.
 
