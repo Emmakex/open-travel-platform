@@ -22,10 +22,11 @@ Before opening a pull request, run:
 npm run check:extension-contracts
 npm run check:release-migrations
 npm run check:upgrade-deprecations
+npm run check:contribution-templates
 npm run verify
 ```
 
-The permanent gates protect extension architecture, release/migration conventions and the upgrade/deprecation lifecycle. `verify` includes them plus the other project checks, TypeScript validation and production build.
+The permanent gates protect extension architecture, release/migration conventions, upgrade/deprecation lifecycle and contribution/release templates. `verify` includes them plus the other project checks, TypeScript validation and production build.
 
 GitHub Actions additionally exercises real MongoDB replica sets, local HTTP adapter contracts, privacy, accessibility, recovery and performance/resource baselines.
 
@@ -92,18 +93,39 @@ A PR that changes a public surface must state whether the lifecycle impact is:
 - `deprecated → removed`;
 - accelerated security exception.
 
-For a deprecation/removal include:
-
-- deprecated identifier/surface;
-- replacement or migration destination;
-- first deprecated release;
-- earliest ordinary removal release;
-- supported source/target upgrade path;
-- migration/rollback impact;
-- warning/documentation changes;
-- security rationale if the normal lifecycle is being accelerated.
+For a deprecation/removal include the deprecated surface, replacement, first deprecated release, earliest ordinary removal release, supported source/target path, migration/rollback impact, warning/documentation changes and any security rationale.
 
 A routine removal without a prior deprecation notice is breaking by default and must not be represented as PATCH/MINOR maintenance.
+
+## Contribution and release templates
+
+Read [`docs/CONTRIBUTION-TEMPLATES.md`](docs/CONTRIBUTION-TEMPLATES.md) before changing GitHub contribution/release workflow.
+
+The repository uses exactly one canonical pull request template:
+
+```text
+.github/PULL_REQUEST_TEMPLATE.md
+```
+
+It turns the architecture/release policies into a practical checklist covering scope, SemVer, migrations, lifecycle, authority/security/privacy, UX/accessibility, validation and documentation.
+
+Issue forms under `.github/ISSUE_TEMPLATE/` collect safe triage context without asking reporters for production credentials, private customer data or protected Traveller Data. Security vulnerabilities go through `SECURITY.md` rather than public issues.
+
+Maintainers use:
+
+```text
+.github/RELEASE_TEMPLATE.md
+```
+
+as the reusable release-notes checklist. It does not automate publication: releases still require verified `main`, immutable `vX.Y.Z` tags and the procedures in `RELEASES.md`, `MIGRATIONS.md`, `UPGRADES.md` and `DEPRECATIONS.md`.
+
+The permanent template gate is:
+
+```bash
+npm run check:contribution-templates
+```
+
+Do not reintroduce case-variant duplicate PR templates.
 
 ## Pull requests
 
@@ -113,8 +135,8 @@ A PR should explain:
 - affected capability/extension boundary;
 - authority/security implications;
 - compatibility impact;
-- **Release and migration impact**;
-- **Upgrade and deprecation impact**;
+- release/migration impact;
+- upgrade/deprecation impact;
 - configuration/migration requirements;
 - rollback/recovery when state changes;
 - how the change was validated.
