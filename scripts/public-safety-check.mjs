@@ -3,6 +3,7 @@ import { extname, join } from "node:path";
 
 const sourceRoots = ["app", "components", "domain", "repositories", "adapters", "lib", "data"];
 const sourceExtensions = new Set([".js", ".jsx", ".mjs", ".ts", ".tsx"]);
+const allowedEnvironmentTemplates = new Set([".env.example", ".env.demo.example"]);
 const findings = [];
 
 async function walk(directory) {
@@ -61,7 +62,7 @@ for (const root of sourceRoots) {
 
 const rootEntries = await readdir(".");
 for (const name of rootEntries) {
-  if (name.startsWith(".env") && name !== ".env.example") {
+  if (name.startsWith(".env") && !allowedEnvironmentTemplates.has(name)) {
     findings.push(`${name}: committed environment file`);
   }
 }

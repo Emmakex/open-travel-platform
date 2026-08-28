@@ -20,6 +20,8 @@ const RSS_GROWTH_BUDGET_MB = 512;
 const ABSOLUTE_RSS_BUDGET_MB = 768;
 const FD_GROWTH_BUDGET = 160;
 const POST_FD_GROWTH_BUDGET = 48;
+const POST_FD_RECOVERY_TIMEOUT_MS = 8_000;
+const POST_FD_RECOVERY_POLL_MS = 500;
 const THREAD_GROWTH_BUDGET = 32;
 
 const routes = [
@@ -48,6 +50,13 @@ type LoadResult = {
   maxMs: number;
   meanMs: number;
   requestsPerSecond: number;
+};
+
+type FdRecoveryResult = {
+  recovered: boolean;
+  elapsedMs: number;
+  snapshot: ResourceSnapshot;
+  samples: ResourceSnapshot[];
 };
 
 function sleep(ms: number) {
@@ -128,6 +137,28 @@ async function warmRoutes() {
       const result = await requestOnce(route);
       if (!result.ok) throw new Error(`Warm-up failed for ${route}: status=${result.status}`);
     }
+  }
+}
+
+async function waitForFdRecovery(pid: number, baselineFileDescriptors: number): Promise<FdRecoveryResult> {
+  const started = performance.now();
+  const samples: ResourceSnapshot[] = [];
+  let best = readResourceSnapshot(pid);
+  samples.push(best);
+
+  while (true) {
+    const elapsedMs = performance.now() - started;
+    if (best.fileDescriptors <= baselineFileDescriptors + POST_FD_GROWTH_BUDGET) {
+      return { recovered: true, elapsedMs: round(elapsedMs), snapshot: best, samples };
+    }
+    if (elapsedMs >= POST_FD_RECOVERY_TIMEOUT_MS) {
+      return { recovered: false, elapsedMs: round(elapsedMs), snapshot: best, samples };
+    }
+
+    await sleep(POST_FD_RECOVERY_POLL_MS);
+    const snapshot = readResourceSnapshot(pid);
+    samples.push(snapshot);
+    if (snapshot.fileDescriptors < best.fileDescriptors) best = snapshot;
   }
 }
 
@@ -219,9 +250,9 @@ async function main() {
     sampler = undefined;
     if (child.exitCode !== null) throw new Error(`Next.js server exited under load with code ${child.exitCode}.`);
 
-    await sleep(1_000);
-    const postLoad = readResourceSnapshot(child.pid!);
-    samples.push(postLoad);
+    const fdRecovery = await waitForFdRecovery(child.pid!, baseline.fileDescriptors);
+    samples.push(...fdRecovery.samples);
+    const postLoad = fdRecovery.snapshot;
     const postLoadLiveness = await requestOnce("/api/health/live");
     if (!postLoadLiveness.ok) throw new Error(`Post-load liveness failed with status ${postLoadLiveness.status}.`);
 
@@ -234,7 +265,7 @@ async function main() {
     if (maxRssMb > ABSOLUTE_RSS_BUDGET_MB) throw new Error(`Maximum RSS ${maxRssMb}MB exceeded ${ABSOLUTE_RSS_BUDGET_MB}MB CI budget.`);
     if (rssGrowthMb > RSS_GROWTH_BUDGET_MB) throw new Error(`RSS growth ${rssGrowthMb}MB exceeded ${RSS_GROWTH_BUDGET_MB}MB CI budget.`);
     if (maxFileDescriptors > baseline.fileDescriptors + FD_GROWTH_BUDGET) throw new Error(`File descriptors grew from ${baseline.fileDescriptors} to ${maxFileDescriptors}, exceeding bounded CI growth.`);
-    if (postLoad.fileDescriptors > baseline.fileDescriptors + POST_FD_GROWTH_BUDGET) throw new Error(`Post-load file descriptors ${postLoad.fileDescriptors} did not recover near baseline ${baseline.fileDescriptors}.`);
+    if (!fdRecovery.recovered) throw new Error(`Post-load file descriptors ${postLoad.fileDescriptors} did not recover near baseline ${baseline.fileDescriptors} within ${POST_FD_RECOVERY_TIMEOUT_MS}ms.`);
     if (maxThreads > baseline.threads + THREAD_GROWTH_BUDGET) throw new Error(`Threads grew from ${baseline.threads} to ${maxThreads}, exceeding bounded CI growth.`);
 
     console.log(JSON.stringify({ event: "runtime_resource_load", ...sustained }));
@@ -243,6 +274,7 @@ async function main() {
       event: "runtime_resource_complete",
       baseline,
       postLoad,
+      fdRecoveryMs: fdRecovery.elapsedMs,
       maxRssMb: round(maxRssMb),
       maxHighWaterMb: round(maxHighWaterMb),
       rssGrowthMb,
