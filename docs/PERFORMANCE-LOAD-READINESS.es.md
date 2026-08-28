@@ -70,6 +70,8 @@ Observa:
 
 El servidor debe sobrevivir al pico, cada request medido debe devolver HTTP 200, el liveness posterior debe seguir funcionando, el crecimiento de recursos debe permanecer dentro de límites conservadores de CI y los descriptores deben recuperar cerca del baseline previo. Consulta `PERFORMANCE-RUNTIME-RESOURCE.es.md` para el contrato detallado.
 
+La primera ejecución aceptada completó **560 peticiones con 0 fallos**. La carga sostenida registró p95 **109,10 ms** a aproximadamente **184,01 requests/segundo**; el pico de mayor concurrencia registró p95 **233,10 ms** a aproximadamente **227,17 requests/segundo**. El RSS del proceso pasó de **193,78 MB** en el baseline calentado a un máximo/valor post-carga medido de **395,74 MB** (**+201,96 MB**), los descriptores pasaron de **40 a 84** y los threads se mantuvieron **15 → 15**. La aplicación permaneció viva y el liveness post-carga pasó correctamente. Son observaciones aceptadas del runner de GitHub, no cifras de dimensionamiento productivo.
+
 ## Los presupuestos de CI no son SLO de producción
 
 Los runners alojados de GitHub son variables y no representan la infraestructura productiva, distancia de red, comportamiento CDN, dimensionamiento de Atlas ni distribución real del tráfico. Los límites de CI son presupuestos de regresión para detectar deterioros grandes, fugas o crecimiento descontrolado en un entorno repetible. **No son SLO de producción, compromisos de capacidad ni garantías de latencia para clientes**.
