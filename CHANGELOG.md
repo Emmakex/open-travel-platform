@@ -19,19 +19,27 @@ All notable project changes are documented here.
 - Phase 10.3.4 permanent architecture-level extension gate through `scripts/extension-contract-check.mjs` and `npm run check:extension-contracts`.
 - Dedicated blocking `Extension contract validation` GitHub Actions workflow running both the static extension gate and the real local-HTTP adapter contract suite.
 - Bilingual permanent-gate documentation through `docs/EXTENSION-VALIDATION.md` and `docs/EXTENSION-VALIDATION.es.md`.
+- Phase 10.4 release conventions in English and Spanish through `docs/RELEASES.md` and `docs/RELEASES.es.md`.
+- Phase 10.4 migration conventions in English and Spanish through `docs/MIGRATIONS.md` and `docs/MIGRATIONS.es.md`.
+- Permanent release/migration convention gate through `scripts/release-migration-check.mjs` and `npm run check:release-migrations`.
+- Dedicated blocking `Release and migration validation` GitHub Actions workflow.
 - Explicit project phase-completion rule in `CONTRIBUTING.md`: implementation -> validation -> EN/ES documentation -> PR review -> green CI -> merge -> verify `main` before starting the next phase.
 
 ### Changed
-- Phase 10 remains **IN PROGRESS**, while **Phase 10.3 — extension contracts and reference adapters is COMPLETE**.
-- **Phase 10.3.1, 10.3.2, 10.3.3 and 10.3.4 are COMPLETE**, with the permanent extension gate delivered and validated through blocking CI.
-- README and ROADMAP EN/ES are synchronized with the extension inventory, compatibility policy, contributor references and permanent validation gate.
+- Phase 10 remains **IN PROGRESS**, while **Phase 10.3 and Phase 10.4 are COMPLETE**.
+- `npm run verify` now includes both `check:extension-contracts` and `check:release-migrations`.
+- `release-check.mjs` now requires the bilingual release and migration policy documents as permanent release artifacts.
+- Public stable releases are governed by Semantic Versioning with immutable `vX.Y.Z` Git tags and release identity aligned across `package.json`, README badge, CHANGELOG and tag.
+- Public releases are cut only from a reviewed, verified `main` commit; tags are not moved or reused after publication.
+- Migration guidance now classifies configuration, persistent-data, wire-contract, encryption/key and destructive changes and requires explicit verification and rollback/recovery semantics.
+- Compatible persistent-data evolution follows **expand -> migrate -> contract**; hidden destructive migrations during application startup are prohibited.
+- CONTRIBUTING requires explicit release/migration impact classification for non-trivial changes.
+- README and ROADMAP EN/ES are synchronized with completed Phase 10.4 release/migration conventions.
 - Existing REST v1 paths/headers remain unchanged; compatibility policy documents them instead of silently rewriting deployed contracts.
 - Typed repository/adapter interfaces are governed by the SemVer/release lifecycle of the core rather than a synthetic global extension version.
 - The read-only catalogue HTTP contract is treated as a legacy-v1 compatibility surface: additive evolution is allowed, while breaking evolution requires a new versioned surface.
 - Outbound event schema version and webhook signature algorithm version are explicitly treated as independent compatibility dimensions.
 - Adapter guidance identifies real tested implementations as the canonical contributor references instead of introducing parallel toy adapters.
-- `npm run verify` now includes `check:extension-contracts`, protecting the nine-interface inventory, public authority surfaces, version identifiers, audit-before-apply ordering, provider-neutral repository purity and reference-adapter transport properties.
-- Reference and compatibility documents now link to the permanent validation contract instead of describing Phase 10.3.4 as future work.
 - The reference network adapters remain tied to `tests/rest-adapter-contracts.ts` coverage for contract version, invalid schema/content type, scope, size bounds, retries and idempotency where applicable.
 - README runtime badge reflects Next.js 16.3.2.
 - Quick-start and contribution workflows use reproducible `npm ci` + non-destructive `npm run setup:demo` instead of ad-hoc `npm install` setup.
