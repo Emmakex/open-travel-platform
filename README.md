@@ -31,24 +31,18 @@ Branding and trademark usage is documented separately in [`TRADEMARKS.md`](TRADE
 
 **Phase 8 — External integrations: COMPLETE.**  
 **Phase 9 — Production hardening engineering baseline: COMPLETE.**  
-**Phase 10 — Open-source productisation: COMPLETE.**
+**Phase 10 — Open-source productisation: COMPLETE.**  
+**Phase 11 — Distribution & deployment ecosystem: IN PROGRESS.**
 
-Phase 10 completion:
+Phase 10 closed with **v1.1.0**. The audited closeout is documented in [`docs/PHASE-10-RELEASE-AUDIT.md`](docs/PHASE-10-RELEASE-AUDIT.md).
 
-- **10.1 Reproducible fresh-clone/demo bootstrap — COMPLETE**
-- **10.2 Provider-neutral self-host standalone deployment — COMPLETE**
-- **10.3 Extension contracts and reference adapters — COMPLETE**
-- **10.4 Release and migration conventions — COMPLETE**
-- **10.5 Upgrade and deprecation lifecycle policy — COMPLETE**
-- **10.6 Contribution and release templates — COMPLETE**
-- **10.7 Branding and trademark policy — COMPLETE**
-- **10.8 Final documentation/release audit and v1.1.0 publication — COMPLETE**
+Current Phase 11 slice:
 
-The Phase 10 closeout is documented in [`docs/PHASE-10-RELEASE-AUDIT.md`](docs/PHASE-10-RELEASE-AUDIT.md). v1.1.0 release notes are in [`docs/RELEASE-NOTES-1.1.0.md`](docs/RELEASE-NOTES-1.1.0.md).
+- **11.1 Reproducible OCI/Docker distribution baseline — COMPLETE**
 
-The repository previously recorded package version 1.0.0 but had no historical Git tag/GitHub Release. The project does not fabricate a retroactive tag; **v1.1.0 is the first release published under the completed Phase 10 release convention**.
+Phase 11.1 provides a provider-neutral multi-stage container image, non-root runtime, runtime-only privileged configuration, built-in liveness healthcheck, real Docker build/start/HTTP validation and bilingual container deployment guidance. The slice is only considered officially closed after its PR is green, merged to `main` and `main` is verified.
 
-Credentialed Stripe/Redsys TEST/LIVE E2E remains a separate provider-dependent validation until suitable provider accounts are available. It does not reopen the completed Phase 9 baseline or block the provider-neutral v1.1.0 release.
+Credentialed Stripe/Redsys TEST/LIVE E2E remains a separate provider-dependent validation item. It does not reopen the completed Phase 9 baseline and is not required for infrastructure-free demo/container validation.
 
 ## Core capabilities
 
@@ -124,6 +118,23 @@ node .next/standalone/server.js
 
 For production deployment see [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) and [`docs/PRODUCTION-CHECKLIST.md`](docs/PRODUCTION-CHECKLIST.md).
 
+## Container deployment
+
+Build the same standalone runtime as a provider-neutral OCI/Docker image:
+
+```bash
+docker build -t open-travel-platform:local .
+
+docker run --rm \
+  --env-file .env.demo.example \
+  -p 127.0.0.1:3000:3000 \
+  open-travel-platform:local
+```
+
+The final image runs as non-root user `app` (`10001:10001`) and exposes a Docker healthcheck backed by `/api/health/live`. Production routing should use `/api/health/ready` and inject secrets/configuration only at runtime.
+
+See [`docs/CONTAINERS.md`](docs/CONTAINERS.md). Registry publication is deliberately not part of Phase 11.1.
+
 ## Release, upgrade and branding contract
 
 Stable releases use:
@@ -154,12 +165,11 @@ npm run check:upgrade-deprecations
 npm run check:contribution-templates
 npm run check:branding-policy
 npm run check:phase-10-release
+npm run check:container
 npm run verify
 ```
 
-The final Phase 10 release workflow creates the immutable release tag only after the dedicated release audit succeeds on merged `main`.
-
-See [`docs/RELEASES.md`](docs/RELEASES.md), [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md), [`docs/UPGRADES.md`](docs/UPGRADES.md), [`docs/DEPRECATIONS.md`](docs/DEPRECATIONS.md), [`docs/CONTRIBUTION-TEMPLATES.md`](docs/CONTRIBUTION-TEMPLATES.md), [`TRADEMARKS.md`](TRADEMARKS.md) and [`docs/PHASE-10-RELEASE-AUDIT.md`](docs/PHASE-10-RELEASE-AUDIT.md).
+See [`docs/RELEASES.md`](docs/RELEASES.md), [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md), [`docs/UPGRADES.md`](docs/UPGRADES.md), [`docs/DEPRECATIONS.md`](docs/DEPRECATIONS.md), [`docs/CONTRIBUTION-TEMPLATES.md`](docs/CONTRIBUTION-TEMPLATES.md), [`TRADEMARKS.md`](TRADEMARKS.md), [`docs/CONTAINERS.md`](docs/CONTAINERS.md) and [`docs/PHASE-10-RELEASE-AUDIT.md`](docs/PHASE-10-RELEASE-AUDIT.md).
 
 ## Documentation
 
@@ -180,6 +190,8 @@ See [`docs/RELEASES.md`](docs/RELEASES.md), [`docs/MIGRATIONS.md`](docs/MIGRATIO
 - [`docs/DEPRECATIONS.md`](docs/DEPRECATIONS.md)
 - [`docs/CONTRIBUTION-TEMPLATES.md`](docs/CONTRIBUTION-TEMPLATES.md)
 - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
+- [`docs/CONTAINERS.md`](docs/CONTAINERS.md)
+- [`docs/CONTAINERS.es.md`](docs/CONTAINERS.es.md)
 
 ### Extensions
 
@@ -201,16 +213,17 @@ npm run check:upgrade-deprecations
 npm run check:contribution-templates
 npm run check:branding-policy
 npm run check:phase-10-release
+npm run check:container
 npm run verify
 ```
 
-Dedicated workflows protect extension contracts, releases/migrations, upgrades/deprecations, contribution templates, branding and the final release identity.
+Dedicated workflows protect extension contracts, releases/migrations, upgrades/deprecations, contribution templates, branding, release identity and container distribution.
 
 ## Phase completion rule
 
 A phase/slice is not complete until implementation and tests are finished, EN/ES documentation/README/ROADMAP/CHANGELOG are synchronized, PR scope is reviewed, required CI is green, the PR is merged to `main`, and `main` is verified before subsequent roadmap work begins.
 
-Phase 10 is closed by the audited v1.1.0 release. Future optional adapters and Kairoseth-specific commercial evolution are post-Phase-10 work unless explicitly promoted into a new core roadmap phase.
+Phase 10 is closed by the audited v1.1.0 release. Phase 11.1 follows the same permanent gate before any later distribution slice begins.
 
 ## License and branding
 
