@@ -53,6 +53,16 @@ For deprecations/removals state the replacement, first deprecated release, earli
 
 If branding changes, confirm [`TRADEMARKS.md`](../TRADEMARKS.md) remains accurate. MIT software rights must not be represented as permission to claim an independent service is official Kairoseth Travel.
 
+## Container / registry / provenance impact
+
+- [ ] No container or registry impact
+- [ ] Dockerfile/runtime behavior changes
+- [ ] Registry image tag/metadata behavior changes
+- [ ] SBOM/provenance/attestation behavior changes
+- [ ] Publishing Action revision/permission changes
+
+If this area changes, preserve the non-root/runtime-secret contract in `docs/CONTAINERS.md` and the immutable-tag/digest/attestation contract in `docs/REGISTRY.md`. Do not introduce moving `latest`/major/minor aliases or private Kairoseth/customer content into the public image.
+
 ## UX / accessibility — visible changes only
 
 - [ ] Desktop layout reviewed
@@ -71,6 +81,8 @@ If branding changes, confirm [`TRADEMARKS.md`](../TRADEMARKS.md) remains accurat
 - [ ] `npm run check:upgrade-deprecations`
 - [ ] `npm run check:contribution-templates`
 - [ ] `npm run check:branding-policy`
+- [ ] `npm run check:container` when container behavior changes
+- [ ] `npm run check:registry-provenance` when publication/supply-chain behavior changes
 - [ ] `npm run verify`
 - [ ] Relevant runtime/integration/E2E flow tested when applicable
 - [ ] No private customer data, credentials or protected deployment values committed
@@ -81,6 +93,7 @@ If branding changes, confirm [`TRADEMARKS.md`](../TRADEMARKS.md) remains accurat
 - [ ] README / ROADMAP / CHANGELOG updated when project/release state changes
 - [ ] `.env.example` / deployment guidance updated when configuration changes
 - [ ] Migration verification and rollback/recovery documented when state changes
+- [ ] Container/registry documentation updated when artifact publication changes
 - [ ] N/A — no documentation/operations impact
 
 ## Phase completion gate — when this PR closes a project slice
