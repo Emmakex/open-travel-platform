@@ -1,91 +1,90 @@
 # Deployment guide
 
-Open Travel Platform does not require one hosting provider. A deployment needs a Node.js-compatible environment capable of running a Next.js production build/server and any durable services selected by its adapters.
+Open Travel Platform is provider-neutral and does not require one hosting vendor. The repository builds a Next.js `standalone` runtime that can be deployed on a VM, container platform, PaaS or another Node.js 24-compatible environment together with the durable services selected by the deployment.
 
-## Runtime
+`travel.kairoseth.com` is the Kairoseth reference/commercial deployment. It is not a runtime dependency of the MIT core and its private infrastructure is not required to self-host Open Travel Platform.
 
-The current target is Node.js 24 LTS.
+## Supported runtime shape
 
-Typical build/start commands:
+The current target is Node.js 24 LTS and npm 11. The repository versions `package-lock.json`; use the reproducible install path:
 
 ```bash
-npm install
+npm ci
 npm run verify
-npm start
 ```
 
-`npm run verify` builds the production application. Run it during CI before deployment rather than relying on runtime compilation.
+`next.config.ts` uses `output: "standalone"`. The deployable application entrypoint is therefore **not** `next start`. Build and prepare the transportable runtime with:
+
+```bash
+npm run build
+npm run package:standalone
+```
+
+`npm run package:standalone` keeps Next.js' traced standalone server and adds the assets that Next.js does not copy into the standalone folder automatically:
+
+- `.next/static` → `.next/standalone/.next/static`
+- `public` → `.next/standalone/public`
+
+The resulting runtime root is `.next/standalone`. Start it with deployment environment variables already injected:
+
+```bash
+HOSTNAME=0.0.0.0 PORT=3000 node .next/standalone/server.js
+```
+
+Do not copy `.env.local` or production secrets into an image/artifact. Supply server-only configuration through the hosting platform's protected runtime environment or secret manager.
+
+The blocking `Self-host standalone` workflow proves clean install → build → package → standalone server → HTTP/static-asset smoke without MongoDB or external provider credentials. This validates the public packaging contract, not production capacity.
+
+## Build-time versus runtime configuration
+
+`NEXT_PUBLIC_*` values are browser-visible and can be embedded at build time. Treat them as public configuration. If a deployment changes branding, public API origins or other `NEXT_PUBLIC_*` values, rebuild the artifact.
+
+Server-only values such as MongoDB credentials, encryption keys, payment secrets and worker tokens must be injected securely at runtime. Never put privileged values in `NEXT_PUBLIC_*` variables.
+
+Use `.env.example` as the full capability inventory and `.env.demo.example` only for local/infrastructure-free evaluation.
 
 ## Deployment profile
 
-Phase 9A introduces an explicit readiness profile:
+The readiness contract uses:
 
 ```text
 KTRAVEL_DEPLOYMENT_PROFILE=demo
 ```
 
-Use `demo` for the public reference/demo experience while fictional capabilities remain enabled.
-
-A real production rollout should switch to:
+for evaluation/reference deployments, and:
 
 ```text
 KTRAVEL_DEPLOYMENT_PROFILE=live
 ```
 
-`live` does not enable capabilities. It makes readiness stricter so `/api/health/ready` returns 503 when core demo modes remain active, the canonical public URL is not HTTPS, required MongoDB is unavailable, or enabled outbound REST adapters lack the server worker token.
+for a real production rollout.
 
-Do not use `live` as a cosmetic status flag. Treat it as the final production-readiness contract.
+`live` does not automatically enable capabilities. It makes `/api/health/ready` stricter so a deployment cannot present itself as ready while core demo modes remain active, the canonical URL is not HTTPS, required MongoDB is unavailable, or enabled integration adapters lack required server-side configuration.
 
-## Environment separation
+Do not use `live` as a cosmetic flag. Change it only after the intended persistent capabilities and production secrets are configured.
 
-Keep development, staging and production configuration separate.
+## Minimum production environment
 
-Public/browser-safe configuration includes values such as:
-
-```text
-NEXT_PUBLIC_SITE_NAME
-NEXT_PUBLIC_SITE_TAGLINE
-NEXT_PUBLIC_DATA_MODE
-NEXT_PUBLIC_TRAVEL_API_URL
-```
-
-Browser-visible values must be safe to expose publicly.
-
-Important server-only configuration includes:
+The exact environment is capability-driven, but a live deployment normally needs:
 
 ```text
-KTRAVEL_PUBLIC_URL
-KTRAVEL_DEPLOYMENT_PROFILE
-TRAVEL_DATA_MODE
-MONGODB_URI
-MONGODB_DB_NAME
-IDENTITY_MODE
-STAFF_AUTH_MODE
-BOOKING_MODE
-OPERATIONS_MODE
-PAYMENT_LEDGER_MODE
-PAYMENT_SECRETS_KEY
-TRAVELLER_DATA_KEY
-INTEGRATION_SECRETS_KEY
-KTRAVEL_INTEGRATION_WORKER_TOKEN
+KTRAVEL_PUBLIC_URL=https://travel.example.com
+KTRAVEL_DEPLOYMENT_PROFILE=live
+NEXT_PUBLIC_DATA_MODE=<persistent/public mode>
+TRAVEL_DATA_MODE=<mongodb|rest as selected>
+IDENTITY_MODE=<mongodb|reviewed adapter>
+STAFF_AUTH_MODE=<mongodb|reviewed adapter>
+BOOKING_MODE=<mongodb|reviewed adapter>
+OPERATIONS_MODE=<mongodb|reviewed adapter>
+PAYMENT_LEDGER_MODE=<mongodb when payments are enabled>
+DEMO_IDENTITY_ENABLED=false
+DEMO_BOOKING_ENABLED=false
+DEMO_OPERATIONS_ENABLED=false
 ```
 
-Never put a MongoDB URI, database password, encryption key or privileged token in `NEXT_PUBLIC_*` variables.
+Add only the credentials required by enabled capabilities. Examples include `MONGODB_URI`, SMTP configuration, payment-provider profiles, `PAYMENT_SECRETS_KEY`, `TRAVELLER_DATA_KEY`, `INTEGRATION_SECRETS_KEY` and `KTRAVEL_INTEGRATION_WORKER_TOKEN`.
 
-Use `.env.example` as the current configuration reference.
-
-## Safe capability selection
-
-For a real deployment:
-
-- use production catalogue data through MongoDB or the configured API adapter;
-- use persistent customer/staff identity or a reviewed external identity provider;
-- use durable booking and operations persistence/adapters;
-- keep `DEMO_IDENTITY_ENABLED`, `DEMO_BOOKING_ENABLED` and `DEMO_OPERATIONS_ENABLED` off for real data;
-- configure the payment ledger explicitly when payments are used;
-- enable supplier/CRM/ERP adapters only when their downstream services and worker scheduling are ready.
-
-Do not enable fictional write adapters simply to make a deployment appear functional.
+A deployment with an integration disabled must not need its credentials simply to boot.
 
 ## Health endpoints
 
@@ -96,146 +95,134 @@ GET /api/health/live
 GET /api/health/ready
 ```
 
-`/api/health/live` is a cheap process-level liveness check and intentionally does not call MongoDB or downstream services.
+`/api/health/live` is process-level liveness and intentionally avoids dependency checks. `/api/health/ready` evaluates the selected deployment profile and required infrastructure.
 
-`/api/health/ready` evaluates the selected deployment profile and required infrastructure. When selected capabilities require MongoDB it performs a `ping`. In `live`, enabled supplier/CRM/ERP REST adapters also require a configured 32+ character integration worker token.
+Recommended orchestration semantics:
 
-Use both endpoints for external monitoring:
+- **liveness**: restart/alert when the process itself is unhealthy;
+- **readiness**: remove the instance from traffic when configured dependencies or production requirements are not ready.
 
-- liveness: detect a dead/unresponsive process;
-- readiness: detect a process that is running but cannot safely serve the configured production workload.
+Do not use liveness as a substitute for readiness.
 
-The readiness response exposes only safe check categories, not credentials or raw database errors.
+## Reverse proxy and HTTPS
 
-## HTTP security and reverse proxy
+Place the standalone Node process behind the selected TLS/reverse proxy or managed ingress in production. The edge should:
 
-Production responses include the Phase 9A security-header baseline from `next.config.ts`, including CSP, frame protection, `nosniff`, referrer policy and HSTS.
+1. terminate HTTPS using the canonical hostname;
+2. redirect plain HTTP where applicable;
+3. forward requests to the private application port;
+4. preserve or deliberately overwrite forwarding headers according to the trust model;
+5. enforce infrastructure-level request/body limits appropriate to the deployment.
 
-Terminate HTTPS using the selected hosting platform/reverse proxy and redirect plain HTTP to HTTPS where applicable.
+`KTRAVEL_PUBLIC_URL` must match the externally visible HTTPS origin.
 
-`KTRAVEL_PUBLIC_URL` must be the canonical externally visible HTTPS origin.
+Cookie-authenticated mutations validate browser `Origin`. Additional exact browser origins may be listed in `KTRAVEL_ALLOWED_BROWSER_ORIGINS`; wildcards are not supported.
 
-Cookie-authenticated Route Handler mutations validate browser `Origin`. If another exact trusted browser origin is required, list it explicitly:
+Keep `KTRAVEL_TRUST_PROXY_IP_HEADERS=false` unless the trusted edge removes spoofed forwarding headers and supplies authoritative client-IP data. See `docs/PRODUCTION-SECURITY.md`.
 
-```text
-KTRAVEL_ALLOWED_BROWSER_ORIGINS=https://ops.example.com
-```
+## MongoDB and durable state
 
-Wildcards are not supported.
+A production deployment should use persistent capability modes rather than demo writes. A safe MongoDB rollout is:
 
-### Trusted proxy client IP
+1. provision MongoDB/Atlas and a least-privilege application user;
+2. restrict network access to the real deployment path where possible;
+3. inject `MONGODB_URI` and `MONGODB_DB_NAME` through protected configuration;
+4. seed/migrate only intended data;
+5. enable the selected MongoDB-backed capability modes;
+6. verify `/api/health/ready` and customer/Operator journeys;
+7. retain an immutable known-good release and a tested data rollback/restore plan.
 
-Auth rate limiting always applies by normalized subject. Optional per-client-IP buckets can be enabled with:
+Do not commit connection strings.
 
-```text
-KTRAVEL_TRUST_PROXY_IP_HEADERS=true
-```
+## First persistent administrator
 
-Enable this only when the hosting/reverse-proxy edge removes spoofed forwarding headers and writes authoritative client-IP values itself. Otherwise leave it `false`.
+The first MongoDB staff administrator can be created with the one-time `KTRAVEL_BOOTSTRAP_ADMIN_*` variables. After sign-in succeeds:
 
-See `docs/PRODUCTION-SECURITY.md` for the full trust model.
+1. remove `KTRAVEL_BOOTSTRAP_ADMIN_PASSWORD` from runtime configuration;
+2. redeploy/restart with the secret removed;
+3. verify staff sign-in and readiness again.
 
-## MongoDB rollout
+Do not keep the bootstrap password as a permanent administrative credential.
 
-A safe migration from demo/reference data to MongoDB is intentionally staged:
+## Payments
 
-1. deploy MongoDB-capable code while keeping the existing read mode;
-2. set `MONGODB_URI` and optionally `MONGODB_DB_NAME` in protected hosting configuration;
-3. confirm `/api/health/ready` and the protected Operator diagnostics relevant to the selected capability;
-4. seed/migrate only the intended records;
-5. switch the capability mode to `mongodb`;
-6. redeploy and exercise customer and Operator workflows;
-7. keep the previous immutable release available for rollback.
+Stripe and Redsys implementations live behind the provider-neutral payment boundary, but their credentials are deployment-specific. Recommended release sequence:
 
-### Atlas networking
+1. configure TEST provider profiles and the required encryption key;
+2. exercise checkout → signed server callback → ledger reconciliation;
+3. replay duplicate callbacks to verify idempotency;
+4. exercise refunds/reconciliation where supported;
+5. compare amount, currency and provider references with the provider dashboard;
+6. promote to LIVE credentials only after controlled TEST sign-off;
+7. repeat limited LIVE smoke transactions before general traffic.
 
-The runtime hosting the application must be allowed to connect to the Atlas cluster. Configure Atlas Network Access and a least-privilege database user appropriate for the deployment. Do not commit connection strings to GitHub.
+Browser return URLs never replace signed provider callback verification. Credentialed Stripe/Redsys TEST/LIVE E2E remains a deployment-specific validation because the public repository intentionally carries no provider accounts or secrets.
 
-## Persistent staff bootstrap
+## Outbound integrations and workers
 
-The first MongoDB staff administrator can be bootstrapped with the one-time `KTRAVEL_BOOTSTRAP_ADMIN_*` variables.
-
-After the administrator exists and sign-in is verified:
-
-1. remove `KTRAVEL_BOOTSTRAP_ADMIN_PASSWORD` from the hosting environment;
-2. redeploy;
-3. verify staff sign-in and `/api/health/ready` again.
-
-Do not leave a bootstrap password configured as a permanent administrative credential.
-
-## Payment rollout
-
-Stripe/Redsys implementations exist behind the provider-neutral payment boundary, but credentials are deployment-specific.
-
-Recommended sequence:
-
-1. configure TEST provider profiles and `PAYMENT_SECRETS_KEY`;
-2. run complete provider TEST checkout + signed callback + ledger reconciliation;
-3. replay/duplicate callbacks to confirm idempotency;
-4. exercise refunds where supported;
-5. verify amounts/currency/provider references against the provider dashboard;
-6. only then configure LIVE credentials;
-7. repeat controlled LIVE smoke transactions before opening general traffic.
-
-Browser return URLs never replace provider callback verification.
-
-## Outbound integration worker
-
-When supplier fulfilment, CRM or ERP/accounting REST adapters are enabled, configure:
-
-```text
-KTRAVEL_INTEGRATION_WORKER_TOKEN=<high-entropy 32+ chars>
-```
-
-Then configure the hosting scheduler to call:
+When supplier fulfilment, CRM or ERP/accounting REST adapters are enabled, configure a high-entropy `KTRAVEL_INTEGRATION_WORKER_TOKEN` and schedule:
 
 ```text
 POST /api/internal/integrations/process
 Authorization: Bearer <token>
 ```
 
-Use the cadence documented in integration operations and monitor dead letters/readiness. The same durable worker/retry infrastructure is shared by generic webhooks and business adapters.
+Monitor retries, dead letters, readiness and downstream latency. Disabled adapters should remain disabled rather than receiving placeholder credentials.
 
-## Encryption keys and recovery
+## Encryption keys and secrets
 
-The platform uses separate server-only master keys for different data classes:
+The platform separates key material by data class, including payment provider secrets, protected Traveller Data and integration signing secrets. Generate independent production keys, keep them stable, store them in a protected secret manager and document secure backup/recovery before ciphertext depends on them.
 
-- `PAYMENT_SECRETS_KEY` — encrypted provider credentials;
-- `TRAVELLER_DATA_KEY` — protected post-purchase traveller data;
-- `INTEGRATION_SECRETS_KEY` — outbound webhook signing secrets.
+Never bake keys into `.next/standalone`, container layers, source control or logs. Rotation must follow the documented re-encryption/keyring procedure.
 
-Generate each independently, keep it stable and back it up through the organization's protected secret-management/recovery process. Removing or rotating a key without a controlled re-encryption migration can make stored ciphertext unreadable.
+## Immutable release layout
 
-Never log or commit these keys.
+A self-host release should be reproducible from an exact Git SHA. A simple artifact can contain only the prepared standalone runtime plus deployment metadata, for example:
 
-## Build verification
+```text
+release/
+  server.js
+  .next/static/...
+  public/...
+  node_modules/...   # traced subset produced by Next.js standalone output
+```
 
-CI verifies at minimum:
-
-1. public-source safety/secret-pattern checks;
-2. release metadata consistency;
-3. domain-specific invariants;
-4. production security baseline;
-5. TypeScript;
-6. production build;
-7. HTTP/security-header/health smoke tests;
-8. dependency audit.
-
-The repository's GitHub Actions workflow uses safe demo/disabled capability defaults, so CI does not require production credentials.
+The deployment platform should inject runtime configuration separately. Keep the previous immutable release available so application rollback does not depend on rebuilding old source under new dependencies.
 
 ## Backups and rollback
 
-Deploy immutable revisions where possible and retain a known-good release for rollback.
+Production rollback must cover both code and durable side effects:
 
-A real production rollback plan must cover both application code and durable state:
-
-- exact application release SHA;
-- MongoDB backup/restore point;
-- backwards-compatible schema/index changes where possible;
+- exact release SHA/artifact;
+- MongoDB backup/restore point and tested restore ownership;
+- backwards-compatible schema/index evolution where possible;
 - encryption-key availability;
-- payment/integration side effects that cannot be undone by rolling code back.
+- payment/integration actions that cannot be undone by rolling code back.
 
-Perform a documented restore/disaster-recovery exercise before launch rather than treating backups as sufficient by themselves.
+Run a documented recovery exercise before launch and periodically thereafter.
+
+## Production verification
+
+For the exact revision intended for release:
+
+```bash
+npm ci
+npm run verify
+npm run build
+npm run package:standalone
+```
+
+Then start the prepared `server.js` with staging/live-like configuration and verify at minimum:
+
+- `/api/health/live` = 200;
+- `/api/health/ready` = 200 once the intended dependencies are ready;
+- public catalogue pages and static assets;
+- customer authentication/account paths;
+- booking and payment flows that are enabled;
+- Operator sign-in and critical operational queues;
+- background integration worker behavior when enabled.
+
+CI credentials and demo smoke tests do not replace this deployment-specific sign-off.
 
 ## Final production review
 
@@ -243,6 +230,7 @@ Before launch review:
 
 - `docs/PRODUCTION-CHECKLIST.md`;
 - `docs/PRODUCTION-SECURITY.md`;
+- `docs/EXTERNAL-MONITORING.md`;
 - `SECURITY.md`;
 - payment and integration adapter documentation;
 - applicable privacy, travel, payment and consumer-law requirements for the operating market.
