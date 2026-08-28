@@ -2,8 +2,8 @@
 
 <p align="center"><a href="./EXTENSION-CONTRACTS.md">English</a> · <strong>Español</strong></p>
 
-Estado: **Fase 10.3 — candidata a cierre; COMPLETADA solo tras CI verde + merge + verificación de `main`**  
-Slices: **10.3.1 COMPLETADA · 10.3.2 COMPLETADA · 10.3.3 COMPLETADA · 10.3.4 candidata a COMPLETADA**  
+Estado: **Fase 10.3 — COMPLETADA**  
+Slices: **10.3.1 COMPLETADA · 10.3.2 COMPLETADA · 10.3.3 COMPLETADA · 10.3.4 COMPLETADA**  
 Gate permanente: `npm run check:extension-contracts`
 
 ## Propósito
@@ -79,9 +79,9 @@ Demuestran credenciales server-only, HTTPS/redirect safety, transporte acotado, 
 
 Consulta [`REFERENCE-ADAPTERS.es.md`](REFERENCE-ADAPTERS.es.md).
 
-## 10.3.4 — Validación permanente — candidata a COMPLETADA
+## 10.3.4 — Validación permanente — COMPLETADA
 
-El nuevo gate estático permanente es:
+Gate estático permanente:
 
 ```bash
 npm run check:extension-contracts
@@ -133,22 +133,23 @@ Un cambio legítimo futuro debe actualizar el gate, no evitarlo:
 5. actualizar `extension-contract-check.mjs` con la nueva invariante deseada;
 6. actualizar pruebas runtime;
 7. sincronizar documentación EN/ES, README, ROADMAP y CHANGELOG;
-8. exigir CI verde y merge antes de avanzar.
+8. exigir CI verde, merge a `main` y verificación de `main` antes de avanzar.
 
 ## Frontera de adapters propietarios
 
 Adapters específicos de Kairoseth/cliente/vendor pueden permanecer privados e importar contratos públicos OTP. El core MIT no debe depender de paquetes privados ni de sus credenciales.
 
-## Gate de cierre de Fase 10.3
+## Registro de cierre de Fase 10.3
 
 ```text
 10.3.1  Inventario + mapa de autoridad              COMPLETADA
 10.3.2  Compatibilidad/versionado                   COMPLETADA
 10.3.3  Adapters de referencia                      COMPLETADA
-10.3.4  Validación automatizada permanente          candidata a COMPLETADA
+10.3.4  Validación automatizada permanente          COMPLETADA
+10.3     Contratos de extensión/adapters referencia COMPLETADA
 ```
 
-**La Fase 10.3 será oficialmente COMPLETADA solo cuando el PR de cierre 10.3.4 tenga CI requerido verde, esté mergeado a `main` y `main` haya sido verificado.** No puede empezar otro trabajo de Fase 10 antes de ese gate.
+La regla permanente del proyecto continúa aplicándose a cualquier slice posterior: implementación, pruebas, documentación sincronizada, CI verde, merge a `main` y verificación de `main` antes de iniciar la siguiente fase.
 
 ## Documentación relacionada
 
