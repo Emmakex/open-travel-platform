@@ -41,8 +41,12 @@ Estado de la Fase 10:
 - **10.1 Bootstrap demo reproducible desde clon limpio — COMPLETADO**
 - **10.2 Despliegue self-host standalone provider-neutral — COMPLETADO**
 - **10.3 Contratos de extensión y adapters de referencia — ACTIVA**
+  - **10.3.1 Inventario de puntos de extensión y mapa de autoridad — COMPLETADA**
+  - **10.3.2 Política de compatibilidad y versionado — ACTIVA**
+  - **10.3.3 Adapters de referencia para contribuidores — PLANIFICADA**
+  - **10.3.4 Validación permanente de contratos — PLANIFICADA**
 
-La Fase 10.3 activa formaliza puntos públicos de extensión, compatibilidad/versionado de contratos y adapters de referencia para contribuidores sin debilitar la autoridad local de dominio. Consulta [`docs/EXTENSION-CONTRACTS.es.md`](docs/EXTENSION-CONTRACTS.es.md).
+La Fase 10.3 ya dispone de un inventario respaldado por código de las superficies públicas de extensión. La auditoría verificó nueve interfaces de primer nivel bajo `repositories/`, corrigió la omisión preliminar de `PaymentRepository` y formalizó qué integraciones tienen autoridad acotada, están subordinadas al workflow, son solo downstream o solo monitorización. Consulta [`docs/EXTENSION-POINT-INVENTORY.es.md`](docs/EXTENSION-POINT-INVENTORY.es.md) y [`docs/EXTENSION-CONTRACTS.es.md`](docs/EXTENSION-CONTRACTS.es.md).
 
 El E2E TEST/LIVE de Stripe/Redsys con credenciales sigue siendo una validación de release dependiente de proveedores y debe completarse cuando existan cuentas adecuadas.
 
@@ -212,6 +216,8 @@ Reglas importantes:
 
 ### Fase 10.3 activa
 
+- [`docs/EXTENSION-POINT-INVENTORY.es.md`](docs/EXTENSION-POINT-INVENTORY.es.md) — superficies públicas verificadas y mapa de autoridad.
+- [`docs/EXTENSION-POINT-INVENTORY.md`](docs/EXTENSION-POINT-INVENTORY.md) — inventario en inglés.
 - [`docs/EXTENSION-CONTRACTS.es.md`](docs/EXTENSION-CONTRACTS.es.md) — autoridad, compatibilidad/versionado y contrato de cierre de 10.3.
 - [`docs/EXTENSION-CONTRACTS.md`](docs/EXTENSION-CONTRACTS.md) — versión inglesa.
 - [`docs/ADAPTER-GUIDE.md`](docs/ADAPTER-GUIDE.md) — implementación de adapters.
@@ -306,23 +312,27 @@ Jobs CI dedicados ejercitan además replica sets MongoDB reales, contratos HTTP 
 | Validación Stripe/Redsys TEST/LIVE con credenciales | **Pendiente de cuentas proveedor** |
 | Fase 10.1 — Bootstrap demo desde clon limpio | **Completada** |
 | Fase 10.2 — Despliegue self-host standalone | **Completada** |
+| Fase 10.3.1 — Inventario de extensiones / autoridad | **Completada** |
+| Fase 10.3.2 — Compatibilidad / versionado | **Activa** |
 | Fase 10.3 — Contratos de extensión/adapters de referencia | **Activa** |
 | Fase 10 — Productización open-source | **En curso** |
 
-## Prioridad activa — Fase 10.3
+## Prioridad activa — Fase 10.3.2
 
-El bloque actual es **Fase 10.3 — Contratos de extensión y adapters de referencia**.
+El bloque actual es **Fase 10.3.2 — política de compatibilidad y versionado**.
 
-Objetivos de entrega:
+La Fase 10.3.1 está completada: el inventario respaldado por código verificó las nueve interfaces de primer nivel bajo `repositories/`, mapeó superficies de red/entrega y documentó la autoridad de cada frontera.
 
-1. inventariar y clasificar los puntos públicos de extensión ya existentes;
-2. documentar qué lado sigue siendo autoritativo para reservas, inventario, pagos, identidad, fulfilment, CRM y ERP/contabilidad;
-3. definir reglas de compatibilidad/versionado antes de ampliar el ecosistema de adapters;
-4. añadir implementaciones y ejemplos de referencia para contribuidores;
-5. añadir validación permanente que impida filtraciones de payloads o autoridad de proveedor entre fronteras;
-6. mantener adapters exclusivos de Kairoseth/cliente fuera del core MIT cuando corresponda.
+Los objetivos activos son ahora:
 
-El alcance y criterios de cierre están en [`docs/EXTENSION-CONTRACTS.es.md`](docs/EXTENSION-CONTRACTS.es.md) y [`ROADMAP.es.md`](ROADMAP.es.md).
+1. definir reglas de compatibilidad para interfaces tipadas de repository/adapter;
+2. definir reglas de compatibilidad y deprecación para contratos REST/HTTP;
+3. definir reglas de compatibilidad para versiones de eventos/schemas como integraciones salientes y `FailureTransportEvent`;
+4. distinguir evolución aditiva compatible de cambios de autoridad, idempotencia, autenticación o estados que exigen versión breaking;
+5. definir una ruta práctica de deprecación/migración antes de eliminar un contrato público;
+6. mantener cambios de versión específicos de APIs proveedor dentro del adapter siempre que el contrato estable del core pueda mantenerse.
+
+El alcance e inventario están en [`docs/EXTENSION-CONTRACTS.es.md`](docs/EXTENSION-CONTRACTS.es.md), [`docs/EXTENSION-POINT-INVENTORY.es.md`](docs/EXTENSION-POINT-INVENTORY.es.md) y [`ROADMAP.es.md`](ROADMAP.es.md).
 
 Después de 10.3, la Fase 10 continuará con convenciones de releases/migraciones, templates de contribución/release y política de marca/trademark.
 

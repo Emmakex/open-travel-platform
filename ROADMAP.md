@@ -21,7 +21,7 @@ The platform is well beyond the original catalogue/booking MVP. Persistent ident
 
 **Phase 9 — Production hardening engineering baseline is COMPLETE.** This includes security/operability, critical persistence/concurrency/contract validation, observability/recovery/audit hardening, privacy/retention, accessibility and performance/load readiness.
 
-**Phase 10 — Open-source productisation is IN PROGRESS. Phase 10.1 and 10.2 are COMPLETE. Phase 10.3 — Extension contracts and reference adapters is ACTIVE.**
+**Phase 10 — Open-source productisation is IN PROGRESS. Phase 10.1 and 10.2 are COMPLETE. Phase 10.3 — Extension contracts and reference adapters is ACTIVE: 10.3.1 extension inventory/authority map is COMPLETE and 10.3.2 compatibility/versioning policy is ACTIVE.**
 
 Credentialed Stripe/Redsys TEST/LIVE E2E remains pending until suitable provider accounts are available. It remains an explicit provider-dependent release validation and does not reopen the completed Phase 9 engineering baseline.
 
@@ -174,19 +174,25 @@ Goal: make the MIT core reproducible to adopt, deploy, extend, release and contr
 
 Authoritative phase document: [`docs/EXTENSION-CONTRACTS.md`](docs/EXTENSION-CONTRACTS.md).
 
-### 10.3.1 — Extension-point inventory and authority map — ACTIVE
+### 10.3.1 — Extension-point inventory and authority map — COMPLETE
 
-- inventory public capability interfaces and adapter composition points;
-- classify each boundary as source-of-truth, downstream-only, synchronization or presentation/catalogue;
-- document which local domain remains authoritative after an external response;
-- explicitly prohibit adapters from silently gaining cross-domain authority.
+Authoritative inventory: [`docs/EXTENSION-POINT-INVENTORY.md`](docs/EXTENSION-POINT-INVENTORY.md).
 
-### 10.3.2 — Contract compatibility and versioning — PLANNED
+- verified all 9 first-class `repositories/` extension interfaces against code;
+- mapped composition points, bundled implementations and network contracts;
+- added the previously omitted `PaymentRepository` to the public inventory;
+- classified authority as bounded repository, local-authoritative, workflow-subordinate, downstream-only or monitoring-only;
+- confirmed generic webhooks are downstream delivery, not reverse mutation authority;
+- explicitly kept SMTP/email and arbitrary internal modules outside public plugin-contract status;
+- classified Stripe/Redsys as PSP integrations rather than `PaymentRepository` replacements.
+
+### 10.3.2 — Contract compatibility and versioning — ACTIVE
 
 - define stable public contract identifiers and compatibility expectations;
 - document backward-compatible versus breaking changes;
 - define deprecation expectations before contract removal;
-- keep provider-specific payloads/versioning inside adapters.
+- map rules across typed interfaces, HTTP contracts and event schemas;
+- keep provider-specific payloads/versioning inside adapters whenever possible.
 
 ### 10.3.3 — Contributor-facing reference adapters — PLANNED
 
@@ -234,8 +240,8 @@ Phase 8  External integrations ------------------------------- COMPLETE
 Phase 9  Production hardening engineering baseline ---------- COMPLETE
 10.1     Fresh-clone/demo bootstrap -------------------------- COMPLETE
 10.2     Self-host standalone deployment --------------------- COMPLETE
-10.3.1   Extension inventory + authority map ----------------- ACTIVE
-10.3.2   Compatibility/versioning policy --------------------- PLANNED
+10.3.1   Extension inventory + authority map ----------------- COMPLETE
+10.3.2   Compatibility/versioning policy --------------------- ACTIVE
 10.3.3   Reference adapter examples -------------------------- PLANNED
 10.3.4   Permanent extension-contract validation ------------ PLANNED
           ↓

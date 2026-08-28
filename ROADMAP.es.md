@@ -21,7 +21,7 @@ La plataforma está muy por encima del MVP original de catálogo/reservas. Ya es
 
 **Fase 9 — Baseline de ingeniería de endurecimiento productivo está COMPLETADA.** Incluye seguridad/operabilidad, validación crítica de persistencia/concurrencia/contratos, observabilidad/recovery/auditoría, privacidad/retención, accesibilidad y preparación de rendimiento/carga.
 
-**Fase 10 — Productización open-source está EN CURSO. Las Fases 10.1 y 10.2 están COMPLETADAS. La Fase 10.3 — Contratos de extensión y adapters de referencia está ACTIVA.**
+**Fase 10 — Productización open-source está EN CURSO. Las Fases 10.1 y 10.2 están COMPLETADAS. La Fase 10.3 — Contratos de extensión y adapters de referencia está ACTIVA: 10.3.1 inventario/mapa de autoridad está COMPLETADA y 10.3.2 política de compatibilidad/versionado está ACTIVA.**
 
 La validación E2E TEST/LIVE con credenciales Stripe/Redsys sigue pendiente hasta disponer de cuentas adecuadas. Es una validación de release dependiente de proveedores y no reabre el baseline de ingeniería completado de la Fase 9.
 
@@ -174,19 +174,25 @@ Objetivo: hacer que el core MIT sea reproducible para adoptar, desplegar, extend
 
 Documento autoritativo de la fase: [`docs/EXTENSION-CONTRACTS.es.md`](docs/EXTENSION-CONTRACTS.es.md).
 
-### 10.3.1 — Inventario de puntos de extensión y mapa de autoridad — ACTIVA
+### 10.3.1 — Inventario de puntos de extensión y mapa de autoridad — COMPLETADA
 
-- inventariar interfaces públicas de capacidad y puntos de composición;
-- clasificar cada frontera como source-of-truth, downstream-only, sincronización o presentación/catálogo;
-- documentar qué dominio local sigue siendo autoritativo tras una respuesta externa;
-- prohibir explícitamente que un adapter obtenga autoridad cross-domain de forma implícita.
+Inventario autoritativo: [`docs/EXTENSION-POINT-INVENTORY.es.md`](docs/EXTENSION-POINT-INVENTORY.es.md).
 
-### 10.3.2 — Compatibilidad y versionado de contratos — PLANIFICADA
+- verificadas las 9 interfaces de extensión de primer nivel bajo `repositories/`;
+- mapeados puntos de composición, implementaciones incluidas y contratos de red;
+- añadido `PaymentRepository`, que faltaba en el inventario preliminar;
+- clasificada la autoridad como repository acotado, local-autoritativa, subordinada a workflow, downstream-only o solo monitorización;
+- confirmado que los webhooks genéricos son entrega downstream, no autoridad de mutación inversa;
+- mantenidos SMTP/email y módulos internos arbitrarios fuera del contrato público de plugins;
+- clasificados Stripe/Redsys como integraciones PSP y no como sustitutos de `PaymentRepository`.
+
+### 10.3.2 — Compatibilidad y versionado de contratos — ACTIVA
 
 - definir identificadores públicos estables y expectativas de compatibilidad;
 - documentar cambios backward-compatible frente a breaking changes;
 - definir expectativas de deprecación antes de eliminar contratos;
-- mantener payloads/versionado específicos de proveedor dentro del adapter.
+- mapear reglas entre interfaces tipadas, contratos HTTP y schemas de eventos;
+- mantener payloads/versionado específicos de proveedor dentro del adapter siempre que sea posible.
 
 ### 10.3.3 — Adapters de referencia para contribuidores — PLANIFICADA
 
@@ -234,8 +240,8 @@ Fase 8   Integraciones externas ------------------------------- COMPLETADA
 Fase 9   Baseline de hardening productivo --------------------- COMPLETADA
 10.1     Bootstrap demo desde clon limpio --------------------- COMPLETADA
 10.2     Despliegue self-host standalone ---------------------- COMPLETADA
-10.3.1   Inventario de extensiones + mapa de autoridad -------- ACTIVA
-10.3.2   Política de compatibilidad/versionado ---------------- PLANIFICADA
+10.3.1   Inventario de extensiones + mapa de autoridad -------- COMPLETADA
+10.3.2   Política de compatibilidad/versionado ---------------- ACTIVA
 10.3.3   Ejemplos de adapters de referencia ------------------- PLANIFICADA
 10.3.4   Validación permanente de contratos ------------------- PLANIFICADA
           ↓
