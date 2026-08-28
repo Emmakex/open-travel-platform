@@ -20,7 +20,7 @@ The official commercial/reference implementation is **Kairoseth Travel**, deploy
 
 This repository is the **MIT-licensed provider-neutral core**. Kairoseth Travel is the hosted/commercial reference implementation.
 
-- customer data, production credentials and proprietary customer integrations stay outside the public repository;
+- customer data and proprietary customer integrations stay outside the public repository;
 - private Kairoseth/customer adapters may depend on public OTP contracts, never the reverse;
 - downstream providers never receive implicit booking, inventory, pricing or payment authority.
 
@@ -30,21 +30,29 @@ This repository is the **MIT-licensed provider-neutral core**. Kairoseth Travel 
 **Phase 9 — Production hardening engineering baseline: COMPLETE.**  
 **Phase 10 — Open-source productisation: IN PROGRESS.**
 
-Phase 10 status after this merge:
+Phase 10.3 closing status:
 
-- **10.1 Reproducible fresh-clone/demo bootstrap — COMPLETE**
-- **10.2 Provider-neutral self-host standalone deployment — COMPLETE**
-- **10.3 Extension contracts and reference adapters — ACTIVE**
-  - **10.3.1 Extension inventory and authority map — COMPLETE**
-  - **10.3.2 Compatibility/versioning policy — COMPLETE**
-  - **10.3.3 Contributor-facing reference adapters — COMPLETE**
-  - **10.3.4 Permanent extension-contract validation — ACTIVE**
+- **10.3.1 Extension inventory and authority map — COMPLETE**
+- **10.3.2 Compatibility/versioning policy — COMPLETE**
+- **10.3.3 Contributor-facing reference adapters — COMPLETE**
+- **10.3.4 Permanent extension-contract validation — COMPLETE candidate**
 
-Phase 10.3 now has a code-backed extension inventory, a formal compatibility/versioning policy and contributor-facing references backed by existing tested adapters. See:
+**Phase 10.3 becomes officially COMPLETE only after the 10.3.4 closing PR is green, merged to `main`, and `main` is verified.**
+
+Permanent extension gate:
+
+```bash
+npm run check:extension-contracts
+```
+
+It is part of `npm run verify` and is backed by a dedicated blocking GitHub Actions workflow that also runs the real local-HTTP adapter contract suite.
+
+Phase 10.3 documentation:
 
 - [`docs/EXTENSION-POINT-INVENTORY.md`](docs/EXTENSION-POINT-INVENTORY.md)
 - [`docs/EXTENSION-COMPATIBILITY.md`](docs/EXTENSION-COMPATIBILITY.md)
 - [`docs/REFERENCE-ADAPTERS.md`](docs/REFERENCE-ADAPTERS.md)
+- [`docs/EXTENSION-VALIDATION.md`](docs/EXTENSION-VALIDATION.md)
 - [`docs/EXTENSION-CONTRACTS.md`](docs/EXTENSION-CONTRACTS.md)
 
 Credentialed Stripe/Redsys TEST/LIVE E2E remains a separate provider-dependent release validation until suitable provider accounts are available.
@@ -55,10 +63,10 @@ Credentialed Stripe/Redsys TEST/LIVE E2E remains a separate provider-dependent r
 
 - bilingual EN/ES catalogue and Operator experience;
 - destinations, trips, itineraries, departures and live inventory;
-- accommodation/rooms, seasonal and occupancy pricing;
+- accommodation/rooms and seasonal/occupancy pricing;
 - Activities, Transport and Travel protection products;
 - transactional reservations with server-authoritative pricing/inventory;
-- travellers, minors, age bands, guardians and historical pricing snapshots;
+- travellers/minors/guardians and historical pricing snapshots;
 - package supplements and post-booking amendments.
 
 ### Identity and operations
@@ -74,7 +82,7 @@ Credentialed Stripe/Redsys TEST/LIVE E2E remains a separate provider-dependent r
 ### Payments and finance
 
 - provider-neutral payment/refund ledger;
-- bank transfer, cash and external terminal movements;
+- bank transfer, cash and external-terminal movements;
 - Stripe/Redsys checkout integrations;
 - deposits/installments/outstanding balance;
 - reconciliation/revenue reporting;
@@ -87,7 +95,7 @@ Credentialed Stripe/Redsys TEST/LIVE E2E remains a separate provider-dependent r
 - WCAG 2.2 AA-oriented accessibility baseline;
 - CSP/security headers, Origin validation and throttling;
 - liveness/readiness and `demo|live` deployment profiles;
-- MongoDB concurrency, idempotency, backup/restore and index validation;
+- MongoDB concurrency/idempotency, backup/restore and index validation;
 - repeatable performance/resource baselines.
 
 ### Integrations
@@ -101,11 +109,9 @@ Credentialed Stripe/Redsys TEST/LIVE E2E remains a separate provider-dependent r
 - provider-neutral failure transport;
 - SSRF/DNS-rebinding protections and bounded external transport.
 
-## Architecture
+## Extension architecture
 
 ```text
-Public catalogue / customer area
-        |
 TravelRepository + IdentityRepository
         |
 BookingRepository (demo / MongoDB / REST v1)
@@ -120,15 +126,11 @@ transactional integration outbox
         +--> CRM REST (downstream-only)
         +--> ERP/accounting REST (downstream-only)
 
-Operator/Admin
-        |
-OperationsRepository + audit/tasks/documents/reports
+OperationsRepository
         |
 SupplierFulfilmentAdapter -> audit-before-apply -> local workflow
 
-Operational failures
-        |
-structured logs -> optional FailureTransport
+Operational failures -> optional FailureTransport
 ```
 
 Provider-specific payloads stay inside adapters. Core authority remains explicit.
@@ -157,13 +159,11 @@ npm run package:standalone
 node .next/standalone/server.js
 ```
 
-For real production deployment use runtime-only secrets and the `live` readiness profile. See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) and [`docs/PRODUCTION-CHECKLIST.md`](docs/PRODUCTION-CHECKLIST.md).
+For production deployment see [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) and [`docs/PRODUCTION-CHECKLIST.md`](docs/PRODUCTION-CHECKLIST.md).
 
-## Extension model
+## Public extension model
 
-Phase 10.3 has formalized the public extension boundary.
-
-### Verified public interfaces
+Verified first-class interfaces:
 
 - `TravelRepository`
 - `IdentityRepository`
@@ -175,18 +175,36 @@ Phase 10.3 has formalized the public extension boundary.
 - `ErpAccountingAdapter`
 - `FailureTransport`
 
-Generic signed webhooks are a separate downstream delivery surface.
-
-### Official contributor references — 10.3.3 COMPLETE
+Official contributor references:
 
 - `RestBookingRepository` — bounded repository authority;
-- `RestSupplierFulfilmentAdapter` + `performSupplierAdapterOperation()` — workflow-subordinate, audit-before-apply;
+- `RestSupplierFulfilmentAdapter` + `performSupplierAdapterOperation()` — workflow-subordinate and audit-before-apply;
 - `RestCrmSyncAdapter` — downstream-only;
 - `RestFailureTransport` — optional monitoring-only pattern.
 
-These existing implementations are already covered by the real local-HTTP contract suite where applicable. The reference guide includes a copy pattern, v1→v2 migration example and proprietary-adapter boundary.
+## Permanent extension validation
 
-See [`docs/REFERENCE-ADAPTERS.md`](docs/REFERENCE-ADAPTERS.md).
+`check:extension-contracts` protects:
+
+- exact public extension inventory;
+- provider-neutral interface purity;
+- downstream-only CRM/ERP authority surfaces;
+- supplier audit-before-apply and authority limits;
+- provider-neutral `PaymentRepository` semantics;
+- documented v1 header/schema/signature identifiers;
+- reference-adapter transport safeguards;
+- central EN/ES documentation consistency.
+
+Run locally:
+
+```bash
+npm run check:extension-contracts
+npm run verify
+```
+
+Dedicated CI: `.github/workflows/extension-contracts.yml`.
+
+See [`docs/EXTENSION-VALIDATION.md`](docs/EXTENSION-VALIDATION.md).
 
 ## Documentation
 
@@ -197,52 +215,20 @@ See [`docs/REFERENCE-ADAPTERS.md`](docs/REFERENCE-ADAPTERS.md).
 - [`CHANGELOG.md`](CHANGELOG.md)
 - [`CONTRIBUTING.md`](CONTRIBUTING.md)
 
-### Phase 10.3
+### Extensions
 
 - [`docs/EXTENSION-POINT-INVENTORY.md`](docs/EXTENSION-POINT-INVENTORY.md)
 - [`docs/EXTENSION-COMPATIBILITY.md`](docs/EXTENSION-COMPATIBILITY.md)
 - [`docs/REFERENCE-ADAPTERS.md`](docs/REFERENCE-ADAPTERS.md)
+- [`docs/EXTENSION-VALIDATION.md`](docs/EXTENSION-VALIDATION.md)
 - [`docs/EXTENSION-CONTRACTS.md`](docs/EXTENSION-CONTRACTS.md)
 - [`docs/ADAPTER-GUIDE.md`](docs/ADAPTER-GUIDE.md)
 
-### Integration contracts
-
-- [`docs/REST-BOOKING-ADAPTER.md`](docs/REST-BOOKING-ADAPTER.md)
-- [`docs/SUPPLIER-FULFILMENT-ADAPTER.md`](docs/SUPPLIER-FULFILMENT-ADAPTER.md)
-- [`docs/CRM-SYNC-ADAPTER.md`](docs/CRM-SYNC-ADAPTER.md)
-- [`docs/ERP-ACCOUNTING-ADAPTER.md`](docs/ERP-ACCOUNTING-ADAPTER.md)
-- [`docs/OUTBOUND-INTEGRATIONS.md`](docs/OUTBOUND-INTEGRATIONS.md)
-- [`docs/FAILURE-TRANSPORT.md`](docs/FAILURE-TRANSPORT.md)
-
-## Quality gates
-
-Run:
-
-```bash
-npm run verify
-```
-
-CI additionally exercises real MongoDB replica sets, local HTTP adapter contracts, privacy, accessibility, recovery and performance/resource baselines.
-
 ## Phase completion rule
 
-A phase/slice is not complete until:
+A phase/slice is not complete until implementation and tests are finished, EN/ES documentation/README/ROADMAP/CHANGELOG are synchronized, the PR scope is reviewed, required CI is green, the PR is merged to `main`, and `main` is verified before the next phase starts.
 
-1. implementation/scope is finished;
-2. validation is complete;
-3. relevant EN/ES documentation, README, ROADMAP and CHANGELOG are synchronized;
-4. the PR diff matches the intended phase scope;
-5. required CI is green;
-6. the PR is merged to `main`;
-7. `main` is verified before the next phase begins.
-
-## Active priority — Phase 10.3.4
-
-After the 10.3.3 closing PR merges, the only active slice is **10.3.4 — permanent extension-contract validation**.
-
-It must add a permanent static/runtime gate that protects interface/reference presence, version/document consistency, provider-payload isolation, downstream authority limits, supplier audit-before-apply and reference-adapter safety, and register that gate in `npm run verify`/CI.
-
-No 10.3.4 implementation is included in the 10.3.3 closing branch.
+No later Phase 10 slice is active until the Phase 10.3 closing gate is satisfied.
 
 ## License
 
