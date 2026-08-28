@@ -26,13 +26,14 @@ Release de cierre de Fase 10: **v1.1.0**.
 10.8     Auditoría final/release + v1.1.0 --------------------- COMPLETADA
 
 11.1     Baseline reproducible OCI/Docker --------------------- COMPLETADA
-11.2     Publicación registry + procedencia ------------------- PLANIFICADA
+11.2     Publicación registry + procedencia ------------------- COMPLETADA
 11.3     Recetas de despliegue / orquestadores ---------------- PLANIFICADA
 11.4     Verificación de release de distribución -------------- PLANIFICADA
 ```
 
 Auditoría final de Fase 10: [`docs/PHASE-10-RELEASE-AUDIT.es.md`](docs/PHASE-10-RELEASE-AUDIT.es.md)  
-Despliegue en contenedores: [`docs/CONTAINERS.es.md`](docs/CONTAINERS.es.md)
+Despliegue en contenedores: [`docs/CONTAINERS.es.md`](docs/CONTAINERS.es.md)  
+Registry/provenance: [`docs/REGISTRY.es.md`](docs/REGISTRY.es.md)
 
 La validación Stripe/Redsys TEST/LIVE con credenciales sigue siendo un ítem dependiente del proveedor y no reabre Fase 9 ni bloquea el trabajo provider-neutral de distribución.
 
@@ -154,18 +155,26 @@ Entregado:
 - workflow bloqueante `Container distribution` construye imagen real, verifica non-root, espera health y ejecuta smoke HTTP/assets;
 - guía bilingüe [`docs/CONTAINERS.es.md`](docs/CONTAINERS.es.md) / [`docs/CONTAINERS.md`](docs/CONTAINERS.md).
 
-La Fase 11.1 **no publica** una imagen en registry. Esa frontera es deliberada.
+## 11.2 — Publicación en registry y procedencia — COMPLETADA
 
-## 11.2 — Publicación en registry y procedencia — PLANIFICADA
+Seguimiento: issue **#136**.
 
-Scope candidato, no activo hasta mergear y verificar 11.1:
+Entregado:
 
-- seleccionar target público de registry/distribución;
-- publicar únicamente referencias inmutables de versión/tag y digest desde commits de release auditados;
-- definir labels/metadata de imagen y enlace source/revision;
-- añadir checksums/SBOM/provenance/firma donde el ecosistema lo permita;
-- definir retención y reglas de tags que nunca se mueven;
-- mantener imágenes/configuración privadas Kairoseth/cliente fuera del core público.
+- GHCR como registry público de referencia sin convertirlo en dependencia de runtime del core;
+- publicación encadenada al workflow de release auditado y no a estado mutable de rama;
+- el tag SemVer debe resolver al SHA exacto de `main` auditado antes de publicar cualquier imagen;
+- `v1.1.0` histórico queda expresamente excluido de publicación retroactiva porque su tag inmutable es anterior al Dockerfile;
+- solo se publican tags exactos `vX.Y.Z` y `sha-<sha-completo>`; quedan prohibidos aliases móviles `latest`, major y minor;
+- metadatos OCI source/revision/version/license enlazan imagen y código fuente;
+- Docker BuildKit genera `provenance: mode=max` y SBOM en el mismo build de publicación;
+- GitHub artifact attestation ligada al digest OCI publicado;
+- Actions de publicación fijadas por SHA completo y permisos limitados a package/attestation/OIDC necesarios;
+- `scripts/registry-provenance-check.mjs` + `npm run check:registry-provenance` forman parte de `npm run verify`;
+- workflow `Registry publication and provenance` protege la política en PR y `main`;
+- guía bilingüe [`docs/REGISTRY.es.md`](docs/REGISTRY.es.md) / [`docs/REGISTRY.md`](docs/REGISTRY.md) documenta pulls por digest y `gh attestation verify`.
+
+11.2 no añade recetas de orquestación ni publica imágenes/configuración privadas Kairoseth/cliente.
 
 ## 11.3 — Recetas de despliegue / ejemplos de orquestador — PLANIFICADA
 
