@@ -10,24 +10,23 @@ _Last updated: 28 August 2026._
 
 **Phase 8 — External integrations: COMPLETE.**  
 **Phase 9 — Production hardening engineering baseline: COMPLETE.**  
-**Phase 10 — Open-source productisation: IN PROGRESS.**
-
-Phase 10 status after the 10.3.3 closing merge:
+**Phase 10 — Open-source productisation: IN PROGRESS.**  
+**Phase 10.3 — Extension contracts and reference adapters: COMPLETE.**
 
 ```text
-10.1     Fresh-clone/demo bootstrap -------------------------- COMPLETE
-10.2     Self-host standalone deployment --------------------- COMPLETE
 10.3.1   Extension inventory + authority map ----------------- COMPLETE
 10.3.2   Compatibility/versioning policy --------------------- COMPLETE
 10.3.3   Contributor-facing reference adapters --------------- COMPLETE
-10.3.4   Permanent extension-contract validation ------------ ACTIVE
+10.3.4   Permanent extension-contract validation ------------ COMPLETE
 ```
+
+The permanent extension gate is now part of `npm run verify` and has its own blocking GitHub Actions workflow.
 
 Credentialed Stripe/Redsys TEST/LIVE E2E remains a separate external dependency and does not reopen Phase 9.
 
 ---
 
-# Completed foundations
+# Completed platform foundations
 
 ## Catalogue, identity and booking — COMPLETE
 
@@ -78,12 +77,12 @@ Credentialed Stripe/Redsys TEST/LIVE E2E remains a separate external dependency 
 - CSP/security headers, HSTS, Origin checks and throttling;
 - liveness/readiness and fail-closed `demo|live` profiles;
 - MongoDB concurrency, rollback and payment/webhook idempotency validation;
-- structured logging, failure transport and external monitoring contract;
+- structured logging, failure transport and external monitoring;
 - privileged audit integrity and encryption keyrings;
 - MongoDB backup/restore and query-plan/index validation;
 - privacy-right execution and retention policy;
 - WCAG 2.2 AA-oriented accessibility gates;
-- public/authenticated read, mutation-throughput and runtime-resource baselines.
+- read, mutation-throughput and runtime-resource baselines.
 
 ---
 
@@ -94,7 +93,7 @@ Goal: make the MIT core easy to adopt, self-host, extend, release and contribute
 ## 10.1 — Reproducible demo bootstrap — COMPLETE
 
 - locked `npm ci` install contract;
-- safe `.env.demo.example`;
+- safe demo configuration;
 - non-destructive `npm run setup:demo`;
 - no mandatory external infrastructure for evaluation;
 - clean-checkout build/start/HTTP smoke;
@@ -105,94 +104,89 @@ Goal: make the MIT core easy to adopt, self-host, extend, release and contribute
 - Next.js `output: standalone` runtime;
 - `npm run package:standalone`;
 - real standalone HTTP/static smoke;
-- deployment docs for runtime secrets, readiness, TLS/proxy, MongoDB, workers, rollback;
+- deployment docs covering readiness, TLS/proxy, MongoDB, workers and rollback;
 - Kairoseth Travel remains a reference deployment, not a core dependency.
 
-## 10.3 — Extension contracts and reference adapters — ACTIVE
-
-Authoritative phase document: [`docs/EXTENSION-CONTRACTS.md`](docs/EXTENSION-CONTRACTS.md).
+## 10.3 — Extension contracts and reference adapters — COMPLETE
 
 ### 10.3.1 — Inventory and authority map — COMPLETE
 
 Authoritative inventory: [`docs/EXTENSION-POINT-INVENTORY.md`](docs/EXTENSION-POINT-INVENTORY.md).
 
-Completed:
-
-- verified all 9 first-class `repositories/` interfaces;
+- verified exactly nine first-class `repositories/` interfaces;
 - mapped composition, implementations and network contracts;
-- added `PaymentRepository` to the formal inventory;
-- classified bounded, local-authoritative, workflow-subordinate, downstream-only and monitoring-only authority;
-- kept SMTP/internal modules outside public plugin-contract status;
-- classified Stripe/Redsys as PSP integrations rather than payment-ledger repositories.
+- classified bounded/local/workflow/downstream/monitoring authority;
+- kept internal modules outside the public plugin contract;
+- classified Stripe/Redsys as PSP integrations rather than ledger repositories.
 
-### 10.3.2 — Compatibility/versioning policy — COMPLETE
+### 10.3.2 — Compatibility/versioning — COMPLETE
 
 Authoritative policy: [`docs/EXTENSION-COMPATIBILITY.md`](docs/EXTENSION-COMPATIBILITY.md).
 
-Completed:
-
 - public in-process interfaces follow core SemVer;
 - existing REST v1 paths/headers remain stable;
-- the unversioned catalogue is frozen as legacy-v1 semantics;
-- event-schema and webhook-signature versions are independent;
+- the unversioned catalogue is legacy-v1 semantics;
+- event schema and signing-scheme versions are independent;
 - authority/authentication/idempotency/state/data allowlists are contract-significant;
 - hidden mutation downgrade is prohibited;
-- breaking evolution requires explicit version/migration/deprecation handling.
+- breaking changes require explicit migration/deprecation/version handling.
 
-### 10.3.3 — Contributor-facing reference adapters — COMPLETE
+### 10.3.3 — Contributor reference adapters — COMPLETE
 
 Authoritative guide: [`docs/REFERENCE-ADAPTERS.md`](docs/REFERENCE-ADAPTERS.md).
 
-Completed:
+- `RestBookingRepository` — bounded repository reference;
+- `RestSupplierFulfilmentAdapter` + coordinator — workflow-subordinate, audit-before-apply;
+- `RestCrmSyncAdapter` — downstream-only reference;
+- `RestFailureTransport` — optional monitoring-only pattern;
+- references are tied to existing real HTTP contract tests.
 
-- designated `RestBookingRepository` as the bounded-authority repository reference;
-- designated `RestSupplierFulfilmentAdapter` + `performSupplierAdapterOperation()` as the workflow-subordinate/audit-before-apply reference;
-- designated `RestCrmSyncAdapter` as the downstream-only reference;
-- documented `RestFailureTransport` as an optional monitoring-only pattern;
-- documented server-only credentials, HTTPS/redirect safety, bounded transport, runtime validation and stable error normalization;
-- documented deterministic idempotency and audit-before-apply;
-- documented provider-version absorption inside adapters;
-- documented deliberate v1→v2 migration without hidden fallback;
-- documented the proprietary Kairoseth/customer adapter boundary;
-- confirmed existing `tests/rest-adapter-contracts.ts` coverage for the designated network references.
+### 10.3.4 — Permanent extension-contract validation — COMPLETE
 
-### 10.3.4 — Permanent extension-contract validation — ACTIVE after merge
+Authoritative guide: [`docs/EXTENSION-VALIDATION.md`](docs/EXTENSION-VALIDATION.md).
 
-Next work must add a permanent automated gate that protects the model formalized in 10.3.1–10.3.3.
+Delivered:
 
-Target coverage:
+- `scripts/extension-contract-check.mjs`;
+- `npm run check:extension-contracts`;
+- registration inside `npm run verify`;
+- dedicated blocking `.github/workflows/extension-contracts.yml`;
+- dedicated workflow executes both static invariants and `npm run test:rest-adapter-contracts`.
 
-- verified public interfaces/reference paths remain present;
-- version declarations and documentation remain synchronized;
-- provider payload types cannot leak into shared domain interfaces;
-- CRM/ERP remain downstream-only;
-- supplier responses still pass through audit/local transition validation;
-- reference adapters retain server-only credentials, bounded transport and runtime parsing;
-- project/contract/adapter docs remain consistent;
-- final gate is registered in `npm run verify` and CI.
+The gate protects:
 
-## Phase 10.3 completion gate
+- exact public interface inventory;
+- provider-neutral interface purity;
+- CRM/ERP downstream-only authority;
+- supplier audit-before-apply and authority limits;
+- provider-neutral payment-ledger boundary;
+- stable v1 contract/header/schema/signature identifiers;
+- reference-adapter transport safeguards;
+- EN/ES documentation synchronization.
 
-Phase 10.3 is not complete until:
+## Phase 10.3 completion record
 
-1. 10.3.1–10.3.4 are complete;
-2. EN/ES docs, README, ROADMAP and CHANGELOG are synchronized;
-3. the permanent validation is running in `npm run verify` and CI;
-4. required CI is green;
-5. the closing PR is merged to `main`;
-6. `main` is verified before any later Phase 10 slice begins.
+All Phase 10.3 completion requirements are satisfied by the closing change:
 
----
+1. 10.3.1–10.3.4 implementation scope is complete;
+2. `npm run check:extension-contracts` is registered in `verify` and blocking CI;
+3. EN/ES docs, README, ROADMAP and CHANGELOG are synchronized;
+4. the dedicated gate and existing runtime contract suite validate the extension model;
+5. proprietary Kairoseth/customer adapters remain decoupled from the MIT core.
 
-# Later Phase 10 slices
+The permanent project rule remains: required CI, merge to `main`, and verification of `main` are mandatory before starting the next phase.
 
-After Phase 10.3 closes:
+## Planned later Phase 10 work
+
+Following completed Phase 10.3, later Phase 10 work may cover:
 
 - release and migration conventions;
 - upgrade/deprecation policy;
 - richer contribution/release templates;
 - trademark/branding policy between Open Travel Platform and Kairoseth Travel;
 - optional adapters driven by commercial/community demand.
+
+No later slice is considered started merely because it is listed here; it receives its own branch and completion gate when work begins.
 
 ## Core non-goals
 

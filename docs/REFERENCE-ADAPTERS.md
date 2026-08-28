@@ -164,30 +164,26 @@ See [`EXTENSION-COMPATIBILITY.md`](EXTENSION-COMPATIBILITY.md).
 
 Private Kairoseth/customer/vendor adapters may import public OTP contracts and types. The MIT core must not import the private package or require its credentials for build, test, demo or self-host.
 
-## Existing test coverage
+## Permanent validation
 
-The designated network references are already exercised by `tests/rest-adapter-contracts.ts`. Coverage includes applicable cases for:
-
-- valid normalized responses;
-- wrong contract versions;
-- invalid content type/schema;
-- scope rejection;
-- bounded response size;
-- transient retry;
-- stable idempotency keys across retries;
-- non-retry of rejected client operations.
-
-Before proposing an adapter, run its focused tests and:
+The Phase 10.3.4 gate now protects these reference patterns through:
 
 ```bash
+npm run check:extension-contracts
+npm run test:rest-adapter-contracts
 npm run verify
 ```
 
-Phase 10.3.4 will add the permanent extension-model gate. This document does not claim that gate exists yet.
+`check:extension-contracts` verifies the public extension inventory, authority surfaces, v1 identifiers, audit-before-apply ordering, server-only/bounded transport properties, reference documentation and CI registration. The local-HTTP suite continues to exercise runtime contract behavior such as version rejection, scope checks, response bounds, retries and idempotency.
+
+Any contributor adding or changing a public extension surface must update the implementation, the relevant EN/ES documentation and the permanent gate in the same pull request.
+
+See [`EXTENSION-VALIDATION.md`](EXTENSION-VALIDATION.md).
 
 ## Related documentation
 
 - [`EXTENSION-POINT-INVENTORY.md`](EXTENSION-POINT-INVENTORY.md)
 - [`EXTENSION-COMPATIBILITY.md`](EXTENSION-COMPATIBILITY.md)
 - [`EXTENSION-CONTRACTS.md`](EXTENSION-CONTRACTS.md)
+- [`EXTENSION-VALIDATION.md`](EXTENSION-VALIDATION.md)
 - [`ADAPTER-GUIDE.md`](ADAPTER-GUIDE.md)
