@@ -1,6 +1,6 @@
 # Getting started from a fresh clone
 
-Phase 10.1 makes the open-source core runnable for evaluation without Kairoseth-specific infrastructure or third-party provider accounts.
+Phase 10.1 established the reproducible infrastructure-free evaluation path. Phase 10.2 added the provider-neutral standalone deployment path, and Phase 10.3 is now formalizing public extension contracts and reference adapters.
 
 ## Requirements
 
@@ -36,7 +36,7 @@ This is an evaluation profile, not a production configuration. Demo identities, 
 
 ## Production-build smoke test
 
-To test the same optimized Next.js build shape used by deployment environments:
+For a quick local check of the optimized Next.js build:
 
 ```bash
 npm run typecheck
@@ -52,7 +52,17 @@ Then verify at least:
 - `http://localhost:3000/operator/sign-in`
 - `http://localhost:3000/api/health/live`
 
-The dedicated `Fresh clone demo` GitHub Actions workflow repeats this path from a clean checkout and treats failure as blocking.
+The dedicated `Fresh clone demo` GitHub Actions workflow repeats the clean-checkout evaluation path and treats failure as blocking.
+
+`npm start` is convenient for this local smoke. It is **not** the documented self-host production entrypoint. Provider-neutral self-host deployments use the prepared Next.js standalone runtime:
+
+```bash
+npm run build
+npm run package:standalone
+HOSTNAME=0.0.0.0 PORT=3000 node .next/standalone/server.js
+```
+
+See [`DEPLOYMENT.md`](DEPLOYMENT.md) for the complete runtime, secrets, reverse-proxy/TLS, readiness and rollback model.
 
 ## Moving beyond the demo
 
@@ -67,6 +77,18 @@ Use `.env.example` as the full configuration inventory when enabling persistent 
 
 Never commit `.env.local`, provider credentials, encryption keys or tokens.
 
+## Extending the platform
+
+Phase 10.3 is the active productisation block for public extension contracts.
+
+Before implementing a new integration or changing an existing public adapter boundary, read:
+
+- [`EXTENSION-CONTRACTS.md`](EXTENSION-CONTRACTS.md) — authority, compatibility/versioning and completion rules;
+- [`ADAPTER-GUIDE.md`](ADAPTER-GUIDE.md) — implementation checklist;
+- the capability-specific adapter contract where applicable.
+
+External systems receive only the authority explicitly granted by their capability contract. Provider-specific payloads should remain inside adapters, and downstream systems such as CRM/ERP must not silently become booking/payment authority.
+
 ## Scope boundary
 
-The public repository remains provider-neutral. `travel.kairoseth.com` is the Kairoseth reference/commercial deployment, not a required dependency for a fresh clone of Open Travel Platform.
+The public repository remains provider-neutral. `travel.kairoseth.com` is the Kairoseth reference/commercial deployment, not a required dependency for a fresh clone of Open Travel Platform. Kairoseth/customer-specific adapters may remain private while consuming the public extension contracts.
