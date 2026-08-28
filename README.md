@@ -71,10 +71,11 @@ The platform is well beyond the original catalogue/booking MVP. The implementati
 - real MongoDB backup/restore disaster-recovery drills and query-plan/index validation;
 - authenticated privacy-right workflows, controlled access/portability/restriction/erasure execution and an explicit retention-policy registry;
 - a WCAG 2.2 AA-oriented accessibility engineering baseline across global navigation, customer authentication, Traveller Data/privacy, booking/payment and Operator workflows, backed by dedicated blocking browser journeys.
+- repeatable performance/load baselines covering public and authenticated reads, bounded mutation contention, runtime RSS/file-descriptor/thread behavior and post-spike liveness/recovery.
 
 Stripe and Redsys credentialed end-to-end validation remains intentionally pending until suitable provider accounts are available. The adapters are implemented, but production payment capability is not considered validated until provider TEST/LIVE flows have been exercised.
 
-**Phase 8 — External integrations is COMPLETE. Phase 9 — Production hardening is IN PROGRESS: Phase 9A production security, Phase 9B critical validation and Phase 9C observability/recovery/privileged-audit hardening are COMPLETE. Phase 9D-1 privacy rights, 9D-2 privacy execution, 9D-3 regulatory retention and 9D-4 accessibility readiness are COMPLETE. Phase 9D-5 performance/load readiness is NEXT.**
+**Phase 8 — External integrations is COMPLETE. The Phase 9 — Production hardening engineering baseline is COMPLETE across Phase 9A production security, Phase 9B critical validation, Phase 9C observability/recovery/privileged-audit hardening and Phase 9D privacy/regulatory/accessibility/performance readiness. Phase 10 — Open-source productisation is NEXT.**
 
 ## Current capabilities
 
@@ -503,6 +504,9 @@ INTEGRATION_COMPLETED_RETENTION_DAYS=180
 - [`docs/OBSERVABILITY.md`](docs/OBSERVABILITY.md) / [`docs/OBSERVABILITY.es.md`](docs/OBSERVABILITY.es.md) — structured operational logging, request correlation and redaction boundary.
 - [`docs/FAILURE-TRANSPORT.md`](docs/FAILURE-TRANSPORT.md) / [`docs/FAILURE-TRANSPORT.es.md`](docs/FAILURE-TRANSPORT.es.md) — provider-neutral centralized failure delivery, severity, allowlists and best-effort semantics.
 - [`docs/ACCESSIBILITY-OPERATOR.md`](docs/ACCESSIBILITY-OPERATOR.md) / [`docs/ACCESSIBILITY-OPERATOR.es.md`](docs/ACCESSIBILITY-OPERATOR.es.md) — Operator accessibility closeout, live-region/form semantics and manual review boundary.
+- [`docs/PERFORMANCE-LOAD-READINESS.md`](docs/PERFORMANCE-LOAD-READINESS.md) / [`docs/PERFORMANCE-LOAD-READINESS.es.md`](docs/PERFORMANCE-LOAD-READINESS.es.md) — consolidated Phase 9D-5 latency, throughput, capacity assumptions and production follow-up.
+- [`docs/PERFORMANCE-MUTATION-THROUGHPUT.md`](docs/PERFORMANCE-MUTATION-THROUGHPUT.md) / [`docs/PERFORMANCE-MUTATION-THROUGHPUT.es.md`](docs/PERFORMANCE-MUTATION-THROUGHPUT.es.md) — bounded booking/cancellation contention and post-load correctness.
+- [`docs/PERFORMANCE-RUNTIME-RESOURCE.md`](docs/PERFORMANCE-RUNTIME-RESOURCE.md) / [`docs/PERFORMANCE-RUNTIME-RESOURCE.es.md`](docs/PERFORMANCE-RUNTIME-RESOURCE.es.md) — runtime RSS/file-descriptor/thread baseline, bounded spike recovery and capacity guidance.
 - [`docs/ADAPTER-GUIDE.md`](docs/ADAPTER-GUIDE.md) — adding integrations.
 - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — deployment model.
 - [`docs/PRODUCTION-CHECKLIST.md`](docs/PRODUCTION-CHECKLIST.md) — production review.
@@ -539,12 +543,16 @@ check:accessibility-auth
 check:accessibility-traveller-privacy
 check:accessibility-booking-payment
 check:accessibility-operator
+check:performance-load
+check:performance-authenticated-read
+check:performance-mutation-throughput
+check:performance-runtime-resource
 check:browser-e2e
 typecheck
 build
 ```
 
-CI performs a clean install, runs deterministic invariants, type-checks and builds the production application. Dedicated blocking jobs exercise real MongoDB 8 replica sets, local HTTP adapter contracts, privileged-audit rollback, key rotation, backup/restore, query plans, privacy execution and critical accessibility journeys in Chromium. The broad registration → booking → customer → Operator Browser E2E remains a separate informational/non-blocking signal by policy; feature-specific accessibility browser gates are blocking.
+CI performs a clean install, runs deterministic invariants, type-checks and builds the production application. Dedicated blocking jobs exercise real MongoDB 8 replica sets, local HTTP adapter contracts, privileged-audit rollback, key rotation, backup/restore, query plans, privacy execution, critical accessibility journeys in Chromium and the four performance/load slices: public reads, authenticated reads, bounded mutations and runtime-resource spike recovery. The broad registration → booking → customer → Operator Browser E2E remains a separate informational/non-blocking signal by policy; feature-specific accessibility browser gates are blocking.
 
 ## Project status
 
@@ -573,22 +581,24 @@ CI performs a clean install, runs deterministic invariants, type-checks and buil
 | Phase 9D-2 — Access/portability, restriction and controlled erasure | **Complete** |
 | Phase 9D-3 — Regulatory retention-policy baseline | **Complete** |
 | Phase 9D-4 — Accessibility readiness | **Complete** |
-| Phase 9D-5 — Performance/load readiness | **Next** |
-| Phase 9 — Production hardening | **In progress** |
+| Phase 9D-5 — Performance/load readiness | **Complete** |
+| Phase 9 — Production hardening engineering baseline | **Complete; provider credentialed validation pending** |
+| Phase 10 — Open-source productisation | **Next** |
 
 Future work is tracked in **[ROADMAP.md](ROADMAP.md)** · **[ROADMAP.es.md](ROADMAP.es.md)**.
 
 ## Next development priority
 
-The next block is **Phase 9D-5 — Performance/load readiness**.
+The next block is **Phase 10 — Open-source productisation**.
 
-The database/index baseline is already validated with real MongoDB query plans, so this phase is about measuring the system rather than adding speculative optimization. The initial direction is:
+The production-hardening engineering baseline is complete. The next work should make a fresh public clone easier to adopt, extend and release without mixing Kairoseth-only infrastructure into the MIT core:
 
-- establish repeatable customer and Operator load scenarios using persistent MongoDB-backed data;
-- capture server-side latency distributions and request success/error rates for representative read and mutation paths;
-- exercise bounded concurrency around catalogue/search, authenticated account reads, booking-adjacent safe paths and Operator queues without weakening existing inventory/payment authority;
-- define explicit CI-friendly baseline budgets separately from production capacity targets;
-- record resource/capacity assumptions and the production observability signals that should trigger remeasurement or scaling;
-- fail safely under overload and document what remains deployment-specific for Hostinger/containers/managed MongoDB or other hosting choices.
+- validate a clean demo seed/setup from a fresh clone;
+- publish a fresh-clone install/deployment path and an optional Docker/self-host reference;
+- formalize reference adapters and extension contracts for external capabilities;
+- define versioned release and migration conventions;
+- add contribution templates and public API/extension documentation;
+- document trademark/branding rules for the open-source core versus Kairoseth Travel;
+- keep proprietary Kairoseth/customer adapters outside the public core where appropriate.
 
 Credentialed Stripe/Redsys TEST/LIVE E2E remains an external-dependency production-hardening requirement and should be inserted as soon as suitable provider accounts are available.
