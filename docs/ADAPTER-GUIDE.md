@@ -5,7 +5,8 @@ Open Travel Platform is provider-neutral. Product routes consume explicit capabi
 Phase 10.3 formalizes these extension boundaries. Before adding or changing an adapter, read:
 
 - [`EXTENSION-CONTRACTS.md`](EXTENSION-CONTRACTS.md) for authority and lifecycle rules;
-- [`EXTENSION-POINT-INVENTORY.md`](EXTENSION-POINT-INVENTORY.md) for the code-backed list of supported public extension surfaces.
+- [`EXTENSION-POINT-INVENTORY.md`](EXTENSION-POINT-INVENTORY.md) for the code-backed list of supported public extension surfaces;
+- [`EXTENSION-COMPATIBILITY.md`](EXTENSION-COMPATIBILITY.md) for the compatibility, versioning, deprecation and migration policy.
 
 ## Core adapter rule
 
@@ -29,7 +30,7 @@ Bundled implementations: demo, HTTP API and MongoDB.
 
 A production adapter may use a CMS, database, REST/GraphQL service or supplier catalogue. Normalize provider payloads before returning them to UI code. Do not expose backend-specific response objects across the repository boundary.
 
-The HTTP catalogue source is a bounded read/source contract; it does not gain booking, identity or payment authority. See [`API-CONTRACT.md`](API-CONTRACT.md).
+The HTTP catalogue source is a bounded read/source contract; it does not gain booking, identity or payment authority. Its current unversioned routes are frozen as legacy-v1 semantics: additive optional fields are allowed, but a future breaking catalogue contract must use an explicit new version rather than changing existing routes in place. See [`API-CONTRACT.md`](API-CONTRACT.md) and [`EXTENSION-COMPATIBILITY.md`](EXTENSION-COMPATIBILITY.md).
 
 ## Identity
 
@@ -184,7 +185,9 @@ Signed generic webhooks are a public delivery surface but **not** a `repositorie
 
 They are downstream-only: receiving a reservation event does not grant a subscriber reverse mutation authority over booking, inventory, payment, traveller or staff state.
 
-See [`OUTBOUND-INTEGRATIONS.md`](OUTBOUND-INTEGRATIONS.md) and [`INTEGRATION-OPERATIONS.md`](INTEGRATION-OPERATIONS.md).
+`IntegrationEventEnvelope.version` versions the event schema. `X-OTP-Signature: v1=...` versions the signing scheme. These are independent compatibility dimensions and must not be bumped together unless both contracts actually change.
+
+See [`OUTBOUND-INTEGRATIONS.md`](OUTBOUND-INTEGRATIONS.md), [`INTEGRATION-OPERATIONS.md`](INTEGRATION-OPERATIONS.md) and [`EXTENSION-COMPATIBILITY.md`](EXTENSION-COMPATIBILITY.md).
 
 ## What is not a public extension contract
 
@@ -218,19 +221,23 @@ getFailureTransport()
 
 Configuration chooses a bounded implementation; page/domain code does not detect vendors implicitly.
 
-A fork can add modes/adapters without changing page-level contracts when the existing interface is sufficient. If the interface is not sufficient, treat the change as a public contract change and apply the compatibility rules in [`EXTENSION-CONTRACTS.md`](EXTENSION-CONTRACTS.md).
+A fork can add modes/adapters without changing page-level contracts when the existing interface is sufficient. If the interface is not sufficient, treat the change as a public contract change and apply the compatibility rules in [`EXTENSION-COMPATIBILITY.md`](EXTENSION-COMPATIBILITY.md).
 
 ## Compatibility and versioning
 
-Phase 10.3.2 is now the active slice. Until its detailed matrix lands, preserve these baseline rules:
+Phase 10.3.2 is complete. The full policy lives in [`EXTENSION-COMPATIBILITY.md`](EXTENSION-COMPATIBILITY.md).
 
+Key rules:
+
+- in-process interfaces follow the core release SemVer; do not add artificial per-interface version constants;
+- preserve current v1 wire paths and header names exactly;
 - adding optional fields/capabilities with safe defaults is normally backward-compatible;
 - removing/renaming required fields, changing state semantics, authority, authentication or idempotency is normally breaking;
 - provider-specific API changes should be absorbed inside the adapter whenever possible;
-- HTTP/event contracts should use their documented version mechanism;
-- deprecation should precede removal of a public contract where practical.
-
-Do not invent a new global extension version unless the existing boundary genuinely needs one.
+- the legacy unversioned HTTP catalogue cannot be broken in place;
+- event-schema versions and signature-scheme versions are independent;
+- mutating adapters must never silently downgrade from a newer wire version to an older one;
+- deprecation and migration guidance should precede ordinary removal of a public contract.
 
 ## Error translation
 
@@ -244,7 +251,7 @@ Never place privileged configuration in `NEXT_PUBLIC_*` variables. Browser-visib
 
 The current HTTP catalogue mode is intentionally read/source oriented and may use browser-visible public configuration; that exception does not permit placing secrets in `NEXT_PUBLIC_*`.
 
-## Reference adapter checklist
+## Reference adapter checklist — Phase 10.3.3
 
 A contributor-facing reference adapter should demonstrate:
 
@@ -259,7 +266,10 @@ A contributor-facing reference adapter should demonstrate:
 9. audit-before-apply for external workflow state where applicable;
 10. explicit outbound data allowlists;
 11. no protected Traveller Data, secrets or raw payload leakage;
-12. no cross-domain authority escalation.
+12. no cross-domain authority escalation;
+13. preservation of the existing public version identifier when the contract is unchanged;
+14. provider-version upgrades absorbed inside the adapter where possible;
+15. explicit migration behavior for a deliberate v1 → v2 transition, with no hidden mutation fallback.
 
 ## Testing a new adapter
 
@@ -273,6 +283,7 @@ Before production use:
 6. confirm protected values never leak to browser/provider payloads;
 7. confirm provider responses cannot rewrite unrelated customer pricing/payment/booking authority;
 8. verify version/header behavior for versioned contracts;
-9. run `npm run verify` and the adapter-specific/deployment-specific integration suite.
+9. verify migration behavior when introducing a new contract version;
+10. run `npm run verify` and the adapter-specific/deployment-specific integration suite.
 
 Phase 10.3.4 will add a permanent extension-contract validation gate. Documentation must not claim that gate exists until its implementation is committed and running in CI.
