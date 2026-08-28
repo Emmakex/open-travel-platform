@@ -28,18 +28,17 @@ This repository is the **MIT-licensed provider-neutral core**. Kairoseth Travel 
 
 **Phase 8 — External integrations: COMPLETE.**  
 **Phase 9 — Production hardening engineering baseline: COMPLETE.**  
-**Phase 10 — Open-source productisation: IN PROGRESS.**
+**Phase 10 — Open-source productisation: IN PROGRESS.**  
+**Phase 10.3 — Extension contracts and reference adapters: COMPLETE.**
 
-Phase 10.3 closing status:
+Phase 10.3 status:
 
 - **10.3.1 Extension inventory and authority map — COMPLETE**
 - **10.3.2 Compatibility/versioning policy — COMPLETE**
 - **10.3.3 Contributor-facing reference adapters — COMPLETE**
-- **10.3.4 Permanent extension-contract validation — COMPLETE candidate**
+- **10.3.4 Permanent extension-contract validation — COMPLETE**
 
-**Phase 10.3 becomes officially COMPLETE only after the 10.3.4 closing PR is green, merged to `main`, and `main` is verified.**
-
-Permanent extension gate:
+The completed Phase 10.3 extension model is now protected by a permanent architecture-level gate:
 
 ```bash
 npm run check:extension-contracts
@@ -228,7 +227,7 @@ See [`docs/EXTENSION-VALIDATION.md`](docs/EXTENSION-VALIDATION.md).
 
 A phase/slice is not complete until implementation and tests are finished, EN/ES documentation/README/ROADMAP/CHANGELOG are synchronized, the PR scope is reviewed, required CI is green, the PR is merged to `main`, and `main` is verified before the next phase starts.
 
-No later Phase 10 slice is active until the Phase 10.3 closing gate is satisfied.
+Phase 10.3 satisfies this rule. Any later Phase 10 work must follow the same completion gate before advancing again.
 
 ## License
 
