@@ -39,23 +39,99 @@ Goal: make the MIT core easy to adopt, self-host, extend, release, upgrade and c
 
 ## 10.1 — Reproducible demo bootstrap — COMPLETE
 
-Locked installation, safe demo bootstrap, infrastructure-free evaluation, production build/start/HTTP smoke and EN/ES onboarding.
+- locked `npm ci` install contract;
+- safe/non-destructive demo bootstrap;
+- no mandatory external infrastructure for evaluation;
+- clean-checkout build/start/HTTP smoke;
+- EN/ES onboarding.
 
 ## 10.2 — Provider-neutral standalone deployment — COMPLETE
 
-Next.js standalone runtime, packaging, real HTTP/static smoke and readiness/TLS/MongoDB/worker/rollback deployment guidance.
+- Next.js `output: standalone` runtime;
+- `npm run package:standalone`;
+- real standalone HTTP/static smoke;
+- readiness/TLS/MongoDB/worker/rollback deployment guidance.
 
 ## 10.3 — Extension contracts and reference adapters — COMPLETE
 
-Delivered nine verified provider-neutral extension interfaces, explicit authority map, compatibility/versioning policy, real reference adapters and permanent `check:extension-contracts` validation.
+Authoritative documents:
+
+- [`docs/EXTENSION-POINT-INVENTORY.md`](docs/EXTENSION-POINT-INVENTORY.md)
+- [`docs/EXTENSION-COMPATIBILITY.md`](docs/EXTENSION-COMPATIBILITY.md)
+- [`docs/REFERENCE-ADAPTERS.md`](docs/REFERENCE-ADAPTERS.md)
+- [`docs/EXTENSION-VALIDATION.md`](docs/EXTENSION-VALIDATION.md)
+
+Delivered:
+
+- nine verified provider-neutral extension interfaces;
+- explicit authority map;
+- compatibility/versioning rules;
+- real contributor reference adapters;
+- permanent `check:extension-contracts` gate and blocking workflow.
 
 ## 10.4 — Release and migration conventions — COMPLETE
 
-Delivered Semantic Versioning, immutable `vX.Y.Z` tags, verified-`main` release identity, migration classes, **expand → migrate → contract**, recovery requirements and permanent `check:release-migrations` validation.
+Authoritative documents:
+
+- [`docs/RELEASES.md`](docs/RELEASES.md)
+- [`docs/RELEASES.es.md`](docs/RELEASES.es.md)
+- [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md)
+- [`docs/MIGRATIONS.es.md`](docs/MIGRATIONS.es.md)
+
+Delivered:
+
+- stable Semantic Versioning and immutable `vX.Y.Z` tags;
+- release identity aligned across package/README/CHANGELOG/tag;
+- releases cut only from verified `main`;
+- migration classes for configuration, persistent state, wire contracts, key rotation and destructive changes;
+- **expand → migrate → contract** persistent evolution;
+- no hidden destructive startup migrations;
+- `check:release-migrations` and dedicated blocking workflow.
 
 ## 10.5 — Upgrade and deprecation lifecycle policy — COMPLETE
 
-Delivered supported upgrade paths, lifecycle `ACTIVE → DEPRECATED → REMOVED`, ordinary MAJOR-only public removals, documented security exceptions and permanent `check:upgrade-deprecations` validation.
+Authoritative documents:
+
+- [`docs/UPGRADES.md`](docs/UPGRADES.md)
+- [`docs/UPGRADES.es.md`](docs/UPGRADES.es.md)
+- [`docs/DEPRECATIONS.md`](docs/DEPRECATIONS.md)
+- [`docs/DEPRECATIONS.es.md`](docs/DEPRECATIONS.es.md)
+
+Support/upgrade contract:
+
+- latest stable release of the current major is the primary supported target;
+- no guaranteed LTS/backport line unless explicitly announced;
+- same-major upgrades are supported with documented migrations;
+- major upgrade path starts from the latest stable release of the immediately previous major when documented;
+- skip-major upgrades require explicit support documentation;
+- operators record exact source/target versions/SHAs and recovery classification.
+
+Deprecation contract:
+
+```text
+ACTIVE → DEPRECATED → REMOVED
+```
+
+- ordinary removal of a public surface occurs only in a **MAJOR** release;
+- deprecation notices identify replacement, first deprecated release and earliest ordinary removal release;
+- PATCH/MINOR releases do not silently remove or reinterpret supported public contracts/configuration;
+- configuration, extension interfaces, wire contracts and persistent data follow the same lifecycle;
+- security can accelerate removal only through an explicit documented exception;
+- warnings must not leak secrets/protected data.
+
+Permanent automation:
+
+```bash
+npm run check:upgrade-deprecations
+npm run verify
+```
+
+Delivered:
+
+- `scripts/upgrade-deprecation-check.mjs`;
+- `check:upgrade-deprecations` registered in `verify`;
+- dedicated `.github/workflows/upgrade-deprecations.yml`;
+- release, migration, extension compatibility, SUPPORT and CONTRIBUTING integration.
 
 ## 10.6 — Contribution and release templates — COMPLETE
 
@@ -66,13 +142,13 @@ Authoritative documents:
 
 Delivered:
 
-- one canonical `.github/PULL_REQUEST_TEMPLATE.md`; duplicate case-variant template removed;
-- PR checklist aligned with capability boundaries, SemVer, migrations, lifecycle, authority/security/privacy, UX/accessibility and phase closure;
-- richer bug/feature issue forms with exact-version, compatibility/public-contract and data-safety context;
-- reusable `.github/RELEASE_TEMPLATE.md` covering release identity, compatibility, upgrade/migration, deprecations/removals, rollback, validation and publication;
-- `scripts/contribution-template-check.mjs` and `npm run check:contribution-templates`;
+- exactly one canonical `.github/PULL_REQUEST_TEMPLATE.md`;
+- PR checklist aligned with capability/extension boundaries, SemVer, migrations, lifecycle, authority/security/privacy, UX/accessibility and phase completion;
+- richer bug/feature issue forms with exact-version, upgrade/public-contract, provider-neutrality and data-safety context;
+- reusable `.github/RELEASE_TEMPLATE.md` for release identity, compatibility, migrations, deprecations/removals, rollback, validation and publication;
+- `scripts/contribution-template-check.mjs` and `check:contribution-templates` inside `npm run verify`;
 - dedicated `.github/workflows/contribution-templates.yml`;
-- gate registered inside `npm run verify` and contributor documentation.
+- contributor documentation synchronized with Phases 10.3–10.5.
 
 ## Planned later Phase 10 work
 
@@ -81,7 +157,7 @@ No later slice is active merely because it is listed. Each receives its own bran
 Potential next slices:
 
 - trademark/branding policy between Open Travel Platform and Kairoseth Travel;
-- final Phase 10 documentation/release audit and public release cut;
+- final Phase 10 documentation/release audit and next public release cut;
 - optional adapters driven by commercial/community demand, outside the Phase 10 completion blocker unless deliberately promoted.
 
 ## Permanent phase gate
