@@ -4,7 +4,7 @@
 
 Open Travel Platform es el core reutilizable bajo licencia MIT. **Kairoseth Travel** es el despliegue comercial/de referencia oficial en **https://travel.kairoseth.com**.
 
-_Última actualización: 28 de agosto de 2026._
+_Última actualización: 29 de agosto de 2026._
 
 ## Posición actual
 
@@ -27,13 +27,16 @@ Release de cierre de Fase 10: **v1.1.0**.
 
 11.1     Baseline reproducible OCI/Docker --------------------- COMPLETADA
 11.2     Publicación registry + procedencia ------------------- COMPLETADA
-11.3     Recetas de despliegue / orquestadores ---------------- PLANIFICADA
+11.3     Recetas de despliegue / orquestadores ---------------- COMPLETADA*
 11.4     Verificación de release de distribución -------------- PLANIFICADA
 ```
 
+`*` La implementación/documentación de 11.3 está completa dentro de su PR de entrega, pero solo queda oficialmente cerrada después de CI obligatorio verde, merge a `main` y verificación de la revisión fusionada de `main`.
+
 Auditoría final de Fase 10: [`docs/PHASE-10-RELEASE-AUDIT.es.md`](docs/PHASE-10-RELEASE-AUDIT.es.md)  
 Despliegue en contenedores: [`docs/CONTAINERS.es.md`](docs/CONTAINERS.es.md)  
-Registry/provenance: [`docs/REGISTRY.es.md`](docs/REGISTRY.es.md)
+Registry/provenance: [`docs/REGISTRY.es.md`](docs/REGISTRY.es.md)  
+Recetas de despliegue: [`docs/DEPLOYMENT-RECIPES.es.md`](docs/DEPLOYMENT-RECIPES.es.md)
 
 La validación Stripe/Redsys TEST/LIVE con credenciales sigue siendo un ítem dependiente del proveedor y no reabre Fase 9 ni bloquea el trabajo provider-neutral de distribución.
 
@@ -176,17 +179,25 @@ Entregado:
 
 11.2 no añade recetas de orquestación ni publica imágenes/configuración privadas Kairoseth/cliente.
 
-## 11.3 — Recetas de despliegue / ejemplos de orquestador — PLANIFICADA
+## 11.3 — Recetas de despliegue / ejemplos de orquestador — COMPLETADA*
 
-Ejemplos provider-neutral candidatos:
+Seguimiento: issue **#138**.
 
-- Docker Compose para evaluación local y self-host controlado;
-- primitivas Kubernetes/plataforma de contenedores;
-- proxy inverso/TLS/readiness;
-- inyección de secrets/config y servicios persistentes externos;
-- upgrade/rollback mediante digests inmutables.
+Entregado en el PR 11.3:
 
-Ninguna plataforma específica será obligatoria para el core.
+- `deploy/compose/compose.demo.yml` para evaluación local sin secretos usando el Dockerfile del repositorio;
+- `deploy/compose/compose.production.yml` para self-host controlado desde un digest OCI inmutable explícito, sin reconstruir código en el host de despliegue;
+- baseline Kubernetes provider-neutral con Deployment, Service ClusterIP, ConfigMap seguro y entrada Kustomize;
+- fronteras de `Secret` externo y MongoDB/servicios stateful externos en vez de credenciales/estado productivos embebidos;
+- `10001:10001` no-root fijo, filesystem raíz de solo lectura, `/tmp` efímero limitado, capacidades eliminadas, sin elevación de privilegios y seccomp Kubernetes `RuntimeDefault`;
+- semántica `/api/health/live` para liveness y `/api/health/ready` para readiness conservada entre orquestadores;
+- red Compose en loopback por defecto y Service Kubernetes ClusterIP por defecto para mantener TLS/ingress bajo control del operador y neutral al proveedor;
+- procedimiento explícito upgrade/rollback mediante digests registrados/verificados y no mediante tags móviles;
+- `scripts/deployment-recipes-check.mjs` + `npm run check:deployment-recipes` añadidos a `npm run verify`;
+- workflow bloqueante `Deployment recipe validation` renderiza Compose/Kustomize y ejecuta build/start real, non-root y smoke de liveness/readiness;
+- guía bilingüe [`docs/DEPLOYMENT-RECIPES.es.md`](docs/DEPLOYMENT-RECIPES.es.md) / [`docs/DEPLOYMENT-RECIPES.md`](docs/DEPLOYMENT-RECIPES.md).
+
+`*` El cierre oficial todavía exige el gate permanente: PR verde, merge a `main` y verificación de la revisión fusionada. 11.3 no publica una nueva release de código ni una nueva imagen OCI.
 
 ## 11.4 — Verificación de release de distribución — PLANIFICADA
 
