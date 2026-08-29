@@ -34,8 +34,14 @@ Candidata de cierre de Fase 11: **v1.2.0**.
 
 `*` La implementación y candidata de release de Fase 11 están completas en la rama/PR de cierre. El cierre operativo oficial exige todavía el gate permanente: PR verde, merge a `main`, verificación verde de `main`, tag inmutable/GitHub Release `v1.2.0`, primera publicación OCI pública auditada y verificación correcta del digest exacto publicado. No comienza una fase posterior antes de completar toda esa secuencia.
 
-Documentos clave:
+Documentos clave de políticas/cierre:
 
+- Política de release: [`docs/RELEASES.es.md`](docs/RELEASES.es.md)
+- Política de migraciones: [`docs/MIGRATIONS.es.md`](docs/MIGRATIONS.es.md)
+- Política de upgrades: [`docs/UPGRADES.es.md`](docs/UPGRADES.es.md)
+- Política de deprecaciones: [`docs/DEPRECATIONS.es.md`](docs/DEPRECATIONS.es.md)
+- Plantillas contribución/release: [`docs/CONTRIBUTION-TEMPLATES.es.md`](docs/CONTRIBUTION-TEMPLATES.es.md)
+- Política branding/marcas: [`TRADEMARKS.es.md`](TRADEMARKS.es.md)
 - Auditoría Fase 10: [`docs/PHASE-10-RELEASE-AUDIT.es.md`](docs/PHASE-10-RELEASE-AUDIT.es.md)
 - Auditoría Fase 11 / v1.2.0: [`docs/RELEASE-AUDIT-1.2.0.es.md`](docs/RELEASE-AUDIT-1.2.0.es.md)
 - Release notes v1.2.0: [`docs/RELEASE-NOTES-1.2.0.es.md`](docs/RELEASE-NOTES-1.2.0.es.md)
@@ -61,7 +67,7 @@ Objetivo conseguido: el core MIT puede evaluarse, self-hostearse, extenderse, pu
 
 ## 10.2 — Standalone provider-neutral — COMPLETADA
 
-Next.js `output: standalone`, `npm run package:standalone`, smoke HTTP/static real y guía de readiness/TLS/MongoDB/workers/rollback.
+Next.js `output: standalone`, `npm run package:standalone`, smoke HTTP/static real y guía readiness/TLS/MongoDB/workers/rollback.
 
 ## 10.3 — Contratos de extensión/adapters referencia — COMPLETADA
 
@@ -69,19 +75,19 @@ Nueve interfaces públicas verificadas, mapa de autoridad, versionado/compatibil
 
 ## 10.4 — Releases y migraciones — COMPLETADA
 
-SemVer estable, tags inmutables `vX.Y.Z`, fuente de release en `main` verificado, clases de migración, expand → migrate → contract y validación permanente.
+SemVer estable, tags inmutables `vX.Y.Z`, fuente de release en `main` verificado, clases de migración, expand → migrate → contract y gate `check:release-migrations`. Consulta `RELEASES` y `MIGRATIONS` arriba.
 
 ## 10.5 — Upgrades y deprecaciones — COMPLETADA
 
-Rutas source/target soportadas, lifecycle `ACTIVE → DEPRECATED → REMOVED`, retirada ordinaria solo en MAJOR y excepción explícita de seguridad.
+Rutas source/target soportadas, lifecycle `ACTIVE → DEPRECATED → REMOVED`, retirada ordinaria solo en MAJOR y excepción explícita de seguridad. Consulta `UPGRADES` y `DEPRECATIONS` arriba.
 
 ## 10.6 — Plantillas de contribución/release — COMPLETADA
 
-PR template canónico, issue forms seguros, checklist reutilizable de release y gate permanente de plantillas.
+PR template canónico, issue forms seguros, checklist reutilizable, guía `CONTRIBUTION-TEMPLATES` y gate `check:contribution-templates`.
 
 ## 10.7 — Branding y marcas — COMPLETADA
 
-Derechos MIT separados de los derechos de branding/estado oficial de Kairoseth/Kairoseth Travel.
+Derechos MIT separados de los derechos de branding/estado oficial de Kairoseth/Kairoseth Travel. Consulta `TRADEMARKS.es.md`.
 
 ## 10.8 — Auditoría final y release v1.1.0 — COMPLETADA
 
