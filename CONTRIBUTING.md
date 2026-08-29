@@ -84,6 +84,10 @@ Public in-process interfaces follow core SemVer. Preserve existing v1 wire ident
 
 Do not add hidden destructive database migrations to application startup. Operational migrations must be deliberate, reviewable and recoverable.
 
+## Upgrade and deprecation impact
+
+For public-surface changes, state whether the lifecycle impact is no change, `ACTIVE → DEPRECATED`, `DEPRECATED → REMOVED`, or an accelerated security exception. Include replacement, migration path, earliest ordinary removal boundary and rollback/recovery implications whenever lifecycle changes.
+
 ## Contribution and release templates
 
 Read [`docs/CONTRIBUTION-TEMPLATES.md`](docs/CONTRIBUTION-TEMPLATES.md).
