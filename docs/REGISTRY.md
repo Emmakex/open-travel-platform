@@ -2,51 +2,68 @@
 
 <p align="center"><strong>English</strong> · <a href="./REGISTRY.es.md">Español</a></p>
 
-Status: **Phase 11.2 — COMPLETE when its closing PR is green, merged and verified on `main`**
+Status: **Phase 11.2 policy COMPLETE; Phase 11.4 closes the first audited public OCI distribution with v1.2.0**
 
 ## Purpose
 
-Open Travel Platform uses GitHub Container Registry (GHCR) as the public reference registry for official MIT-core container releases. The registry is a distribution channel, not a new application runtime: images are built from the same verified Dockerfile and Next.js standalone bundle defined by Phase 11.1.
+GitHub Container Registry (GHCR) is the public reference registry for official Open Travel Platform MIT-core container releases. It is a distribution channel, not a runtime dependency: operators may self-build or mirror a verified OCI digest elsewhere.
 
-The public image namespace is:
+Public image namespace:
 
 ```text
 ghcr.io/emmakex/open-travel-platform
 ```
 
-Registry choice does not make the application dependent on GHCR. Operators may build the OCI image themselves or mirror an immutable digest into another registry.
+## Audited publication chain
 
-## Publication trigger
-
-Container publication is downstream of the audited source release lifecycle:
+The reusable publication chain is:
 
 ```text
-Phase 10 release audit
+verified merged main
+  → Release audit
   → Publish audited release
-  → immutable SemVer tag + GitHub Release
+  → immutable vX.Y.Z tag + GitHub Release
   → Publish audited container
+  → Verify published distribution
 ```
 
-`Publish audited container` is triggered by the successful `Publish audited release` workflow. It checks out the exact audited `main` SHA and publishes only when the repository SemVer tag resolves to that same commit.
+The source release publisher creates a new tag/release only when the version-specific release audit explicitly approves the current version. Existing immutable history is never moved or recreated.
 
-A successful release workflow for an already-published historical version is therefore a safe no-op for container publication.
+The container publisher then checks out the exact audited SHA and publishes only when the SemVer source tag resolves to that same commit.
+
+## First-package GHCR visibility
+
+A newly created GHCR package may initially have private package visibility even when it is linked to a public repository. The Phase 11.4 verifier deliberately performs an anonymous pull **before any registry login** so a private package cannot be mistaken for a public distribution.
+
+If the first `Verify published distribution` run reports that the image is not anonymously pullable, a repository/package owner must perform the one-time GitHub package visibility action:
+
+```text
+GitHub profile / organization
+→ Packages
+→ open-travel-platform
+→ Package settings
+→ Change visibility
+→ Public
+```
+
+Then rerun the failed verification workflow. Phase 11 remains open until the anonymous pull succeeds. Do not weaken the verifier by logging in before this check.
 
 ## Historical v1.1.0 boundary
 
-`v1.1.0` was created before the Docker/OCI distribution baseline existed in the immutable source tag. It is intentionally **not** rebuilt or relabelled as a container image.
+`v1.1.0` was published before the Docker/OCI distribution baseline existed inside its immutable source tag. It is intentionally **not** rebuilt or relabelled retroactively as a container image.
 
-The first public GHCR image will be a future release whose immutable source tag already contains the Dockerfile, container validation and registry/provenance workflow. Release history must not be rewritten to manufacture a historical image.
+`v1.2.0` is the first release eligible for the complete audited public OCI pipeline because its immutable source revision contains the Dockerfile, container validation, registry/provenance policy, deployment recipes and post-publication verification workflow.
 
 ## Immutable image identities
 
-For a release `vX.Y.Z` built from source commit `<sha>`, the workflow publishes only:
+For release `vX.Y.Z` from audited source commit `<sha>`, only these discovery tags are emitted:
 
 ```text
 ghcr.io/emmakex/open-travel-platform:vX.Y.Z
 ghcr.io/emmakex/open-travel-platform:sha-<full-source-sha>
 ```
 
-Moving aliases are deliberately not published:
+Moving aliases are prohibited:
 
 ```text
 latest
@@ -55,17 +72,17 @@ latest
 stable
 ```
 
-Production deployments should resolve and record the OCI digest, then deploy by digest:
+Production deployment identity is the OCI digest:
 
 ```bash
 docker pull ghcr.io/emmakex/open-travel-platform@sha256:<digest>
 ```
 
-A SemVer tag is convenient for discovery; the digest is the immutable deployment identity.
+SemVer/SHA tags are discovery identities; `@sha256:<digest>` is the immutable runtime identity.
 
 ## OCI metadata
 
-Published images carry at least these OCI annotations:
+Published images carry at least:
 
 ```text
 org.opencontainers.image.source
@@ -74,28 +91,48 @@ org.opencontainers.image.version
 org.opencontainers.image.licenses=MIT
 ```
 
-The revision points to the exact audited source SHA.
+The revision must equal the audited source SHA and the version must equal the immutable source release.
 
 ## SBOM and provenance
 
-The release image is built with BuildKit attestations enabled:
+The publishing build emits:
 
-- `provenance: mode=max`
-- `sbom: true`
+- BuildKit `provenance: mode=max`;
+- `sbom: true`;
+- GitHub artifact attestation bound to the pushed OCI digest.
 
-The provenance and SBOM are generated from the same build that pushes the release image. They are not produced by rebuilding the source later.
+SBOM and provenance come from the same build that pushes the release image; they are not produced by rebuilding later.
 
-The workflow additionally creates a GitHub artifact attestation bound to the pushed OCI digest. The attestation identifies the repository/workflow identity that produced that digest.
+Publishing Actions are pinned to full commit SHAs and receive only required permissions (`contents: read`, `packages: write`, `attestations: write`, `id-token: write`).
 
-## Verify an image
+## Post-publication verification
 
-Pull by digest, not by a moving name:
+Phase 11.4 adds `Verify published distribution`, downstream of `Publish audited container`.
+
+For a newly published audited release the workflow verifies:
+
+1. the public SemVer image can be pulled without registry credentials;
+2. the SemVer tag and `sha-<full-source-sha>` tag resolve to the same OCI digest;
+3. the digest matches the exact subject subsequently executed;
+4. OCI source/revision/version/license labels match the audited source release;
+5. BuildKit provenance is present;
+6. an SPDX SBOM is present;
+7. GitHub artifact attestation verifies for the OCI subject;
+8. the image can be pulled and run by digest with the secret-free demo profile;
+9. runtime UID/GID is `10001:10001`;
+10. `/api/health/live`, `/api/health/ready` and representative routes/assets succeed.
+
+A machine-readable `distribution-verification-X.Y.Z.json` record is attached to the GitHub Release after successful verification. It records the release tag, audited source SHA and OCI digest for operator rollback/reference.
+
+## Operator verification
+
+Pull by digest:
 
 ```bash
 docker pull ghcr.io/emmakex/open-travel-platform@sha256:<digest>
 ```
 
-Verify the GitHub attestation for the OCI subject:
+Verify the GitHub OCI attestation:
 
 ```bash
 gh attestation verify \
@@ -103,49 +140,30 @@ gh attestation verify \
   --repo Emmakex/open-travel-platform
 ```
 
-Operators should compare:
+Compare:
 
-1. the intended Open Travel Platform release;
-2. its immutable source tag/commit;
-3. the image OCI revision metadata;
-4. the published OCI digest;
-5. the GitHub artifact attestation.
+- intended `vX.Y.Z` source release;
+- source tag commit;
+- OCI revision/version labels;
+- OCI digest;
+- release-attached distribution verification record;
+- GitHub artifact attestation.
 
-A mismatch is a deployment stop condition.
-
-## Workflow permissions and action pinning
-
-The publication workflow receives only the permissions required for the release image:
-
-- `contents: read`
-- `packages: write`
-- `attestations: write`
-- `id-token: write`
-
-Third-party and GitHub Actions used by the publishing job are pinned to full commit SHAs. Updating those action revisions is a reviewed supply-chain change and must pass the permanent registry/provenance gate.
+Any mismatch is a deployment stop condition.
 
 ## Secrets and private extensions
 
-The public image is built from the MIT core only. Production credentials remain runtime-injected as defined by `CONTAINERS.md`; no MongoDB, SMTP, PSP, Traveller Data, adapter or integration secrets are baked into the image.
+The public image contains the MIT core only. MongoDB, SMTP, PSP, Traveller Data, adapter/integration secrets and customer configuration remain runtime/external state.
 
-Private Kairoseth/customer adapters, private deployment configuration and proprietary service credentials must remain outside this public package. Publishing an independently operated image does not make that deployment an official Kairoseth Travel service; see `TRADEMARKS.md`.
+Private Kairoseth/customer adapters and proprietary configuration remain outside the public image. Running or mirroring this image does not make an independent deployment official Kairoseth Travel; see `TRADEMARKS.md`.
 
-## Validation
-
-Static publication/provenance invariants:
+## Permanent validation
 
 ```bash
 npm run check:registry-provenance
-```
-
-The permanent `Registry publication and provenance` GitHub Actions workflow runs this gate and preserves the Phase 11.1 container and prior release gates.
-
-The full project gate remains:
-
-```bash
+npm run check:release-audit
+npm run check:phase-11-distribution
 npm run verify
 ```
 
-## Phase boundary
-
-Phase 11.2 establishes registry publication and verifiable supply-chain identity only. Orchestrator/deployment recipes, multi-platform policy and later distribution capabilities remain separate Phase 11 slices and cannot be treated as complete by this document.
+`Registry publication and provenance` protects static supply-chain policy. `Release audit` protects the current source release, and `Verify published distribution` provides runtime/supply-chain evidence for the actual public artifact after publication.

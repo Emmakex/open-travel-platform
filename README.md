@@ -4,11 +4,11 @@
 
 > Reusable open-source travel platform foundation for agencies, tour operators and booking products.
 
-Open Travel Platform is a clean-room **Next.js + TypeScript + MongoDB** platform built around explicit domain, repository and adapter boundaries. It supports infrastructure-free demo onboarding, persistent production capabilities and provider-neutral self-host deployment.
+Open Travel Platform is a clean-room **Next.js + TypeScript + MongoDB** platform built around explicit domain, repository and adapter boundaries. It supports infrastructure-free demo onboarding, persistent production capabilities, reproducible OCI distribution and provider-neutral self-host/orchestrator deployment.
 
 The official commercial/reference implementation is **Kairoseth Travel**, deployed at **[travel.kairoseth.com](https://travel.kairoseth.com)**.
 
-![Version](https://img.shields.io/badge/version-1.1.0-0d1b2d)
+![Version](https://img.shields.io/badge/version-1.2.0-0d1b2d)
 ![Next.js](https://img.shields.io/badge/Next.js-16.3.2-000000)
 ![React](https://img.shields.io/badge/React-19.2.8-149eca)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178c6)
@@ -32,20 +32,22 @@ Branding and trademark usage is documented separately in [`TRADEMARKS.md`](TRADE
 **Phase 8 — External integrations: COMPLETE.**  
 **Phase 9 — Production hardening engineering baseline: COMPLETE.**  
 **Phase 10 — Open-source productisation: COMPLETE.**  
-**Phase 11 — Distribution & deployment ecosystem: IN PROGRESS.**
+**Phase 11 — Distribution & deployment ecosystem: COMPLETE.**
 
-Phase 10 closed with **v1.1.0**. Its final slices remain explicitly recorded as **10.7 Branding and trademark policy — COMPLETE** and **10.8 Final documentation/release audit and v1.1.0 publication — COMPLETE**. The audited closeout is documented in [`docs/PHASE-10-RELEASE-AUDIT.md`](docs/PHASE-10-RELEASE-AUDIT.md).
+Phase 10 closed with immutable source release **v1.1.0**. Its final slices remain recorded as **10.7 — Branding and trademark policy — COMPLETE** and **10.8 — Final documentation/release audit and v1.1.0 publication — COMPLETE**, with the closeout documented in [`docs/PHASE-10-RELEASE-AUDIT.md`](docs/PHASE-10-RELEASE-AUDIT.md).
 
-Current Phase 11 slices:
+Phase 11 closes with backward-compatible MINOR release **v1.2.0**:
 
 - **11.1 Reproducible OCI/Docker distribution baseline — COMPLETE**
 - **11.2 Registry publication and provenance — COMPLETE**
-- **11.3 Orchestrator/deployment recipes — COMPLETE subject to the permanent PR/merge/main-verification gate**
-- **11.4 Distribution release verification — PLANNED**
+- **11.3 Orchestrator/deployment recipes — COMPLETE**
+- **11.4 Distribution release verification — COMPLETE subject to the permanent PR/merge/published-artifact verification gate**
 
-Phase 11.1 provides the provider-neutral multi-stage container image, non-root runtime, runtime-only privileged configuration, built-in liveness healthcheck and real Docker build/start/HTTP validation. Phase 11.2 adds the audited GHCR publication contract, immutable SemVer/SHA image identities, OCI metadata, BuildKit `mode=max` provenance, SBOM and GitHub artifact attestations bound to the pushed digest. Phase 11.3 adds provider-neutral Docker Compose and Kubernetes deployment recipes, digest-only production image identity, external state/secrets, explicit liveness/readiness, non-root security contexts and upgrade/rollback by digest. Each slice is only officially closed after its PR is green, merged to `main` and `main` is verified.
+The v1.2.0 release audit is [`docs/RELEASE-AUDIT-1.2.0.md`](docs/RELEASE-AUDIT-1.2.0.md). This release PR declares the completed Phase 11 engineering baseline; operational closeout is only final after the PR is green, squash-merged to `main`, merged `main` passes `Release audit`, immutable `v1.2.0` and its GitHub Release are published, the first public OCI image is created, and `Verify published distribution` succeeds against the registry artifact itself.
 
-Credentialed Stripe/Redsys TEST/LIVE E2E remains a separate provider-dependent validation item. It does not reopen the completed Phase 9 baseline and is not required for infrastructure-free demo/container validation.
+The post-publication workflow attaches `distribution-verification-1.2.0.json` to the GitHub Release with the exact audited source SHA and verified OCI digest. The historical v1.1.0 source release is never retroactively rebuilt as an image.
+
+Credentialed Stripe/Redsys TEST/LIVE E2E remains a separate provider-dependent validation item. It does not reopen the completed Phase 9 baseline and is not required for provider-neutral distribution verification.
 
 ## Core capabilities
 
@@ -140,26 +142,26 @@ See [`docs/CONTAINERS.md`](docs/CONTAINERS.md).
 
 ## Registry and provenance
 
-GHCR is the public reference registry for future audited container releases:
+For audited releases eligible for container distribution, GHCR is the public reference registry:
 
 ```text
 ghcr.io/emmakex/open-travel-platform:vX.Y.Z
 ghcr.io/emmakex/open-travel-platform:sha-<full-source-sha>
 ```
 
-No moving `latest`, major or minor aliases are published. Production should deploy the recorded digest, for example:
+No moving `latest`, major or minor aliases are published. Production deploys the verified digest:
 
 ```bash
 docker pull ghcr.io/emmakex/open-travel-platform@sha256:<digest>
 ```
 
-Published release images include SBOM, BuildKit `provenance: mode=max`, OCI source/revision/version/license metadata and a GitHub artifact attestation tied to the image digest. `v1.1.0` is intentionally not rebuilt retroactively because its immutable source tag predates the Dockerfile/container workflow.
+Published images include SBOM, BuildKit `provenance: mode=max`, OCI source/revision/version/license metadata and a GitHub artifact attestation tied to the image digest. v1.2.0 is the first release eligible for a real public OCI distribution. `v1.1.0` remains source-only because its immutable tag predates the Docker baseline.
 
 See [`docs/REGISTRY.md`](docs/REGISTRY.md).
 
 ## Deployment recipes
 
-Phase 11.3 adds provider-neutral orchestration examples without making a hosting platform mandatory:
+Provider-neutral orchestration examples do not make a hosting platform mandatory:
 
 ```bash
 docker compose -f deploy/compose/compose.demo.yml up -d --build --wait
@@ -169,6 +171,20 @@ kubectl kustomize deploy/kubernetes/base
 Production Compose and Kubernetes recipes consume an immutable identity such as `ghcr.io/emmakex/open-travel-platform@sha256:<digest>`, preserve UID/GID `10001:10001`, keep the root filesystem read-only, require external runtime secrets/state and distinguish `/api/health/live` from `/api/health/ready`. Production MongoDB is deliberately not bundled.
 
 See [`docs/DEPLOYMENT-RECIPES.md`](docs/DEPLOYMENT-RECIPES.md).
+
+## Published distribution verification
+
+After an audited source release and OCI publication, `Verify published distribution` validates the **registry artifact**, not a local rebuild. For v1.2.0 it must prove:
+
+- public pull succeeds before registry authentication;
+- SemVer and source-SHA tags resolve to one digest;
+- OCI source/revision/version/license labels match the audited release;
+- BuildKit SLSA provenance and SPDX SBOM are present;
+- GitHub artifact attestation verifies against the digest;
+- clean run by digest preserves UID/GID `10001:10001`;
+- `/api/health/live`, `/api/health/ready` and representative routes/assets succeed.
+
+The resulting `distribution-verification-1.2.0.json` GitHub Release asset is the exact machine-readable verification record.
 
 ## Release, upgrade and branding contract
 
@@ -203,10 +219,12 @@ npm run check:phase-10-release
 npm run check:container
 npm run check:registry-provenance
 npm run check:deployment-recipes
+npm run check:release-audit
+npm run check:phase-11-distribution
 npm run verify
 ```
 
-See [`docs/RELEASES.md`](docs/RELEASES.md), [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md), [`docs/UPGRADES.md`](docs/UPGRADES.md), [`docs/DEPRECATIONS.md`](docs/DEPRECATIONS.md), [`docs/CONTRIBUTION-TEMPLATES.md`](docs/CONTRIBUTION-TEMPLATES.md), [`TRADEMARKS.md`](TRADEMARKS.md), [`docs/CONTAINERS.md`](docs/CONTAINERS.md), [`docs/REGISTRY.md`](docs/REGISTRY.md), [`docs/DEPLOYMENT-RECIPES.md`](docs/DEPLOYMENT-RECIPES.md) and [`docs/PHASE-10-RELEASE-AUDIT.md`](docs/PHASE-10-RELEASE-AUDIT.md).
+See [`docs/RELEASES.md`](docs/RELEASES.md), [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md), [`docs/UPGRADES.md`](docs/UPGRADES.md), [`docs/DEPRECATIONS.md`](docs/DEPRECATIONS.md), [`docs/CONTRIBUTION-TEMPLATES.md`](docs/CONTRIBUTION-TEMPLATES.md), [`TRADEMARKS.md`](TRADEMARKS.md), [`docs/CONTAINERS.md`](docs/CONTAINERS.md), [`docs/REGISTRY.md`](docs/REGISTRY.md), [`docs/DEPLOYMENT-RECIPES.md`](docs/DEPLOYMENT-RECIPES.md), [`docs/PHASE-10-RELEASE-AUDIT.md`](docs/PHASE-10-RELEASE-AUDIT.md) and [`docs/RELEASE-AUDIT-1.2.0.md`](docs/RELEASE-AUDIT-1.2.0.md).
 
 ## Documentation
 
@@ -221,6 +239,10 @@ See [`docs/RELEASES.md`](docs/RELEASES.md), [`docs/MIGRATIONS.md`](docs/MIGRATIO
 - [`TRADEMARKS.es.md`](TRADEMARKS.es.md)
 - [`docs/PHASE-10-RELEASE-AUDIT.md`](docs/PHASE-10-RELEASE-AUDIT.md)
 - [`docs/RELEASE-NOTES-1.1.0.md`](docs/RELEASE-NOTES-1.1.0.md)
+- [`docs/RELEASE-AUDIT-1.2.0.md`](docs/RELEASE-AUDIT-1.2.0.md)
+- [`docs/RELEASE-AUDIT-1.2.0.es.md`](docs/RELEASE-AUDIT-1.2.0.es.md)
+- [`docs/RELEASE-NOTES-1.2.0.md`](docs/RELEASE-NOTES-1.2.0.md)
+- [`docs/RELEASE-NOTES-1.2.0.es.md`](docs/RELEASE-NOTES-1.2.0.es.md)
 - [`docs/RELEASES.md`](docs/RELEASES.md)
 - [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md)
 - [`docs/UPGRADES.md`](docs/UPGRADES.md)
@@ -257,16 +279,18 @@ npm run check:phase-10-release
 npm run check:container
 npm run check:registry-provenance
 npm run check:deployment-recipes
+npm run check:release-audit
+npm run check:phase-11-distribution
 npm run verify
 ```
 
-Dedicated workflows protect extension contracts, releases/migrations, upgrades/deprecations, contribution templates, branding, release identity, container distribution, registry/provenance policy and deployment recipes.
+Dedicated workflows protect extension contracts, releases/migrations, upgrades/deprecations, contribution templates, branding, historical Phase 10 release identity, container distribution, registry/provenance, deployment recipes, current release audit and published-distribution verification.
 
 ## Phase completion rule
 
-A phase/slice is not complete until implementation and tests are finished, EN/ES documentation/README/ROADMAP/CHANGELOG are synchronized, PR scope is reviewed, required CI is green, the PR is merged to `main`, and `main` is verified before subsequent roadmap work begins.
+A phase/slice is not complete until implementation and tests are finished, EN/ES documentation/README/ROADMAP/CHANGELOG are synchronized, PR scope is reviewed, required CI is green, the PR is merged to `main`, merged `main` is verified, and any release artifact required by the phase is published and independently verified before subsequent roadmap work begins.
 
-Phase 10 is closed by the audited v1.1.0 release. Phase 11.1, 11.2 and 11.3 follow the same permanent gate before any later distribution slice begins.
+Phase 10 remains historically closed by v1.1.0. Phase 11 closes through v1.2.0 only after the public OCI distribution itself passes the final verification workflow.
 
 ## License and branding
 

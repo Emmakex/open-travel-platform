@@ -2,51 +2,66 @@
 
 <p align="center"><a href="./REGISTRY.md">English</a> · <strong>Español</strong></p>
 
-Estado: **Fase 11.2 — COMPLETADA cuando su PR de cierre esté en verde, mergeada y verificada en `main`**
+Estado: **Política Fase 11.2 COMPLETADA; Fase 11.4 cierra la primera distribución OCI pública auditada con v1.2.0**
 
 ## Objetivo
 
-Open Travel Platform utiliza GitHub Container Registry (GHCR) como registry público de referencia para las imágenes oficiales del core MIT. El registry es un canal de distribución, no un runtime nuevo: las imágenes se construyen con el mismo Dockerfile verificado y el mismo bundle standalone de Next.js definido en la Fase 11.1.
+GitHub Container Registry (GHCR) es el registry público de referencia para releases oficiales del core MIT de Open Travel Platform. Es un canal de distribución, no una dependencia runtime: un operador puede autoconstruir o replicar un digest OCI verificado en otro registry.
 
-El namespace público es:
+Namespace público:
 
 ```text
 ghcr.io/emmakex/open-travel-platform
 ```
 
-La elección de GHCR no hace que la aplicación dependa de GHCR. Un operador puede construir la imagen OCI por su cuenta o replicar un digest inmutable en otro registry.
-
-## Disparo de publicación
-
-La publicación del contenedor queda aguas abajo del ciclo de release auditado:
+## Cadena auditada de publicación
 
 ```text
-Auditoría de release de Fase 10
+main mergeado/verificado
+  → Release audit
   → Publish audited release
-  → tag SemVer inmutable + GitHub Release
+  → tag vX.Y.Z inmutable + GitHub Release
   → Publish audited container
+  → Verify published distribution
 ```
 
-`Publish audited container` se dispara desde la finalización correcta de `Publish audited release`. El job hace checkout del SHA exacto auditado de `main` y solo publica cuando el tag SemVer del repositorio resuelve al mismo commit.
+El publisher de source crea un tag/release nuevo únicamente cuando la auditoría versionada aprueba explícitamente la versión actual. El historial inmutable existente nunca se mueve ni recrea.
 
-Por ello, una ejecución correcta del workflow de release para una versión histórica ya publicada se convierte en un no-op seguro para la imagen.
+El publisher del contenedor hace checkout del SHA auditado exacto y publica únicamente cuando el tag SemVer de código resuelve al mismo commit.
 
-## Límite histórico de v1.1.0
+## Visibilidad del primer paquete GHCR
 
-`v1.1.0` fue creado antes de que el baseline Docker/OCI existiera dentro de su tag de código inmutable. Por ese motivo **no** se reconstruye ni se reetiqueta retroactivamente como imagen de contenedor.
+Un paquete nuevo de GHCR puede tener inicialmente visibilidad privada aunque esté vinculado a un repositorio público. El verificador de Fase 11.4 realiza deliberadamente un pull anónimo **antes de cualquier login al registry**, para impedir que un paquete privado se confunda con una distribución pública.
 
-La primera imagen pública en GHCR será una release futura cuyo tag de código ya contenga el Dockerfile, la validación de contenedor y el workflow de registry/provenance. No se reescribe el historial de releases para fabricar una imagen histórica.
+Si la primera ejecución de `Verify published distribution` indica que la imagen no puede descargarse anónimamente, un propietario del repositorio/paquete debe realizar una única acción de visibilidad en GitHub:
 
-## Identidades inmutables de imagen
+```text
+Perfil / organización de GitHub
+→ Packages
+→ open-travel-platform
+→ Package settings
+→ Change visibility
+→ Public
+```
 
-Para una release `vX.Y.Z` construida desde el commit `<sha>`, el workflow publica únicamente:
+Después se vuelve a ejecutar el workflow fallido. Fase 11 permanece abierta hasta que el pull anónimo funcione. No se debe debilitar el verificador haciendo login antes de esta comprobación.
+
+## Límite histórico v1.1.0
+
+`v1.1.0` se publicó antes de que el baseline Docker/OCI existiera dentro de su tag source inmutable. Por tanto no se reconstruye ni etiqueta retroactivamente como imagen.
+
+`v1.2.0` es la primera release elegible para el pipeline OCI público auditado completo porque su revisión source inmutable contiene Dockerfile, validación de contenedor, política registry/provenance, recetas de despliegue y workflow de verificación post-publicación.
+
+## Identidades inmutables
+
+Para `vX.Y.Z` desde `<sha>` auditado se publican únicamente:
 
 ```text
 ghcr.io/emmakex/open-travel-platform:vX.Y.Z
 ghcr.io/emmakex/open-travel-platform:sha-<sha-completo-del-codigo>
 ```
 
-No se publican aliases móviles:
+Aliases móviles prohibidos:
 
 ```text
 latest
@@ -55,17 +70,17 @@ latest
 stable
 ```
 
-Los despliegues de producción deben resolver y registrar el digest OCI y desplegar por digest:
+La identidad productiva es el digest OCI:
 
 ```bash
 docker pull ghcr.io/emmakex/open-travel-platform@sha256:<digest>
 ```
 
-El tag SemVer sirve para localizar una release; el digest es la identidad inmutable del despliegue.
+Los tags SemVer/SHA sirven para localizar; `@sha256:<digest>` es la identidad runtime inmutable.
 
 ## Metadatos OCI
 
-Las imágenes publicadas incluyen como mínimo estas anotaciones OCI:
+La imagen publicada contiene al menos:
 
 ```text
 org.opencontainers.image.source
@@ -74,28 +89,48 @@ org.opencontainers.image.version
 org.opencontainers.image.licenses=MIT
 ```
 
-La revisión apunta al SHA exacto del código auditado.
+La revisión debe coincidir con el SHA auditado y la versión con el release source inmutable.
 
 ## SBOM y provenance
 
-La imagen de release se construye con attestations de BuildKit activadas:
+El build de publicación genera:
 
-- `provenance: mode=max`
-- `sbom: true`
+- BuildKit `provenance: mode=max`;
+- `sbom: true`;
+- GitHub artifact attestation ligada al digest OCI publicado.
 
-La provenance y el SBOM se generan en el mismo build que publica la imagen. No se generan reconstruyendo el código posteriormente.
+SBOM y provenance proceden del mismo build que realiza el push; no se fabrican reconstruyendo posteriormente.
 
-El workflow crea además una GitHub artifact attestation ligada al digest OCI publicado. Esa attestation identifica el repositorio y workflow que produjeron exactamente ese digest.
+Las Actions de publicación están fijadas por SHA completo y reciben únicamente permisos necesarios (`contents: read`, `packages: write`, `attestations: write`, `id-token: write`).
 
-## Verificar una imagen
+## Verificación post-publicación
 
-Descarga por digest y no por un nombre móvil:
+Fase 11.4 añade `Verify published distribution`, aguas abajo de `Publish audited container`.
+
+Para un release auditado nuevo comprueba:
+
+1. pull público del tag SemVer sin credenciales de registry;
+2. tag SemVer y `sha-<sha-completo>` resolviendo al mismo digest OCI;
+3. ejecución posterior exactamente por ese digest;
+4. labels OCI source/revision/version/license contra la release auditada;
+5. presencia de provenance BuildKit;
+6. presencia de SBOM SPDX;
+7. verificación de GitHub artifact attestation para el sujeto OCI;
+8. pull/run por digest con perfil demo sin secretos;
+9. UID/GID runtime `10001:10001`;
+10. éxito de `/api/health/live`, `/api/health/ready` y rutas/assets representativos.
+
+Tras éxito se adjunta a GitHub Release `distribution-verification-X.Y.Z.json`, con tag, SHA source auditado y digest OCI exacto para referencia/rollback.
+
+## Verificación del operador
+
+Pull por digest:
 
 ```bash
 docker pull ghcr.io/emmakex/open-travel-platform@sha256:<digest>
 ```
 
-Verifica la attestation de GitHub para el sujeto OCI:
+Verifica la attestation OCI:
 
 ```bash
 gh attestation verify \
@@ -103,49 +138,30 @@ gh attestation verify \
   --repo Emmakex/open-travel-platform
 ```
 
-Un operador debe contrastar:
+Contrasta:
 
-1. la release de Open Travel Platform que pretende desplegar;
-2. su tag/commit de código inmutable;
-3. el metadato OCI de revisión;
-4. el digest OCI publicado;
-5. la GitHub artifact attestation.
+- release source `vX.Y.Z`;
+- commit del tag;
+- labels OCI revision/version;
+- digest OCI;
+- registro de verificación adjunto al release;
+- GitHub artifact attestation.
 
-Cualquier discrepancia debe bloquear el despliegue.
-
-## Permisos y pinning de Actions
-
-El workflow de publicación recibe únicamente los permisos necesarios:
-
-- `contents: read`
-- `packages: write`
-- `attestations: write`
-- `id-token: write`
-
-Las GitHub Actions y acciones de terceros usadas para publicar están fijadas por SHA completo. Cambiar esas revisiones se considera un cambio de supply chain que debe revisarse y pasar el gate permanente de registry/provenance.
+Cualquier discrepancia bloquea el despliegue.
 
 ## Secretos y extensiones privadas
 
-La imagen pública se construye únicamente desde el core MIT. Las credenciales de producción siguen inyectándose en runtime según `CONTAINERS.es.md`; no se incluyen secretos de MongoDB, SMTP, PSP, Traveller Data, adapters ni integraciones dentro de la imagen.
+La imagen pública contiene únicamente el core MIT. MongoDB, SMTP, PSP, Traveller Data, secretos de adapters/integraciones y configuración cliente siguen siendo estado externo/runtime.
 
-Los adapters privados de Kairoseth/clientes, configuración privada de despliegue y credenciales propietarias deben permanecer fuera de este paquete público. Publicar una imagen operada de forma independiente no convierte ese despliegue en un servicio oficial Kairoseth Travel; consulta `TRADEMARKS.es.md`.
+Adapters privados Kairoseth/cliente y configuración propietaria permanecen fuera de la imagen pública. Ejecutar o replicar esta imagen no convierte un despliegue independiente en Kairoseth Travel oficial; consulta `TRADEMARKS.es.md`.
 
-## Validación
-
-Invariantes estáticas de publicación/provenance:
+## Validación permanente
 
 ```bash
 npm run check:registry-provenance
-```
-
-El workflow permanente `Registry publication and provenance` ejecuta este gate y conserva además las invariantes del contenedor de Fase 11.1 y los gates de release anteriores.
-
-El gate global continúa siendo:
-
-```bash
+npm run check:release-audit
+npm run check:phase-11-distribution
 npm run verify
 ```
 
-## Límite de fase
-
-La Fase 11.2 establece únicamente publicación en registry e identidad verificable de supply chain. Las recetas de orquestación/despliegue, la política multi-plataforma y otras capacidades posteriores de distribución permanecen como slices separados de la Fase 11.
+`Registry publication and provenance` protege la política estática. `Release audit` protege la release source actual y `Verify published distribution` aporta evidencia real del artefacto público tras publicación.

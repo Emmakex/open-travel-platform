@@ -1,0 +1,198 @@
+name: Verify published distribution
+
+on:
+  workflow_run:
+    workflows: ["Publish audited container"]
+    types: [completed]
+
+permissions:
+  contents: write
+  packages: read
+  attestations: read
+
+concurrency:
+  group: verify-published-distribution-${{ github.event.workflow_run.head_sha }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'workflow_run' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      AUDITED_SHA: ${{ github.event.workflow_run.head_sha }}
+      IMAGE: ghcr.io/emmakex/open-travel-platform
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout exact audited source revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - name: Resolve immutable release identity
+        id: release
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(node -p "require('./package.json').version")"
+          TAG="v${VERSION}"
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null
+          git fetch --force origin "refs/tags/${TAG}:refs/tags/${TAG}"
+          TAG_COMMIT="$(git rev-list -n 1 "$TAG")"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          if [[ "$TAG_COMMIT" != "$AUDITED_SHA" || "$TAG" == "v1.1.0" ]]; then
+            echo "verify=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "verify=true" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx for attestation inspection
+        if: steps.release.outputs.verify == 'true'
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e
+
+      - name: Clean public pull and resolve immutable digest
+        if: steps.release.outputs.verify == 'true'
+        id: image
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.release.outputs.tag }}"
+
+          # Deliberately pull the public image before any registry login.
+          # New GHCR packages are private by default; the first publication may
+          # require a one-time Package settings → Change visibility → Public action.
+          if ! docker pull "${IMAGE}:${TAG}"; then
+            echo "::error::The newly published GHCR package is not anonymously pullable. For the first package publication, open the open-travel-platform package settings on GitHub, change visibility to Public, then rerun this workflow. Phase 11 remains open until this clean public pull succeeds."
+            exit 1
+          fi
+
+          DIGEST_REF="$(docker image inspect "${IMAGE}:${TAG}" --format '{{index .RepoDigests 0}}')"
+          [[ "$DIGEST_REF" == "${IMAGE}@sha256:"* ]]
+          DIGEST="${DIGEST_REF#*@}"
+
+          docker pull "${IMAGE}:sha-${AUDITED_SHA}"
+          SHA_DIGEST_REF="$(docker image inspect "${IMAGE}:sha-${AUDITED_SHA}" --format '{{index .RepoDigests 0}}')"
+          test "$SHA_DIGEST_REF" = "$DIGEST_REF"
+
+          echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
+          echo "digest_ref=$DIGEST_REF" >> "$GITHUB_OUTPUT"
+          echo "Resolved public image ${DIGEST_REF}"
+
+      - name: Verify OCI source identity labels
+        if: steps.release.outputs.verify == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.release.outputs.tag }}"
+          VERSION="${{ steps.release.outputs.version }}"
+          test "$(docker image inspect "${IMAGE}:${TAG}" --format '{{ index .Config.Labels "org.opencontainers.image.source" }}')" = "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}"
+          test "$(docker image inspect "${IMAGE}:${TAG}" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')" = "$AUDITED_SHA"
+          test "$(docker image inspect "${IMAGE}:${TAG}" --format '{{ index .Config.Labels "org.opencontainers.image.version" }}')" = "$VERSION"
+          test "$(docker image inspect "${IMAGE}:${TAG}" --format '{{ index .Config.Labels "org.opencontainers.image.licenses" }}')" = "MIT"
+
+      - name: Verify BuildKit provenance and SBOM
+        if: steps.release.outputs.verify == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          DIGEST="${{ steps.image.outputs.digest }}"
+          docker buildx imagetools inspect "${IMAGE}@${DIGEST}" --format '{{json .Provenance}}' > /tmp/provenance.json
+          docker buildx imagetools inspect "${IMAGE}@${DIGEST}" --format '{{json .SBOM}}' > /tmp/sbom.json
+          node -e "const p=require('/tmp/provenance.json'); if (!p || !p.SLSA) process.exit(1)"
+          node -e "const s=require('/tmp/sbom.json'); if (!s || !s.SPDX) process.exit(1)"
+
+      - name: Verify GitHub artifact attestation
+        if: steps.release.outputs.verify == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          DIGEST="${{ steps.image.outputs.digest }}"
+          echo "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          gh attestation verify "oci://${IMAGE}@${DIGEST}" --repo "$GITHUB_REPOSITORY"
+
+      - name: Run pulled artifact by digest
+        if: steps.release.outputs.verify == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          DIGEST="${{ steps.image.outputs.digest }}"
+          docker pull "${IMAGE}@${DIGEST}"
+          docker run --detach \
+            --name open-travel-platform-release \
+            --env-file .env.demo.example \
+            --publish 127.0.0.1:3000:3000 \
+            --read-only \
+            --tmpfs /tmp:rw,noexec,nosuid,size=64m \
+            --cap-drop ALL \
+            --security-opt no-new-privileges:true \
+            "${IMAGE}@${DIGEST}"
+
+          healthy=false
+          for attempt in {1..90}; do
+            status="$(docker inspect --format '{{.State.Health.Status}}' open-travel-platform-release)"
+            if [[ "$status" == "healthy" ]]; then
+              healthy=true
+              break
+            fi
+            if [[ "$status" == "unhealthy" ]]; then
+              docker logs open-travel-platform-release || true
+              exit 1
+            fi
+            sleep 1
+          done
+          test "$healthy" = "true"
+          test "$(docker exec open-travel-platform-release id -u)" = "10001"
+          test "$(docker exec open-travel-platform-release id -g)" = "10001"
+
+          curl --fail --silent --show-error http://127.0.0.1:3000/api/health/live >/dev/null
+          curl --fail --silent --show-error http://127.0.0.1:3000/api/health/ready >/dev/null
+          curl --fail --silent --show-error http://127.0.0.1:3000/ >/dev/null
+          curl --fail --silent --show-error http://127.0.0.1:3000/trips >/dev/null
+          curl --fail --silent --show-error http://127.0.0.1:3000/destinations >/dev/null
+          curl --fail --silent --show-error http://127.0.0.1:3000/media/barcelona-cover.svg >/dev/null
+
+      - name: Record immutable distribution verification
+        if: steps.release.outputs.verify == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.release.outputs.version }}"
+          TAG="${{ steps.release.outputs.tag }}"
+          DIGEST="${{ steps.image.outputs.digest }}"
+          RECORD="distribution-verification-${VERSION}.json"
+          VERIFIED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          cat > "$RECORD" <<EOF
+          {
+            "version": "${VERSION}",
+            "sourceTag": "${TAG}",
+            "sourceSha": "${AUDITED_SHA}",
+            "image": "${IMAGE}",
+            "imageDigest": "${DIGEST}",
+            "imageReference": "${IMAGE}@${DIGEST}",
+            "rollbackSourceTag": "v1.1.0",
+            "rollbackImageDigest": null,
+            "verifiedAt": "${VERIFIED_AT}"
+          }
+          EOF
+          gh release upload "$TAG" "$RECORD" --repo "$GITHUB_REPOSITORY" --clobber
+          cat "$RECORD" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Distribution diagnostics on failure
+        if: failure()
+        run: |
+          docker inspect open-travel-platform-release || true
+          docker logs open-travel-platform-release || true
+
+      - name: Stop verification container
+        if: always() && steps.release.outputs.verify == 'true'
+        run: docker rm --force open-travel-platform-release || true
+
+      - name: Explain safe no-op
+        if: steps.release.outputs.verify != 'true'
+        run: echo "No newly published immutable distribution matched this audited main SHA; verification skipped safely."

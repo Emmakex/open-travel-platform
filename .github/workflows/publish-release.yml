@@ -2,7 +2,7 @@ name: Publish audited release
 
 on:
   workflow_run:
-    workflows: ["Phase 10 release audit"]
+    workflows: ["Release audit"]
     types: [completed]
 
 permissions:
@@ -18,14 +18,14 @@ jobs:
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.event == 'push' &&
       github.event.workflow_run.head_branch == 'main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       AUDITED_SHA: ${{ github.event.workflow_run.head_sha }}
     steps:
       - name: Checkout exact audited main revision
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
@@ -36,10 +36,13 @@ jobs:
           set -euo pipefail
           VERSION="$(node -p "require('./package.json').version")"
           TAG="v${VERSION}"
+          AUDIT="docs/RELEASE-AUDIT-${VERSION}.md"
+          NOTES="docs/RELEASE-NOTES-${VERSION}.md"
           [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
-          grep -Fq "RELEASE APPROVED FOR ${TAG}" docs/PHASE-10-RELEASE-AUDIT.md
-          grep -Fq "## [${VERSION}] - 2026-08-28" CHANGELOG.md
-          test -f "docs/RELEASE-NOTES-${VERSION}.md"
+          test -f "$AUDIT"
+          test -f "$NOTES"
+          grep -Fq "RELEASE APPROVED FOR ${TAG}" "$AUDIT"
+          grep -Fq "## [${VERSION}] - " CHANGELOG.md
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
           echo "TAG=$TAG" >> "$GITHUB_ENV"
 
@@ -55,6 +58,9 @@ jobs:
               echo "Existing tag ${TAG} has no GitHub Release; refusing to rewrite release history." >&2
               exit 1
             fi
+            git fetch --force origin "refs/tags/${TAG}:refs/tags/${TAG}"
+            TAG_COMMIT="$(git rev-list -n 1 "$TAG")"
+            echo "Existing ${TAG} resolves to ${TAG_COMMIT}; audited main is ${AUDITED_SHA}."
             echo "already_published=true" >> "$GITHUB_OUTPUT"
           else
             echo "already_published=false" >> "$GITHUB_OUTPUT"
