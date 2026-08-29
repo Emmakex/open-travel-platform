@@ -11,9 +11,10 @@ _Last updated: 29 August 2026._
 **Phase 8 — External integrations: COMPLETE.**  
 **Phase 9 — Production hardening engineering baseline: COMPLETE.**  
 **Phase 10 — Open-source productisation: COMPLETE.**  
-**Phase 11 — Distribution & deployment ecosystem: IN PROGRESS.**
+**Phase 11 — Distribution & deployment ecosystem — COMPLETE.**
 
-Phase 10 closeout release: **v1.1.0**.
+Phase 10 closeout release: **v1.1.0**.  
+Phase 11 closeout release candidate: **v1.2.0**.
 
 ```text
 10.1     Reproducible fresh-clone/demo bootstrap ------------- COMPLETE
@@ -27,26 +28,28 @@ Phase 10 closeout release: **v1.1.0**.
 
 11.1     Reproducible OCI/Docker distribution baseline ------- COMPLETE
 11.2     Registry publication + provenance ------------------- COMPLETE
-11.3     Deployment recipes / orchestrator examples ---------- COMPLETE*
-11.4     Distribution release verification ------------------- PLANNED
+11.3     Deployment recipes / orchestrator examples ---------- COMPLETE
+11.4     Distribution release verification + v1.2.0 ---------- COMPLETE*
 ```
 
-`*` 11.3 implementation/documentation is complete in its delivery PR but is only officially closed after required CI is green, merge to `main` and merged-`main` verification.
+`*` The Phase 11 implementation and release candidate are complete in the closing branch/PR. Official operational closeout still requires the permanent gate: green PR, merge to `main`, green merged-`main` verification, immutable `v1.2.0` tag/GitHub Release, first audited public OCI publication, and successful verification of that exact published digest. No subsequent roadmap phase starts before that sequence finishes.
 
-Final Phase 10 audit: [`docs/PHASE-10-RELEASE-AUDIT.md`](docs/PHASE-10-RELEASE-AUDIT.md)  
-Container deployment: [`docs/CONTAINERS.md`](docs/CONTAINERS.md)  
-Registry/provenance: [`docs/REGISTRY.md`](docs/REGISTRY.md)  
-Deployment recipes: [`docs/DEPLOYMENT-RECIPES.md`](docs/DEPLOYMENT-RECIPES.md)
+Key closeout documents:
 
-Credentialed Stripe/Redsys TEST/LIVE E2E remains a separate provider-dependent validation item and does not reopen Phase 9 or block provider-neutral distribution work.
+- Phase 10 audit: [`docs/PHASE-10-RELEASE-AUDIT.md`](docs/PHASE-10-RELEASE-AUDIT.md)
+- Phase 11 / v1.2.0 audit: [`docs/RELEASE-AUDIT-1.2.0.md`](docs/RELEASE-AUDIT-1.2.0.md)
+- v1.2.0 release notes: [`docs/RELEASE-NOTES-1.2.0.md`](docs/RELEASE-NOTES-1.2.0.md)
+- Container runtime: [`docs/CONTAINERS.md`](docs/CONTAINERS.md)
+- Registry/provenance: [`docs/REGISTRY.md`](docs/REGISTRY.md)
+- Deployment recipes: [`docs/DEPLOYMENT-RECIPES.md`](docs/DEPLOYMENT-RECIPES.md)
+
+Credentialed Stripe/Redsys TEST/LIVE E2E remains a separate provider-dependent validation item. It does not reopen Phase 9 and does not block provider-neutral source/container distribution verification.
 
 ---
 
 # Completed platform foundations
 
-Catalogue, identity, booking, commerce, post-purchase, operations, documents/reporting, external integrations, Phase 9 production hardening and Phase 10 open-source productisation are complete. The core includes persistent MongoDB capability adapters, provider-neutral payment boundaries, encrypted Traveller Data, operational workflows, signed outbound integrations, privacy/accessibility gates, recovery, repeatable performance baselines and a verified release lifecycle.
-
----
+Catalogue, identity, booking, commerce, post-purchase, operations, documents/reporting, external integrations, Phase 9 production hardening and Phase 10 open-source productisation are complete. The core includes persistent MongoDB adapters, provider-neutral payment boundaries, encrypted Traveller Data, operational workflows, signed outbound integrations, privacy/accessibility gates, recovery, repeatable performance baselines and a verified release lifecycle.
 
 # Phase 10 — Open-source productisation — COMPLETE
 
@@ -54,91 +57,41 @@ Goal achieved: the MIT core can be evaluated, self-hosted, extended, released, u
 
 ## 10.1 — Reproducible demo bootstrap — COMPLETE
 
-- locked `npm ci` install contract;
-- safe/non-destructive demo bootstrap;
-- no mandatory external infrastructure for evaluation;
-- clean-checkout build/start/HTTP smoke;
-- EN/ES onboarding.
+Locked `npm ci`, safe infrastructure-free demo bootstrap, clean-checkout build/start/HTTP smoke and EN/ES onboarding.
 
 ## 10.2 — Provider-neutral standalone deployment — COMPLETE
 
-- Next.js `output: standalone` runtime;
-- `npm run package:standalone`;
-- real standalone HTTP/static smoke;
-- readiness/TLS/MongoDB/worker/rollback deployment guidance.
+Next.js `output: standalone`, `npm run package:standalone`, real standalone HTTP/static smoke and readiness/TLS/MongoDB/worker/rollback guidance.
 
 ## 10.3 — Extension contracts and reference adapters — COMPLETE
 
-- nine verified provider-neutral extension interfaces;
-- explicit authority map;
-- compatibility/versioning rules;
-- real contributor reference adapters;
-- permanent `check:extension-contracts` gate and blocking workflow.
-
-Documents: [`docs/EXTENSION-POINT-INVENTORY.md`](docs/EXTENSION-POINT-INVENTORY.md), [`docs/EXTENSION-COMPATIBILITY.md`](docs/EXTENSION-COMPATIBILITY.md), [`docs/REFERENCE-ADAPTERS.md`](docs/REFERENCE-ADAPTERS.md), [`docs/EXTENSION-VALIDATION.md`](docs/EXTENSION-VALIDATION.md).
+Nine verified public extension interfaces, explicit authority map, compatibility/versioning rules, real reference adapters and permanent `check:extension-contracts` validation.
 
 ## 10.4 — Release and migration conventions — COMPLETE
 
-- stable Semantic Versioning and immutable `vX.Y.Z` tags;
-- release identity aligned across package/README/CHANGELOG/tag;
-- releases from verified `main`;
-- explicit migration classes and recovery;
-- **expand → migrate → contract**;
-- no hidden destructive startup migrations;
-- permanent `check:release-migrations` gate.
-
-Documents: [`docs/RELEASES.md`](docs/RELEASES.md), [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md).
+Stable SemVer, immutable `vX.Y.Z` tags, verified-`main` release source, explicit migration classes, expand → migrate → contract and permanent release/migration validation.
 
 ## 10.5 — Upgrade and deprecation lifecycle — COMPLETE
 
-- current-major stable release as primary support target;
-- no implicit LTS/backport promise;
-- documented same-major/adjacent-major upgrade paths;
-- lifecycle `ACTIVE → DEPRECATED → REMOVED`;
-- ordinary public removal only in MAJOR;
-- explicit security exception;
-- permanent `check:upgrade-deprecations` gate.
-
-Documents: [`docs/UPGRADES.md`](docs/UPGRADES.md), [`docs/DEPRECATIONS.md`](docs/DEPRECATIONS.md).
+Supported source/target paths, lifecycle `ACTIVE → DEPRECATED → REMOVED`, ordinary MAJOR-only removal and explicit security exception.
 
 ## 10.6 — Contribution and release templates — COMPLETE
 
-- one canonical PR template;
-- safer enriched issue forms;
-- reusable release checklist;
-- architecture/release/lifecycle/security/UX review fields;
-- permanent `check:contribution-templates` gate.
-
-Documents: [`docs/CONTRIBUTION-TEMPLATES.md`](docs/CONTRIBUTION-TEMPLATES.md).
+Canonical PR template, safe issue forms, reusable release checklist and permanent template validation.
 
 ## 10.7 — Branding and trademark policy — COMPLETE
 
-- MIT software rights separated from branding rights;
-- Open Travel Platform = public provider-neutral core/project;
-- Kairoseth Travel = official hosted/commercial reference implementation;
-- official deployment = `https://travel.kairoseth.com`;
-- truthful descriptive attribution allowed without implied official status;
-- permanent `check:branding-policy` gate.
-
-Documents: [`TRADEMARKS.md`](TRADEMARKS.md), [`TRADEMARKS.es.md`](TRADEMARKS.es.md).
+MIT software rights separated from Kairoseth/Kairoseth Travel branding and official-status rights.
 
 ## 10.8 — Final audit and v1.1.0 release — COMPLETE
 
-- release classified MINOR/backward-compatible;
-- package/README/CHANGELOG release identity moved to 1.1.0;
-- final audit and bilingual release notes added;
-- `check:phase-10-release` added to `npm run verify`;
-- dedicated release-audit workflow validates merged `main`;
-- publication workflow created the immutable `v1.1.0` tag and GitHub Release after that audit succeeded;
-- historical 1.0.0 package state is documented honestly rather than fabricating a retroactive tag.
-
-Documents: [`docs/PHASE-10-RELEASE-AUDIT.md`](docs/PHASE-10-RELEASE-AUDIT.md), [`docs/RELEASE-NOTES-1.1.0.md`](docs/RELEASE-NOTES-1.1.0.md).
+Phase 10 closed with the immutable `v1.1.0` Git tag/GitHub Release. The earlier 1.0.0 package state remains an honest pre-policy historical record rather than a fabricated retroactive release tag.
 
 ---
 
-# Phase 11 — Distribution & deployment ecosystem — IN PROGRESS
+# Phase 11 — Distribution & deployment ecosystem — COMPLETE
 
-Goal: make the verified standalone core straightforward to distribute and operate as an immutable provider-neutral application artifact without leaking secrets, vendor coupling or private Kairoseth implementation details.
+Goal achieved at the implementation/release-candidate level: distribute and operate the verified standalone core as an immutable provider-neutral OCI artifact without leaking secrets, vendor coupling or private Kairoseth implementation details. Final operational completion is effective only after the v1.2.0 publication/verification sequence described above succeeds on merged `main`.
 
 ## 11.1 — Reproducible OCI/Docker distribution baseline — COMPLETE
 
@@ -146,17 +99,15 @@ Tracked by issue **#134**.
 
 Delivered:
 
-- provider-neutral multi-stage `Dockerfile` using Node.js 24 Debian slim;
-- build stage reuses `npm ci`, `npm run build` and `npm run package:standalone`;
-- final image contains the prepared standalone runtime rather than the full source/build toolchain;
-- fixed non-root runtime identity `app` / `10001:10001`;
-- runtime defaults limited to `NODE_ENV`, `HOSTNAME`, `PORT` and telemetry control;
-- privileged configuration/secrets remain runtime-injected and are not baked into image layers;
-- Docker healthcheck uses `/api/health/live`, while production routing remains tied to `/api/health/ready`;
-- `.dockerignore` reduces build context and excludes local environment/runtime artifacts;
-- `scripts/container-distribution-check.mjs` + `npm run check:container` are part of `npm run verify`;
-- dedicated blocking `Container distribution` workflow performs a real image build, non-root inspection, health wait and HTTP/static-asset smoke;
-- bilingual [`docs/CONTAINERS.md`](docs/CONTAINERS.md) / [`docs/CONTAINERS.es.md`](docs/CONTAINERS.es.md).
+- provider-neutral multi-stage Dockerfile using Node.js 24;
+- build reuses locked install, production build and standalone packaging;
+- fixed non-root runtime `app` / `10001:10001`;
+- privileged configuration supplied only at runtime;
+- `/api/health/live` Docker healthcheck and `/api/health/ready` routing semantics;
+- hardened `.dockerignore`;
+- `npm run check:container` in `npm run verify`;
+- blocking real Docker build/start/non-root/health/HTTP workflow;
+- bilingual container guidance.
 
 ## 11.2 — Registry publication and provenance — COMPLETE
 
@@ -164,50 +115,63 @@ Tracked by issue **#136**.
 
 Delivered:
 
-- GHCR selected as the public reference registry without making it a core runtime dependency;
-- publication chained to the successful audited release workflow rather than mutable branch state;
-- SemVer tag must resolve to the exact audited `main` SHA before any image is published;
-- historical `v1.1.0` is explicitly excluded from retroactive image publication because its immutable source tag predates the Dockerfile;
-- only exact `vX.Y.Z` and `sha-<full-source-sha>` image tags are emitted; moving `latest`, major and minor aliases are forbidden;
-- OCI source/revision/version/license metadata links image to source;
-- Docker BuildKit emits `provenance: mode=max` and SBOM from the publishing build;
-- GitHub artifact attestation is bound to the pushed OCI digest;
-- publication actions are pinned to full commit SHAs and receive only required package/attestation/OIDC permissions;
-- `scripts/registry-provenance-check.mjs` + `npm run check:registry-provenance` are part of `npm run verify`;
-- dedicated `Registry publication and provenance` workflow protects this policy in PRs and `main`;
-- bilingual [`docs/REGISTRY.md`](docs/REGISTRY.md) / [`docs/REGISTRY.es.md`](docs/REGISTRY.es.md) document digest-pinned pulls and `gh attestation verify`.
+- GHCR as public reference registry without becoming a runtime dependency;
+- publication only after a successful audited source release;
+- exact SemVer tag ↔ audited `main` SHA equality before publishing;
+- immutable `vX.Y.Z` and `sha-<full-source-sha>` tags only;
+- no moving `latest`, major, minor or `stable` aliases;
+- OCI source/revision/version/license metadata;
+- BuildKit `provenance: mode=max` and SBOM from the publishing build;
+- GitHub artifact attestation tied to the OCI digest;
+- full-SHA-pinned publishing Actions and minimal permissions;
+- permanent `check:registry-provenance` gate;
+- explicit historical rule that `v1.1.0` receives no retroactive container image.
 
-11.2 does not add orchestrator recipes or publish private Kairoseth/customer images.
+## 11.3 — Deployment recipes / orchestrator examples — COMPLETE
 
-## 11.3 — Deployment recipes / orchestrator examples — COMPLETE*
+Tracked by issue **#138** and merged through PR **#139**.
 
-Tracked by issue **#138**.
+Delivered:
 
-Delivered in the 11.3 PR:
+- secret-free demo Docker Compose recipe;
+- production Compose consuming only an explicit immutable OCI digest;
+- provider-neutral Kubernetes Deployment/ClusterIP Service/ConfigMap/Kustomize baseline;
+- external Secret and MongoDB/state boundaries;
+- fixed UID/GID `10001:10001`, read-only root filesystem, dropped capabilities and no privilege escalation;
+- Kubernetes `RuntimeDefault` seccomp;
+- liveness/readiness separation;
+- operator-controlled TLS/ingress/reverse proxy;
+- upgrade/rollback by verified digest;
+- permanent `check:deployment-recipes` gate and real Compose smoke.
 
-- `deploy/compose/compose.demo.yml` for secret-free local evaluation using the repository Dockerfile;
-- `deploy/compose/compose.production.yml` for controlled self-hosting from an explicit immutable OCI digest, with no source rebuild on the deployment host;
-- provider-neutral Kubernetes base with Deployment, ClusterIP Service, safe ConfigMap and Kustomize entry point;
-- external `Secret` and external MongoDB/stateful-service boundaries rather than bundled production credentials/state;
-- fixed non-root `10001:10001`, read-only root filesystem, bounded ephemeral `/tmp`, dropped capabilities, no privilege escalation and Kubernetes `RuntimeDefault` seccomp;
-- `/api/health/live` liveness and `/api/health/ready` readiness semantics preserved across orchestrators;
-- loopback-by-default Compose networking and ClusterIP-by-default Kubernetes networking so TLS/ingress remains operator-controlled and provider-neutral;
-- explicit upgrade/rollback procedure using recorded verified image digests rather than moving tags;
-- `scripts/deployment-recipes-check.mjs` + `npm run check:deployment-recipes` added to `npm run verify`;
-- dedicated blocking `Deployment recipe validation` workflow renders Compose/Kustomize and performs a real Compose build/start/non-root/liveness/readiness smoke;
-- bilingual [`docs/DEPLOYMENT-RECIPES.md`](docs/DEPLOYMENT-RECIPES.md) / [`docs/DEPLOYMENT-RECIPES.es.md`](docs/DEPLOYMENT-RECIPES.es.md).
+11.3 is officially complete on `main` at merge commit `2d3e7e02134fe46a19a26595c02d493dde3f83fb`, after 30/30 merged-main workflows succeeded and the historical v1.1.0 container publisher again completed as a safe no-op.
 
-`*` Official completion still requires the permanent phase gate: green PR, merge to `main` and verification of the merged `main` revision. 11.3 does not publish a new source release or OCI image.
+## 11.4 — Distribution release verification — COMPLETE*
 
-## 11.4 — Distribution release verification — PLANNED
+Tracked by issue **#140**.
 
-Potential closeout gate for Phase 11:
+Release candidate: **v1.2.0**, classified **MINOR / backward-compatible** from v1.1.0.
 
-- verify published artifact digest ↔ source tag/commit identity;
-- verify clean pull/run of the public artifact;
-- validate release notes/upgrade/rollback documentation;
-- preserve non-root, health and runtime-secret invariants in published artifacts;
-- close Phase 11 only after the same permanent documentation/PR/CI/merge/main-verification gate.
+Delivered in the closing slice:
+
+- reusable `check:release-audit` gate for the current stable release rather than hard-coding future releases to the historical Phase 10 audit;
+- preserved historical `check:phase-10-release` validation for v1.1.0;
+- permanent `check:phase-11-distribution` closeout gate;
+- dedicated `Release audit` workflow for verified merged `main`;
+- generalized immutable `Publish audited release` workflow downstream of that current-release audit;
+- existing audited OCI publisher retained with exact tag/SHA matching, SBOM, max provenance and GitHub artifact attestation;
+- new `Verify published distribution` workflow after publication;
+- public pull of both immutable SemVer and digest identities;
+- verification that SemVer and SHA image tags resolve to the same OCI digest;
+- OCI source/revision/version/license label verification;
+- SBOM and provenance verification;
+- GitHub OCI attestation verification;
+- clean runtime smoke **by digest** with the secret-free demo profile;
+- verification of non-root UID/GID, liveness/readiness and representative routes/assets;
+- machine-readable `distribution-verification-1.2.0.json` evidence uploaded to the GitHub Release;
+- bilingual v1.2.0 audit and release notes.
+
+The first audited public OCI distribution is created only after this slice is merged and the audited `v1.2.0` source release is published from verified `main`. Historical `v1.1.0` remains intentionally image-free.
 
 ## Permanent project gate
 
@@ -221,6 +185,7 @@ implementation
 → merge to main
 → verify main
 → immutable release/tag/artifact when applicable
+→ verify the published artifact when applicable
 → subsequent roadmap work
 ```
 
