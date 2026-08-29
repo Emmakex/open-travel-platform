@@ -6,7 +6,7 @@ The active feature roadmap is frozen at **v1.2.0**. See [`MAINTENANCE.md`](MAINT
 
 ## Supported release baseline
 
-The primary public support target is the stable **v1.2.0** baseline and any future maintenance/security release explicitly published from it.
+Under the existing public lifecycle contract, the **latest stable release in the current major** remains the primary supported target. In maintenance mode, that baseline is currently **v1.2.0** and any future maintenance/security release explicitly published from it.
 
 Open Travel Platform currently provides **no guaranteed LTS branch**. Older-release fixes and security backports are best-effort unless a release or security notice explicitly announces a supported backport.
 
