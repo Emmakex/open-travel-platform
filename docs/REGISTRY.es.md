@@ -29,6 +29,23 @@ El publisher de source crea un tag/release nuevo únicamente cuando la auditorí
 
 El publisher del contenedor hace checkout del SHA auditado exacto y publica únicamente cuando el tag SemVer de código resuelve al mismo commit.
 
+## Visibilidad del primer paquete GHCR
+
+Un paquete nuevo de GHCR puede tener inicialmente visibilidad privada aunque esté vinculado a un repositorio público. El verificador de Fase 11.4 realiza deliberadamente un pull anónimo **antes de cualquier login al registry**, para impedir que un paquete privado se confunda con una distribución pública.
+
+Si la primera ejecución de `Verify published distribution` indica que la imagen no puede descargarse anónimamente, un propietario del repositorio/paquete debe realizar una única acción de visibilidad en GitHub:
+
+```text
+Perfil / organización de GitHub
+→ Packages
+→ open-travel-platform
+→ Package settings
+→ Change visibility
+→ Public
+```
+
+Después se vuelve a ejecutar el workflow fallido. Fase 11 permanece abierta hasta que el pull anónimo funcione. No se debe debilitar el verificador haciendo login antes de esta comprobación.
+
 ## Límite histórico v1.1.0
 
 `v1.1.0` se publicó antes de que el baseline Docker/OCI existiera dentro de su tag source inmutable. Por tanto no se reconstruye ni etiqueta retroactivamente como imagen.
