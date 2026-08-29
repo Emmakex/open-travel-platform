@@ -34,8 +34,14 @@ Phase 11 closeout release candidate: **v1.2.0**.
 
 `*` The Phase 11 implementation and release candidate are complete in the closing branch/PR. Official operational closeout still requires the permanent gate: green PR, merge to `main`, green merged-`main` verification, immutable `v1.2.0` tag/GitHub Release, first audited public OCI publication, and successful verification of that exact published digest. No subsequent roadmap phase starts before that sequence finishes.
 
-Key closeout documents:
+Key policy/closeout documents:
 
+- Release policy: [`docs/RELEASES.md`](docs/RELEASES.md)
+- Migration policy: [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md)
+- Upgrade policy: [`docs/UPGRADES.md`](docs/UPGRADES.md)
+- Deprecation policy: [`docs/DEPRECATIONS.md`](docs/DEPRECATIONS.md)
+- Contribution/release templates: [`docs/CONTRIBUTION-TEMPLATES.md`](docs/CONTRIBUTION-TEMPLATES.md)
+- Branding/trademark policy: [`TRADEMARKS.md`](TRADEMARKS.md)
 - Phase 10 audit: [`docs/PHASE-10-RELEASE-AUDIT.md`](docs/PHASE-10-RELEASE-AUDIT.md)
 - Phase 11 / v1.2.0 audit: [`docs/RELEASE-AUDIT-1.2.0.md`](docs/RELEASE-AUDIT-1.2.0.md)
 - v1.2.0 release notes: [`docs/RELEASE-NOTES-1.2.0.md`](docs/RELEASE-NOTES-1.2.0.md)
@@ -69,19 +75,19 @@ Nine verified public extension interfaces, explicit authority map, compatibility
 
 ## 10.4 — Release and migration conventions — COMPLETE
 
-Stable SemVer, immutable `vX.Y.Z` tags, verified-`main` release source, explicit migration classes, expand → migrate → contract and permanent release/migration validation.
+Stable SemVer, immutable `vX.Y.Z` tags, verified-`main` release source, explicit migration classes, expand → migrate → contract and permanent `check:release-migrations` validation. See `RELEASES` and `MIGRATIONS` policy above.
 
 ## 10.5 — Upgrade and deprecation lifecycle — COMPLETE
 
-Supported source/target paths, lifecycle `ACTIVE → DEPRECATED → REMOVED`, ordinary MAJOR-only removal and explicit security exception.
+Supported source/target paths, lifecycle `ACTIVE → DEPRECATED → REMOVED`, ordinary MAJOR-only removal and explicit security exception. See `UPGRADES` and `DEPRECATIONS` policy above.
 
 ## 10.6 — Contribution and release templates — COMPLETE
 
-Canonical PR template, safe issue forms, reusable release checklist and permanent template validation.
+Canonical PR template, safe issue forms, reusable release checklist, `CONTRIBUTION-TEMPLATES` guidance and permanent `check:contribution-templates` validation.
 
 ## 10.7 — Branding and trademark policy — COMPLETE
 
-MIT software rights separated from Kairoseth/Kairoseth Travel branding and official-status rights.
+MIT software rights separated from Kairoseth/Kairoseth Travel branding and official-status rights. See `TRADEMARKS.md`.
 
 ## 10.8 — Final audit and v1.1.0 release — COMPLETE
 
