@@ -34,7 +34,7 @@ Branding and trademark usage is documented separately in [`TRADEMARKS.md`](TRADE
 **Phase 10 — Open-source productisation: COMPLETE.**  
 **Phase 11 — Distribution & deployment ecosystem: COMPLETE.**
 
-Phase 10 closed with immutable source release **v1.1.0**. Its final slice **10.8 — Final documentation/release audit and v1.1.0 publication — COMPLETE** remains documented in [`docs/PHASE-10-RELEASE-AUDIT.md`](docs/PHASE-10-RELEASE-AUDIT.md).
+Phase 10 closed with immutable source release **v1.1.0**. Its final slices remain recorded as **10.7 — Branding and trademark policy — COMPLETE** and **10.8 — Final documentation/release audit and v1.1.0 publication — COMPLETE**, with the closeout documented in [`docs/PHASE-10-RELEASE-AUDIT.md`](docs/PHASE-10-RELEASE-AUDIT.md).
 
 Phase 11 closes with backward-compatible MINOR release **v1.2.0**:
 
