@@ -62,11 +62,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          VERSION="${{ steps.release.outputs.version }}"
           TAG="${{ steps.release.outputs.tag }}"
 
           # Deliberately pull the public image before any registry login.
-          docker pull "${IMAGE}:${TAG}"
+          # New GHCR packages are private by default; the first publication may
+          # require a one-time Package settings → Change visibility → Public action.
+          if ! docker pull "${IMAGE}:${TAG}"; then
+            echo "::error::The newly published GHCR package is not anonymously pullable. For the first package publication, open the open-travel-platform package settings on GitHub, change visibility to Public, then rerun this workflow. Phase 11 remains open until this clean public pull succeeds."
+            exit 1
+          fi
+
           DIGEST_REF="$(docker image inspect "${IMAGE}:${TAG}" --format '{{index .RepoDigests 0}}')"
           [[ "$DIGEST_REF" == "${IMAGE}@sha256:"* ]]
           DIGEST="${DIGEST_REF#*@}"
