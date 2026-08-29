@@ -32,8 +32,15 @@ const service = read('deploy/kubernetes/base/service.yaml');
 const configMap = read('deploy/kubernetes/base/configmap.yaml');
 const kustomization = read('deploy/kubernetes/base/kustomization.yaml');
 const workflow = read('.github/workflows/deployment-recipes.yml');
+const releaseTemplate = read('.github/RELEASE_TEMPLATE.md');
 const docsEn = read('docs/DEPLOYMENT-RECIPES.md');
 const docsEs = read('docs/DEPLOYMENT-RECIPES.es.md');
+const readmeEn = read('README.md');
+const readmeEs = read('README.es.md');
+const roadmapEn = read('ROADMAP.md');
+const roadmapEs = read('ROADMAP.es.md');
+const changelog = read('CHANGELOG.md');
+const contributing = read('CONTRIBUTING.md');
 const packageJson = read('package.json');
 
 includes(demoCompose, 'build:', 'demo Compose must build the audited repository Dockerfile');
@@ -55,6 +62,8 @@ includes(productionCompose, 'no-new-privileges:true', 'production Compose must d
 
 assert(/image:\s+ghcr\.io\/emmakex\/open-travel-platform@sha256:[0-9a-f]{64}/.test(deployment), 'Kubernetes image must be pinned by OCI digest');
 excludes(deployment, ':latest', 'Kubernetes must not use latest');
+includes(deployment, 'automountServiceAccountToken: false', 'Kubernetes must not mount a service-account token by default');
+includes(deployment, 'enableServiceLinks: false', 'Kubernetes must not inject implicit service-link environment data');
 includes(deployment, 'runAsNonRoot: true', 'Kubernetes pod must require non-root execution');
 includes(deployment, 'runAsUser: 10001', 'Kubernetes container must preserve UID 10001');
 includes(deployment, 'runAsGroup: 10001', 'Kubernetes container must preserve GID 10001');
@@ -89,6 +98,7 @@ for (const [name, source] of [
 
 includes(workflow, 'npm run check:deployment-recipes', 'deployment workflow must run the permanent gate');
 includes(workflow, 'docker compose -f deploy/compose/compose.demo.yml', 'deployment workflow must exercise the real demo Compose recipe');
+includes(workflow, 'kubectl kustomize deploy/kubernetes/base', 'deployment workflow must render the Kubernetes baseline');
 includes(workflow, '/api/health/live', 'deployment workflow must smoke liveness');
 includes(workflow, '/api/health/ready', 'deployment workflow must smoke readiness');
 includes(workflow, 'id -u', 'deployment workflow must verify the non-root runtime identity');
@@ -101,7 +111,28 @@ for (const [name, source] of [
   includes(source, '/api/health/live', `${name} must document liveness`);
   includes(source, '/api/health/ready', `${name} must document readiness`);
   includes(source, '10001', `${name} must document the non-root runtime identity`);
+  includes(source, 'MongoDB', `${name} must document the external durable-state boundary`);
 }
+
+for (const [name, source] of [
+  ['README.md', readmeEn],
+  ['README.es.md', readmeEs],
+  ['ROADMAP.md', roadmapEn],
+  ['ROADMAP.es.md', roadmapEs],
+  ['CHANGELOG.md', changelog],
+  ['CONTRIBUTING.md', contributing],
+  ['.github/RELEASE_TEMPLATE.md', releaseTemplate],
+]) {
+  includes(source, 'check:deployment-recipes', `${name} must remain synchronized with the Phase 11.3 permanent gate`);
+}
+
+includes(readmeEn, '11.3 Orchestrator/deployment recipes', 'English README must record Phase 11.3 status');
+includes(readmeEs, '11.3 Recetas de orquestación/despliegue', 'Spanish README must record Phase 11.3 status');
+includes(roadmapEn, '11.3     Deployment recipes / orchestrator examples ---------- COMPLETE', 'English ROADMAP must record Phase 11.3 completion');
+includes(roadmapEs, '11.3     Recetas de despliegue / orquestadores ---------------- COMPLETADA', 'Spanish ROADMAP must record Phase 11.3 completion');
+includes(changelog, 'Phase 11.3 Docker Compose demo recipe', 'CHANGELOG must record Phase 11.3');
+includes(contributing, '**Phase 11.3**', 'CONTRIBUTING must record the Phase 11.3 deployment contract');
+includes(releaseTemplate, '## Deployment recipes / orchestrators', 'release template must review deployment-recipe impact');
 
 includes(packageJson, '"check:deployment-recipes": "node scripts/deployment-recipes-check.mjs"', 'package.json must expose check:deployment-recipes');
 includes(packageJson, 'npm run check:deployment-recipes', 'npm run verify must include the deployment recipe gate');
