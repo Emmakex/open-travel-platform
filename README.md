@@ -9,12 +9,23 @@ Open Travel Platform is a clean-room **Next.js + TypeScript + MongoDB** platform
 The official commercial/reference implementation is **Kairoseth Travel**, deployed at **[travel.kairoseth.com](https://travel.kairoseth.com)**.
 
 ![Version](https://img.shields.io/badge/version-1.2.0-0d1b2d)
+![Status](https://img.shields.io/badge/status-stable%20%7C%20maintenance--only-2f855a)
 ![Next.js](https://img.shields.io/badge/Next.js-16.3.2-000000)
 ![React](https://img.shields.io/badge/React-19.2.8-149eca)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178c6)
 ![Node](https://img.shields.io/badge/Node-24_LTS-5fa04e)
 ![MongoDB](https://img.shields.io/badge/MongoDB-supported-47A248)
 ![License](https://img.shields.io/badge/license-MIT-45d6b5)
+
+## Development status — stable / maintenance only
+
+**Open Travel Platform v1.2.0 is the feature-frozen stable open-source baseline.** Phase 11 is fully closed and there is no active OTP feature roadmap.
+
+The repository remains public and unarchived for cloning, self-hosting, forks, security reports and relevant maintenance bugs. Future OTP changes are limited to security, critical correctness/reliability, necessary compatibility/runtime maintenance and documentation corrections. New commercial product features are out of scope for this repository.
+
+Active product development continues separately in **Kairoseth Travel**. New Kairoseth Travel features are not automatically backported to OTP, and OTP never depends on private Kairoseth/customer code.
+
+See [`MAINTENANCE.md`](MAINTENANCE.md) for the maintenance boundary and [`ROADMAP.md`](ROADMAP.md) for the frozen historical roadmap.
 
 ## Project model
 
@@ -36,18 +47,26 @@ Branding and trademark usage is documented separately in [`TRADEMARKS.md`](TRADE
 
 Phase 10 closed with immutable source release **v1.1.0**. Its final slices remain recorded as **10.7 — Branding and trademark policy — COMPLETE** and **10.8 — Final documentation/release audit and v1.1.0 publication — COMPLETE**, with the closeout documented in [`docs/PHASE-10-RELEASE-AUDIT.md`](docs/PHASE-10-RELEASE-AUDIT.md).
 
-Phase 11 closes with backward-compatible MINOR release **v1.2.0**:
+Phase 11 closed with backward-compatible MINOR release **v1.2.0**:
 
 - **11.1 Reproducible OCI/Docker distribution baseline — COMPLETE**
 - **11.2 Registry publication and provenance — COMPLETE**
 - **11.3 Orchestrator/deployment recipes — COMPLETE**
-- **11.4 Distribution release verification — COMPLETE subject to the permanent PR/merge/published-artifact verification gate**
+- **11.4 Distribution release verification — COMPLETE**
 
-The v1.2.0 release audit is [`docs/RELEASE-AUDIT-1.2.0.md`](docs/RELEASE-AUDIT-1.2.0.md). This release PR declares the completed Phase 11 engineering baseline; operational closeout is only final after the PR is green, squash-merged to `main`, merged `main` passes `Release audit`, immutable `v1.2.0` and its GitHub Release are published, the first public OCI image is created, and `Verify published distribution` succeeds against the registry artifact itself.
+The v1.2.0 release audit is [`docs/RELEASE-AUDIT-1.2.0.md`](docs/RELEASE-AUDIT-1.2.0.md). The closing PR was squash-merged to verified `main`, the immutable `v1.2.0` GitHub Release was published, the first public OCI image was created, and `Verify published distribution` succeeded against the registry artifact itself.
 
-The post-publication workflow attaches `distribution-verification-1.2.0.json` to the GitHub Release with the exact audited source SHA and verified OCI digest. The historical v1.1.0 source release is never retroactively rebuilt as an image.
+The verified stable distribution identity is:
 
-Credentialed Stripe/Redsys TEST/LIVE E2E remains a separate provider-dependent validation item. It does not reopen the completed Phase 9 baseline and is not required for provider-neutral distribution verification.
+```text
+Source release: v1.2.0
+Source SHA: aae9b2dcd4529cafba37cc44e7cdfec740731508
+OCI digest: sha256:aeda693786e6f7c69fd61348a1098acc5bdf09ddaf859cfe16314ce72d7ba6ac
+```
+
+The GitHub Release contains `distribution-verification-1.2.0.json`, the machine-readable verification record. The historical v1.1.0 source release is never retroactively rebuilt as an image.
+
+Credentialed Stripe/Redsys TEST/LIVE E2E remains a separate provider-dependent validation item. It does not reopen the completed Phase 9 baseline and is not required for the stable provider-neutral OTP baseline.
 
 ## Core capabilities
 
@@ -142,20 +161,20 @@ See [`docs/CONTAINERS.md`](docs/CONTAINERS.md).
 
 ## Registry and provenance
 
-For audited releases eligible for container distribution, GHCR is the public reference registry:
+GHCR is the public reference registry for the stable audited distribution:
 
 ```text
-ghcr.io/emmakex/open-travel-platform:vX.Y.Z
-ghcr.io/emmakex/open-travel-platform:sha-<full-source-sha>
+ghcr.io/emmakex/open-travel-platform:v1.2.0
+ghcr.io/emmakex/open-travel-platform:sha-aae9b2dcd4529cafba37cc44e7cdfec740731508
 ```
 
-No moving `latest`, major or minor aliases are published. Production deploys the verified digest:
+No moving `latest`, major or minor aliases are published. Production should deploy the verified digest:
 
 ```bash
-docker pull ghcr.io/emmakex/open-travel-platform@sha256:<digest>
+docker pull ghcr.io/emmakex/open-travel-platform@sha256:aeda693786e6f7c69fd61348a1098acc5bdf09ddaf859cfe16314ce72d7ba6ac
 ```
 
-Published images include SBOM, BuildKit `provenance: mode=max`, OCI source/revision/version/license metadata and a GitHub artifact attestation tied to the image digest. v1.2.0 is the first release eligible for a real public OCI distribution. `v1.1.0` remains source-only because its immutable tag predates the Docker baseline.
+The image includes SBOM, BuildKit `provenance: mode=max`, OCI source/revision/version/license metadata and a GitHub artifact attestation tied to the image digest. `v1.1.0` remains source-only because its immutable tag predates the Docker baseline.
 
 See [`docs/REGISTRY.md`](docs/REGISTRY.md).
 
@@ -174,7 +193,7 @@ See [`docs/DEPLOYMENT-RECIPES.md`](docs/DEPLOYMENT-RECIPES.md).
 
 ## Published distribution verification
 
-After an audited source release and OCI publication, `Verify published distribution` validates the **registry artifact**, not a local rebuild. For v1.2.0 it must prove:
+`Verify published distribution` validates the **registry artifact**, not a local rebuild. For v1.2.0 it proved:
 
 - public pull succeeds before registry authentication;
 - SemVer and source-SHA tags resolve to one digest;
@@ -196,7 +215,7 @@ Git tag       -> vX.Y.Z
 CHANGELOG     -> ## [X.Y.Z] - YYYY-MM-DD
 ```
 
-A production upgrade identifies exact source/target versions and SHAs, reviews all intervening migrations/deprecations, validates a representative target environment and declares recovery before persistent changes.
+A future maintenance release, when necessary, must still identify exact source/target versions and SHAs, review migration/deprecation impact, validate a representative target environment and declare recovery before persistent changes.
 
 Public lifecycle:
 
@@ -224,12 +243,14 @@ npm run check:phase-11-distribution
 npm run verify
 ```
 
-See [`docs/RELEASES.md`](docs/RELEASES.md), [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md), [`docs/UPGRADES.md`](docs/UPGRADES.md), [`docs/DEPRECATIONS.md`](docs/DEPRECATIONS.md), [`docs/CONTRIBUTION-TEMPLATES.md`](docs/CONTRIBUTION-TEMPLATES.md), [`TRADEMARKS.md`](TRADEMARKS.md), [`docs/CONTAINERS.md`](docs/CONTAINERS.md), [`docs/REGISTRY.md`](docs/REGISTRY.md), [`docs/DEPLOYMENT-RECIPES.md`](docs/DEPLOYMENT-RECIPES.md), [`docs/PHASE-10-RELEASE-AUDIT.md`](docs/PHASE-10-RELEASE-AUDIT.md) and [`docs/RELEASE-AUDIT-1.2.0.md`](docs/RELEASE-AUDIT-1.2.0.md).
+See [`MAINTENANCE.md`](MAINTENANCE.md), [`docs/RELEASES.md`](docs/RELEASES.md), [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md), [`docs/UPGRADES.md`](docs/UPGRADES.md), [`docs/DEPRECATIONS.md`](docs/DEPRECATIONS.md), [`docs/CONTRIBUTION-TEMPLATES.md`](docs/CONTRIBUTION-TEMPLATES.md), [`TRADEMARKS.md`](TRADEMARKS.md), [`docs/CONTAINERS.md`](docs/CONTAINERS.md), [`docs/REGISTRY.md`](docs/REGISTRY.md), [`docs/DEPLOYMENT-RECIPES.md`](docs/DEPLOYMENT-RECIPES.md), [`docs/PHASE-10-RELEASE-AUDIT.md`](docs/PHASE-10-RELEASE-AUDIT.md) and [`docs/RELEASE-AUDIT-1.2.0.md`](docs/RELEASE-AUDIT-1.2.0.md).
 
 ## Documentation
 
 ### Project and delivery
 
+- [`MAINTENANCE.md`](MAINTENANCE.md)
+- [`MAINTENANCE.es.md`](MAINTENANCE.es.md)
 - [`ROADMAP.md`](ROADMAP.md)
 - [`ROADMAP.es.md`](ROADMAP.es.md)
 - [`CHANGELOG.md`](CHANGELOG.md)
@@ -290,7 +311,7 @@ Dedicated workflows protect extension contracts, releases/migrations, upgrades/d
 
 A phase/slice is not complete until implementation and tests are finished, EN/ES documentation/README/ROADMAP/CHANGELOG are synchronized, PR scope is reviewed, required CI is green, the PR is merged to `main`, merged `main` is verified, and any release artifact required by the phase is published and independently verified before subsequent roadmap work begins.
 
-Phase 10 remains historically closed by v1.1.0. Phase 11 closes through v1.2.0 only after the public OCI distribution itself passes the final verification workflow.
+Phase 10 is historically closed by v1.1.0. Phase 11 is fully closed by verified v1.2.0. **No Phase 12 is planned for OTP; the public roadmap is frozen under the maintenance policy.**
 
 ## License and branding
 
