@@ -61,7 +61,7 @@ Read before introducing or changing an adapter:
 
 Official reference patterns remain `RestBookingRepository`, `RestSupplierFulfilmentAdapter` + coordinator, `RestCrmSyncAdapter` and monitoring-only `RestFailureTransport`.
 
-## Compatibility, releases and migrations
+## Release and migration impact
 
 Read:
 
