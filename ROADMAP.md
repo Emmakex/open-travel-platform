@@ -4,7 +4,7 @@
 
 Open Travel Platform is the reusable MIT-licensed core. **Kairoseth Travel** is the official commercial/reference deployment at **https://travel.kairoseth.com**.
 
-_Last updated: 28 August 2026._
+_Last updated: 29 August 2026._
 
 ## Current position
 
@@ -27,13 +27,16 @@ Phase 10 closeout release: **v1.1.0**.
 
 11.1     Reproducible OCI/Docker distribution baseline ------- COMPLETE
 11.2     Registry publication + provenance ------------------- COMPLETE
-11.3     Deployment recipes / orchestrator examples ---------- PLANNED
+11.3     Deployment recipes / orchestrator examples ---------- COMPLETE*
 11.4     Distribution release verification ------------------- PLANNED
 ```
 
+`*` 11.3 implementation/documentation is complete in its delivery PR but is only officially closed after required CI is green, merge to `main` and merged-`main` verification.
+
 Final Phase 10 audit: [`docs/PHASE-10-RELEASE-AUDIT.md`](docs/PHASE-10-RELEASE-AUDIT.md)  
 Container deployment: [`docs/CONTAINERS.md`](docs/CONTAINERS.md)  
-Registry/provenance: [`docs/REGISTRY.md`](docs/REGISTRY.md)
+Registry/provenance: [`docs/REGISTRY.md`](docs/REGISTRY.md)  
+Deployment recipes: [`docs/DEPLOYMENT-RECIPES.md`](docs/DEPLOYMENT-RECIPES.md)
 
 Credentialed Stripe/Redsys TEST/LIVE E2E remains a separate provider-dependent validation item and does not reopen Phase 9 or block provider-neutral distribution work.
 
@@ -176,17 +179,25 @@ Delivered:
 
 11.2 does not add orchestrator recipes or publish private Kairoseth/customer images.
 
-## 11.3 — Deployment recipes / orchestrator examples — PLANNED
+## 11.3 — Deployment recipes / orchestrator examples — COMPLETE*
 
-Candidate provider-neutral examples may cover:
+Tracked by issue **#138**.
 
-- Docker Compose for local evaluation and controlled self-hosting;
-- Kubernetes/container-platform deployment primitives;
-- reverse proxy/TLS/readiness configuration;
-- runtime secret/config injection and persistent external services;
-- upgrade/rollback using immutable image digests.
+Delivered in the 11.3 PR:
 
-No provider-specific platform becomes mandatory for the core.
+- `deploy/compose/compose.demo.yml` for secret-free local evaluation using the repository Dockerfile;
+- `deploy/compose/compose.production.yml` for controlled self-hosting from an explicit immutable OCI digest, with no source rebuild on the deployment host;
+- provider-neutral Kubernetes base with Deployment, ClusterIP Service, safe ConfigMap and Kustomize entry point;
+- external `Secret` and external MongoDB/stateful-service boundaries rather than bundled production credentials/state;
+- fixed non-root `10001:10001`, read-only root filesystem, bounded ephemeral `/tmp`, dropped capabilities, no privilege escalation and Kubernetes `RuntimeDefault` seccomp;
+- `/api/health/live` liveness and `/api/health/ready` readiness semantics preserved across orchestrators;
+- loopback-by-default Compose networking and ClusterIP-by-default Kubernetes networking so TLS/ingress remains operator-controlled and provider-neutral;
+- explicit upgrade/rollback procedure using recorded verified image digests rather than moving tags;
+- `scripts/deployment-recipes-check.mjs` + `npm run check:deployment-recipes` added to `npm run verify`;
+- dedicated blocking `Deployment recipe validation` workflow renders Compose/Kustomize and performs a real Compose build/start/non-root/liveness/readiness smoke;
+- bilingual [`docs/DEPLOYMENT-RECIPES.md`](docs/DEPLOYMENT-RECIPES.md) / [`docs/DEPLOYMENT-RECIPES.es.md`](docs/DEPLOYMENT-RECIPES.es.md).
+
+`*` Official completion still requires the permanent phase gate: green PR, merge to `main` and verification of the merged `main` revision. 11.3 does not publish a new source release or OCI image.
 
 ## 11.4 — Distribution release verification — PLANNED
 

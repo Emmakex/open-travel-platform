@@ -27,12 +27,13 @@ npm run check:branding-policy
 npm run check:phase-10-release
 npm run check:container
 npm run check:registry-provenance
+npm run check:deployment-recipes
 npm run verify
 ```
 
-The permanent gates protect extension architecture, release/migration conventions, upgrade/deprecation lifecycle, contribution/release templates, branding/trademark separation, the audited Phase 10 release baseline, container distribution and registry/provenance policy. `verify` includes them plus the other project checks, TypeScript validation and production build.
+The permanent gates protect extension architecture, release/migration conventions, upgrade/deprecation lifecycle, contribution/release templates, branding/trademark separation, the audited Phase 10 release baseline, container distribution, registry/provenance policy and Phase 11.3 deployment recipes. `verify` includes them plus the other project checks, TypeScript validation and production build.
 
-GitHub Actions additionally exercises real MongoDB replica sets, local HTTP adapter contracts, privacy, accessibility, recovery, performance/resource baselines and a real provider-neutral Docker build/start/health/HTTP smoke.
+GitHub Actions additionally exercises real MongoDB replica sets, local HTTP adapter contracts, privacy, accessibility, recovery, performance/resource baselines, a real provider-neutral Docker build/start/health/HTTP smoke and the real Compose deployment-recipe smoke.
 
 ## Architecture rules
 
@@ -203,6 +204,32 @@ npm run check:registry-provenance
 
 The dedicated `Registry publication and provenance` workflow protects these invariants in PRs and on `main`.
 
+## Deployment recipe changes
+
+**Phase 11.3** defines the provider-neutral orchestration baseline. Read [`docs/DEPLOYMENT-RECIPES.md`](docs/DEPLOYMENT-RECIPES.md) before changing `deploy/compose/`, `deploy/kubernetes/` or the deployment-recipe workflow.
+
+Deployment recipe changes must preserve:
+
+- immutable production image identity by `ghcr.io/emmakex/open-travel-platform@sha256:<digest>` or an equivalent verified mirror digest;
+- no `latest`, moving major/minor aliases or hidden source rebuild in the production recipe;
+- demo Compose may build the repository Dockerfile, but production Compose must consume the published artifact;
+- fixed non-root UID/GID `10001:10001`;
+- read-only root filesystem, dropped Linux capabilities and no privilege escalation;
+- Kubernetes `RuntimeDefault` seccomp;
+- `/api/health/live` for liveness and `/api/health/ready` for production readiness;
+- privileged runtime values through external env/Secret injection only;
+- MongoDB and other durable production services outside the application recipe;
+- TLS/ingress/reverse-proxy choice remaining operator-controlled and provider-neutral;
+- upgrades and rollback by recorded verified digest.
+
+Validate with:
+
+```bash
+npm run check:deployment-recipes
+```
+
+The blocking `Deployment recipe validation` workflow renders both Compose surfaces, renders the Kustomize baseline and performs a real Compose build/start/non-root/liveness/readiness smoke.
+
 ## Pull requests
 
 A PR should explain:
@@ -216,6 +243,7 @@ A PR should explain:
 - **Branding / trademark impact** when public identity changes;
 - container/distribution impact when the deployable artifact changes;
 - registry/provenance impact when image publication or supply-chain identity changes;
+- deployment recipe/orchestrator impact when Compose/Kubernetes/runtime topology changes;
 - configuration/migration requirements;
 - rollback/recovery when state changes;
 - how the change was validated.

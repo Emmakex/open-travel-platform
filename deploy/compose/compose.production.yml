@@ -1,0 +1,26 @@
+services:
+  app:
+    image: "${OTP_IMAGE:?Set OTP_IMAGE to an immutable ghcr.io/emmakex/open-travel-platform@sha256:<digest> reference}"
+    env_file:
+      - "${OTP_ENV_FILE:-.env.production}"
+    ports:
+      - "${OTP_BIND_ADDRESS:-127.0.0.1}:${OTP_PORT:-3000}:3000"
+    user: "10001:10001"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/health/live').then((response) => { if (!response.ok) process.exit(1); }).catch(() => process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    restart: unless-stopped

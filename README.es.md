@@ -40,10 +40,10 @@ Slices actuales de Fase 11:
 
 - **11.1 Baseline reproducible OCI/Docker — COMPLETADA**
 - **11.2 Publicación en registry y provenance — COMPLETADA**
-- **11.3 Recetas de orquestación/despliegue — PLANIFICADA**
-- **11.4 Capacidades posteriores de distribución — PLANIFICADA**
+- **11.3 Recetas de orquestación/despliegue — COMPLETADA sujeta al gate permanente de PR/merge/verificación de `main`**
+- **11.4 Verificación de release de distribución — PLANIFICADA**
 
-La Fase 11.1 aporta imagen multi-stage provider-neutral, runtime no-root, configuración privilegiada solo en runtime, healthcheck de liveness y validación real Docker build/start/HTTP. La Fase 11.2 añade contrato auditado de publicación GHCR, identidades inmutables SemVer/SHA, metadatos OCI, provenance BuildKit `mode=max`, SBOM y GitHub artifact attestations ligadas al digest publicado. Cada slice solo se considera oficialmente cerrado tras CI verde, merge a `main` y verificación de `main`.
+La Fase 11.1 aporta imagen multi-stage provider-neutral, runtime no-root, configuración privilegiada solo en runtime, healthcheck de liveness y validación real Docker build/start/HTTP. La Fase 11.2 añade contrato auditado de publicación GHCR, identidades inmutables SemVer/SHA, metadatos OCI, provenance BuildKit `mode=max`, SBOM y GitHub artifact attestations ligadas al digest publicado. La Fase 11.3 añade recetas provider-neutral Docker Compose y Kubernetes, identidad productiva solo por digest, estado/secretos externos, liveness/readiness explícitos, security contexts no-root y upgrade/rollback por digest. Cada slice solo se considera oficialmente cerrado tras CI verde, merge a `main` y verificación de `main`.
 
 La validación Stripe/Redsys TEST/LIVE con credenciales permanece como validación dependiente del proveedor. No reabre la Fase 9 y no es necesaria para la validación demo/contenedor sin infraestructura.
 
@@ -122,6 +122,19 @@ Las imágenes de release publicadas incluyen SBOM, BuildKit `provenance: mode=ma
 
 Consulta [`docs/REGISTRY.es.md`](docs/REGISTRY.es.md).
 
+## Recetas de despliegue
+
+La Fase 11.3 añade ejemplos de orquestación neutrales al proveedor sin hacer obligatorio ningún hosting concreto:
+
+```bash
+docker compose -f deploy/compose/compose.demo.yml up -d --build --wait
+kubectl kustomize deploy/kubernetes/base
+```
+
+Las recetas productivas Compose y Kubernetes consumen una identidad inmutable como `ghcr.io/emmakex/open-travel-platform@sha256:<digest>`, preservan UID/GID `10001:10001`, filesystem raíz de solo lectura, secretos/estado externos y diferencian `/api/health/live` de `/api/health/ready`. MongoDB productivo no se incluye deliberadamente.
+
+Consulta [`docs/DEPLOYMENT-RECIPES.es.md`](docs/DEPLOYMENT-RECIPES.es.md).
+
 ## Contrato de release, upgrade y branding
 
 ```text
@@ -152,10 +165,11 @@ npm run check:branding-policy
 npm run check:phase-10-release
 npm run check:container
 npm run check:registry-provenance
+npm run check:deployment-recipes
 npm run verify
 ```
 
-Consulta [`docs/RELEASES.es.md`](docs/RELEASES.es.md), [`docs/MIGRATIONS.es.md`](docs/MIGRATIONS.es.md), [`docs/UPGRADES.es.md`](docs/UPGRADES.es.md), [`docs/DEPRECATIONS.es.md`](docs/DEPRECATIONS.es.md), [`docs/CONTRIBUTION-TEMPLATES.es.md`](docs/CONTRIBUTION-TEMPLATES.es.md), [`TRADEMARKS.es.md`](TRADEMARKS.es.md), [`docs/CONTAINERS.es.md`](docs/CONTAINERS.es.md), [`docs/REGISTRY.es.md`](docs/REGISTRY.es.md) y [`docs/PHASE-10-RELEASE-AUDIT.es.md`](docs/PHASE-10-RELEASE-AUDIT.es.md).
+Consulta [`docs/RELEASES.es.md`](docs/RELEASES.es.md), [`docs/MIGRATIONS.es.md`](docs/MIGRATIONS.es.md), [`docs/UPGRADES.es.md`](docs/UPGRADES.es.md), [`docs/DEPRECATIONS.es.md`](docs/DEPRECATIONS.es.md), [`docs/CONTRIBUTION-TEMPLATES.es.md`](docs/CONTRIBUTION-TEMPLATES.es.md), [`TRADEMARKS.es.md`](TRADEMARKS.es.md), [`docs/CONTAINERS.es.md`](docs/CONTAINERS.es.md), [`docs/REGISTRY.es.md`](docs/REGISTRY.es.md), [`docs/DEPLOYMENT-RECIPES.es.md`](docs/DEPLOYMENT-RECIPES.es.md) y [`docs/PHASE-10-RELEASE-AUDIT.es.md`](docs/PHASE-10-RELEASE-AUDIT.es.md).
 
 ## Documentación
 
@@ -180,6 +194,8 @@ Consulta [`docs/RELEASES.es.md`](docs/RELEASES.es.md), [`docs/MIGRATIONS.es.md`]
 - [`docs/CONTAINERS.md`](docs/CONTAINERS.md)
 - [`docs/REGISTRY.es.md`](docs/REGISTRY.es.md)
 - [`docs/REGISTRY.md`](docs/REGISTRY.md)
+- [`docs/DEPLOYMENT-RECIPES.es.md`](docs/DEPLOYMENT-RECIPES.es.md)
+- [`docs/DEPLOYMENT-RECIPES.md`](docs/DEPLOYMENT-RECIPES.md)
 
 ### Extensiones
 
@@ -201,16 +217,17 @@ npm run check:branding-policy
 npm run check:phase-10-release
 npm run check:container
 npm run check:registry-provenance
+npm run check:deployment-recipes
 npm run verify
 ```
 
-Workflows dedicados protegen contratos de extensión, release/migraciones, lifecycle de upgrades/deprecaciones, plantillas, branding, identidad de release, distribución en contenedores y política de registry/provenance.
+Workflows dedicados protegen contratos de extensión, release/migraciones, lifecycle de upgrades/deprecaciones, plantillas, branding, identidad de release, distribución en contenedores, política de registry/provenance y recetas de despliegue.
 
 ## Regla de cierre de fases
 
 Una fase/slice no está completada hasta terminar implementación/pruebas, sincronizar documentación EN/ES, revisar diff, tener CI obligatorio verde, mergear a `main` y verificar `main` antes de iniciar trabajo posterior del roadmap.
 
-La Fase 10 queda cerrada mediante el release auditado v1.1.0. Las Fases 11.1 y 11.2 siguen el mismo gate permanente antes de iniciar cualquier slice posterior de distribución.
+La Fase 10 queda cerrada mediante el release auditado v1.1.0. Las Fases 11.1, 11.2 y 11.3 siguen el mismo gate permanente antes de iniciar cualquier slice posterior de distribución.
 
 ## Licencia y branding
 

@@ -5,7 +5,7 @@ All notable project changes are documented here.
 ## [Unreleased]
 
 ### Added
-- Phase 11 distribution/deployment ecosystem tracking through issues #133, #134 and #136.
+- Phase 11 distribution/deployment ecosystem tracking through issues #133, #134, #136 and #138.
 - Phase 11.1 provider-neutral multi-stage `Dockerfile` built from the existing Next.js standalone runtime.
 - Non-root final container runtime (`app`, UID/GID `10001:10001`), built-in `/api/health/live` Docker healthcheck and runtime-only privileged configuration.
 - `.dockerignore` build-context hardening that excludes local environment and generated runtime artifacts.
@@ -18,15 +18,22 @@ All notable project changes are documented here.
 - Bilingual registry/provenance guidance through `docs/REGISTRY.md` and `docs/REGISTRY.es.md`, including digest-pinned pulls and `gh attestation verify`.
 - Permanent registry/provenance gate through `scripts/registry-provenance-check.mjs` and `npm run check:registry-provenance`.
 - Dedicated `Registry publication and provenance` workflow preserving registry policy together with the prior container and release invariants.
+- Phase 11.3 Docker Compose demo recipe that reuses the repository Dockerfile and secret-free demo profile.
+- Phase 11.3 production Compose recipe that requires an immutable OCI digest and never rebuilds source on the deployment host.
+- Provider-neutral Kubernetes base containing Deployment, ClusterIP Service, safe ConfigMap and Kustomize entry point, with external Secret/state boundaries.
+- Bilingual deployment-recipe guidance through `docs/DEPLOYMENT-RECIPES.md` and `docs/DEPLOYMENT-RECIPES.es.md`, including reverse proxy/TLS, readiness, external MongoDB, digest upgrade and rollback guidance.
+- Permanent deployment-recipe gate through `scripts/deployment-recipes-check.mjs` and `npm run check:deployment-recipes`.
+- Blocking `Deployment recipe validation` workflow that renders Compose/Kustomize and performs a real Compose build/start, UID/GID and liveness/readiness smoke.
 
 ### Changed
-- **Phase 11 — Distribution & deployment ecosystem is IN PROGRESS**; Phase 11.1 and Phase 11.2 are documented as COMPLETE subject to the permanent PR/CI/merge/`main` verification gate.
-- `npm run verify` includes both `check:container` and `check:registry-provenance` alongside the existing fresh-clone and standalone deployment gates.
-- README and ROADMAP EN/ES document completed 11.1 container distribution and 11.2 registry/provenance; 11.3 deployment recipes and 11.4 distribution release verification remain PLANNED.
-- `docs/CONTAINERS.md` and `docs/CONTAINERS.es.md` now mark Phase 11.1 COMPLETE and delegate audited registry publication to the Phase 11.2 registry guides.
+- **Phase 11 — Distribution & deployment ecosystem is IN PROGRESS**; Phase 11.1 and Phase 11.2 are complete and Phase 11.3 implementation/documentation is complete subject to the permanent PR/CI/merge/`main` verification gate.
+- `npm run verify` includes `check:container`, `check:registry-provenance` and `check:deployment-recipes` alongside the existing fresh-clone and standalone deployment gates.
+- README and ROADMAP EN/ES document completed 11.1 container distribution, 11.2 registry/provenance and the completed 11.3 deployment-recipe baseline; 11.4 distribution release verification remains PLANNED.
+- `docs/CONTAINERS.md` and `docs/CONTAINERS.es.md` mark Phase 11.1 COMPLETE and delegate audited registry publication to the Phase 11.2 registry guides.
 - GHCR is the public reference registry but remains a distribution choice rather than a runtime dependency; operators may build or mirror OCI artifacts elsewhere.
 - Container publication requires the release SemVer tag to resolve to the exact audited `main` SHA before pushing.
 - Historical `v1.1.0` is deliberately excluded from retroactive container publication because its immutable source tag predates the Dockerfile and registry workflow.
+- Production orchestrator examples consume immutable digests, keep durable state and secrets external, and preserve `/api/health/live` versus `/api/health/ready` semantics.
 
 ### Security
 - Container builds exclude local `.env*`, `.next`, `node_modules` and repository/runtime artifacts from the build context while retaining only reviewed public environment examples.
@@ -34,13 +41,16 @@ All notable project changes are documented here.
 - The final runtime executes as a fixed non-root user; privileged capability configuration must be injected at runtime.
 - Container publication actions are pinned to full commit SHAs and use only `contents: read`, `packages: write`, `attestations: write` and `id-token: write` permissions.
 - Moving image aliases such as `latest`, major-only and minor-only tags are prohibited; production deployment is expected to record/use immutable OCI digests.
+- Compose and Kubernetes deployment examples preserve UID/GID `10001:10001`, read-only root filesystem, dropped capabilities and no privilege escalation; Kubernetes additionally uses `RuntimeDefault` seccomp.
+- Production MongoDB, TLS certificates, secret-manager material and private Kairoseth/customer configuration are not bundled into public deployment recipes.
 - Private Kairoseth/customer adapters, credentials and deployment configuration remain outside the public GHCR package.
 
 ### Compatibility
-- No public repository/adapter contract, REST/event/signature identifier or persistent-data schema changes are introduced by Phase 11.1 or 11.2.
-- No migration is required.
+- No public repository/adapter contract, REST/event/signature identifier or persistent-data schema changes are introduced by Phase 11.1, 11.2 or 11.3.
+- No migration is required by the deployment-recipe slice itself.
 - The image path reuses the existing supported Next.js standalone runtime and does not create a second application execution model.
 - Registry publication is additive and provider-neutral; GHCR does not become mandatory for self-build or mirrored deployments.
+- Compose/Kubernetes recipes are optional operational examples and do not make Docker Compose, Kubernetes, a cloud, ingress controller or secret manager a mandatory core dependency.
 
 ## [1.1.0] - 2026-08-28
 

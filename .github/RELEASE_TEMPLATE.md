@@ -27,6 +27,7 @@ Describe the release outcome in user/operator/contributor terms.
 - New/changed configuration: yes / no
 - Container/distribution artifact changed: yes / no
 - Registry/provenance policy changed: yes / no
+- Deployment recipe/orchestrator contract changed: yes / no
 - Minimum supported source release for upgrade: `<version>`
 
 ## Upgrade and migration
@@ -91,6 +92,21 @@ If none, state `None` explicitly.
 - [ ] `npm run check:registry-provenance` passed
 - [ ] N/A — no registry/provenance impact
 
+## Deployment recipes / orchestrators
+
+- [ ] Production image identity is an immutable verified OCI digest, not `latest` or a moving major/minor alias
+- [ ] Production Compose consumes the published artifact and does not rebuild source on the deployment host
+- [ ] Compose/Kubernetes preserve non-root UID/GID `10001:10001`, read-only root filesystem, dropped capabilities and no privilege escalation
+- [ ] Kubernetes preserves `RuntimeDefault` seccomp
+- [ ] `/api/health/live` remains liveness and `/api/health/ready` remains production readiness
+- [ ] MongoDB and other durable production services remain external to the application recipe
+- [ ] Secrets/privileged configuration remain runtime-injected and are not committed to public manifests
+- [ ] TLS/ingress/reverse-proxy choice remains provider-neutral
+- [ ] Upgrade and rollback procedures record exact verified digests
+- [ ] `npm run check:deployment-recipes` passed
+- [ ] Real deployment-recipe Compose smoke passed when applicable
+- [ ] N/A — no deployment recipe/orchestrator impact
+
 ## Validation
 
 - [ ] Release version, README badge, CHANGELOG and tag identity agree
@@ -103,6 +119,7 @@ If none, state `None` explicitly.
 - [ ] `npm run check:phase-10-release` when auditing the Phase 10 release baseline
 - [ ] `npm run check:container`
 - [ ] `npm run check:registry-provenance`
+- [ ] `npm run check:deployment-recipes`
 - [ ] `npm run verify`
 - [ ] `npm run package:standalone`
 - [ ] Fresh-clone/demo validation passed
@@ -122,6 +139,7 @@ State any provider-dependent checks that could not be completed. Do not represen
 - [ ] Branding/trademark policy updated when public names, logos or official-status claims changed
 - [ ] Container deployment docs updated when image/runtime behavior changed
 - [ ] Registry/provenance docs updated when publication, tags, digest, SBOM or attestations changed
+- [ ] Deployment recipe docs updated when Compose/Kubernetes/runtime topology changes
 - [ ] Final release audit/release notes updated when closing a major project phase
 - [ ] Release notes contain no credentials, private customer data or protected Traveller Data
 
