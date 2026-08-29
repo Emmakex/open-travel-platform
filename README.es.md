@@ -34,7 +34,7 @@ El uso de branding y marcas se documenta en [`TRADEMARKS.es.md`](TRADEMARKS.es.m
 **Fase 10 — Productización open-source: COMPLETADA.**  
 **Fase 11 — Ecosistema de distribución y despliegue: COMPLETADA.**
 
-La Fase 10 se cerró con la release source inmutable **v1.1.0**. Su slice final **10.8 — Auditoría final de documentación/release y publicación v1.1.0 — COMPLETADA** permanece documentado en [`docs/PHASE-10-RELEASE-AUDIT.es.md`](docs/PHASE-10-RELEASE-AUDIT.es.md).
+La Fase 10 se cerró con la release source inmutable **v1.1.0**. Sus slices finales permanecen registrados como **10.7 — Política de branding y marcas — COMPLETADA** y **10.8 — Auditoría final de documentación/release y publicación v1.1.0 — COMPLETADA**, con el cierre documentado en [`docs/PHASE-10-RELEASE-AUDIT.es.md`](docs/PHASE-10-RELEASE-AUDIT.es.md).
 
 La Fase 11 se cierra con la release MINOR backward-compatible **v1.2.0**:
 
