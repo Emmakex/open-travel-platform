@@ -4,6 +4,17 @@ All notable project changes are documented here.
 
 ## [Unreleased]
 
+### Added
+- Bilingual `MAINTENANCE.md` / `MAINTENANCE.es.md` policy defining Open Travel Platform v1.2.0 as the feature-frozen stable public baseline.
+
+### Changed
+- Open Travel Platform is now explicitly **stable / maintenance-only** after the fully verified Phase 11 v1.2.0 closeout.
+- The public OTP feature roadmap is frozen; no Phase 12 is planned. Future public-repository work is limited to security, critical correctness/reliability, necessary compatibility/runtime maintenance and documentation corrections.
+- Active commercial/product development continues separately in **Kairoseth Travel**; new Kairoseth/customer features are not automatically backported to OTP and the public core never depends on proprietary implementations.
+- README and ROADMAP EN/ES now record the completed v1.2.0 publication/verification rather than the earlier release-candidate wording.
+- SUPPORT and CONTRIBUTING now reflect the maintenance-only scope while preserving all existing validation, release, migration, security, branding and distribution contracts.
+- The stable verified OCI identity is documented as `ghcr.io/emmakex/open-travel-platform@sha256:aeda693786e6f7c69fd61348a1098acc5bdf09ddaf859cfe16314ce72d7ba6ac` from source SHA `aae9b2dcd4529cafba37cc44e7cdfec740731508`.
+
 ## [1.2.0] - 2026-08-29
 
 ### Added
