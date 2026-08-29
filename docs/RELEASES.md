@@ -2,15 +2,13 @@
 
 <p align="center"><strong>English</strong> · <a href="./RELEASES.es.md">Español</a></p>
 
-Status: **Phase 10.4 — COMPLETE**
+Status: **Phase 10.4 policy COMPLETE; Phase 11.4 audited distribution lifecycle added**
 
 ## Purpose
 
-Open Travel Platform uses reproducible, immutable releases. A release is a reviewed commit from `main`, identified by the package version and an immutable Git tag.
+Open Travel Platform uses reproducible, immutable public releases. A release is a reviewed commit already merged to `main`, identified by the package version, an immutable Git tag and—when OCI distribution applies—the verified published image digest.
 
-This document defines the public release contract for the MIT core. Kairoseth Travel may deploy the core independently, but hosted deployment state does not redefine the public core version.
-
-Release identity is complemented by the operational lifecycle policies in [`UPGRADES.md`](UPGRADES.md) and [`DEPRECATIONS.md`](DEPRECATIONS.md).
+This policy is complemented by [`MIGRATIONS.md`](MIGRATIONS.md), [`UPGRADES.md`](UPGRADES.md), [`DEPRECATIONS.md`](DEPRECATIONS.md), [`REGISTRY.md`](REGISTRY.md) and [`DEPLOYMENT-RECIPES.md`](DEPLOYMENT-RECIPES.md).
 
 ## Version format
 
@@ -26,172 +24,164 @@ Git tags use:
 vX.Y.Z
 ```
 
-Examples:
+Release identity must agree across:
 
 ```text
-package.json  -> 1.2.3
-Git tag       -> v1.2.3
-CHANGELOG     -> ## [1.2.3] - YYYY-MM-DD
+package.json  -> X.Y.Z
+README badge  -> X.Y.Z
+CHANGELOG.md  -> ## [X.Y.Z] - YYYY-MM-DD
+Git tag       -> vX.Y.Z
 ```
 
-Current project checks intentionally accept stable `x.y.z` package versions only. Introducing prerelease versions such as `-rc.1` requires a deliberate future policy/check change.
+**Tags are immutable.** Never move, delete/recreate or reuse a published version tag to change release contents.
+
+Current project checks accept stable `x.y.z` versions only. A prerelease policy would require an explicit future change.
 
 ## SemVer policy
 
 ### PATCH
 
-Use a patch release for backward-compatible fixes that do not require consumers to change public configuration, public contracts or persistent data interpretation.
-
-Examples:
-
-- bug fixes;
-- security fixes that preserve supported public behavior;
-- documentation corrections;
-- performance improvements without contract changes.
+Backward-compatible fixes that do not require consumers to change supported public contracts, required configuration or persistent-data interpretation.
 
 ### MINOR
 
-Use a minor release for backward-compatible additions.
+Backward-compatible additions such as optional capabilities, additive adapters or new optional distribution surfaces.
 
-Examples:
-
-- new optional capabilities;
-- new opt-in adapters behind existing contracts;
-- additive optional fields with safe absence;
-- new endpoints/event types that do not alter existing subscribers.
-
-PATCH/MINOR releases must not perform an ordinary removal of a previously supported public surface. Deprecation and ordinary removal follow [`DEPRECATIONS.md`](DEPRECATIONS.md).
+PATCH/MINOR releases must not perform an ordinary removal of a supported public surface.
 
 ### MAJOR
 
-Use a major release for breaking public changes.
+Breaking public changes, including incompatible required fields/methods/configuration, authority/authentication/idempotency semantics, wire contracts or persistent-data migrations.
 
-Examples:
+Extension compatibility remains governed by [`EXTENSION-COMPATIBILITY.md`](EXTENSION-COMPATIBILITY.md).
 
-- removed or renamed required public fields/methods;
-- incompatible environment/configuration requirements;
-- changed authority, authentication or idempotency semantics;
-- breaking wire-contract changes without a parallel compatible version;
-- persistent-data changes that require an incompatible migration.
+## Source of truth
 
-Extension-specific compatibility rules remain authoritative in [`EXTENSION-COMPATIBILITY.md`](EXTENSION-COMPATIBILITY.md).
+A public release is cut only from a reviewed revision already **merged to `main`**.
 
-## Release source of truth
+Before release publication, maintainers must **Verify `main`** and ensure the current release audit passes on that exact revision.
 
-A public release must be cut from a reviewed commit already merged to `main`.
+The version-specific audit and release notes are:
 
-The following values must agree:
+```text
+docs/RELEASE-AUDIT-X.Y.Z.md
+docs/RELEASE-AUDIT-X.Y.Z.es.md
+docs/RELEASE-NOTES-X.Y.Z.md
+docs/RELEASE-NOTES-X.Y.Z.es.md
+```
 
-- `package.json` version;
-- README version badge;
-- `CHANGELOG.md` release heading;
-- Git tag `vX.Y.Z`.
-
-Tags are immutable. Never move, delete/recreate or reuse a published version tag to change release contents.
+Historical audits remain historical records. For example, `check:phase-10-release` preserves the v1.1.0 closeout rather than being rewritten for newer versions.
 
 ## Required release sequence
 
-1. **Choose version impact** — PATCH, MINOR or MAJOR from the actual compatibility impact.
-2. **Review deprecations/removals** — classify lifecycle changes through [`DEPRECATIONS.md`](DEPRECATIONS.md).
-3. **Review migrations** — classify configuration, data and wire-contract changes using [`MIGRATIONS.md`](MIGRATIONS.md).
-4. **Review supported upgrade path** — ensure the target release documents its supported source path through [`UPGRADES.md`](UPGRADES.md).
-5. **Update version** — set `package.json` to the target stable version.
-6. **Finalize changelog** — move relevant Unreleased entries into `## [X.Y.Z] - YYYY-MM-DD`; preserve an Unreleased section for future work.
-7. **Synchronize documentation** — README, ROADMAP, migration/upgrade/deprecation guidance and capability docs must describe the release truthfully.
-8. **Validate from the locked graph**:
+1. **Choose SemVer impact** from the actual compatibility change.
+2. **Review deprecations/removals** with `DEPRECATIONS.md`.
+3. **Review migrations** with `MIGRATIONS.md`.
+4. **Review supported upgrade path** with `UPGRADES.md`.
+5. **Update release identity** across `package.json`, README, CHANGELOG and version-specific audit/release notes.
+6. **Retain `Unreleased`** in CHANGELOG.
+7. **Synchronize EN/ES documentation.**
+8. **Validate from the locked graph:**
 
 ```bash
 npm ci
+npm run check:release
+npm run check:release-migrations
+npm run check:upgrade-deprecations
+npm run check:release-audit
 npm run verify
-```
-
-9. **Validate the production runtime boundary**:
-
-```bash
-npm run build
 npm run package:standalone
 ```
 
-10. **Merge the release PR to `main`** only after required CI is green.
+9. **Open/review the closing PR.**
+10. **Merge to `main` only after required CI is green.**
 11. **Verify `main`** after merge.
-12. **Create immutable tag** `vX.Y.Z` on that verified `main` commit.
-13. **Publish release notes** from the matching CHANGELOG entry, including migration/upgrade/deprecation notes when applicable.
-14. **Deploy consumers separately**; a hosted deployment should record the exact core release/commit it runs.
+12. Let the blocking **`Release audit`** workflow validate that exact merged revision.
+13. Let **`Publish audited release`** create the immutable `vX.Y.Z` tag and GitHub Release only when the version audit explicitly approves it.
+14. When OCI distribution applies, let **`Publish audited container`** publish only if the SemVer tag resolves to the exact audited SHA.
+15. Let **`Verify published distribution`** verify the exact public OCI digest, metadata, provenance, SBOM, attestation and runtime before declaring the distribution release complete.
+16. Deploy consumers separately using exact version/SHA/digest identities.
 
-A release tag must never be created from an unmerged feature branch.
+A public tag must never be created from an unmerged feature branch.
+
+## Audited publication automation
+
+### Release audit
+
+`Release audit` runs on the merged `main` revision and requires:
+
+- release identity consistency;
+- version-specific release approval;
+- `npm run verify`;
+- standalone packaging.
+
+### Immutable source release
+
+`Publish audited release` is downstream of the successful `Release audit`. It refuses to rewrite an existing tag/release and uses the reviewed version-specific release notes.
+
+### OCI publication
+
+`Publish audited container` is downstream of the source release. It requires tag SHA = audited SHA and emits only immutable SemVer/SHA image tags. Historical `v1.1.0` is deliberately excluded from retroactive OCI publication.
+
+### Published artifact verification
+
+For releases with OCI distribution, `Verify published distribution` verifies:
+
+- public pullability;
+- SemVer/SHA image tags resolving to the same digest;
+- OCI source/revision/version/license metadata;
+- BuildKit provenance;
+- SBOM;
+- GitHub artifact attestation;
+- clean runtime by digest;
+- non-root identity;
+- liveness/readiness and representative HTTP/static behavior.
+
+The verification record is attached to the GitHub Release when the workflow succeeds.
 
 ## Changelog contract
 
-`CHANGELOG.md` follows a release-history model with an Unreleased section plus immutable historical release entries.
+`CHANGELOG.md` keeps an `Unreleased` section plus immutable historical release entries. Release entries should cover relevant Added, Changed, Fixed, Security, Deprecated, Removed, Migration and Compatibility information.
 
-Each release entry should distinguish relevant categories such as:
+Historical release entries are records; do not rewrite them merely because current tooling or policy has evolved.
 
-- Added;
-- Changed;
-- Fixed;
-- Security;
-- Deprecated;
-- Removed;
-- Migration;
-- Compatibility.
+## Migration gate
 
-A deprecation entry identifies the replacement and earliest ordinary removal boundary. A removal entry links the corresponding upgrade/migration path. Breaking or operationally significant changes must contain enough information to reach the exact required procedure.
+Any release that changes persistent state, required configuration or public wire contracts must include migration and supported-upgrade guidance in the same release PR.
 
-Historical release entries are records. Do not rewrite them merely because current dependency/tool versions or lifecycle state have changed.
+Required review questions include:
 
-## Release artifact contract
-
-The provider-neutral production runtime is the Next.js standalone output documented in [`DEPLOYMENT.md`](DEPLOYMENT.md).
-
-A release consumer should build from the exact tagged source/lockfile and treat the resulting runtime artifact as immutable. Runtime secrets and customer data are deployment state, not release contents.
-
-Never commit or package production credentials into a public release.
-
-## Migration and upgrade gate
-
-A release that changes persistent state, required configuration or a public wire contract must include migration and supported-upgrade guidance in the same release PR.
-
-Required questions:
-
-- Is the change backward-compatible?
-- Does deployment require new environment variables?
-- Does MongoDB data/index state need transformation?
-- Is a public REST/event contract version changing?
+- Is it backward-compatible?
+- Are new environment variables required?
+- Does MongoDB data/index state change?
+- Does a REST/event contract version change?
 - Is encrypted/protected data affected?
-- Is any surface deprecated or removed?
-- What is the minimum supported source release?
-- Can old application code still read the migrated state during rollout?
+- Is any public surface deprecated or removed?
+- What source release is the minimum supported upgrade point?
+- Can previous code still read state during rollout?
 - What is the rollback/recovery plan?
 
 See [`MIGRATIONS.md`](MIGRATIONS.md), [`UPGRADES.md`](UPGRADES.md) and [`DEPRECATIONS.md`](DEPRECATIONS.md).
 
 ## Rollback
 
-Application rollback should normally deploy the previous known-good immutable release artifact/tag.
+Application **Rollback** normally deploys the previous known-good immutable application identity. Never solve a bad release by moving an existing Git tag or a published OCI tag.
 
-Do not solve a bad release by moving an existing tag.
-
-If persistent data has already been migrated, rollback feasibility depends on the migration class:
-
-- additive/expand migrations should preserve previous-reader compatibility during the declared window;
-- destructive/contract steps require an explicit backup/restore or reverse-migration plan;
-- irreversible changes must be declared before release and require a tested recovery procedure.
+For OCI deployments, record the exact previous digest and roll back by digest. If persistent data already changed, recovery depends on the documented migration class: application-only rollback, reverse migration, backup restore or forward-only recovery.
 
 ## Security releases
 
-Security fixes may require compressed deprecation/removal timelines, but they do not bypass validation, release identity or migration safety. Accelerated removal must follow the security exception in [`DEPRECATIONS.md`](DEPRECATIONS.md).
+Security fixes may compress deprecation/removal timelines, but they do not bypass release identity, validation, migration safety or artifact verification. Follow `SECURITY.md` and the security exception in `DEPRECATIONS.md`.
 
-Follow [`../SECURITY.md`](../SECURITY.md) for vulnerability handling.
-
-## Automation
-
-Release/lifecycle convention drift is protected by:
+## Permanent validation
 
 ```bash
 npm run check:release
 npm run check:release-migrations
 npm run check:upgrade-deprecations
+npm run check:release-audit
+npm run check:phase-11-distribution
 npm run verify
 ```
 
-Phase 10.4 protects release/migration identity and Phase 10.5 protects the upgrade/deprecation lifecycle layered on top of it.
+Phase 10.4 remains the release/migration policy foundation. Phase 11.4 adds the reusable audited source + OCI publication/verification lifecycle without rewriting historical release records.
