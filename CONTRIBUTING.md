@@ -1,6 +1,16 @@
 # Contributing
 
-Thanks for helping improve Open Travel Platform.
+Thanks for helping preserve Open Travel Platform.
+
+## Maintenance-only contribution scope
+
+Open Travel Platform **v1.2.0** is the feature-frozen stable public baseline. Read [`MAINTENANCE.md`](MAINTENANCE.md) before proposing work.
+
+This repository no longer has an active feature roadmap. Contributions are expected to be narrowly scoped maintenance, primarily security fixes, critical correctness/reliability fixes, required runtime/dependency compatibility work, documentation corrections or fixes to the verified release/distribution baseline.
+
+New product capabilities, commercial UX, new business integrations, private/customer adapters and Kairoseth-specific product evolution are out of scope here and belong in downstream products or forks. A feature proposal may therefore be closed as `not planned` without implying that the idea is invalid elsewhere.
+
+Active commercial product development continues separately in **Kairoseth Travel**. New Kairoseth Travel code is not automatically backported to OTP, and the public core must never depend on proprietary Kairoseth/customer implementations.
 
 ## Development setup
 
@@ -180,17 +190,18 @@ npm run check:deployment-recipes
 
 **Phase 11.4** separates historical release audits from the reusable current-release pipeline.
 
-For a new public stable release:
+For a future maintenance release:
 
-1. classify SemVer from actual compatibility impact;
-2. synchronize `package.json`, README badge, CHANGELOG, version-specific release audit and release notes;
-3. run `npm run check:release-audit` and `npm run verify`;
-4. merge only after required PR CI is green;
-5. verify merged `main`;
-6. let the blocking `Release audit` workflow validate that exact `main` revision;
-7. create/publish the immutable source tag/GitHub Release only through `Publish audited release`;
-8. publish the OCI artifact only when the tag resolves to the exact audited SHA;
-9. verify the published distribution by exact digest before considering the distribution release complete.
+1. confirm the change is within `MAINTENANCE.md` scope;
+2. classify SemVer from actual compatibility impact;
+3. synchronize `package.json`, README badge, CHANGELOG, version-specific release audit and release notes;
+4. run `npm run check:release-audit` and `npm run verify`;
+5. merge only after required PR CI is green;
+6. verify merged `main`;
+7. let the blocking `Release audit` workflow validate that exact `main` revision;
+8. create/publish the immutable source tag/GitHub Release only through `Publish audited release`;
+9. publish the OCI artifact only when the tag resolves to the exact audited SHA;
+10. verify the published distribution by exact digest before considering the maintenance release complete.
 
 The historical Phase 10 audit remains intentionally version-specific for `v1.1.0`; do not mutate it to represent newer releases.
 
@@ -205,8 +216,9 @@ A distribution verification must confirm SemVer/SHA tag digest equality, OCI lab
 
 ## Pull requests
 
-A PR should explain:
+A maintenance PR should explain:
 
+- why the change is necessary under `MAINTENANCE.md`;
 - what changes and why;
 - affected capability/extension boundary;
 - authority/security/privacy implications;
@@ -234,6 +246,8 @@ A phase/slice is not complete until:
 6. the PR is merged to `main`;
 7. `main` is verified;
 8. when the phase creates a public release/distribution, the immutable release and artifact are published and verified before later roadmap work starts.
+
+Phase 11 is the final planned OTP feature phase. After v1.2.0, this rule applies only to deliberately approved maintenance/security work; it does not imply a Phase 12 feature roadmap.
 
 ## Security reports
 
