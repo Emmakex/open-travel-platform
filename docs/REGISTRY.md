@@ -31,6 +31,23 @@ The source release publisher creates a new tag/release only when the version-spe
 
 The container publisher then checks out the exact audited SHA and publishes only when the SemVer source tag resolves to that same commit.
 
+## First-package GHCR visibility
+
+A newly created GHCR package may initially have private package visibility even when it is linked to a public repository. The Phase 11.4 verifier deliberately performs an anonymous pull **before any registry login** so a private package cannot be mistaken for a public distribution.
+
+If the first `Verify published distribution` run reports that the image is not anonymously pullable, a repository/package owner must perform the one-time GitHub package visibility action:
+
+```text
+GitHub profile / organization
+→ Packages
+→ open-travel-platform
+→ Package settings
+→ Change visibility
+→ Public
+```
+
+Then rerun the failed verification workflow. Phase 11 remains open until the anonymous pull succeeds. Do not weaken the verifier by logging in before this check.
+
 ## Historical v1.1.0 boundary
 
 `v1.1.0` was published before the Docker/OCI distribution baseline existed inside its immutable source tag. It is intentionally **not** rebuilt or relabelled retroactively as a container image.
