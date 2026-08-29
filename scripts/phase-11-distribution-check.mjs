@@ -65,12 +65,16 @@ assert(changelog.includes('## [1.2.0] - 2026-08-29'), 'CHANGELOG must contain th
 assert(changelog.includes('Phase 11'), 'CHANGELOG must record Phase 11 completion');
 assert(changelog.includes('first audited public OCI distribution'), 'CHANGELOG must record the first public OCI distribution contract');
 
-for (const [name, source] of [['audit', audit], ['audit ES', auditEs]]) {
-  assert(source.includes('RELEASE APPROVED FOR v1.2.0'), `${name} must approve v1.2.0`);
-  assert(source.includes('Phase 11'), `${name} must identify Phase 11 closeout`);
-  assert(source.includes('v1.1.0'), `${name} must preserve the historical no-image decision`);
-  assert(source.includes('MINOR'), `${name} must classify v1.2.0 as MINOR`);
-}
+assert(audit.includes('RELEASE APPROVED FOR v1.2.0'), 'audit must approve v1.2.0');
+assert(audit.includes('Phase 11'), 'audit must identify Phase 11 closeout');
+assert(audit.includes('v1.1.0'), 'audit must preserve the historical no-image decision');
+assert(audit.includes('MINOR'), 'audit must classify v1.2.0 as MINOR');
+
+assert(auditEs.includes('RELEASE APPROVED FOR v1.2.0'), 'audit ES must approve v1.2.0');
+assert(auditEs.includes('Fase 11'), 'audit ES must identify Fase 11 closeout');
+assert(auditEs.includes('v1.1.0'), 'audit ES must preserve the historical no-image decision');
+assert(auditEs.includes('MINOR'), 'audit ES must classify v1.2.0 as MINOR');
+
 assert(notes.includes('Open Travel Platform v1.2.0'), 'English notes must target v1.2.0');
 assert(notesEs.includes('Open Travel Platform v1.2.0'), 'Spanish notes must target v1.2.0');
 
