@@ -4,11 +4,11 @@
 
 > Base open-source reutilizable para agencias, turoperadores y productos de reserva de viajes.
 
-Open Travel Platform es una plataforma clean-room con **Next.js + TypeScript + MongoDB**, organizada alrededor de fronteras explícitas de dominio, repositories y adapters. Soporta onboarding demo sin infraestructura, capacidades persistentes y despliegue self-host provider-neutral.
+Open Travel Platform es una plataforma clean-room con **Next.js + TypeScript + MongoDB**, organizada alrededor de fronteras explícitas de dominio, repositories y adapters. Soporta onboarding demo sin infraestructura, capacidades persistentes, distribución OCI reproducible y despliegue self-host/orquestado provider-neutral.
 
 La implementación comercial/de referencia oficial es **Kairoseth Travel**, desplegada en **[travel.kairoseth.com](https://travel.kairoseth.com)**.
 
-![Version](https://img.shields.io/badge/version-1.1.0-0d1b2d)
+![Version](https://img.shields.io/badge/version-1.2.0-0d1b2d)
 ![Next.js](https://img.shields.io/badge/Next.js-16.3.2-000000)
 ![React](https://img.shields.io/badge/React-19.2.8-149eca)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178c6)
@@ -20,7 +20,7 @@ La implementación comercial/de referencia oficial es **Kairoseth Travel**, desp
 
 Este repositorio es el **core MIT provider-neutral**. Kairoseth Travel es la implementación alojada/comercial de referencia.
 
-- datos de clientes e integraciones propietarias permanecen fuera del repositorio público;
+- los datos de clientes e integraciones propietarias permanecen fuera del repositorio público;
 - adapters privados Kairoseth/cliente pueden depender de contratos públicos OTP, nunca al revés;
 - sistemas downstream no reciben autoridad implícita sobre booking, inventario, pricing o pagos;
 - la licencia MIT del software no concede por sí sola permiso para presentar un fork/servicio independiente como Kairoseth Travel oficial.
@@ -32,20 +32,22 @@ El uso de branding y marcas se documenta en [`TRADEMARKS.es.md`](TRADEMARKS.es.m
 **Fase 8 — Integraciones externas: COMPLETADA.**  
 **Fase 9 — Baseline de hardening productivo: COMPLETADA.**  
 **Fase 10 — Productización open-source: COMPLETADA.**  
-**Fase 11 — Ecosistema de distribución y despliegue: EN CURSO.**
+**Fase 11 — Ecosistema de distribución y despliegue: COMPLETADA.**
 
-La Fase 10 se cerró con **v1.1.0**. Sus últimos slices permanecen registrados explícitamente como **10.7 Política de branding y marcas — COMPLETADA** y **10.8 Auditoría final de documentación/release y publicación v1.1.0 — COMPLETADA**. La auditoría final está en [`docs/PHASE-10-RELEASE-AUDIT.es.md`](docs/PHASE-10-RELEASE-AUDIT.es.md).
+La Fase 10 se cerró con la release source inmutable **v1.1.0**. Su cierre histórico permanece documentado en [`docs/PHASE-10-RELEASE-AUDIT.es.md`](docs/PHASE-10-RELEASE-AUDIT.es.md).
 
-Slices actuales de Fase 11:
+La Fase 11 se cierra con la release MINOR backward-compatible **v1.2.0**:
 
 - **11.1 Baseline reproducible OCI/Docker — COMPLETADA**
 - **11.2 Publicación en registry y provenance — COMPLETADA**
-- **11.3 Recetas de orquestación/despliegue — COMPLETADA sujeta al gate permanente de PR/merge/verificación de `main`**
-- **11.4 Verificación de release de distribución — PLANIFICADA**
+- **11.3 Recetas de orquestación/despliegue — COMPLETADA**
+- **11.4 Verificación de release de distribución — COMPLETADA sujeta al gate permanente de PR/merge/verificación del artefacto publicado**
 
-La Fase 11.1 aporta imagen multi-stage provider-neutral, runtime no-root, configuración privilegiada solo en runtime, healthcheck de liveness y validación real Docker build/start/HTTP. La Fase 11.2 añade contrato auditado de publicación GHCR, identidades inmutables SemVer/SHA, metadatos OCI, provenance BuildKit `mode=max`, SBOM y GitHub artifact attestations ligadas al digest publicado. La Fase 11.3 añade recetas provider-neutral Docker Compose y Kubernetes, identidad productiva solo por digest, estado/secretos externos, liveness/readiness explícitos, security contexts no-root y upgrade/rollback por digest. Cada slice solo se considera oficialmente cerrado tras CI verde, merge a `main` y verificación de `main`.
+La auditoría v1.2.0 está en [`docs/RELEASE-AUDIT-1.2.0.es.md`](docs/RELEASE-AUDIT-1.2.0.es.md). Este PR declara completado el baseline de ingeniería de Fase 11; el cierre operativo solo es final después de CI verde, squash merge a `main`, `Release audit` verde sobre `main`, publicación del tag inmutable `v1.2.0` y su GitHub Release, creación de la primera imagen OCI pública y éxito de `Verify published distribution` contra el artefacto real del registry.
 
-La validación Stripe/Redsys TEST/LIVE con credenciales permanece como validación dependiente del proveedor. No reabre la Fase 9 y no es necesaria para la validación demo/contenedor sin infraestructura.
+El workflow post-publicación adjunta `distribution-verification-1.2.0.json` al GitHub Release con el SHA source auditado y digest OCI verificado exactos. La release histórica v1.1.0 nunca se reconstruye retroactivamente como imagen.
+
+La validación Stripe/Redsys TEST/LIVE con credenciales continúa como validación dependiente del proveedor. No reabre la Fase 9 ni es necesaria para la verificación provider-neutral de distribución.
 
 ## Capacidades principales
 
@@ -105,26 +107,26 @@ Consulta [`docs/CONTAINERS.es.md`](docs/CONTAINERS.es.md).
 
 ## Registry y provenance
 
-GHCR es el registry público de referencia para futuras releases auditadas de contenedor:
+Para releases auditadas elegibles para distribución por contenedor, GHCR es el registry público de referencia:
 
 ```text
 ghcr.io/emmakex/open-travel-platform:vX.Y.Z
-ghcr.io/emmakex/open-travel-platform:sha-<sha-completo-del-codigo>
+ghcr.io/emmakex/open-travel-platform:sha-<sha-source-completo>
 ```
 
-No se publican aliases móviles `latest`, major o minor. Producción debe desplegar el digest registrado, por ejemplo:
+No se publican aliases móviles `latest`, major o minor. Producción despliega el digest verificado:
 
 ```bash
 docker pull ghcr.io/emmakex/open-travel-platform@sha256:<digest>
 ```
 
-Las imágenes de release publicadas incluyen SBOM, BuildKit `provenance: mode=max`, metadatos OCI de source/revision/version/license y una GitHub artifact attestation ligada al digest. `v1.1.0` no se reconstruye retroactivamente porque su tag de código inmutable es anterior al Dockerfile/workflow de contenedores.
+Las imágenes publicadas incluyen SBOM, BuildKit `provenance: mode=max`, metadatos OCI source/revision/version/license y GitHub artifact attestation ligada al digest. v1.2.0 es la primera release elegible para distribución OCI pública real. `v1.1.0` permanece solo como source porque su tag inmutable es anterior al baseline Docker.
 
 Consulta [`docs/REGISTRY.es.md`](docs/REGISTRY.es.md).
 
 ## Recetas de despliegue
 
-La Fase 11.3 añade ejemplos de orquestación neutrales al proveedor sin hacer obligatorio ningún hosting concreto:
+Los ejemplos de orquestación provider-neutral no hacen obligatorio ningún hosting concreto:
 
 ```bash
 docker compose -f deploy/compose/compose.demo.yml up -d --build --wait
@@ -134,6 +136,20 @@ kubectl kustomize deploy/kubernetes/base
 Las recetas productivas Compose y Kubernetes consumen una identidad inmutable como `ghcr.io/emmakex/open-travel-platform@sha256:<digest>`, preservan UID/GID `10001:10001`, filesystem raíz de solo lectura, secretos/estado externos y diferencian `/api/health/live` de `/api/health/ready`. MongoDB productivo no se incluye deliberadamente.
 
 Consulta [`docs/DEPLOYMENT-RECIPES.es.md`](docs/DEPLOYMENT-RECIPES.es.md).
+
+## Verificación de distribución publicada
+
+Tras una release source auditada y publicación OCI, `Verify published distribution` valida el **artefacto del registry**, no un rebuild local. Para v1.2.0 debe demostrar:
+
+- pull público antes de autenticar en el registry;
+- tags SemVer y source-SHA resolviendo al mismo digest;
+- labels OCI source/revision/version/license coincidentes con la release auditada;
+- provenance BuildKit SLSA y SBOM SPDX presentes;
+- GitHub artifact attestation válida para el digest;
+- ejecución limpia por digest con UID/GID `10001:10001`;
+- éxito de `/api/health/live`, `/api/health/ready` y rutas/assets representativos.
+
+El asset `distribution-verification-1.2.0.json` del GitHub Release es el registro machine-readable exacto de esa verificación.
 
 ## Contrato de release, upgrade y branding
 
@@ -166,10 +182,12 @@ npm run check:phase-10-release
 npm run check:container
 npm run check:registry-provenance
 npm run check:deployment-recipes
+npm run check:release-audit
+npm run check:phase-11-distribution
 npm run verify
 ```
 
-Consulta [`docs/RELEASES.es.md`](docs/RELEASES.es.md), [`docs/MIGRATIONS.es.md`](docs/MIGRATIONS.es.md), [`docs/UPGRADES.es.md`](docs/UPGRADES.es.md), [`docs/DEPRECATIONS.es.md`](docs/DEPRECATIONS.es.md), [`docs/CONTRIBUTION-TEMPLATES.es.md`](docs/CONTRIBUTION-TEMPLATES.es.md), [`TRADEMARKS.es.md`](TRADEMARKS.es.md), [`docs/CONTAINERS.es.md`](docs/CONTAINERS.es.md), [`docs/REGISTRY.es.md`](docs/REGISTRY.es.md), [`docs/DEPLOYMENT-RECIPES.es.md`](docs/DEPLOYMENT-RECIPES.es.md) y [`docs/PHASE-10-RELEASE-AUDIT.es.md`](docs/PHASE-10-RELEASE-AUDIT.es.md).
+Consulta [`docs/RELEASES.es.md`](docs/RELEASES.es.md), [`docs/MIGRATIONS.es.md`](docs/MIGRATIONS.es.md), [`docs/UPGRADES.es.md`](docs/UPGRADES.es.md), [`docs/DEPRECATIONS.es.md`](docs/DEPRECATIONS.es.md), [`docs/CONTRIBUTION-TEMPLATES.es.md`](docs/CONTRIBUTION-TEMPLATES.es.md), [`TRADEMARKS.es.md`](TRADEMARKS.es.md), [`docs/CONTAINERS.es.md`](docs/CONTAINERS.es.md), [`docs/REGISTRY.es.md`](docs/REGISTRY.es.md), [`docs/DEPLOYMENT-RECIPES.es.md`](docs/DEPLOYMENT-RECIPES.es.md), [`docs/PHASE-10-RELEASE-AUDIT.es.md`](docs/PHASE-10-RELEASE-AUDIT.es.md) y [`docs/RELEASE-AUDIT-1.2.0.es.md`](docs/RELEASE-AUDIT-1.2.0.es.md).
 
 ## Documentación
 
@@ -184,6 +202,10 @@ Consulta [`docs/RELEASES.es.md`](docs/RELEASES.es.md), [`docs/MIGRATIONS.es.md`]
 - [`TRADEMARKS.md`](TRADEMARKS.md)
 - [`docs/PHASE-10-RELEASE-AUDIT.es.md`](docs/PHASE-10-RELEASE-AUDIT.es.md)
 - [`docs/RELEASE-NOTES-1.1.0.es.md`](docs/RELEASE-NOTES-1.1.0.es.md)
+- [`docs/RELEASE-AUDIT-1.2.0.es.md`](docs/RELEASE-AUDIT-1.2.0.es.md)
+- [`docs/RELEASE-AUDIT-1.2.0.md`](docs/RELEASE-AUDIT-1.2.0.md)
+- [`docs/RELEASE-NOTES-1.2.0.es.md`](docs/RELEASE-NOTES-1.2.0.es.md)
+- [`docs/RELEASE-NOTES-1.2.0.md`](docs/RELEASE-NOTES-1.2.0.md)
 - [`docs/RELEASES.es.md`](docs/RELEASES.es.md)
 - [`docs/MIGRATIONS.es.md`](docs/MIGRATIONS.es.md)
 - [`docs/UPGRADES.es.md`](docs/UPGRADES.es.md)
@@ -218,16 +240,18 @@ npm run check:phase-10-release
 npm run check:container
 npm run check:registry-provenance
 npm run check:deployment-recipes
+npm run check:release-audit
+npm run check:phase-11-distribution
 npm run verify
 ```
 
-Workflows dedicados protegen contratos de extensión, release/migraciones, lifecycle de upgrades/deprecaciones, plantillas, branding, identidad de release, distribución en contenedores, política de registry/provenance y recetas de despliegue.
+Workflows dedicados protegen contratos de extensión, release/migraciones, lifecycle de upgrades/deprecaciones, plantillas, branding, identidad histórica de release de Fase 10, distribución en contenedores, registry/provenance, recetas de despliegue, auditoría de release actual y verificación de distribución publicada.
 
 ## Regla de cierre de fases
 
-Una fase/slice no está completada hasta terminar implementación/pruebas, sincronizar documentación EN/ES, revisar diff, tener CI obligatorio verde, mergear a `main` y verificar `main` antes de iniciar trabajo posterior del roadmap.
+Una fase/slice no está completada hasta terminar implementación/pruebas, sincronizar documentación EN/ES, revisar diff, tener CI obligatorio verde, mergear a `main`, verificar `main` y, cuando la fase exige un artefacto de release, publicarlo y verificarlo independientemente antes de iniciar trabajo posterior del roadmap.
 
-La Fase 10 queda cerrada mediante el release auditado v1.1.0. Las Fases 11.1, 11.2 y 11.3 siguen el mismo gate permanente antes de iniciar cualquier slice posterior de distribución.
+La Fase 10 permanece históricamente cerrada mediante v1.1.0. La Fase 11 se cierra mediante v1.2.0 solo cuando la distribución OCI pública supera el workflow final de verificación.
 
 ## Licencia y branding
 
