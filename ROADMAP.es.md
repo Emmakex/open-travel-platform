@@ -6,6 +6,14 @@ Open Travel Platform es el core reutilizable bajo licencia MIT. **Kairoseth Trav
 
 _Última actualización: 29 de agosto de 2026._
 
+## Estado del roadmap — CONGELADO / SOLO MANTENIMIENTO
+
+Open Travel Platform **v1.2.0** es el baseline open-source estable completado. La Fase 11 ha sido publicada y verificada independientemente, y **no se planifica una Fase 12 ni existe un roadmap activo de nuevas funcionalidades para OTP**.
+
+Este roadmap se conserva como registro histórico de ingeniería del core estable. El trabajo futuro en el repositorio público queda limitado al alcance de mantenimiento definido en [`MAINTENANCE.es.md`](MAINTENANCE.es.md): seguridad, correcciones críticas de fiabilidad/corrección, mantenimiento necesario de compatibilidad/runtime y correcciones documentales.
+
+El desarrollo comercial/de producto activo continúa por separado en **Kairoseth Travel**. Las nuevas funciones de Kairoseth Travel, adapters privados y capacidades específicas de clientes no se devuelven automáticamente a OTP.
+
 ## Posición actual
 
 **Fase 8 — Integraciones externas: COMPLETADA.**  
@@ -14,7 +22,7 @@ _Última actualización: 29 de agosto de 2026._
 **Fase 11 — Ecosistema de distribución y despliegue — COMPLETADA.**
 
 Release de cierre de Fase 10: **v1.1.0**.  
-Candidata de cierre de Fase 11: **v1.2.0**.
+Release estable de cierre de Fase 11: **v1.2.0**.
 
 ```text
 10.1     Bootstrap demo/fresh-clone reproducible -------------- COMPLETADA
@@ -29,13 +37,22 @@ Candidata de cierre de Fase 11: **v1.2.0**.
 11.1     Baseline reproducible OCI/Docker --------------------- COMPLETADA
 11.2     Publicación registry + provenance -------------------- COMPLETADA
 11.3     Recetas de despliegue / orquestadores ---------------- COMPLETADA
-11.4     Verificación de distribución + v1.2.0 ---------------- COMPLETADA*
+11.4     Verificación de distribución + v1.2.0 ---------------- COMPLETADA
 ```
 
-`*` La implementación y candidata de release de Fase 11 están completas en la rama/PR de cierre. El cierre operativo oficial exige todavía el gate permanente: PR verde, merge a `main`, verificación verde de `main`, tag inmutable/GitHub Release `v1.2.0`, primera publicación OCI pública auditada y verificación correcta del digest exacto publicado. No comienza una fase posterior antes de completar toda esa secuencia.
+El cierre operativo de Fase 11 está completado: PR #141 mergeado a `main`, todos los workflows requeridos de `main` terminaron correctamente, se publicaron `v1.2.0` y su GitHub Release inmutables, se publicó la primera imagen OCI pública auditada y `Verify published distribution` validó correctamente el digest exacto del registry.
+
+Identidad estable de distribución:
+
+```text
+Release source: v1.2.0
+Source SHA: aae9b2dcd4529cafba37cc44e7cdfec740731508
+Digest OCI: sha256:aeda693786e6f7c69fd61348a1098acc5bdf09ddaf859cfe16314ce72d7ba6ac
+```
 
 Documentos clave de políticas/cierre:
 
+- Política de mantenimiento: [`MAINTENANCE.es.md`](MAINTENANCE.es.md)
 - Política de release: [`docs/RELEASES.es.md`](docs/RELEASES.es.md)
 - Política de migraciones: [`docs/MIGRATIONS.es.md`](docs/MIGRATIONS.es.md)
 - Política de upgrades: [`docs/UPGRADES.es.md`](docs/UPGRADES.es.md)
@@ -49,7 +66,7 @@ Documentos clave de políticas/cierre:
 - Registry/provenance: [`docs/REGISTRY.es.md`](docs/REGISTRY.es.md)
 - Recetas de despliegue: [`docs/DEPLOYMENT-RECIPES.es.md`](docs/DEPLOYMENT-RECIPES.es.md)
 
-La validación Stripe/Redsys TEST/LIVE con credenciales permanece como ítem dependiente del proveedor. No reabre Fase 9 ni bloquea la distribución provider-neutral de código/contenedor.
+La validación Stripe/Redsys TEST/LIVE con credenciales permanece como ítem dependiente del proveedor. No reabre Fase 9 ni bloquea el baseline estable provider-neutral de código/contenedor.
 
 ---
 
@@ -97,7 +114,7 @@ Fase 10 cerró con tag Git/GitHub Release inmutable `v1.1.0`. El estado históri
 
 # Fase 11 — Ecosistema de distribución y despliegue — COMPLETADA
 
-Objetivo conseguido a nivel de implementación/candidata de release: distribuir y operar el core standalone verificado como artefacto OCI inmutable provider-neutral sin filtrar secretos, acoplar vendors ni incluir implementación privada de Kairoseth. El cierre operativo final solo se hace efectivo tras la publicación/verificación v1.2.0 descrita arriba sobre `main` mergeado.
+Objetivo conseguido: distribuir y operar el core standalone verificado como artefacto OCI inmutable provider-neutral sin filtrar secretos, acoplar vendors ni incluir implementación privada de Kairoseth. Tanto la release source v1.2.0 como la distribución OCI pública exacta han completado la secuencia requerida de auditoría y verificación post-publicación.
 
 ## 11.1 — Baseline reproducible OCI/Docker — COMPLETADA
 
@@ -152,21 +169,21 @@ Entregado:
 
 11.3 quedó oficialmente completa en `main` en el merge `2d3e7e02134fe46a19a26595c02d493dde3f83fb`, con 30/30 workflows de `main` verdes y no-op seguro confirmado para el publisher histórico de v1.1.0.
 
-## 11.4 — Verificación de release de distribución — COMPLETADA*
+## 11.4 — Verificación de release de distribución — COMPLETADA
 
-Seguimiento: issue **#140**.
+Seguimiento: issue **#140**, cerrado como completado tras superar la verificación del artefacto público.
 
-Candidata de release: **v1.2.0**, clasificada **MINOR / backward-compatible** desde v1.1.0.
+Release estable: **v1.2.0**, clasificada **MINOR / backward-compatible** desde v1.1.0.
 
-Entregado en el cierre:
+Entregado:
 
 - gate reutilizable `check:release-audit` para la release estable actual;
 - preservación del gate histórico `check:phase-10-release` para v1.1.0;
 - gate permanente `check:phase-11-distribution`;
 - workflow dedicado `Release audit` sobre `main` verificado;
 - `Publish audited release` generalizado y aguas abajo del audit actual;
-- publisher OCI existente conservando matching exacto tag/SHA, SBOM, max provenance y attestation GitHub;
-- nuevo workflow `Verify published distribution` tras publicar;
+- publisher OCI con matching exacto tag/SHA, SBOM, max provenance y attestation GitHub;
+- workflow `Verify published distribution` tras publicar;
 - pull público de identidades SemVer y digest;
 - verificación de que tags SemVer/SHA resuelven al mismo digest OCI;
 - verificación de labels OCI source/revision/version/license;
@@ -177,7 +194,7 @@ Entregado en el cierre:
 - evidencia machine-readable `distribution-verification-1.2.0.json` adjunta a GitHub Release;
 - auditoría y release notes v1.2.0 bilingües.
 
-La primera distribución OCI pública auditada se crea únicamente después de mergear este cierre y publicar la release source `v1.2.0` desde `main` verificado. `v1.1.0` histórico permanece deliberadamente sin imagen.
+La primera distribución OCI pública auditada queda por tanto completada y verificada. `v1.1.0` histórico permanece deliberadamente sin imagen.
 
 ## Gate permanente
 
@@ -194,6 +211,8 @@ implementación
 → verificar artefacto publicado cuando corresponda
 → trabajo posterior del roadmap
 ```
+
+Para OTP, la secuencia termina ahora en **modo mantenimiento**, no en una nueva fase de features.
 
 ## No-objetivos
 
