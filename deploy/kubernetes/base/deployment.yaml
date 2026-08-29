@@ -19,6 +19,8 @@ spec:
       labels:
         app.kubernetes.io/name: open-travel-platform
     spec:
+      automountServiceAccountToken: false
+      enableServiceLinks: false
       terminationGracePeriodSeconds: 30
       securityContext:
         runAsNonRoot: true
