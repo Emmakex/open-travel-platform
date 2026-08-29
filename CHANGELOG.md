@@ -4,8 +4,10 @@ All notable project changes are documented here.
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-08-29
+
 ### Added
-- Phase 11 distribution/deployment ecosystem tracking through issues #133, #134, #136 and #138.
+- Phase 11 distribution/deployment ecosystem tracking through issues #133, #134, #136, #138 and #140.
 - Phase 11.1 provider-neutral multi-stage `Dockerfile` built from the existing Next.js standalone runtime.
 - Non-root final container runtime (`app`, UID/GID `10001:10001`), built-in `/api/health/live` Docker healthcheck and runtime-only privileged configuration.
 - `.dockerignore` build-context hardening that excludes local environment and generated runtime artifacts.
@@ -24,33 +26,47 @@ All notable project changes are documented here.
 - Bilingual deployment-recipe guidance through `docs/DEPLOYMENT-RECIPES.md` and `docs/DEPLOYMENT-RECIPES.es.md`, including reverse proxy/TLS, readiness, external MongoDB, digest upgrade and rollback guidance.
 - Permanent deployment-recipe gate through `scripts/deployment-recipes-check.mjs` and `npm run check:deployment-recipes`.
 - Blocking `Deployment recipe validation` workflow that renders Compose/Kustomize and performs a real Compose build/start, UID/GID and liveness/readiness smoke.
+- Phase 11.4 reusable current-release audit through `scripts/release-audit-check.mjs`, `npm run check:release-audit` and the blocking `Release audit` workflow.
+- Permanent Phase 11 distribution closeout gate through `scripts/phase-11-distribution-check.mjs` and `npm run check:phase-11-distribution`.
+- Bilingual v1.2.0 distribution audit and release notes through `docs/RELEASE-AUDIT-1.2.0*.md` and `docs/RELEASE-NOTES-1.2.0*.md`.
+- `Verify published distribution` workflow that verifies the first audited public OCI distribution after publication by immutable digest.
+- Post-publication verification of SemVer/SHA tag digest equality, OCI source/revision/version/license labels, BuildKit provenance, SPDX SBOM and GitHub artifact attestation.
+- Clean public pull/run smoke by OCI digest with the secret-free demo profile, including UID/GID `10001:10001`, `/api/health/live`, `/api/health/ready`, representative routes and static assets.
+- Machine-readable `distribution-verification-1.2.0.json` evidence uploaded to the immutable GitHub Release after successful public-artifact verification.
 
 ### Changed
-- **Phase 11 — Distribution & deployment ecosystem is IN PROGRESS**; Phase 11.1 and Phase 11.2 are complete and Phase 11.3 implementation/documentation is complete subject to the permanent PR/CI/merge/`main` verification gate.
-- `npm run verify` includes `check:container`, `check:registry-provenance` and `check:deployment-recipes` alongside the existing fresh-clone and standalone deployment gates.
-- README and ROADMAP EN/ES document completed 11.1 container distribution, 11.2 registry/provenance and the completed 11.3 deployment-recipe baseline; 11.4 distribution release verification remains PLANNED.
-- `docs/CONTAINERS.md` and `docs/CONTAINERS.es.md` mark Phase 11.1 COMPLETE and delegate audited registry publication to the Phase 11.2 registry guides.
-- GHCR is the public reference registry but remains a distribution choice rather than a runtime dependency; operators may build or mirror OCI artifacts elsewhere.
-- Container publication requires the release SemVer tag to resolve to the exact audited `main` SHA before pushing.
-- Historical `v1.1.0` is deliberately excluded from retroactive container publication because its immutable source tag predates the Dockerfile and registry workflow.
-- Production orchestrator examples consume immutable digests, keep durable state and secrets external, and preserve `/api/health/live` versus `/api/health/ready` semantics.
+- Package/release identity moves from **1.1.0** to **1.2.0** as a backward-compatible MINOR release.
+- **Phase 11 — Distribution & deployment ecosystem is COMPLETE** at the implementation/release-candidate level; operational closeout becomes effective only after the closing PR is merged, merged `main` is green, `v1.2.0` is published and its exact public OCI digest passes the post-publication verification workflow.
+- `Publish audited release` now follows the reusable current `Release audit` rather than binding future releases to the historical Phase 10 v1.1.0 audit.
+- The historical `check:phase-10-release` gate remains preserved as an immutable v1.1.0 audit while future release identity is checked by `check:release-audit`.
+- `npm run verify` now includes `check:release-audit` and `check:phase-11-distribution` in addition to the existing container, registry/provenance and deployment-recipe gates.
+- README and ROADMAP EN/ES document completed Phase 11 slices 11.1 through 11.4 and the v1.2.0 distribution release candidate.
+- GHCR remains the public reference registry but not a mandatory runtime dependency; operators may self-build or mirror verified OCI digests.
+- Container publication still requires the SemVer source tag to resolve to the exact audited `main` SHA before pushing.
+- Historical `v1.1.0` remains deliberately excluded from retroactive container publication because its immutable source tag predates the Dockerfile and registry workflow.
+- Production orchestrator examples continue to consume immutable digests, keep durable state/secrets external and preserve `/api/health/live` versus `/api/health/ready` semantics.
 
 ### Security
-- Container builds exclude local `.env*`, `.next`, `node_modules` and repository/runtime artifacts from the build context while retaining only reviewed public environment examples.
-- The Dockerfile does not bake MongoDB, SMTP, PSP, Traveller Data, integration or adapter credentials into image layers.
-- The final runtime executes as a fixed non-root user; privileged capability configuration must be injected at runtime.
-- Container publication actions are pinned to full commit SHAs and use only `contents: read`, `packages: write`, `attestations: write` and `id-token: write` permissions.
-- Moving image aliases such as `latest`, major-only and minor-only tags are prohibited; production deployment is expected to record/use immutable OCI digests.
-- Compose and Kubernetes deployment examples preserve UID/GID `10001:10001`, read-only root filesystem, dropped capabilities and no privilege escalation; Kubernetes additionally uses `RuntimeDefault` seccomp.
-- Production MongoDB, TLS certificates, secret-manager material and private Kairoseth/customer configuration are not bundled into public deployment recipes.
-- Private Kairoseth/customer adapters, credentials and deployment configuration remain outside the public GHCR package.
+- Container builds exclude local `.env*`, `.next`, `node_modules` and repository/runtime artifacts from the build context while retaining reviewed public environment examples only.
+- Docker/Compose/Kubernetes artifacts never bake MongoDB, SMTP, PSP, Traveller Data, integration or adapter credentials into public image layers/manifests.
+- The final runtime executes as fixed non-root UID/GID `10001:10001`; privileged capability configuration remains runtime-injected.
+- Container publication actions remain pinned to full commit SHAs and use only the package/attestation/OIDC permissions required for publishing.
+- Moving image aliases such as `latest`, major-only, minor-only and `stable` remain prohibited; production deployment records and uses immutable OCI digests.
+- Compose/Kubernetes examples preserve a read-only root filesystem, dropped capabilities and no privilege escalation; Kubernetes additionally uses `RuntimeDefault` seccomp.
+- Production MongoDB, TLS certificates, secret-manager material and private Kairoseth/customer configuration remain external to public deployment recipes.
+- Post-publication verification treats any mismatch between source tag/SHA, OCI digest, metadata or attestation as a release/distribution failure.
 
 ### Compatibility
-- No public repository/adapter contract, REST/event/signature identifier or persistent-data schema changes are introduced by Phase 11.1, 11.2 or 11.3.
-- No migration is required by the deployment-recipe slice itself.
-- The image path reuses the existing supported Next.js standalone runtime and does not create a second application execution model.
-- Registry publication is additive and provider-neutral; GHCR does not become mandatory for self-build or mirrored deployments.
-- Compose/Kubernetes recipes are optional operational examples and do not make Docker Compose, Kubernetes, a cloud, ingress controller or secret manager a mandatory core dependency.
+- v1.2.0 is classified **MINOR / backward-compatible** relative to v1.1.0.
+- No supported public repository/adapter interface, REST/event/signature identifier or persistent-data schema is intentionally removed or broken by Phase 11.
+- No application-data migration is required by the distribution/deployment release itself.
+- The OCI path reuses the existing supported Next.js standalone runtime rather than introducing a second application execution model.
+- GHCR, Docker Compose and Kubernetes remain optional operational/distribution surfaces rather than mandatory core dependencies.
+- The provider-dependent Stripe/Redsys TEST/LIVE credentialed E2E item remains separate and does not block provider-neutral v1.2.0 distribution verification.
+
+### Release history
+- `v1.1.0` remains the first release published under the immutable source-tag/GitHub-Release convention and intentionally has no retroactive OCI image.
+- `v1.2.0` is the first release eligible for the audited public OCI publication/verification pipeline because its immutable source revision contains the Docker, registry/provenance and deployment baseline.
 
 ## [1.1.0] - 2026-08-28
 
